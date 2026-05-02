@@ -1,0 +1,181 @@
+#pragma once
+
+#include <QColor>
+#include <QImage>
+#include <QPointF>
+#include <QRectF>
+#include <QElapsedTimer>
+#include <QStringList>
+#include <QWidget>
+
+#include <optional>
+
+class QPainter;
+class QPushButton;
+class QScreen;
+class QTextEdit;
+class QWheelEvent;
+
+class ShotWindow final : public QWidget {
+public:
+    enum class Action {
+        ToolMove,
+        ToolPen,
+        ToolLine,
+        ToolHighlighter,
+        ToolRectangle,
+        ToolEllipse,
+        ToolArrow,
+        ToolText,
+        ToolNumber,
+        ToolMosaic,
+        Undo,
+        Redo,
+        OpenWith,
+        Copy,
+        Save,
+        Cancel,
+    };
+
+    struct DesktopApp {
+        QString name;
+        QString desktopPath;
+        QString exec;
+    };
+
+    explicit ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent = nullptr);
+    bool configureLayerShell(QScreen *screen);
+    void startFullscreenAnnotation();
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
+
+private:
+    enum class Mode {
+        Selecting,
+        Editing,
+    };
+
+    enum class Tool {
+        Move,
+        Pen,
+        Line,
+        Highlighter,
+        Rectangle,
+        Ellipse,
+        Arrow,
+        Text,
+        Number,
+        Mosaic,
+    };
+
+    enum class SelectionDrag {
+        None,
+        Move,
+        Left,
+        Right,
+        Top,
+        Bottom,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+    };
+
+    struct Annotation {
+        Tool tool = Tool::Pen;
+        QRectF rect;
+        QVector<QPointF> points;
+        QString text;
+        int number = 0;
+        QColor color = QColor(255, 77, 77);
+        qreal width = 4.0;
+    };
+
+    QPushButton *addToolbarButton(Action action, const QString &shortcutText, QWidget *parentToolbar = nullptr);
+    QVector<DesktopApp> imageDesktopApps() const;
+    QImage renderedSelection() const;
+    QPointF clampImagePoint(QPointF point) const;
+    QImage mosaicImage(QRect sourceRect, int blockSize) const;
+    QString currentToolName() const;
+    QPointF widgetToImage(QPointF point) const;
+    QPointF imageToWidget(QPointF point) const;
+    QRectF normalizedSelection() const;
+    QRectF imageRectToWidget(QRectF rect) const;
+    QString defaultSavePath() const;
+    bool hasUsableSelection() const;
+    qreal currentToolWidth() const;
+    qreal currentToolPreviewSize() const;
+    SelectionDrag selectionDragAt(QPointF imagePoint) const;
+    QRectF constrainedRect(QPointF start, QPointF end) const;
+    void beginSelection(QPointF imagePoint);
+    void commitDraft();
+    void commitTextEditor();
+    void copySelection();
+    void redoAnnotation();
+    void drawAnnotation(QPainter &painter, const Annotation &annotation, bool widgetCoordinates) const;
+    void drawArrow(QPainter &painter, QPointF start, QPointF end, qreal width) const;
+    void drawMosaic(QPainter &painter, QRectF imageRect, qreal blockSize, bool widgetCoordinates) const;
+    void drawNumber(QPainter &painter, QPointF imagePoint, int number, QColor color, qreal width, bool widgetCoordinates) const;
+    void drawWheelPreview(QPainter &painter);
+    void beginTextAnnotation(QPointF imagePoint);
+    void openSelectionWithDesktop(const DesktopApp &app);
+    QString saveSelectionToTempFile() const;
+    void setCurrentColor(QColor color);
+    void saveSelection();
+    void revealSelectionInfo();
+    void setTool(Tool tool);
+    void toggleColorPalette(QPoint position);
+    void toggleOpenWithPanel();
+    void updateCursor();
+    void updateColorPaletteGeometry(QPoint anchor);
+    void updateColorPalettePreview();
+    void updateOpenWithPanel();
+    void updateOpenWithPanelGeometry();
+    void updateTextEditorGeometry();
+    void updateFrozenImageRect();
+    void updateActionToolbarGeometry();
+    void updateToolbarGeometry();
+    void updateToolbarState();
+
+    QImage m_frozenFrame;
+    QString m_outputName;
+    QRectF m_frozenImageRect;
+    QRectF m_selection;
+    QPointF m_selectionStart;
+    QRectF m_selectionBeforeDrag;
+    QPointF m_dragStart;
+    SelectionDrag m_selectionDrag = SelectionDrag::None;
+    Mode m_mode = Mode::Selecting;
+    Tool m_tool = Tool::Pen;
+    bool m_dragging = false;
+    bool m_committingText = false;
+    bool m_showSelectionInfo = false;
+    bool m_showWheelPreview = false;
+    QElapsedTimer m_selectionInfoTimer;
+    QPointF m_wheelPreviewPosition;
+    QElapsedTimer m_wheelPreviewTimer;
+    QColor m_currentColor = QColor(255, 77, 77);
+    qreal m_penWidth = 4.0;
+    qreal m_shapeWidth = 3.0;
+    qreal m_mosaicBlockSize = 14.0;
+    int m_nextNumber = 1;
+    QVector<Annotation> m_annotations;
+    std::optional<Annotation> m_draft;
+    QWidget *m_toolbar = nullptr;
+    QWidget *m_actionToolbar = nullptr;
+    QWidget *m_openWithPanel = nullptr;
+    QWidget *m_colorPalette = nullptr;
+    QWidget *m_colorPalettePreview = nullptr;
+    QPoint m_colorPaletteAnchor;
+    QTextEdit *m_textEditor = nullptr;
+    QPointF m_textEditorImagePoint;
+    QVector<Annotation> m_redoStack;
+};

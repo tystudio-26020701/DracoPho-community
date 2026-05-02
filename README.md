@@ -1,0 +1,85 @@
+# Mark Shot
+
+[中文说明](README.zh-CN.md)
+
+`mark-shot` is a Qt 6 screenshot tool for Wayland compositors such as niri. It captures a frozen screen frame with `grim`, opens a fullscreen annotation surface, and lets you select, mark, save, copy, or open the edited image with another desktop application.
+
+## Features
+
+- Captures the current output by default, with `--all-outputs` for a full compositor capture.
+- Supports region selection, fullscreen annotation, and selection resize or move.
+- Provides pen, line, highlighter, rectangle, ellipse, arrow, text, number, and mosaic tools.
+- Supports undo, redo, save, copy to Wayland clipboard, and open-with actions.
+- Uses a layer-shell overlay by default and can fall back to a regular fullscreen xdg window with `--xdg-window`.
+- Designed for compositors that support `wlr-screencopy`, especially niri.
+
+## Build
+
+Arch Linux dependencies:
+
+```bash
+sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-wayland layer-shell-qt grim wl-clipboard
+```
+
+Build and run:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/mark-shot
+```
+
+Install locally:
+
+```bash
+cmake --install build --prefix "$HOME/.local"
+```
+
+## Usage
+
+Capture the current output:
+
+```bash
+mark-shot
+```
+
+Capture every output:
+
+```bash
+mark-shot --all-outputs
+```
+
+Annotate the full captured frame without selecting a region first:
+
+```bash
+mark-shot --fullscreen
+```
+
+Use a regular fullscreen xdg window instead of layer-shell:
+
+```bash
+mark-shot --xdg-window
+```
+
+Example niri binding:
+
+```kdl
+Mod+Shift+S { spawn "mark-shot"; }
+```
+
+## Controls
+
+- Drag to create a selection.
+- `V`, `P`, `L`, `H`, `R`, `E`, `A`, `T`, `N`, and `M` switch to move, pen, line, highlighter, rectangle, ellipse, arrow, text, number, and mosaic.
+- The move tool drags the selection or resizes it from edges and corners.
+- Hold `Ctrl` while drawing rectangles or ellipses to constrain them to squares or circles.
+- Right click opens the radial color palette.
+- Mouse wheel changes stroke width, number size, text size, or mosaic block size for the active tool.
+- `Ctrl+Z` undoes, and `Ctrl+Shift+Z` or `Ctrl+Y` redoes.
+- `Ctrl+C` copies the edited selection.
+- `Ctrl+S` or `Enter` saves the edited selection.
+- `Esc` exits.
+
+## License
+
+MIT License.
