@@ -1,5 +1,9 @@
 #include "shot_window.h"
 
+#include "ui/color_picker.h"
+#include "ui/icons.h"
+#include "ui/theme.h"
+
 #include <LayerShellQt/Window>
 
 #include <QAbstractItemView>
@@ -7,7 +11,6 @@
 #include <QBuffer>
 #include <QBrush>
 #include <QClipboard>
-#include <QColorDialog>
 #include <QDateTime>
 #include <QDir>
 #include <QDirIterator>
@@ -15,7 +18,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFontComboBox>
+#include <QFontDatabase>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -56,442 +59,13 @@ constexpr qreal kMaxStrokeWidth = 24.0;
 constexpr qreal kMinMosaicBlockSize = 4.0;
 constexpr qreal kMaxMosaicBlockSize = 48.0;
 
-QVector<QColor> paletteColors()
-{
-    return {
-        QColor(255, 77, 77),
-        QColor(255, 159, 67),
-        QColor(255, 221, 87),
-        QColor(46, 213, 115),
-        QColor(0, 210, 255),
-        QColor(84, 160, 255),
-        QColor(165, 94, 234),
-        QColor(255, 107, 180),
-        QColor(255, 255, 255),
-        QColor(17, 24, 39),
-    };
-}
-
 QRectF normalizedRect(QPointF a, QPointF b)
 {
     return QRectF(a, b).normalized();
 }
 
-QString panelStyleSheet()
-{
-    return QStringLiteral(
-        "QWidget#shotToolbar, QWidget#actionToolbar, QWidget#annotationPropertyPanel, QWidget#propertyColorDialogPanel {"
-        " background: rgba(8, 13, 19, 238);"
-        " border: 1px solid rgba(148, 163, 184, 95);"
-        " border-radius: 18px;"
-        "}"
-        "QPushButton {"
-        " color: rgba(241,245,249,245);"
-        " background: rgba(255,255,255,20);"
-        " border: 1px solid rgba(255,255,255,28);"
-        " border-radius: 13px;"
-        " padding: 0;"
-        " min-width: 44px;"
-        " min-height: 44px;"
-        " max-width: 44px;"
-        " max-height: 44px;"
-        "}"
-        "QPushButton:hover {"
-        " background: rgba(20,184,166,64);"
-        " border-color: rgba(94,234,212,150);"
-        "}"
-        "QPushButton:pressed {"
-        " background: rgba(20,184,166,115);"
-        " border-color: rgba(153,246,228,210);"
-        "}"
-        "QPushButton[active=\"true\"] {"
-        " color: #042F2E;"
-        " background: rgb(94,234,212);"
-        " border-color: rgb(153,246,228);"
-        "}"
-        "QPushButton[role=\"primary\"] {"
-        " color: #431407;"
-        " background: rgb(251,146,60);"
-        " border-color: rgb(253,186,116);"
-        "}"
-        "QPushButton[role=\"primary\"]:hover { background: rgb(249,115,22); }"
-        "QPushButton[role=\"danger\"]:hover {"
-        " background: rgba(239,68,68,110);"
-        " border-color: rgba(252,165,165,190);"
-        "}"
-        "QLabel {"
-        " color: rgba(241,245,249,235);"
-        " font-weight: 800;"
-        "}"
-        "QComboBox {"
-        " color: rgba(241,245,249,245);"
-        " background: rgba(255,255,255,20);"
-        " border: 1px solid rgba(255,255,255,35);"
-        " border-radius: 10px;"
-        " padding: 6px 10px;"
-        " min-height: 30px;"
-        "}"
-        "QComboBox QAbstractItemView {"
-        " color: rgba(241,245,249,245);"
-        " background: rgb(15,23,42);"
-        " selection-background-color: rgb(20,184,166);"
-        "}"
-        "QSlider::groove:horizontal {"
-        " height: 7px;"
-        " background: rgba(255,255,255,28);"
-        " border-radius: 3px;"
-        "}"
-        "QSlider::handle:horizontal {"
-        " width: 16px;"
-        " margin: -5px 0;"
-        " border-radius: 8px;"
-        " background: rgb(94,234,212);"
-        "}");
-}
-
-QString openWithPanelStyleSheet()
-{
-    return QStringLiteral(
-        "QWidget#openWithPanel {"
-        " background: rgba(8, 13, 19, 244);"
-        " border: 1px solid rgba(148, 163, 184, 105);"
-        " border-radius: 18px;"
-        "}"
-        "QLabel {"
-        " color: rgba(241,245,249,238);"
-        " font-size: 13px;"
-        " font-weight: 800;"
-        " letter-spacing: 0.4px;"
-        " padding: 2px 4px 6px 4px;"
-        "}"
-        "QListWidget {"
-        " color: white;"
-        " background: transparent;"
-        " border: 0;"
-        " outline: 0;"
-        "}"
-        "QListWidget::item {"
-        " background: rgba(255,255,255,24);"
-        " border: 1px solid rgba(255,255,255,24);"
-        " border-radius: 11px;"
-        " padding: 10px 12px;"
-        " margin: 3px 0;"
-        "}"
-        "QListWidget::item:hover {"
-        " background: rgba(20,184,166,70);"
-        " border-color: rgba(94,234,212,145);"
-        "}"
-        "QListWidget::item:selected {"
-        " color: #042F2E;"
-        " background: rgb(94,234,212);"
-        " border-color: rgb(153,246,228);"
-        "}"
-        "QPushButton {"
-        " color: white;"
-        " text-align: left;"
-        " background: rgba(255,255,255,24);"
-        " border: 1px solid rgba(255,255,255,24);"
-        " border-radius: 11px;"
-        " padding: 10px 12px;"
-        " min-height: 22px;"
-        "}"
-        "QPushButton:hover {"
-        " background: rgba(20,184,166,70);"
-        " border-color: rgba(94,234,212,145);"
-        "}");
-}
-
-QString propertyColorDialogPanelStyleSheet()
-{
-    return QStringLiteral(
-        "QWidget#propertyColorDialogPanel {"
-        " background: rgba(8, 13, 19, 238);"
-        " border: 1px solid rgba(148, 163, 184, 95);"
-        " border-radius: 18px;"
-        "}"
-        "QLabel {"
-        " color: rgba(241,245,249,235);"
-        " font-weight: 700;"
-        "}"
-        "QLineEdit, QSpinBox {"
-        " color: rgba(241,245,249,245);"
-        " background: rgba(255,255,255,22);"
-        " border: 1px solid rgba(255,255,255,35);"
-        " border-radius: 6px;"
-        " padding: 3px 5px;"
-        "}"
-        "QSlider::groove:horizontal {"
-        " height: 7px;"
-        " background: rgba(255,255,255,28);"
-        " border-radius: 3px;"
-        "}"
-        "QSlider::handle:horizontal {"
-        " width: 16px;"
-        " margin: -5px 0;"
-        " border-radius: 8px;"
-        " background: rgb(94,234,212);"
-        "}");
-}
-
-QString textEditorStyleSheet(const QColor &color, int pointSize)
-{
-    return QStringLiteral(
-        "QTextEdit#textEditor {"
-        " color: %1;"
-        " background: transparent;"
-        " border: 1px solid rgb(94,234,212);"
-        " border-radius: 0;"
-        " padding: 4px 6px;"
-        " font-size: %2px;"
-        " font-weight: 800;"
-        " selection-background-color: rgb(94,234,212);"
-        " selection-color: #042F2E;"
-        "}"
-        "QTextEdit#textEditor QAbstractScrollArea { background: transparent; }"
-        "QTextEdit#textEditor QWidget { background: transparent; }")
-        .arg(color.name())
-        .arg(pointSize);
-}
-
-QString colorPaletteStyleSheet()
-{
-    return QStringLiteral(
-        "QWidget#colorPalette { background: transparent; }"
-        "QPushButton {"
-        " border: 2px solid rgba(8,13,19,210);"
-        " border-radius: 15px;"
-        " min-width: 30px;"
-        " min-height: 30px;"
-        " max-width: 30px;"
-        " max-height: 30px;"
-        "}"
-        "QPushButton:hover {"
-        " border: 3px solid rgb(94,234,212);"
-        "}");
-}
-
-QString actionName(ShotWindow::Action action)
-{
-    switch (action) {
-    case ShotWindow::Action::ToolMove:
-        return QStringLiteral("Move");
-    case ShotWindow::Action::ToolSelect:
-        return QStringLiteral("Select");
-    case ShotWindow::Action::ToolPen:
-        return QStringLiteral("Pen");
-    case ShotWindow::Action::ToolLine:
-        return QStringLiteral("Line");
-    case ShotWindow::Action::ToolHighlighter:
-        return QStringLiteral("Highlighter");
-    case ShotWindow::Action::ToolRectangle:
-        return QStringLiteral("Rect");
-    case ShotWindow::Action::ToolEllipse:
-        return QStringLiteral("Ellipse");
-    case ShotWindow::Action::ToolArrow:
-        return QStringLiteral("Arrow");
-    case ShotWindow::Action::ToolText:
-        return QStringLiteral("Text");
-    case ShotWindow::Action::ToolNumber:
-        return QStringLiteral("Number");
-    case ShotWindow::Action::ToolMosaic:
-        return QStringLiteral("Mosaic");
-    case ShotWindow::Action::Undo:
-        return QStringLiteral("Undo");
-    case ShotWindow::Action::Redo:
-        return QStringLiteral("Redo");
-    case ShotWindow::Action::OpenWith:
-        return QStringLiteral("Open With");
-    case ShotWindow::Action::Copy:
-        return QStringLiteral("Copy");
-    case ShotWindow::Action::Save:
-        return QStringLiteral("Save");
-    case ShotWindow::Action::Cancel:
-        return QStringLiteral("Cancel");
-    }
-
-    return {};
-}
-
-QIcon makeToolIcon(ShotWindow::Action action)
-{
-    QPixmap pixmap(32, 32);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    const QColor ink(226, 232, 240);
-    const QColor muted(148, 163, 184);
-    const QColor teal(94, 234, 212);
-    const QColor orange(251, 146, 60);
-    const QColor red(248, 113, 113);
-    const QPen stroke(ink, 2.15, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
-    const QPen softStroke(QColor(226, 232, 240, 175), 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
-    painter.setPen(stroke);
-    painter.setBrush(Qt::NoBrush);
-
-    switch (action) {
-    case ShotWindow::Action::ToolMove:
-        painter.setPen(QPen(teal, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawLine(QPointF(16, 5), QPointF(16, 27));
-        painter.drawLine(QPointF(5, 16), QPointF(27, 16));
-        painter.drawLine(QPointF(16, 5), QPointF(12, 9));
-        painter.drawLine(QPointF(16, 5), QPointF(20, 9));
-        painter.drawLine(QPointF(16, 27), QPointF(12, 23));
-        painter.drawLine(QPointF(16, 27), QPointF(20, 23));
-        painter.drawLine(QPointF(5, 16), QPointF(9, 12));
-        painter.drawLine(QPointF(5, 16), QPointF(9, 20));
-        painter.drawLine(QPointF(27, 16), QPointF(23, 12));
-        painter.drawLine(QPointF(27, 16), QPointF(23, 20));
-        break;
-    case ShotWindow::Action::ToolSelect: {
-        painter.setPen(QPen(teal, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawLine(QPointF(10, 15), QPointF(10, 24));
-        painter.drawLine(QPointF(14, 10), QPointF(14, 24));
-        painter.drawLine(QPointF(18, 12), QPointF(18, 24));
-        painter.drawLine(QPointF(22, 15), QPointF(22, 23));
-        painter.setPen(stroke);
-        painter.drawPath([] {
-            QPainterPath path;
-            path.moveTo(10, 24);
-            path.cubicTo(10, 28, 22, 28, 24, 22);
-            path.cubicTo(25, 18, 23, 15, 22, 15);
-            return path;
-        }());
-        break;
-    }
-    case ShotWindow::Action::ToolPen: {
-        QPolygonF nib;
-        nib << QPointF(9, 23) << QPointF(12.5, 14.2) << QPointF(20.8, 5.8) << QPointF(26.2, 11.2)
-            << QPointF(17.8, 19.5) << QPointF(9, 23);
-        painter.setBrush(QColor(94, 234, 212, 38));
-        painter.drawPolygon(nib);
-        painter.setPen(QPen(teal, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawLine(QPointF(13, 14), QPointF(18, 19));
-        painter.setPen(stroke);
-        painter.drawLine(QPointF(7, 25), QPointF(12, 23));
-        break;
-    }
-    case ShotWindow::Action::ToolLine:
-        painter.setPen(QPen(teal, 2.4, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawLine(QPointF(8, 24), QPointF(24, 8));
-        painter.setBrush(teal);
-        painter.setPen(Qt::NoPen);
-        painter.drawEllipse(QPointF(8, 24), 2.1, 2.1);
-        painter.drawEllipse(QPointF(24, 8), 2.1, 2.1);
-        break;
-    case ShotWindow::Action::ToolHighlighter:
-        painter.setPen(QPen(QColor(251, 191, 36, 172), 7.0, Qt::SolidLine, Qt::RoundCap));
-        painter.drawLine(QPointF(8, 21), QPointF(24, 13));
-        painter.setPen(stroke);
-        painter.drawRoundedRect(QRectF(9, 8, 12, 8), 2.5, 2.5);
-        painter.drawLine(QPointF(19, 14), QPointF(24, 19));
-        break;
-    case ShotWindow::Action::ToolRectangle:
-        painter.setPen(QPen(ink, 2.05, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawRoundedRect(QRectF(7, 9, 18, 14), 3.5, 3.5);
-        painter.setPen(QPen(teal, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawLine(QPointF(12, 9), QPointF(20, 9));
-        break;
-    case ShotWindow::Action::ToolEllipse:
-        painter.drawEllipse(QRectF(6.5, 8.5, 19, 15));
-        painter.setPen(QPen(teal, 2.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawArc(QRectF(6.5, 8.5, 19, 15), 40 * 16, 90 * 16);
-        break;
-    case ShotWindow::Action::ToolArrow:
-        painter.setPen(QPen(teal, 2.35, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawLine(QPointF(8, 24), QPointF(24, 8));
-        painter.drawLine(QPointF(24, 8), QPointF(23, 16));
-        painter.drawLine(QPointF(24, 8), QPointF(16, 9));
-        break;
-    case ShotWindow::Action::ToolText:
-        painter.setPen(softStroke);
-        painter.drawLine(QPointF(8, 8), QPointF(24, 8));
-        painter.setPen(stroke);
-        painter.drawLine(QPointF(16, 8), QPointF(16, 24));
-        painter.drawLine(QPointF(12, 24), QPointF(20, 24));
-        break;
-    case ShotWindow::Action::ToolNumber:
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(orange);
-        painter.drawEllipse(QRectF(6, 6, 20, 20));
-        painter.setPen(QColor(67, 20, 7));
-        painter.setFont(QFont(QStringLiteral("Sans Serif"), 12, QFont::Black));
-        painter.drawText(QRectF(6, 6, 20, 20), Qt::AlignCenter, QStringLiteral("1"));
-        break;
-    case ShotWindow::Action::ToolMosaic:
-        painter.setPen(Qt::NoPen);
-        for (int y = 7; y < 25; y += 6) {
-            for (int x = 7; x < 25; x += 6) {
-                const int alpha = ((x + y) / 6) % 2 ? 230 : 110;
-                painter.setBrush(QColor(226, 232, 240, alpha));
-                painter.drawRoundedRect(QRectF(x, y, 4.5, 4.5), 1.0, 1.0);
-            }
-        }
-        break;
-    case ShotWindow::Action::Undo:
-        painter.setPen(QPen(ink, 2.25, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawPath([] {
-            QPainterPath path;
-            path.moveTo(10.0, 13.0);
-            path.cubicTo(13.0, 8.3, 20.6, 8.0, 23.6, 12.5);
-            path.cubicTo(27.0, 17.5, 23.4, 24.0, 16.2, 24.0);
-            return path;
-        }());
-        painter.setBrush(ink);
-        painter.setPen(Qt::NoPen);
-        {
-            QPolygonF head;
-            head << QPointF(8.2, 13.2) << QPointF(15.0, 8.6) << QPointF(14.1, 16.8);
-            painter.drawPolygon(head);
-        }
-        break;
-    case ShotWindow::Action::Redo:
-        painter.setPen(QPen(ink, 2.25, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawPath([] {
-            QPainterPath path;
-            path.moveTo(22.0, 13.0);
-            path.cubicTo(19.0, 8.3, 11.4, 8.0, 8.4, 12.5);
-            path.cubicTo(5.0, 17.5, 8.6, 24.0, 15.8, 24.0);
-            return path;
-        }());
-        painter.setBrush(ink);
-        painter.setPen(Qt::NoPen);
-        {
-            QPolygonF head;
-            head << QPointF(23.8, 13.2) << QPointF(17.0, 8.6) << QPointF(17.9, 16.8);
-            painter.drawPolygon(head);
-        }
-        break;
-    case ShotWindow::Action::OpenWith:
-        painter.drawRoundedRect(QRectF(7, 10, 14, 14), 3.0, 3.0);
-        painter.setPen(QPen(teal, 2.1, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawLine(QPointF(17, 7), QPointF(25, 7));
-        painter.drawLine(QPointF(25, 7), QPointF(25, 15));
-        painter.drawLine(QPointF(24, 8), QPointF(15, 17));
-        break;
-    case ShotWindow::Action::Copy:
-        painter.setPen(softStroke);
-        painter.drawRoundedRect(QRectF(11, 7, 12, 15), 3.0, 3.0);
-        painter.setPen(stroke);
-        painter.drawRoundedRect(QRectF(7, 11, 12, 15), 3.0, 3.0);
-        break;
-    case ShotWindow::Action::Save:
-        painter.setPen(QPen(QColor(67, 20, 7), 2.15, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawRoundedRect(QRectF(8, 7, 16, 18), 3.2, 3.2);
-        painter.drawLine(QPointF(12, 8), QPointF(12, 14));
-        painter.drawLine(QPointF(20, 8), QPointF(20, 14));
-        painter.drawLine(QPointF(12, 22), QPointF(20, 22));
-        break;
-    case ShotWindow::Action::Cancel:
-        painter.setPen(QPen(red, 2.4, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter.drawLine(QPointF(10, 10), QPointF(22, 22));
-        painter.drawLine(QPointF(22, 10), QPointF(10, 22));
-        break;
-    }
-
-    painter.end();
-    return QIcon(pixmap);
-}
+// Stylesheets, palette presets, action names, and toolbar icons now live in
+// src/ui/theme.{h,cpp} and src/ui/icons.{h,cpp}.
 
 QString desktopEntryValue(const QStringList &lines, const QString &key)
 {
@@ -620,7 +194,7 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
 
     m_toolbar = new QWidget(this);
     m_toolbar->setObjectName(QStringLiteral("shotToolbar"));
-    m_toolbar->setStyleSheet(panelStyleSheet());
+    m_toolbar->setStyleSheet(markshot::theme::panelStyleSheet());
     m_toolbar->installEventFilter(this);
 
     auto *layout = new QHBoxLayout(m_toolbar);
@@ -638,6 +212,7 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     layout->addWidget(addToolbarButton(Action::ToolText, QStringLiteral("T")));
     layout->addWidget(addToolbarButton(Action::ToolNumber, QStringLiteral("N")));
     layout->addWidget(addToolbarButton(Action::ToolMosaic, QStringLiteral("M")));
+    layout->addWidget(addToolbarButton(Action::Clear, QStringLiteral("Clear")));
     layout->addWidget(addToolbarButton(Action::Undo, QStringLiteral("Ctrl+Z")));
     layout->addWidget(addToolbarButton(Action::Redo, QStringLiteral("Ctrl+Shift+Z")));
     for (Action action : {Action::OpenWith, Action::Copy, Action::Save, Action::Cancel}) {
@@ -672,7 +247,7 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     propertyLayout->setSpacing(7);
     m_annotationPropertyTitle = new QLabel(QStringLiteral("Object"), m_annotationPropertyPanel);
     propertyLayout->addWidget(m_annotationPropertyTitle);
-    m_propertyWidthLabel = new QLabel(QStringLiteral("Width 4"), m_annotationPropertyPanel);
+    m_propertyWidthLabel = new QLabel(QStringLiteral("Width 2"), m_annotationPropertyPanel);
     propertyLayout->addWidget(m_propertyWidthLabel);
     m_propertyWidthSlider = new QSlider(Qt::Horizontal, m_annotationPropertyPanel);
     m_propertyWidthSlider->setFocusPolicy(Qt::NoFocus);
@@ -700,14 +275,12 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     m_propertyRadiusSlider->setToolTip(QStringLiteral("Rectangle corner radius"));
     connect(m_propertyRadiusSlider, &QSlider::valueChanged, this, [this](int value) { setSelectedAnnotationCornerRadius(value); });
     propertyLayout->addWidget(m_propertyRadiusSlider);
-    m_propertyFontComboBox = new QFontComboBox(m_annotationPropertyPanel);
-    m_propertyFontComboBox->setFocusPolicy(Qt::StrongFocus);
-    m_propertyFontComboBox->setFixedWidth(160);
-    m_propertyFontComboBox->setToolTip(QStringLiteral("Text font"));
-    connect(m_propertyFontComboBox, &QFontComboBox::currentFontChanged, this, [this](const QFont &font) {
-        setSelectedTextFontFamily(font.family());
-    });
-    propertyLayout->addWidget(m_propertyFontComboBox);
+    m_propertyFontButton = new QPushButton(QStringLiteral("Font"), m_annotationPropertyPanel);
+    m_propertyFontButton->setFocusPolicy(Qt::NoFocus);
+    m_propertyFontButton->setFixedWidth(160);
+    m_propertyFontButton->setToolTip(QStringLiteral("Text font"));
+    connect(m_propertyFontButton, &QPushButton::clicked, this, [this] { toggleSelectedTextFontPanel(); });
+    propertyLayout->addWidget(m_propertyFontButton);
     m_propertyEditTextButton = new QPushButton(QStringLiteral("Edit"), m_annotationPropertyPanel);
     m_propertyEditTextButton->setFocusPolicy(Qt::NoFocus);
     m_propertyEditTextButton->setToolTip(QStringLiteral("Edit selected text"));
@@ -717,25 +290,50 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
 
     m_propertyColorDialogPanel = new QWidget(this);
     m_propertyColorDialogPanel->setObjectName(QStringLiteral("propertyColorDialogPanel"));
-    m_propertyColorDialogPanel->setStyleSheet(propertyColorDialogPanelStyleSheet());
+    m_propertyColorDialogPanel->setStyleSheet(markshot::theme::propertyColorDialogPanelStyleSheet());
     auto *propertyColorLayout = new QVBoxLayout(m_propertyColorDialogPanel);
-    propertyColorLayout->setContentsMargins(10, 10, 10, 10);
+    propertyColorLayout->setContentsMargins(12, 12, 12, 12);
     propertyColorLayout->setSpacing(0);
-    m_propertyColorDialog = new QColorDialog(m_currentColor, m_propertyColorDialogPanel);
-    m_propertyColorDialog->setOptions(QColorDialog::DontUseNativeDialog
-                                      | QColorDialog::ShowAlphaChannel
-                                      | QColorDialog::NoButtons);
-    m_propertyColorDialog->setWindowFlags(Qt::Widget);
-    m_propertyColorDialog->setSizeGripEnabled(false);
-    connect(m_propertyColorDialog, &QColorDialog::currentColorChanged, this, [this](const QColor &color) {
-        applyPropertyColor(color);
-    });
-    propertyColorLayout->addWidget(m_propertyColorDialog);
+    m_propertyColorPicker = new markshot::ui::ColorPicker(m_propertyColorDialogPanel);
+    m_propertyColorPicker->setColor(m_currentColor);
+    connect(m_propertyColorPicker, &markshot::ui::ColorPicker::colorChanged, this,
+            [this](const QColor &color) { applyPropertyColor(color); });
+    propertyColorLayout->addWidget(m_propertyColorPicker);
     m_propertyColorDialogPanel->hide();
+
+    m_propertyFontPanel = new QWidget(this);
+    m_propertyFontPanel->setObjectName(QStringLiteral("propertyFontPanel"));
+    m_propertyFontPanel->setStyleSheet(markshot::theme::openWithPanelStyleSheet());
+    auto *fontPanelLayout = new QVBoxLayout(m_propertyFontPanel);
+    fontPanelLayout->setContentsMargins(8, 8, 8, 8);
+    fontPanelLayout->setSpacing(0);
+    m_propertyFontList = new QListWidget(m_propertyFontPanel);
+    m_propertyFontList->setFocusPolicy(Qt::NoFocus);
+    m_propertyFontList->setUniformItemSizes(true);
+    m_propertyFontList->setMinimumHeight(96);
+    m_propertyFontList->setMaximumHeight(260);
+    m_propertyFontList->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    m_propertyFontList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    for (const QString &family : QFontDatabase::families()) {
+        auto *item = new QListWidgetItem(family, m_propertyFontList);
+        item->setData(Qt::UserRole, family);
+        item->setFont(QFont(family, 12));
+    }
+    connect(m_propertyFontList, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
+        if (!item) {
+            return;
+        }
+        setSelectedTextFontFamily(item->data(Qt::UserRole).toString());
+        if (m_propertyFontPanel) {
+            m_propertyFontPanel->hide();
+        }
+    });
+    fontPanelLayout->addWidget(m_propertyFontList);
+    m_propertyFontPanel->hide();
 
     m_openWithPanel = new QWidget(this);
     m_openWithPanel->setObjectName(QStringLiteral("openWithPanel"));
-    m_openWithPanel->setStyleSheet(openWithPanelStyleSheet());
+    m_openWithPanel->setStyleSheet(markshot::theme::openWithPanelStyleSheet());
     auto *openLayout = new QVBoxLayout(m_openWithPanel);
     openLayout->setContentsMargins(12, 12, 12, 12);
     openLayout->setSpacing(7);
@@ -743,8 +341,8 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
 
     m_colorPalette = new QWidget(this);
     m_colorPalette->setObjectName(QStringLiteral("colorPalette"));
-    m_colorPalette->setStyleSheet(colorPaletteStyleSheet());
-    for (const QColor &color : paletteColors()) {
+    m_colorPalette->setStyleSheet(markshot::theme::colorPaletteStyleSheet());
+    for (const QColor &color : markshot::theme::paletteColors()) {
         auto *button = new QPushButton(m_colorPalette);
         button->setFocusPolicy(Qt::NoFocus);
         button->setStyleSheet(QStringLiteral("background: %1;").arg(color.name()));
@@ -758,7 +356,7 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     m_textEditor = new QTextEdit(this);
     m_textEditor->setObjectName(QStringLiteral("textEditor"));
     m_textEditor->setPlaceholderText(QStringLiteral("Type text"));
-    m_textEditor->setStyleSheet(textEditorStyleSheet(QColor(94, 234, 212), 24));
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(QColor(94, 234, 212), 24));
     m_textEditor->setAcceptRichText(false);
     m_textEditor->setTabChangesFocus(false);
     m_textEditor->setFrameShape(QFrame::NoFrame);
@@ -836,7 +434,7 @@ void ShotWindow::startFullscreenAnnotation()
     m_undoStack.clear();
     m_redoStack.clear();
     m_draft.reset();
-    m_selectedAnnotationId.reset();
+    setSelectedAnnotations({});
     m_nextNumber = 1;
     m_nextAnnotationId = 1;
     if (m_openWithPanel) {
@@ -847,6 +445,9 @@ void ShotWindow::startFullscreenAnnotation()
     }
     if (m_propertyColorDialogPanel) {
         m_propertyColorDialogPanel->hide();
+    }
+    if (m_propertyFontPanel) {
+        m_propertyFontPanel->hide();
     }
     setTool(Tool::Pen);
     if (m_toolbar) {
@@ -864,11 +465,11 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
 {
     QWidget *toolbar = parentToolbar ? parentToolbar : m_toolbar;
     auto *button = new QPushButton(toolbar);
-    button->setIcon(makeToolIcon(action));
+    button->setIcon(markshot::ui::makeToolIcon(action));
     button->setIconSize(QSize(26, 26));
     button->setFocusPolicy(Qt::NoFocus);
-    button->setToolTip(QStringLiteral("%1 (%2)").arg(actionName(action), shortcutText));
-    button->setProperty("action", actionName(action));
+    button->setToolTip(QStringLiteral("%1 (%2)").arg(markshot::ui::actionName(action), shortcutText));
+    button->setProperty("action", markshot::ui::actionName(action));
     if (!parentToolbar && action == Action::ToolMove) {
         button->installEventFilter(this);
     }
@@ -902,6 +503,8 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
         connect(button, &QPushButton::clicked, this, [this] { setTool(Tool::Number); });
     } else if (action == Action::ToolMosaic) {
         connect(button, &QPushButton::clicked, this, [this] { setTool(Tool::Mosaic); });
+    } else if (action == Action::Clear) {
+        connect(button, &QPushButton::clicked, this, [this] { clearAnnotations(); });
     } else if (action == Action::Undo) {
         connect(button, &QPushButton::clicked, this, [this] { undoAnnotationEdit(); });
     } else if (action == Action::Redo) {
@@ -971,7 +574,7 @@ QVector<ShotWindow::DesktopApp> ShotWindow::imageDesktopApps() const
 bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
 {
     const bool isFullscreenMoveButton = m_fullscreenAnnotation
-        && watched->property("action").toString() == actionName(Action::ToolMove);
+        && watched->property("action").toString() == markshot::ui::actionName(Action::ToolMove);
     if (isFullscreenMoveButton) {
         if (event->type() == QEvent::MouseButtonPress) {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
@@ -1058,12 +661,21 @@ void ShotWindow::paintEvent(QPaintEvent *)
         const QRectF widgetSelection = imageRectToWidget(selection);
         painter.save();
         for (const Annotation &annotation : m_annotations) {
+            if (m_editingTextAnnotationId.has_value() && annotation.id == *m_editingTextAnnotationId) {
+                continue;
+            }
             drawAnnotation(painter, annotation, true);
         }
         if (m_draft.has_value()) {
             drawAnnotation(painter, *m_draft, true);
         }
         drawSelectedAnnotationFrame(painter);
+        if (m_annotationSelectionBoxActive) {
+            const QRectF box = imageRectToWidget(m_annotationSelectionBox.normalized());
+            painter.setPen(QPen(QColor(45, 212, 191), 1.5, Qt::DashLine));
+            painter.setBrush(QColor(45, 212, 191, 34));
+            painter.drawRoundedRect(box, 4.0, 4.0);
+        }
         painter.restore();
 
         painter.setPen(QPen(QColor(94, 234, 212), 2.0));
@@ -1159,6 +771,12 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         && (!m_toolbar || !m_toolbar->geometry().contains(event->pos()))) {
         m_propertyColorDialogPanel->hide();
     }
+    if (m_propertyFontPanel && m_propertyFontPanel->isVisible()
+        && !m_propertyFontPanel->geometry().contains(event->pos())
+        && (!m_annotationPropertyPanel || !m_annotationPropertyPanel->geometry().contains(event->pos()))
+        && (!m_toolbar || !m_toolbar->geometry().contains(event->pos()))) {
+        m_propertyFontPanel->hide();
+    }
     if (m_textEditor && m_textEditor->isVisible() && !m_textEditor->geometry().contains(event->pos())) {
         commitTextEditor();
     }
@@ -1196,7 +814,14 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
             return;
         }
 
-        if (m_selectedAnnotationId.has_value()) {
+        const QVector<int> selectedIds = selectedAnnotationIds();
+        if (selectedIds.size() > 1) {
+            const SelectionDrag drag = annotationBoundsDragAt(imagePoint, selectedAnnotationsBounds());
+            if (drag != SelectionDrag::None) {
+                beginAnnotationDrag(selectedIds.first(), drag, imagePoint);
+                return;
+            }
+        } else if (m_selectedAnnotationId.has_value()) {
             const SelectionDrag drag = annotationDragAt(imagePoint, *m_selectedAnnotationId);
             if (drag != SelectionDrag::None) {
                 beginAnnotationDrag(*m_selectedAnnotationId, drag, imagePoint);
@@ -1207,14 +832,11 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         const std::optional<int> hitAnnotationId = annotationAt(imagePoint);
         if (hitAnnotationId.has_value()) {
             const SelectionDrag drag = annotationDragAt(imagePoint, *hitAnnotationId);
+            setSelectedAnnotations({*hitAnnotationId});
             beginAnnotationDrag(*hitAnnotationId, drag == SelectionDrag::None ? SelectionDrag::Move : drag, imagePoint);
             updateAnnotationPropertyPanel();
         } else {
-            m_selectedAnnotationId.reset();
-            m_annotationDrag = SelectionDrag::None;
-            updateAnnotationPropertyPanel();
-            updateCursor();
-            update();
+            beginAnnotationSelectionBox(imagePoint);
         }
         return;
     }
@@ -1289,8 +911,19 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
+    if (m_mode == Mode::Editing && m_tool == Tool::Select && m_dragging && m_annotationSelectionBoxActive) {
+        updateAnnotationSelectionBox(imagePoint);
+        return;
+    }
+
     if (m_mode == Mode::Editing && m_tool == Tool::Select && !m_dragging) {
-        if (m_selectedAnnotationId.has_value()) {
+        if (selectedAnnotationIds().size() > 1) {
+            m_annotationDrag = annotationBoundsDragAt(imagePoint, selectedAnnotationsBounds());
+            if (m_annotationDrag != SelectionDrag::None) {
+                updateCursor();
+                return;
+            }
+        } else if (m_selectedAnnotationId.has_value()) {
             m_annotationDrag = annotationDragAt(imagePoint, *m_selectedAnnotationId);
             if (m_annotationDrag != SelectionDrag::None) {
                 updateCursor();
@@ -1411,6 +1044,90 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
     update();
 }
 
+void ShotWindow::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    if (event->button() != Qt::LeftButton || m_mode != Mode::Editing) {
+        QWidget::mouseDoubleClickEvent(event);
+        return;
+    }
+
+    const QPointF imagePoint = widgetToImage(event->position());
+    if (!m_frozenImageRect.contains(event->position())) {
+        QWidget::mouseDoubleClickEvent(event);
+        return;
+    }
+
+    const auto annotationId = annotationAt(imagePoint);
+    if (!annotationId) {
+        QWidget::mouseDoubleClickEvent(event);
+        return;
+    }
+
+    const Annotation *annotation = annotationById(*annotationId);
+    if (!annotation || annotation->tool != Tool::Text) {
+        QWidget::mouseDoubleClickEvent(event);
+        return;
+    }
+
+    const int targetId = *annotationId;
+
+    // The single click that preceded this double-click already executed
+    // mousePressEvent in the active tool's branch. Roll back its side
+    // effects so the user does not see a stray duplicate annotation when
+    // we transition into text editing.
+    switch (m_tool) {
+    case Tool::Number:
+        // mousePressEvent appended a number annotation and captured a
+        // history snapshot. Undo both so the new digit doesn't linger.
+        if (!m_annotations.isEmpty() && m_annotations.last().tool == Tool::Number) {
+            m_annotations.removeLast();
+            if (m_nextNumber > 1) {
+                --m_nextNumber;
+            }
+            if (m_nextAnnotationId > 1) {
+                --m_nextAnnotationId;
+            }
+        }
+        if (!m_undoStack.isEmpty()) {
+            m_undoStack.removeLast();
+        }
+        break;
+    case Tool::Pen:
+    case Tool::Highlighter:
+    case Tool::Line:
+    case Tool::Rectangle:
+    case Tool::Ellipse:
+    case Tool::Arrow:
+    case Tool::Mosaic:
+        // First press created an in-flight draft; discard it so the
+        // upcoming mouseReleaseEvent (which still fires for the second
+        // click of the double-click) does not commit a tiny stamp.
+        m_draft.reset();
+        break;
+    case Tool::Text:
+        // First press opened a fresh, empty text editor at the click point.
+        // setTool(Select) below will call commitTextEditor() and tear it
+        // down without producing an empty annotation.
+        break;
+    case Tool::Move:
+    case Tool::Select:
+        // No draft to discard.
+        break;
+    }
+
+    m_dragging = false;
+    m_annotationDrag = SelectionDrag::None;
+    m_annotationHistoryCaptured = false;
+
+    if (m_tool != Tool::Select) {
+        setTool(Tool::Select);
+    }
+    setSelectedAnnotations({targetId});
+    beginEditingSelectedTextAnnotation();
+    update();
+    event->accept();
+}
+
 void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() != Qt::LeftButton || !m_dragging) {
@@ -1430,6 +1147,13 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         m_annotationDrag = SelectionDrag::None;
         m_annotationHistoryCaptured = false;
         updateAnnotationPropertyPanel();
+        updateCursor();
+        update();
+        return;
+    }
+
+    if (m_tool == Tool::Select && m_annotationSelectionBoxActive) {
+        commitAnnotationSelectionBox();
         updateCursor();
         update();
         return;
@@ -1479,20 +1203,22 @@ void ShotWindow::wheelEvent(QWheelEvent *event)
         return;
     }
 
-    if (m_tool == Tool::Select && m_selectedAnnotationId.has_value()) {
-        if (Annotation *annotation = annotationById(*m_selectedAnnotationId)) {
-            pushHistorySnapshot();
-            if (annotation->tool == Tool::Mosaic) {
-                annotation->width = std::clamp(annotation->width + steps * 2.0, kMinMosaicBlockSize, kMaxMosaicBlockSize);
-            } else {
-                annotation->width = std::clamp(annotation->width + steps * 1.0, kMinStrokeWidth, kMaxStrokeWidth);
+    if (m_tool == Tool::Select && !selectedAnnotationIds().isEmpty()) {
+        pushHistorySnapshot();
+        for (int id : selectedAnnotationIds()) {
+            if (Annotation *annotation = annotationById(id)) {
+                if (annotation->tool == Tool::Mosaic) {
+                    annotation->width = std::clamp(annotation->width + steps * 2.0, kMinMosaicBlockSize, kMaxMosaicBlockSize);
+                } else {
+                    annotation->width = std::clamp(annotation->width + steps * 1.0, kMinStrokeWidth, kMaxStrokeWidth);
+                }
             }
-            updateColorPalettePreview();
-            updateAnnotationPropertyPanel();
-            event->accept();
-            update();
-            return;
         }
+        updateColorPalettePreview();
+        updateAnnotationPropertyPanel();
+        event->accept();
+        update();
+        return;
     }
 
     if (m_tool == Tool::Mosaic) {
@@ -1611,12 +1337,15 @@ void ShotWindow::beginSelection(QPointF imagePoint)
     if (m_propertyColorDialogPanel) {
         m_propertyColorDialogPanel->hide();
     }
+    if (m_propertyFontPanel) {
+        m_propertyFontPanel->hide();
+    }
     setFullscreenActionButtonsVisible(false);
     m_annotations.clear();
     m_undoStack.clear();
     m_redoStack.clear();
     m_draft.reset();
-    m_selectedAnnotationId.reset();
+    setSelectedAnnotations({});
     m_nextNumber = 1;
     m_nextAnnotationId = 1;
     revealSelectionInfo();
@@ -1664,9 +1393,10 @@ void ShotWindow::setTool(Tool tool)
     commitTextEditor();
     m_selectionDrag = SelectionDrag::None;
     m_annotationDrag = SelectionDrag::None;
+    m_annotationSelectionBoxActive = false;
     m_tool = tool;
     if (m_tool != Tool::Select) {
-        m_selectedAnnotationId.reset();
+        setSelectedAnnotations({});
     }
     updateAnnotationPropertyPanel();
     updateCursor();
@@ -1859,6 +1589,109 @@ QRectF ShotWindow::annotationBounds(const Annotation &annotation) const
     return bounds.normalized().intersected(QRectF(QPointF(0, 0), QSizeF(m_frozenFrame.size())));
 }
 
+QVector<int> ShotWindow::selectedAnnotationIds() const
+{
+    QVector<int> ids;
+    for (int id : m_selectedAnnotationIds) {
+        if (annotationById(id) && !ids.contains(id)) {
+            ids.append(id);
+        }
+    }
+    if (m_selectedAnnotationId.has_value() && annotationById(*m_selectedAnnotationId) && !ids.contains(*m_selectedAnnotationId)) {
+        ids.append(*m_selectedAnnotationId);
+    }
+    return ids;
+}
+
+void ShotWindow::setSelectedAnnotations(QVector<int> annotationIds)
+{
+    QVector<int> validIds;
+    for (int id : annotationIds) {
+        if (annotationById(id) && !validIds.contains(id)) {
+            validIds.append(id);
+        }
+    }
+    m_selectedAnnotationIds = validIds;
+    m_selectedAnnotationId = validIds.size() == 1
+        ? std::optional<int>(validIds.first())
+        : std::nullopt;
+}
+
+QRectF ShotWindow::selectedAnnotationsBounds() const
+{
+    QRectF bounds;
+    for (int id : selectedAnnotationIds()) {
+        const Annotation *annotation = annotationById(id);
+        if (!annotation) {
+            continue;
+        }
+        const QRectF annotationRect = annotationBounds(*annotation);
+        if (annotationRect.isEmpty()) {
+            continue;
+        }
+        bounds = bounds.isEmpty() ? annotationRect : bounds.united(annotationRect);
+    }
+    return bounds.normalized();
+}
+
+QVector<int> ShotWindow::annotationsInRect(QRectF imageRect) const
+{
+    imageRect = imageRect.normalized();
+    QVector<int> ids;
+    if (imageRect.width() < 2.0 || imageRect.height() < 2.0) {
+        return ids;
+    }
+    for (const Annotation &annotation : m_annotations) {
+        const QRectF bounds = annotationBounds(annotation);
+        if (!bounds.isEmpty() && imageRect.intersects(bounds)) {
+            ids.append(annotation.id);
+        }
+    }
+    return ids;
+}
+
+ShotWindow::SelectionDrag ShotWindow::annotationBoundsDragAt(QPointF imagePoint, QRectF bounds) const
+{
+    bounds = bounds.normalized();
+    if (bounds.isEmpty()) {
+        return SelectionDrag::None;
+    }
+
+    const qreal imageTolerance = 10.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+    const bool nearLeft = std::abs(imagePoint.x() - bounds.left()) <= imageTolerance;
+    const bool nearRight = std::abs(imagePoint.x() - bounds.right()) <= imageTolerance;
+    const bool nearTop = std::abs(imagePoint.y() - bounds.top()) <= imageTolerance;
+    const bool nearBottom = std::abs(imagePoint.y() - bounds.bottom()) <= imageTolerance;
+
+    if (nearLeft && nearTop) {
+        return SelectionDrag::TopLeft;
+    }
+    if (nearRight && nearTop) {
+        return SelectionDrag::TopRight;
+    }
+    if (nearLeft && nearBottom) {
+        return SelectionDrag::BottomLeft;
+    }
+    if (nearRight && nearBottom) {
+        return SelectionDrag::BottomRight;
+    }
+    if (nearLeft) {
+        return SelectionDrag::Left;
+    }
+    if (nearRight) {
+        return SelectionDrag::Right;
+    }
+    if (nearTop) {
+        return SelectionDrag::Top;
+    }
+    if (nearBottom) {
+        return SelectionDrag::Bottom;
+    }
+    return bounds.adjusted(-imageTolerance, -imageTolerance, imageTolerance, imageTolerance).contains(imagePoint)
+        ? SelectionDrag::Move
+        : SelectionDrag::None;
+}
+
 QVector<QPointF> ShotWindow::selectionHandlePoints(QRectF rect) const
 {
     rect = rect.normalized();
@@ -1871,14 +1704,7 @@ QVector<QPointF> ShotWindow::selectionHandlePoints(QRectF rect) const
 
 QRectF ShotWindow::selectedAnnotationDeleteButtonRect() const
 {
-    if (!m_selectedAnnotationId.has_value()) {
-        return {};
-    }
-    const Annotation *annotation = annotationById(*m_selectedAnnotationId);
-    if (!annotation) {
-        return {};
-    }
-    const QRectF bounds = imageRectToWidget(annotationBounds(*annotation));
+    const QRectF bounds = imageRectToWidget(selectedAnnotationsBounds());
     if (bounds.isEmpty()) {
         return {};
     }
@@ -1930,39 +1756,7 @@ ShotWindow::SelectionDrag ShotWindow::annotationDragAt(QPointF imagePoint, int a
         return SelectionDrag::None;
     }
 
-    const qreal imageTolerance = 10.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
-    const bool nearLeft = std::abs(imagePoint.x() - bounds.left()) <= imageTolerance;
-    const bool nearRight = std::abs(imagePoint.x() - bounds.right()) <= imageTolerance;
-    const bool nearTop = std::abs(imagePoint.y() - bounds.top()) <= imageTolerance;
-    const bool nearBottom = std::abs(imagePoint.y() - bounds.bottom()) <= imageTolerance;
-
-    if (nearLeft && nearTop) {
-        return SelectionDrag::TopLeft;
-    }
-    if (nearRight && nearTop) {
-        return SelectionDrag::TopRight;
-    }
-    if (nearLeft && nearBottom) {
-        return SelectionDrag::BottomLeft;
-    }
-    if (nearRight && nearBottom) {
-        return SelectionDrag::BottomRight;
-    }
-    if (nearLeft) {
-        return SelectionDrag::Left;
-    }
-    if (nearRight) {
-        return SelectionDrag::Right;
-    }
-    if (nearTop) {
-        return SelectionDrag::Top;
-    }
-    if (nearBottom) {
-        return SelectionDrag::Bottom;
-    }
-    return bounds.adjusted(-imageTolerance, -imageTolerance, imageTolerance, imageTolerance).contains(imagePoint)
-        ? SelectionDrag::Move
-        : SelectionDrag::None;
+    return annotationBoundsDragAt(imagePoint, bounds);
 }
 
 std::optional<int> ShotWindow::annotationAt(QPointF imagePoint) const
@@ -1980,15 +1774,12 @@ std::optional<int> ShotWindow::annotationAt(QPointF imagePoint) const
 
 void ShotWindow::drawSelectedAnnotationFrame(QPainter &painter) const
 {
-    if (!m_selectedAnnotationId.has_value()) {
-        return;
-    }
-    const Annotation *annotation = annotationById(*m_selectedAnnotationId);
-    if (!annotation) {
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (selectedIds.isEmpty()) {
         return;
     }
 
-    const QRectF bounds = imageRectToWidget(annotationBounds(*annotation));
+    const QRectF bounds = imageRectToWidget(selectedAnnotationsBounds());
     if (bounds.isEmpty()) {
         return;
     }
@@ -1997,6 +1788,14 @@ void ShotWindow::drawSelectedAnnotationFrame(QPainter &painter) const
     painter.setPen(QPen(QColor(251, 146, 60), 2.0, Qt::DashLine));
     painter.setBrush(Qt::NoBrush);
     painter.drawRoundedRect(bounds, 4.0, 4.0);
+    if (selectedIds.size() > 1) {
+        painter.setPen(QPen(QColor(251, 146, 60, 150), 1.0, Qt::DashLine));
+        for (int id : selectedIds) {
+            if (const Annotation *annotation = annotationById(id)) {
+                painter.drawRoundedRect(imageRectToWidget(annotationBounds(*annotation)), 3.0, 3.0);
+            }
+        }
+    }
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor(251, 146, 60));
     for (const QPointF &handle : selectionHandlePoints(bounds)) {
@@ -2036,6 +1835,8 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
         return clampImagePoint(QPointF(newBounds.left() + xRatio * newBounds.width(),
                                       newBounds.top() + yRatio * newBounds.height()));
     };
+    const qreal scaleFactor = std::max(newBounds.width() / oldBounds.width(),
+                                       newBounds.height() / oldBounds.height());
 
     switch (annotation.tool) {
     case Tool::Move:
@@ -2045,7 +1846,8 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
     case Tool::Ellipse:
     case Tool::Mosaic:
     case Tool::Text:
-        annotation.rect = newBounds;
+        annotation.rect = QRectF(mapPoint(annotation.rect.normalized().topLeft()),
+                                 mapPoint(annotation.rect.normalized().bottomRight())).normalized();
         break;
     case Tool::Pen:
     case Tool::Highlighter:
@@ -2057,9 +1859,8 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
         break;
     case Tool::Number:
         if (!annotation.points.isEmpty()) {
-            annotation.points[0] = newBounds.center();
-            const qreal radius = std::max(newBounds.width(), newBounds.height()) / 2.0;
-            annotation.width = std::clamp(radius - 15.0, kMinStrokeWidth, kMaxStrokeWidth);
+            annotation.points[0] = mapPoint(annotation.points.first());
+            annotation.width = std::clamp(annotation.width * scaleFactor, kMinStrokeWidth, kMaxStrokeWidth);
         }
         break;
     }
@@ -2071,10 +1872,18 @@ void ShotWindow::beginAnnotationDrag(int annotationId, SelectionDrag drag, QPoin
     if (!annotation || drag == SelectionDrag::None) {
         return;
     }
-    m_selectedAnnotationId = annotationId;
+    if (!selectedAnnotationIds().contains(annotationId)) {
+        setSelectedAnnotations({annotationId});
+    }
     m_annotationDrag = drag;
     m_annotationBeforeDrag = *annotation;
-    m_annotationBoundsBeforeDrag = annotationBounds(*annotation);
+    m_annotationsBeforeDrag.clear();
+    for (int id : selectedAnnotationIds()) {
+        if (const Annotation *selected = annotationById(id)) {
+            m_annotationsBeforeDrag.append(*selected);
+        }
+    }
+    m_annotationBoundsBeforeDrag = selectedAnnotationsBounds();
     m_dragStart = imagePoint;
     m_dragging = true;
     m_annotationHistoryCaptured = false;
@@ -2085,11 +1894,8 @@ void ShotWindow::beginAnnotationDrag(int annotationId, SelectionDrag drag, QPoin
 
 void ShotWindow::updateAnnotationDrag(QPointF imagePoint)
 {
-    if (!m_selectedAnnotationId.has_value() || m_annotationDrag == SelectionDrag::None) {
-        return;
-    }
-    Annotation *annotation = annotationById(*m_selectedAnnotationId);
-    if (!annotation) {
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (selectedIds.isEmpty() || m_annotationDrag == SelectionDrag::None) {
         return;
     }
     if (!m_annotationHistoryCaptured) {
@@ -2097,32 +1903,76 @@ void ShotWindow::updateAnnotationDrag(QPointF imagePoint)
         m_annotationHistoryCaptured = true;
     }
 
-    *annotation = m_annotationBeforeDrag;
+    for (const Annotation &before : m_annotationsBeforeDrag) {
+        if (Annotation *annotation = annotationById(before.id)) {
+            *annotation = before;
+        }
+    }
+
     if (m_annotationDrag == SelectionDrag::Move) {
         const QRectF startBounds = m_annotationBoundsBeforeDrag;
         QPointF delta = clampImagePoint(imagePoint) - m_dragStart;
         delta.setX(std::clamp(delta.x(), -startBounds.left(), m_frozenFrame.width() - startBounds.right()));
         delta.setY(std::clamp(delta.y(), -startBounds.top(), m_frozenFrame.height() - startBounds.bottom()));
-        moveAnnotation(*annotation, delta);
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id)) {
+                moveAnnotation(*annotation, delta);
+            }
+        }
     } else {
-        transformAnnotation(*annotation, m_annotationBoundsBeforeDrag, resizedBounds(m_annotationBoundsBeforeDrag, m_annotationDrag, imagePoint));
+        const QRectF newBounds = resizedBounds(m_annotationBoundsBeforeDrag, m_annotationDrag, imagePoint);
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id)) {
+                transformAnnotation(*annotation, m_annotationBoundsBeforeDrag, newBounds);
+            }
+        }
     }
     update();
 }
 
+void ShotWindow::beginAnnotationSelectionBox(QPointF imagePoint)
+{
+    setSelectedAnnotations({});
+    m_annotationDrag = SelectionDrag::None;
+    m_annotationSelectionBoxActive = true;
+    m_dragging = true;
+    m_dragStart = clampImagePoint(imagePoint);
+    m_annotationSelectionBox = QRectF(m_dragStart, m_dragStart);
+    updateAnnotationPropertyPanel();
+    updateCursor();
+    update();
+}
+
+void ShotWindow::updateAnnotationSelectionBox(QPointF imagePoint)
+{
+    m_annotationSelectionBox = QRectF(m_dragStart, clampImagePoint(imagePoint)).normalized();
+    update();
+}
+
+void ShotWindow::commitAnnotationSelectionBox()
+{
+    m_annotationSelectionBoxActive = false;
+    setSelectedAnnotations(annotationsInRect(m_annotationSelectionBox));
+    m_annotationSelectionBox = {};
+    updateAnnotationPropertyPanel();
+}
+
 ShotWindow::HistorySnapshot ShotWindow::currentHistorySnapshot() const
 {
-    return {m_annotations, m_selectedAnnotationId, m_nextNumber, m_nextAnnotationId};
+    return {m_annotations, m_selectedAnnotationId, selectedAnnotationIds(), m_nextNumber, m_nextAnnotationId};
 }
 
 void ShotWindow::restoreHistorySnapshot(const HistorySnapshot &snapshot)
 {
     m_annotations = snapshot.annotations;
-    m_selectedAnnotationId = snapshot.selectedAnnotationId;
+    setSelectedAnnotations(snapshot.selectedAnnotationIds.isEmpty()
+                               ? (snapshot.selectedAnnotationId.has_value() ? QVector<int>{*snapshot.selectedAnnotationId} : QVector<int>{})
+                               : snapshot.selectedAnnotationIds);
     m_nextNumber = snapshot.nextNumber;
     m_nextAnnotationId = snapshot.nextAnnotationId;
     m_draft.reset();
     m_annotationDrag = SelectionDrag::None;
+    m_annotationSelectionBoxActive = false;
     m_annotationHistoryCaptured = false;
     updateAnnotationPropertyPanel();
     updateCursor();
@@ -2209,10 +2059,13 @@ void ShotWindow::setCurrentColor(QColor color)
     }
 
     m_currentColor = color;
-    if (m_tool == Tool::Select && m_selectedAnnotationId.has_value()) {
-        if (Annotation *annotation = annotationById(*m_selectedAnnotationId)) {
-            pushHistorySnapshot();
-            annotation->color = color;
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (m_tool == Tool::Select && !selectedIds.isEmpty()) {
+        pushHistorySnapshot();
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id)) {
+                annotation->color = color;
+            }
         }
         updateAnnotationPropertyPanel();
     }
@@ -2448,10 +2301,15 @@ void ShotWindow::updateAnnotationPropertyPanel()
         return;
     }
 
-    const Annotation *annotation = m_selectedAnnotationId.has_value()
-        ? annotationById(*m_selectedAnnotationId)
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    const Annotation *annotation = selectedIds.size() == 1
+        ? annotationById(selectedIds.first())
         : nullptr;
-    const bool editingAnnotation = m_tool == Tool::Select && annotation;
+    const Annotation *firstSelectedAnnotation = !selectedIds.isEmpty()
+        ? annotationById(selectedIds.first())
+        : nullptr;
+    const bool groupSelection = m_tool == Tool::Select && selectedIds.size() > 1;
+    const bool editingAnnotation = m_tool == Tool::Select && !selectedIds.isEmpty();
     const bool editingTool = m_mode == Mode::Editing
         && m_tool != Tool::Move
         && m_tool != Tool::Select;
@@ -2460,13 +2318,16 @@ void ShotWindow::updateAnnotationPropertyPanel()
         if (m_propertyColorDialogPanel) {
             m_propertyColorDialogPanel->hide();
         }
+        if (m_propertyFontPanel) {
+            m_propertyFontPanel->hide();
+        }
         return;
     }
 
     QString title = QStringLiteral("Object");
-    const Tool panelTool = annotation ? annotation->tool : m_tool;
-    const QColor panelColor = annotation ? annotation->color : m_currentColor;
-    const qreal panelWidth = annotation ? annotation->width : currentToolWidth();
+    const Tool panelTool = groupSelection ? Tool::Select : (annotation ? annotation->tool : m_tool);
+    const QColor panelColor = firstSelectedAnnotation ? firstSelectedAnnotation->color : m_currentColor;
+    const qreal panelWidth = firstSelectedAnnotation ? firstSelectedAnnotation->width : currentToolWidth();
     const bool panelFilled = annotation ? annotation->filled : m_shapeFilled;
     const qreal panelRadius = annotation ? annotation->cornerRadius : m_rectangleCornerRadius;
     const QString panelFontFamily = annotation ? annotation->fontFamily : m_textFontFamily;
@@ -2506,30 +2367,43 @@ void ShotWindow::updateAnnotationPropertyPanel()
     }
 
     if (m_annotationPropertyTitle) {
-        m_annotationPropertyTitle->setText(title);
+        m_annotationPropertyTitle->setText(groupSelection
+                                               ? QStringLiteral("Group %1").arg(selectedIds.size())
+                                               : title);
     }
     if (m_propertyEditTextButton) {
-        m_propertyEditTextButton->setVisible(editingAnnotation && panelTool == Tool::Text);
+        m_propertyEditTextButton->setVisible(!groupSelection && editingAnnotation && panelTool == Tool::Text);
     }
-    if (m_propertyFontComboBox) {
-        m_propertyFontComboBox->setVisible(panelTool == Tool::Text);
-        if (panelTool == Tool::Text) {
-            const QSignalBlocker blocker(m_propertyFontComboBox);
-            m_propertyFontComboBox->setCurrentFont(QFont(panelFontFamily.isEmpty() ? QStringLiteral("Sans Serif") : panelFontFamily));
+    if (m_propertyFontButton) {
+        m_propertyFontButton->setVisible(!groupSelection && panelTool == Tool::Text);
+        if (!groupSelection && panelTool == Tool::Text) {
+            const QString family = panelFontFamily.isEmpty() ? QStringLiteral("Sans Serif") : panelFontFamily;
+            m_propertyFontButton->setText(QStringLiteral("Font"));
+            m_propertyFontButton->setToolTip(family);
+            if (m_propertyFontList) {
+                const auto matches = m_propertyFontList->findItems(family, Qt::MatchExactly);
+                if (!matches.isEmpty()) {
+                    m_propertyFontList->setCurrentItem(matches.first());
+                    m_propertyFontList->scrollToItem(matches.first(), QAbstractItemView::PositionAtCenter);
+                }
+            }
+        } else if (m_propertyFontPanel) {
+            m_propertyFontPanel->hide();
+            m_propertyFontButton->setToolTip(QStringLiteral("Text font"));
         }
     }
     if (m_propertyFillButton) {
-        const bool supportsFill = panelTool == Tool::Rectangle || panelTool == Tool::Ellipse;
+        const bool supportsFill = !groupSelection && (panelTool == Tool::Rectangle || panelTool == Tool::Ellipse);
         m_propertyFillButton->setVisible(supportsFill);
         const QSignalBlocker blocker(m_propertyFillButton);
         m_propertyFillButton->setChecked(panelFilled);
     }
     if (m_propertyRadiusLabel) {
-        m_propertyRadiusLabel->setVisible(panelTool == Tool::Rectangle);
+        m_propertyRadiusLabel->setVisible(!groupSelection && panelTool == Tool::Rectangle);
         m_propertyRadiusLabel->setText(QStringLiteral("Radius %1").arg(qRound(panelRadius)));
     }
     if (m_propertyRadiusSlider) {
-        m_propertyRadiusSlider->setVisible(panelTool == Tool::Rectangle);
+        m_propertyRadiusSlider->setVisible(!groupSelection && panelTool == Tool::Rectangle);
         const QSignalBlocker blocker(m_propertyRadiusSlider);
         m_propertyRadiusSlider->setValue(qRound(panelRadius));
     }
@@ -2546,38 +2420,22 @@ void ShotWindow::updateAnnotationPropertyPanel()
         m_propertyWidthSlider->setValue(qRound(panelWidth));
     }
     if (m_propertyColorButton) {
-        const int luma = (panelColor.red() * 299 + panelColor.green() * 587 + panelColor.blue() * 114) / 1000;
-        const QString textColor = luma > 150 && panelColor.alpha() > 120 ? QStringLiteral("#111827") : QStringLiteral("#F8FAFC");
-        m_propertyColorButton->setStyleSheet(QStringLiteral(
-            "QPushButton {"
-            " color: %5;"
-            " background: rgba(%1,%2,%3,%4);"
-            " border: 2px solid rgba(255,255,255,150);"
-            " border-radius: 13px;"
-            " min-width: 44px;"
-            " min-height: 44px;"
-            " max-width: 44px;"
-            " max-height: 44px;"
-            " padding: 0;"
-            "}"
-            "QPushButton:hover { border-color: rgba(94,234,212,220); }")
-            .arg(panelColor.red())
-            .arg(panelColor.green())
-            .arg(panelColor.blue())
-            .arg(panelColor.alpha())
-            .arg(textColor));
+        m_propertyColorButton->setStyleSheet(markshot::theme::propertyColorButtonStyleSheet(panelColor));
         m_propertyColorButton->setVisible(panelTool != Tool::Mosaic);
         if (panelTool == Tool::Mosaic && m_propertyColorDialogPanel) {
             m_propertyColorDialogPanel->hide();
         }
     }
-    if (m_propertyColorDialog && m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()) {
-        const QSignalBlocker blocker(m_propertyColorDialog);
-        m_propertyColorDialog->setCurrentColor(panelColor);
+    if (m_propertyColorPicker && m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()) {
+        const QSignalBlocker blocker(m_propertyColorPicker);
+        m_propertyColorPicker->setColor(panelColor);
     }
 
-    updateAnnotationPropertyPanelGeometry();
     m_annotationPropertyPanel->show();
+    if (QLayout *panelLayout = m_annotationPropertyPanel->layout()) {
+        panelLayout->activate();
+    }
+    updateAnnotationPropertyPanelGeometry();
     m_annotationPropertyPanel->raise();
     if (m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()) {
         updatePropertyColorDialogGeometry();
@@ -2608,48 +2466,90 @@ void ShotWindow::updateAnnotationPropertyPanelGeometry()
     y = std::clamp(y, 8, std::max(8, height() - panelSize.height() - 8));
     m_annotationPropertyPanel->setGeometry(x, y, panelSize.width(), panelSize.height());
     updatePropertyColorDialogGeometry();
+    updatePropertyFontPanelGeometry();
 }
 
 void ShotWindow::updatePropertyColorDialogGeometry()
 {
-    if (!m_propertyColorDialogPanel || !m_propertyColorDialogPanel->isVisible() || !m_annotationPropertyPanel) {
+    if (!m_propertyColorDialogPanel || !m_annotationPropertyPanel) {
         return;
     }
 
     m_propertyColorDialogPanel->adjustSize();
     QSize panelSize = m_propertyColorDialogPanel->sizeHint();
-    panelSize.setWidth(std::min(panelSize.width(), std::max(320, width() - 16)));
-    panelSize.setHeight(std::min(panelSize.height(), std::max(240, height() - 16)));
+    panelSize.setWidth(std::min(panelSize.width(), std::max(160, width() - 16)));
+    panelSize.setHeight(std::min(panelSize.height(), std::max(180, height() - 16)));
+
+    // Anchor on the color button's centre so the picker stays put when the
+    // property panel resizes (e.g. fill/radius/font slots showing or hiding).
+    // Falling back to the property panel keeps geometry valid when the
+    // button is hidden (mosaic case).
+    QPoint anchor;
+    if (m_propertyColorButton && m_propertyColorButton->isVisible()) {
+        anchor = m_propertyColorButton->mapTo(this, m_propertyColorButton->rect().center());
+    } else {
+        const QRect propertyRect = m_annotationPropertyPanel->geometry();
+        anchor = QPoint(propertyRect.center().x(), propertyRect.bottom());
+    }
+
+    int x = anchor.x() - panelSize.width() / 2;
+    int y = anchor.y() + 14;
 
     const QRect propertyRect = m_annotationPropertyPanel->geometry();
-    int x = propertyRect.left();
-    int y = propertyRect.bottom() + kToolbarMargin;
     if (y + panelSize.height() > height() - 8) {
-        y = propertyRect.top() - panelSize.height() - kToolbarMargin;
-    }
-    if (x + panelSize.width() > width() - 8) {
-        x = propertyRect.right() - panelSize.width();
+        // Place above the property panel instead.
+        y = propertyRect.top() - panelSize.height() - 8;
     }
     x = std::clamp(x, 8, std::max(8, width() - panelSize.width() - 8));
     y = std::clamp(y, 8, std::max(8, height() - panelSize.height() - 8));
     m_propertyColorDialogPanel->setGeometry(x, y, panelSize.width(), panelSize.height());
 }
 
-void ShotWindow::adjustSelectedAnnotationWidth(qreal delta)
+void ShotWindow::updatePropertyFontPanelGeometry()
 {
-    if (!m_selectedAnnotationId.has_value()) {
+    if (!m_propertyFontPanel || !m_annotationPropertyPanel || !m_propertyFontButton) {
         return;
     }
-    Annotation *annotation = annotationById(*m_selectedAnnotationId);
-    if (!annotation) {
+
+    const int visibleRows = std::min(10, m_propertyFontList ? std::max(1, m_propertyFontList->count()) : 1);
+    const int rowHeight = m_propertyFontList ? std::max(24, m_propertyFontList->sizeHintForRow(0)) : 28;
+    QSize panelSize(260, std::min(280, visibleRows * rowHeight + 18));
+    panelSize.setWidth(std::min(panelSize.width(), std::max(180, width() - 16)));
+    panelSize.setHeight(std::min(panelSize.height(), std::max(120, height() - 16)));
+
+    QPoint anchor = m_propertyFontButton->mapTo(this, QPoint(m_propertyFontButton->width() / 2,
+                                                            m_propertyFontButton->height()));
+    int x = anchor.x() - panelSize.width() / 2;
+    int y = anchor.y() + 10;
+    const QRect propertyRect = m_annotationPropertyPanel->geometry();
+    if (y + panelSize.height() > height() - 8) {
+        y = propertyRect.top() - panelSize.height() - 8;
+    }
+    x = std::clamp(x, 8, std::max(8, width() - panelSize.width() - 8));
+    y = std::clamp(y, 8, std::max(8, height() - panelSize.height() - 8));
+    if (m_propertyFontList) {
+        m_propertyFontList->setFixedHeight(std::max(80, panelSize.height() - 16));
+    }
+    m_propertyFontPanel->setFixedSize(panelSize);
+    m_propertyFontPanel->setGeometry(x, y, panelSize.width(), panelSize.height());
+}
+
+void ShotWindow::adjustSelectedAnnotationWidth(qreal delta)
+{
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (selectedIds.isEmpty()) {
         return;
     }
 
     pushHistorySnapshot();
-    if (annotation->tool == Tool::Mosaic) {
-        annotation->width = std::clamp(annotation->width + delta * 2.0, kMinMosaicBlockSize, kMaxMosaicBlockSize);
-    } else {
-        annotation->width = std::clamp(annotation->width + delta, kMinStrokeWidth, kMaxStrokeWidth);
+    for (int id : selectedIds) {
+        if (Annotation *annotation = annotationById(id)) {
+            if (annotation->tool == Tool::Mosaic) {
+                annotation->width = std::clamp(annotation->width + delta * 2.0, kMinMosaicBlockSize, kMaxMosaicBlockSize);
+            } else {
+                annotation->width = std::clamp(annotation->width + delta, kMinStrokeWidth, kMaxStrokeWidth);
+            }
+        }
     }
     updateAnnotationPropertyPanel();
     update();
@@ -2657,13 +2557,25 @@ void ShotWindow::adjustSelectedAnnotationWidth(qreal delta)
 
 void ShotWindow::setSelectedAnnotationWidth(int width)
 {
-    if (m_selectedAnnotationId.has_value()) {
-        Annotation *annotation = annotationById(*m_selectedAnnotationId);
-        if (!annotation || qRound(annotation->width) == width) {
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        bool changed = false;
+        for (int id : selectedIds) {
+            const Annotation *annotation = annotationById(id);
+            if (annotation && qRound(annotation->width) != width) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
             return;
         }
         pushHistorySnapshot();
-        annotation->width = width;
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id)) {
+                annotation->width = width;
+            }
+        }
     } else {
         switch (m_tool) {
         case Tool::Pen:
@@ -2734,26 +2646,26 @@ void ShotWindow::setSelectedAnnotationCornerRadius(int radius)
 
 void ShotWindow::deleteSelectedAnnotation()
 {
-    if (!m_selectedAnnotationId.has_value()) {
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (selectedIds.isEmpty()) {
         return;
     }
-    for (int i = 0; i < m_annotations.size(); ++i) {
-        if (m_annotations.at(i).id == *m_selectedAnnotationId) {
-            pushHistorySnapshot();
+    pushHistorySnapshot();
+    for (int i = m_annotations.size() - 1; i >= 0; --i) {
+        if (selectedIds.contains(m_annotations.at(i).id)) {
             m_annotations.removeAt(i);
-            m_selectedAnnotationId.reset();
-            m_annotationDrag = SelectionDrag::None;
-            updateAnnotationPropertyPanel();
-            updateCursor();
-            update();
-            return;
         }
     }
+    setSelectedAnnotations({});
+    m_annotationDrag = SelectionDrag::None;
+    updateAnnotationPropertyPanel();
+    updateCursor();
+    update();
 }
 
 void ShotWindow::openSelectedAnnotationColorPalette()
 {
-    if (!m_propertyColorDialogPanel || !m_propertyColorDialog || !m_annotationPropertyPanel) {
+    if (!m_propertyColorDialogPanel || !m_propertyColorPicker || !m_annotationPropertyPanel) {
         return;
     }
 
@@ -2766,20 +2678,63 @@ void ShotWindow::openSelectedAnnotationColorPalette()
         m_colorPalette->hide();
     }
     QColor color = m_currentColor;
-    if (m_selectedAnnotationId.has_value()) {
-        if (const Annotation *annotation = annotationById(*m_selectedAnnotationId)) {
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        if (const Annotation *annotation = annotationById(selectedIds.first())) {
             color = annotation->color;
         }
     }
     m_propertyColorEditHistoryCaptured = false;
     {
-        const QSignalBlocker blocker(m_propertyColorDialog);
-        m_propertyColorDialog->setCurrentColor(color);
+        const QSignalBlocker blocker(m_propertyColorPicker);
+        m_propertyColorPicker->setColor(color);
     }
     updateAnnotationPropertyPanel();
+    if (m_annotationPropertyPanel) {
+        m_annotationPropertyPanel->show();
+        m_annotationPropertyPanel->raise();
+        if (QLayout *panelLayout = m_annotationPropertyPanel->layout()) {
+            panelLayout->activate();
+        }
+        updateAnnotationPropertyPanelGeometry();
+    }
+    if (QLayout *colorLayout = m_propertyColorDialogPanel->layout()) {
+        colorLayout->activate();
+    }
     updatePropertyColorDialogGeometry();
     m_propertyColorDialogPanel->show();
+    updatePropertyColorDialogGeometry();
     m_propertyColorDialogPanel->raise();
+    QTimer::singleShot(0, this, [this] {
+        if (m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()) {
+            updatePropertyColorDialogGeometry();
+            m_propertyColorDialogPanel->raise();
+        }
+    });
+}
+
+void ShotWindow::toggleSelectedTextFontPanel()
+{
+    if (!m_propertyFontPanel || !m_propertyFontList || !m_propertyFontButton) {
+        return;
+    }
+
+    if (m_propertyFontPanel->isVisible()) {
+        m_propertyFontPanel->hide();
+        return;
+    }
+
+    if (m_propertyColorDialogPanel) {
+        m_propertyColorDialogPanel->hide();
+    }
+    updateAnnotationPropertyPanel();
+    if (QLayout *fontLayout = m_propertyFontPanel->layout()) {
+        fontLayout->activate();
+    }
+    updatePropertyFontPanelGeometry();
+    m_propertyFontPanel->show();
+    updatePropertyFontPanelGeometry();
+    m_propertyFontPanel->raise();
 }
 
 void ShotWindow::applyPropertyColor(QColor color)
@@ -2787,13 +2742,16 @@ void ShotWindow::applyPropertyColor(QColor color)
     if (!color.isValid()) {
         return;
     }
-    if (m_selectedAnnotationId.has_value()) {
-        if (Annotation *annotation = annotationById(*m_selectedAnnotationId)) {
-            if (!m_propertyColorEditHistoryCaptured) {
-                pushHistorySnapshot();
-                m_propertyColorEditHistoryCaptured = true;
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        if (!m_propertyColorEditHistoryCaptured) {
+            pushHistorySnapshot();
+            m_propertyColorEditHistoryCaptured = true;
+        }
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id)) {
+                annotation->color = color;
             }
-            annotation->color = color;
         }
     } else {
         m_currentColor = color;
@@ -2803,6 +2761,33 @@ void ShotWindow::applyPropertyColor(QColor color)
     }
     updateColorPalettePreview();
     updateAnnotationPropertyPanel();
+    update();
+}
+
+void ShotWindow::clearAnnotations()
+{
+    commitTextEditor();
+    if (m_annotations.isEmpty() && !m_draft.has_value()) {
+        return;
+    }
+
+    pushHistorySnapshot();
+    m_annotations.clear();
+    m_draft.reset();
+    setSelectedAnnotations({});
+    m_annotationDrag = SelectionDrag::None;
+    m_annotationSelectionBoxActive = false;
+    m_annotationHistoryCaptured = false;
+    m_nextNumber = 1;
+    m_nextAnnotationId = 1;
+    if (m_propertyColorDialogPanel) {
+        m_propertyColorDialogPanel->hide();
+    }
+    if (m_propertyFontPanel) {
+        m_propertyFontPanel->hide();
+    }
+    updateAnnotationPropertyPanel();
+    updateCursor();
     update();
 }
 
@@ -3007,10 +2992,10 @@ void ShotWindow::updateTextEditorGeometry()
 
     const QPointF topLeft = imageToWidget(m_textEditorImagePoint);
     const QRectF selection = imageRectToWidget(normalizedSelection());
-    const int availableRight = std::max(150, qRound(selection.right() - topLeft.x() - 12));
-    const int availableBottom = std::max(46, qRound(selection.bottom() - topLeft.y() - 12));
-    const int editorWidth = std::min(360, std::max(130, availableRight));
-    const int editorHeight = std::min(160, std::max(46, availableBottom));
+    const int availableRight = std::max(80, qRound(selection.right() - topLeft.x() - 12));
+    const int availableBottom = std::max(36, qRound(selection.bottom() - topLeft.y() - 12));
+    const int editorWidth = std::clamp(220, 96, availableRight);
+    const int editorHeight = std::clamp(m_textEditor->fontMetrics().height() + 18, 38, availableBottom);
     QRect editorRect(qRound(topLeft.x()), qRound(topLeft.y()), editorWidth, editorHeight);
     editorRect.moveLeft(std::clamp(editorRect.left(), 8, std::max(8, width() - editorRect.width() - 8)));
     editorRect.moveTop(std::clamp(editorRect.top(), 8, std::max(8, height() - editorRect.height() - 8)));
@@ -3154,24 +3139,32 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
 
 void ShotWindow::drawArrow(QPainter &painter, QPointF start, QPointF end, qreal width) const
 {
-    painter.drawLine(start, end);
-
     const QLineF line(start, end);
     if (line.length() < 1.0) {
         return;
     }
 
-    const qreal angle = std::atan2(end.y() - start.y(), end.x() - start.x());
-    const qreal arrowSize = std::max<qreal>(12.0, width * 5.0);
-    const QPointF p1 = end - QPointF(std::cos(angle - M_PI / 6.0) * arrowSize,
-                                     std::sin(angle - M_PI / 6.0) * arrowSize);
-    const QPointF p2 = end - QPointF(std::cos(angle + M_PI / 6.0) * arrowSize,
-                                     std::sin(angle + M_PI / 6.0) * arrowSize);
+    const QColor color = painter.pen().color();
+    painter.save();
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(color, width, Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin));
+    painter.drawLine(start, end);
 
-    QPolygonF head;
-    head << end << p1 << p2;
-    painter.setBrush(painter.pen().color());
-    painter.drawPolygon(head);
+    const qreal angle = std::atan2(end.y() - start.y(), end.x() - start.x());
+    const qreal arrowSize = std::clamp(width * 6.0, 14.0, 38.0);
+    constexpr qreal headAngle = M_PI / 7.5;
+    const QPointF p1 = end - QPointF(std::cos(angle - headAngle) * arrowSize,
+                                     std::sin(angle - headAngle) * arrowSize);
+    const QPointF p2 = end - QPointF(std::cos(angle + headAngle) * arrowSize,
+                                     std::sin(angle + headAngle) * arrowSize);
+
+    QPainterPath head;
+    head.moveTo(p1);
+    head.lineTo(end);
+    head.lineTo(p2);
+    painter.setPen(QPen(color, width, Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin));
+    painter.drawPath(head);
+    painter.restore();
 }
 
 void ShotWindow::drawWheelPreview(QPainter &painter)
@@ -3242,7 +3235,7 @@ void ShotWindow::beginTextAnnotation(QPointF imagePoint)
     m_textEditorImagePoint = imagePoint;
     m_draft.reset();
     m_textEditor->clear();
-    m_textEditor->setStyleSheet(textEditorStyleSheet(m_currentColor, qRound(20.0 + m_shapeWidth)));
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, qRound(20.0 + m_shapeWidth)));
     m_textEditor->setFont(QFont(m_textFontFamily, qRound(20.0 + m_shapeWidth), QFont::DemiBold));
     m_textEditor->show();
     m_textEditor->raise();
@@ -3265,7 +3258,7 @@ void ShotWindow::beginEditingSelectedTextAnnotation()
     m_textEditorImagePoint = annotation->rect.normalized().topLeft();
     m_draft.reset();
     m_textEditor->setPlainText(annotation->text);
-    m_textEditor->setStyleSheet(textEditorStyleSheet(annotation->color, qRound(20.0 + annotation->width)));
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(annotation->color, qRound(20.0 + annotation->width)));
     m_textEditor->setFont(QFont(annotation->fontFamily.isEmpty() ? QStringLiteral("Sans Serif") : annotation->fontFamily,
                                 qRound(20.0 + annotation->width),
                                 QFont::DemiBold));
@@ -3274,6 +3267,9 @@ void ShotWindow::beginEditingSelectedTextAnnotation()
     }
     if (m_propertyColorDialogPanel) {
         m_propertyColorDialogPanel->hide();
+    }
+    if (m_propertyFontPanel) {
+        m_propertyFontPanel->hide();
     }
     m_textEditor->show();
     m_textEditor->raise();

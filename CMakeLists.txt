@@ -17,7 +17,15 @@ qt_add_executable(mark-shot
     src/screen_capture.h
     src/shot_window.cpp
     src/shot_window.h
+    src/ui/color_picker.cpp
+    src/ui/color_picker.h
+    src/ui/icons.cpp
+    src/ui/icons.h
+    src/ui/theme.cpp
+    src/ui/theme.h
 )
+
+target_include_directories(mark-shot PRIVATE src)
 
 target_link_libraries(mark-shot
     PRIVATE
