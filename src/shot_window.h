@@ -11,8 +11,12 @@
 #include <optional>
 
 class QPainter;
+class QColorDialog;
+class QFontComboBox;
+class QLabel;
 class QPushButton;
 class QScreen;
+class QSlider;
 class QTextEdit;
 class QWheelEvent;
 
@@ -20,6 +24,7 @@ class ShotWindow final : public QWidget {
 public:
     enum class Action {
         ToolMove,
+        ToolSelect,
         ToolPen,
         ToolLine,
         ToolHighlighter,
@@ -65,6 +70,7 @@ private:
 
     enum class Tool {
         Move,
+        Select,
         Pen,
         Line,
         Highlighter,
@@ -90,6 +96,7 @@ private:
     };
 
     struct Annotation {
+        int id = 0;
         Tool tool = Tool::Pen;
         QRectF rect;
         QVector<QPointF> points;
@@ -97,6 +104,16 @@ private:
         int number = 0;
         QColor color = QColor(255, 77, 77);
         qreal width = 4.0;
+        bool filled = false;
+        qreal cornerRadius = 0.0;
+        QString fontFamily = QStringLiteral("Sans Serif");
+    };
+
+    struct HistorySnapshot {
+        QVector<Annotation> annotations;
+        std::optional<int> selectedAnnotationId;
+        int nextNumber = 1;
+        int nextAnnotationId = 1;
     };
 
     QPushButton *addToolbarButton(Action action, const QString &shortcutText, QWidget *parentToolbar = nullptr);
@@ -115,6 +132,23 @@ private:
     qreal currentToolPreviewSize() const;
     SelectionDrag selectionDragAt(QPointF imagePoint) const;
     QRectF constrainedRect(QPointF start, QPointF end) const;
+    Annotation *annotationById(int id);
+    const Annotation *annotationById(int id) const;
+    QRectF annotationBounds(const Annotation &annotation) const;
+    QRectF resizedBounds(QRectF start, SelectionDrag drag, QPointF imagePoint) const;
+    QVector<QPointF> selectionHandlePoints(QRectF rect) const;
+    QRectF selectedAnnotationDeleteButtonRect() const;
+    SelectionDrag annotationDragAt(QPointF imagePoint, int annotationId) const;
+    std::optional<int> annotationAt(QPointF imagePoint) const;
+    void drawSelectedAnnotationFrame(QPainter &painter) const;
+    void moveAnnotation(Annotation &annotation, QPointF delta) const;
+    void transformAnnotation(Annotation &annotation, QRectF oldBounds, QRectF newBounds) const;
+    void beginAnnotationDrag(int annotationId, SelectionDrag drag, QPointF imagePoint);
+    void updateAnnotationDrag(QPointF imagePoint);
+    HistorySnapshot currentHistorySnapshot() const;
+    void restoreHistorySnapshot(const HistorySnapshot &snapshot);
+    void pushHistorySnapshot();
+    void undoAnnotationEdit();
     void beginSelection(QPointF imagePoint);
     void commitDraft();
     void commitTextEditor();
@@ -126,6 +160,7 @@ private:
     void drawNumber(QPainter &painter, QPointF imagePoint, int number, QColor color, qreal width, bool widgetCoordinates) const;
     void drawWheelPreview(QPainter &painter);
     void beginTextAnnotation(QPointF imagePoint);
+    void beginEditingSelectedTextAnnotation();
     void openSelectionWithDesktop(const DesktopApp &app);
     QString saveSelectionToTempFile() const;
     void setCurrentColor(QColor color);
@@ -139,6 +174,17 @@ private:
     void updateColorPalettePreview();
     void updateOpenWithPanel();
     void updateOpenWithPanelGeometry();
+    void updateAnnotationPropertyPanel();
+    void updateAnnotationPropertyPanelGeometry();
+    void updatePropertyColorDialogGeometry();
+    void adjustSelectedAnnotationWidth(qreal delta);
+    void setSelectedAnnotationWidth(int width);
+    void setSelectedAnnotationFilled(bool filled);
+    void setSelectedAnnotationCornerRadius(int radius);
+    void setSelectedTextFontFamily(const QString &fontFamily);
+    void applyPropertyColor(QColor color);
+    void deleteSelectedAnnotation();
+    void openSelectedAnnotationColorPalette();
     void updateTextEditorGeometry();
     void updateFrozenImageRect();
     void updateActionToolbarGeometry();
@@ -154,10 +200,14 @@ private:
     QPointF m_selectionStart;
     QRectF m_selectionBeforeDrag;
     QPointF m_dragStart;
+    Annotation m_annotationBeforeDrag;
+    QRectF m_annotationBoundsBeforeDrag;
     SelectionDrag m_selectionDrag = SelectionDrag::None;
+    SelectionDrag m_annotationDrag = SelectionDrag::None;
     Mode m_mode = Mode::Selecting;
     Tool m_tool = Tool::Pen;
     bool m_dragging = false;
+    bool m_annotationHistoryCaptured = false;
     bool m_fullscreenAnnotation = false;
     bool m_toolbarDragging = false;
     bool m_toolbarUserPlaced = false;
@@ -171,11 +221,29 @@ private:
     qreal m_penWidth = 4.0;
     qreal m_shapeWidth = 3.0;
     qreal m_mosaicBlockSize = 14.0;
+    bool m_shapeFilled = false;
+    qreal m_rectangleCornerRadius = 0.0;
+    QString m_textFontFamily = QStringLiteral("Sans Serif");
     int m_nextNumber = 1;
+    int m_nextAnnotationId = 1;
+    std::optional<int> m_selectedAnnotationId;
     QVector<Annotation> m_annotations;
     std::optional<Annotation> m_draft;
     QWidget *m_toolbar = nullptr;
     QWidget *m_actionToolbar = nullptr;
+    QWidget *m_annotationPropertyPanel = nullptr;
+    QLabel *m_annotationPropertyTitle = nullptr;
+    QLabel *m_propertyWidthLabel = nullptr;
+    QSlider *m_propertyWidthSlider = nullptr;
+    QPushButton *m_propertyColorButton = nullptr;
+    QPushButton *m_propertyFillButton = nullptr;
+    QLabel *m_propertyRadiusLabel = nullptr;
+    QSlider *m_propertyRadiusSlider = nullptr;
+    QFontComboBox *m_propertyFontComboBox = nullptr;
+    QPushButton *m_propertyEditTextButton = nullptr;
+    QWidget *m_propertyColorDialogPanel = nullptr;
+    QColorDialog *m_propertyColorDialog = nullptr;
+    bool m_propertyColorEditHistoryCaptured = false;
     QWidget *m_openWithPanel = nullptr;
     QWidget *m_colorPalette = nullptr;
     QWidget *m_colorPalettePreview = nullptr;
@@ -185,5 +253,7 @@ private:
     QVector<QPushButton *> m_fullscreenActionButtons;
     QTextEdit *m_textEditor = nullptr;
     QPointF m_textEditorImagePoint;
-    QVector<Annotation> m_redoStack;
+    std::optional<int> m_editingTextAnnotationId;
+    QVector<HistorySnapshot> m_undoStack;
+    QVector<HistorySnapshot> m_redoStack;
 };
