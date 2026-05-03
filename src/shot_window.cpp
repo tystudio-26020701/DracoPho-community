@@ -40,6 +40,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace {
 
@@ -537,6 +538,7 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     m_toolbar = new QWidget(this);
     m_toolbar->setObjectName(QStringLiteral("shotToolbar"));
     m_toolbar->setStyleSheet(panelStyleSheet());
+    m_toolbar->installEventFilter(this);
 
     auto *layout = new QHBoxLayout(m_toolbar);
     layout->setContentsMargins(10, 10, 10, 10);
@@ -554,6 +556,16 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     layout->addWidget(addToolbarButton(Action::ToolMosaic, QStringLiteral("M")));
     layout->addWidget(addToolbarButton(Action::Undo, QStringLiteral("Ctrl+Z")));
     layout->addWidget(addToolbarButton(Action::Redo, QStringLiteral("Ctrl+Shift+Z")));
+    for (Action action : {Action::OpenWith, Action::Copy, Action::Save, Action::Cancel}) {
+        const QString shortcut = action == Action::OpenWith ? QStringLiteral("Open")
+            : action == Action::Copy                 ? QStringLiteral("Ctrl+C")
+            : action == Action::Save                 ? QStringLiteral("Ctrl+S")
+                                                     : QStringLiteral("Esc");
+        QPushButton *button = addToolbarButton(action, shortcut);
+        button->hide();
+        m_fullscreenActionButtons.append(button);
+        layout->addWidget(button);
+    }
     m_toolbar->hide();
 
     m_actionToolbar = new QWidget(this);
@@ -663,6 +675,9 @@ void ShotWindow::startFullscreenAnnotation()
 
     m_mode = Mode::Editing;
     m_dragging = false;
+    m_fullscreenAnnotation = true;
+    m_toolbarDragging = false;
+    m_toolbarUserPlaced = false;
     m_selection = QRectF(QPointF(0, 0), QSizeF(m_frozenFrame.size()));
     m_annotations.clear();
     m_redoStack.clear();
@@ -673,13 +688,13 @@ void ShotWindow::startFullscreenAnnotation()
     }
     setTool(Tool::Pen);
     if (m_toolbar) {
+        setFullscreenActionButtonsVisible(true);
         m_toolbar->show();
     }
     if (m_actionToolbar) {
-        m_actionToolbar->show();
+        m_actionToolbar->hide();
     }
     updateToolbarGeometry();
-    updateActionToolbarGeometry();
     update();
 }
 
@@ -692,6 +707,9 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
     button->setFocusPolicy(Qt::NoFocus);
     button->setToolTip(QStringLiteral("%1 (%2)").arg(actionName(action), shortcutText));
     button->setProperty("action", actionName(action));
+    if (!parentToolbar && action == Action::ToolMove) {
+        button->installEventFilter(this);
+    }
     if (action == Action::Save) {
         button->setProperty("role", QStringLiteral("primary"));
     } else if (action == Action::Cancel) {
@@ -797,6 +815,46 @@ QVector<ShotWindow::DesktopApp> ShotWindow::imageDesktopApps() const
 
 bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
 {
+    const bool isFullscreenMoveButton = m_fullscreenAnnotation
+        && watched->property("action").toString() == actionName(Action::ToolMove);
+    if (isFullscreenMoveButton) {
+        if (event->type() == QEvent::MouseButtonPress) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton) {
+                auto *eventWidget = qobject_cast<QWidget *>(watched);
+                if (!eventWidget) {
+                    return false;
+                }
+                m_dragging = true;
+                m_toolbarDragging = true;
+                m_toolbarDragStart = eventWidget->mapTo(this, mouseEvent->pos());
+                m_toolbarBeforeDrag = m_toolbar->geometry();
+                setCursor(Qt::SizeAllCursor);
+                return true;
+            }
+        } else if (event->type() == QEvent::MouseMove && m_toolbarDragging) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            auto *eventWidget = qobject_cast<QWidget *>(watched);
+            if (!eventWidget) {
+                return false;
+            }
+            const QPoint delta = eventWidget->mapTo(this, mouseEvent->pos()) - m_toolbarDragStart;
+            m_toolbarUserPlaced = true;
+            m_toolbar->setGeometry(clampedToolbarGeometry(m_toolbarBeforeDrag.translated(delta)));
+            updateOpenWithPanelGeometry();
+            return true;
+        } else if (event->type() == QEvent::MouseButtonRelease && m_toolbarDragging) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton) {
+                m_dragging = false;
+                m_toolbarDragging = false;
+                updateCursor();
+                updateOpenWithPanelGeometry();
+                return true;
+            }
+        }
+    }
+
     if (watched == m_textEditor && event->type() == QEvent::KeyPress) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
         if (keyEvent->key() == Qt::Key_Escape) {
@@ -810,6 +868,15 @@ bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
     }
 
     return QWidget::eventFilter(watched, event);
+}
+
+void ShotWindow::setFullscreenActionButtonsVisible(bool visible)
+{
+    for (QPushButton *button : std::as_const(m_fullscreenActionButtons)) {
+        if (button) {
+            button->setVisible(visible);
+        }
+    }
 }
 
 void ShotWindow::paintEvent(QPaintEvent *)
@@ -844,7 +911,7 @@ void ShotWindow::paintEvent(QPaintEvent *)
         painter.setBrush(Qt::NoBrush);
         painter.drawRoundedRect(widgetSelection, 3.0, 3.0);
 
-        if (m_tool == Tool::Move) {
+        if (m_tool == Tool::Move && !m_fullscreenAnnotation) {
             painter.setPen(Qt::NoPen);
             painter.setBrush(QColor(94, 234, 212));
             const QVector<QPointF> handles = {
@@ -919,7 +986,8 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     const QPointF imagePoint = widgetToImage(event->position());
     if (m_openWithPanel && m_openWithPanel->isVisible()
         && !m_openWithPanel->geometry().contains(event->pos())
-        && (!m_actionToolbar || !m_actionToolbar->geometry().contains(event->pos()))) {
+        && (!m_actionToolbar || !m_actionToolbar->geometry().contains(event->pos()))
+        && (!m_toolbar || !m_toolbar->geometry().contains(event->pos()))) {
         m_openWithPanel->hide();
     }
     if (m_textEditor && m_textEditor->isVisible() && !m_textEditor->geometry().contains(event->pos())) {
@@ -938,7 +1006,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    if (m_tool == Tool::Move) {
+    if (m_tool == Tool::Move && !m_fullscreenAnnotation) {
         m_selectionDrag = selectionDragAt(imagePoint);
         if (m_selectionDrag == SelectionDrag::None) {
             updateCursor();
@@ -1013,7 +1081,18 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
-    if (m_mode == Mode::Editing && m_tool == Tool::Move && !m_dragging) {
+    if (m_fullscreenAnnotation && m_toolbarDragging) {
+        const QPoint delta = event->pos() - m_toolbarDragStart;
+        QRect toolbarGeometry = m_toolbarBeforeDrag.translated(delta);
+        if (m_toolbar) {
+            m_toolbarUserPlaced = true;
+            m_toolbar->setGeometry(clampedToolbarGeometry(toolbarGeometry));
+        }
+        updateOpenWithPanelGeometry();
+        return;
+    }
+
+    if (m_mode == Mode::Editing && m_tool == Tool::Move && !m_fullscreenAnnotation && !m_dragging) {
         const SelectionDrag hoverDrag = selectionDragAt(imagePoint);
         switch (hoverDrag) {
         case SelectionDrag::Left:
@@ -1042,7 +1121,7 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
-    if (m_mode == Mode::Editing && m_tool == Tool::Move && m_dragging && m_selectionDrag != SelectionDrag::None) {
+    if (m_mode == Mode::Editing && m_tool == Tool::Move && !m_fullscreenAnnotation && m_dragging && m_selectionDrag != SelectionDrag::None) {
         const QPointF clamped = clampImagePoint(imagePoint);
         const QRectF start = m_selectionBeforeDrag;
         const qreal maxWidth = m_frozenFrame.width();
@@ -1117,6 +1196,13 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
     }
 
     m_dragging = false;
+    if (m_toolbarDragging) {
+        m_toolbarDragging = false;
+        updateCursor();
+        updateOpenWithPanelGeometry();
+        return;
+    }
+
     if (m_mode == Mode::Selecting) {
         m_selection = normalizedSelection();
         if (!hasUsableSelection()) {
@@ -1125,7 +1211,10 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
             return;
         }
         m_mode = Mode::Editing;
+        m_fullscreenAnnotation = false;
+        m_toolbarUserPlaced = false;
         setTool(Tool::Pen);
+        setFullscreenActionButtonsVisible(false);
         m_toolbar->show();
         m_actionToolbar->show();
         revealSelectionInfo();
@@ -1135,7 +1224,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
-    if (m_tool == Tool::Move && m_selectionDrag != SelectionDrag::None) {
+    if (m_tool == Tool::Move && !m_fullscreenAnnotation && m_selectionDrag != SelectionDrag::None) {
         m_selection = normalizedSelection();
         m_selectionDrag = SelectionDrag::None;
         revealSelectionInfo();
@@ -1258,6 +1347,9 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
 void ShotWindow::beginSelection(QPointF imagePoint)
 {
     m_dragging = true;
+    m_fullscreenAnnotation = false;
+    m_toolbarDragging = false;
+    m_toolbarUserPlaced = false;
     m_selectionDrag = SelectionDrag::None;
     m_selectionStart = imagePoint;
     m_selection = QRectF(imagePoint, imagePoint);
@@ -1268,6 +1360,7 @@ void ShotWindow::beginSelection(QPointF imagePoint)
     if (m_openWithPanel) {
         m_openWithPanel->hide();
     }
+    setFullscreenActionButtonsVisible(false);
     m_annotations.clear();
     m_redoStack.clear();
     m_draft.reset();
@@ -1326,7 +1419,7 @@ void ShotWindow::updateCursor()
         return;
     }
 
-    if (m_tool == Tool::Move) {
+    if (m_tool == Tool::Move && !m_fullscreenAnnotation) {
         switch (m_selectionDrag) {
         case SelectionDrag::Left:
         case SelectionDrag::Right:
@@ -1630,6 +1723,13 @@ void ShotWindow::updateFrozenImageRect()
     m_frozenImageRect = QRectF(topLeft, frameSize);
 }
 
+QRect ShotWindow::clampedToolbarGeometry(QRect toolbarGeometry) const
+{
+    toolbarGeometry.moveLeft(std::clamp(toolbarGeometry.left(), 8, std::max(8, width() - toolbarGeometry.width() - 8)));
+    toolbarGeometry.moveTop(std::clamp(toolbarGeometry.top(), 8, std::max(8, height() - toolbarGeometry.height() - 8)));
+    return toolbarGeometry;
+}
+
 void ShotWindow::updateToolbarGeometry()
 {
     if (!m_toolbar || !hasUsableSelection()) {
@@ -1637,6 +1737,14 @@ void ShotWindow::updateToolbarGeometry()
     }
 
     m_toolbar->adjustSize();
+    if (m_fullscreenAnnotation && m_toolbarUserPlaced) {
+        const QSize toolbarSize = m_toolbar->sizeHint();
+        QRect toolbarGeometry = m_toolbar->geometry();
+        toolbarGeometry.setSize(toolbarSize);
+        m_toolbar->setGeometry(clampedToolbarGeometry(toolbarGeometry));
+        return;
+    }
+
     const QRectF selection = imageRectToWidget(normalizedSelection());
     const QSize toolbarSize = m_toolbar->sizeHint();
     int x = qRound(selection.center().x() - toolbarSize.width() / 2.0);
@@ -1652,7 +1760,7 @@ void ShotWindow::updateToolbarGeometry()
 
 void ShotWindow::updateActionToolbarGeometry()
 {
-    if (!m_actionToolbar || !hasUsableSelection()) {
+    if (!m_actionToolbar || !hasUsableSelection() || m_fullscreenAnnotation) {
         return;
     }
 
@@ -1752,7 +1860,9 @@ void ShotWindow::updateOpenWithPanelGeometry()
     m_openWithPanel->adjustSize();
     const QSize panelSize(std::min(340, std::max(280, m_openWithPanel->sizeHint().width())),
                           std::min(540, std::max(80, m_openWithPanel->sizeHint().height())));
-    const QRect toolbarRect = m_actionToolbar ? m_actionToolbar->geometry() : QRect(width() - 64, height() / 2 - 80, 56, 160);
+    const QRect toolbarRect = m_fullscreenAnnotation && m_toolbar
+        ? m_toolbar->geometry()
+        : (m_actionToolbar ? m_actionToolbar->geometry() : QRect(width() - 64, height() / 2 - 80, 56, 160));
     int x = toolbarRect.left() - panelSize.width() - kToolbarMargin;
     int y = toolbarRect.top();
     if (x < 8) {

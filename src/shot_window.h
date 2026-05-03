@@ -144,6 +144,8 @@ private:
     void updateActionToolbarGeometry();
     void updateToolbarGeometry();
     void updateToolbarState();
+    void setFullscreenActionButtonsVisible(bool visible);
+    QRect clampedToolbarGeometry(QRect toolbarGeometry) const;
 
     QImage m_frozenFrame;
     QString m_outputName;
@@ -156,6 +158,9 @@ private:
     Mode m_mode = Mode::Selecting;
     Tool m_tool = Tool::Pen;
     bool m_dragging = false;
+    bool m_fullscreenAnnotation = false;
+    bool m_toolbarDragging = false;
+    bool m_toolbarUserPlaced = false;
     bool m_committingText = false;
     bool m_showSelectionInfo = false;
     bool m_showWheelPreview = false;
@@ -175,6 +180,9 @@ private:
     QWidget *m_colorPalette = nullptr;
     QWidget *m_colorPalettePreview = nullptr;
     QPoint m_colorPaletteAnchor;
+    QPoint m_toolbarDragStart;
+    QRect m_toolbarBeforeDrag;
+    QVector<QPushButton *> m_fullscreenActionButtons;
     QTextEdit *m_textEditor = nullptr;
     QPointF m_textEditorImagePoint;
     QVector<Annotation> m_redoStack;
