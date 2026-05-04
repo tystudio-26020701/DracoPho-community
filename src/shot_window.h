@@ -41,6 +41,7 @@ public:
         Undo,
         Redo,
         OpenWith,
+        Pin,
         Copy,
         Save,
         Cancel,
@@ -50,6 +51,7 @@ public:
         QString name;
         QString desktopPath;
         QString exec;
+        QString icon;
     };
 
     explicit ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent = nullptr);
@@ -146,7 +148,7 @@ private:
     QRectF selectedAnnotationsBounds() const;
     QVector<int> annotationsInRect(QRectF imageRect) const;
     SelectionDrag annotationBoundsDragAt(QPointF imagePoint, QRectF bounds) const;
-    QRectF resizedBounds(QRectF start, SelectionDrag drag, QPointF imagePoint) const;
+    QRectF resizedBounds(QRectF start, SelectionDrag drag, QPointF imagePoint, bool keepAspectRatio) const;
     QVector<QPointF> selectionHandlePoints(QRectF rect) const;
     QRectF selectedAnnotationDeleteButtonRect() const;
     SelectionDrag annotationDragAt(QPointF imagePoint, int annotationId) const;
@@ -155,7 +157,7 @@ private:
     void moveAnnotation(Annotation &annotation, QPointF delta) const;
     void transformAnnotation(Annotation &annotation, QRectF oldBounds, QRectF newBounds) const;
     void beginAnnotationDrag(int annotationId, SelectionDrag drag, QPointF imagePoint);
-    void updateAnnotationDrag(QPointF imagePoint);
+    void updateAnnotationDrag(QPointF imagePoint, bool keepAspectRatio);
     void beginAnnotationSelectionBox(QPointF imagePoint);
     void updateAnnotationSelectionBox(QPointF imagePoint);
     void commitAnnotationSelectionBox();
@@ -176,6 +178,7 @@ private:
     void beginTextAnnotation(QPointF imagePoint);
     void beginEditingSelectedTextAnnotation();
     void openSelectionWithDesktop(const DesktopApp &app);
+    void pinSelection();
     QString saveSelectionToTempFile() const;
     void setCurrentColor(QColor color);
     void saveSelection();
@@ -240,6 +243,7 @@ private:
     QColor m_currentColor = QColor(255, 77, 77);
     qreal m_penWidth = 2.0;
     qreal m_shapeWidth = 3.0;
+    qreal m_numberWidth = 3.0;
     qreal m_mosaicBlockSize = 14.0;
     bool m_shapeFilled = false;
     qreal m_rectangleCornerRadius = 0.0;

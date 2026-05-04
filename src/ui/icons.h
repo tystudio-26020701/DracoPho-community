@@ -15,4 +15,8 @@ QString actionName(ShotWindow::Action action);
 // drawn with QPainter so the binary stays free of image assets.
 QIcon makeToolIcon(ShotWindow::Action action);
 
+// Hollow square when filled=false, solid square when filled=true. Used by the
+// Fill toggle so the glyph itself communicates the state.
+QIcon makeFillIcon(bool filled);
+
 }  // namespace markshot::ui

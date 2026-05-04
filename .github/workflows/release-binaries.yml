@@ -1,0 +1,82 @@
+name: Release Binaries
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, for example v0.1.2'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  linux:
+    name: Build Linux x86_64 binary package
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+
+    steps:
+      - name: Resolve tag
+        id: version
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            echo "No release tag was provided" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.version.outputs.tag }}
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            cmake \
+            gcc \
+            ninja \
+            qt6-base \
+            qt6-wayland \
+            layer-shell-qt
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package install tree
+        shell: bash
+        run: |
+          cmake --install build --prefix "$PWD/app"
+          install -Dm644 LICENSE app/share/licenses/mark-shot/LICENSE
+          install -Dm644 README.md app/share/doc/mark-shot/README.md
+          install -Dm644 README.zh-CN.md app/share/doc/mark-shot/README.zh-CN.md
+
+          ASSET="mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz"
+          tar -C app -czf "$ASSET" .
+          sha256sum "$ASSET" > "$ASSET.sha256"
+
+      - name: Upload binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz
+            mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz.sha256
