@@ -1,12 +1,20 @@
 #pragma once
 
 #include <QImage>
+#include <QRect>
 #include <QString>
 
 struct CaptureResult {
     QImage image;
     QString error;
     QString outputName;
+    QRect sourceGeometry;
 };
 
-CaptureResult captureScreenFrame(const QString &preferredOutputName, bool allOutputs);
+struct CaptureRequest {
+    QString preferredOutputName;
+    QRect sourceGeometry;
+    bool allOutputs = false;
+};
+
+CaptureResult captureScreenFrame(const CaptureRequest &request);

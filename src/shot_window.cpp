@@ -63,6 +63,9 @@ constexpr qreal kMinNumberWidth = 1.0;
 constexpr qreal kMaxNumberWidth = 72.0;
 constexpr qreal kMinMosaicBlockSize = 4.0;
 constexpr qreal kMaxMosaicBlockSize = 48.0;
+constexpr qreal kMinLaserWidth = 4.0;
+constexpr qreal kMaxLaserWidth = 48.0;
+constexpr qint64 kLaserLifetimeMs = 1800;
 
 QRectF normalizedRect(QPointF a, QPointF b)
 {
@@ -401,6 +404,8 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     layout->addWidget(addToolbarButton(Action::ToolText, QStringLiteral("T")));
     layout->addWidget(addToolbarButton(Action::ToolNumber, QStringLiteral("N")));
     layout->addWidget(addToolbarButton(Action::ToolMosaic, QStringLiteral("M")));
+    layout->addWidget(addToolbarButton(Action::ToolLaser, QStringLiteral("G")));
+    layout->addWidget(addToolbarButton(Action::ToggleCaptureScope, QStringLiteral("F")));
     layout->addWidget(addToolbarButton(Action::Clear, QStringLiteral("Clear")));
     layout->addWidget(addToolbarButton(Action::Undo, QStringLiteral("Ctrl+Z")));
     layout->addWidget(addToolbarButton(Action::Redo, QStringLiteral("Ctrl+Shift+Z")));
@@ -446,6 +451,15 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     m_propertyWidthSlider->setToolTip(QStringLiteral("Selected object width or size"));
     connect(m_propertyWidthSlider, &QSlider::valueChanged, this, [this](int value) { setSelectedAnnotationWidth(value); });
     propertyLayout->addWidget(m_propertyWidthSlider);
+    m_propertyOpacityLabel = new QLabel(QStringLiteral("Opacity 100%"), m_annotationPropertyPanel);
+    propertyLayout->addWidget(m_propertyOpacityLabel);
+    m_propertyOpacitySlider = new QSlider(Qt::Horizontal, m_annotationPropertyPanel);
+    m_propertyOpacitySlider->setFocusPolicy(Qt::NoFocus);
+    m_propertyOpacitySlider->setRange(0, 100);
+    m_propertyOpacitySlider->setFixedWidth(110);
+    m_propertyOpacitySlider->setToolTip(QStringLiteral("Selected object opacity"));
+    connect(m_propertyOpacitySlider, &QSlider::valueChanged, this, [this](int value) { setSelectedAnnotationOpacity(value); });
+    propertyLayout->addWidget(m_propertyOpacitySlider);
     m_propertyColorButton = new QPushButton(m_annotationPropertyPanel);
     m_propertyColorButton->setFocusPolicy(Qt::NoFocus);
     m_propertyColorButton->setToolTip(QStringLiteral("Change selected object color"));
@@ -563,6 +577,11 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     m_textEditor->setToolTip(QStringLiteral("Enter inserts newline, click outside commits, Esc cancels"));
     m_textEditor->hide();
     m_textEditor->installEventFilter(this);
+
+    m_laserClock.start();
+    m_laserTimer = new QTimer(this);
+    m_laserTimer->setInterval(33);
+    connect(m_laserTimer, &QTimer::timeout, this, [this] { cleanupLaserStrokes(); });
 }
 
 bool ShotWindow::configureLayerShell(QScreen *screen)
@@ -616,24 +635,38 @@ bool ShotWindow::configureLayerShell(QScreen *screen)
 
 void ShotWindow::startFullscreenAnnotation()
 {
+    enterFullscreenAnnotation(true);
+}
+
+void ShotWindow::enterFullscreenAnnotation(bool resetAnnotations)
+{
     commitTextEditor();
     if (m_colorPalette) {
         m_colorPalette->hide();
     }
 
+    if (!m_fullscreenAnnotation && hasUsableSelection()) {
+        m_selectionBeforeFullscreenAnnotation = normalizedSelection();
+    }
     m_mode = Mode::Editing;
     m_dragging = false;
     m_fullscreenAnnotation = true;
     m_toolbarDragging = false;
     m_toolbarUserPlaced = false;
     m_selection = QRectF(QPointF(0, 0), QSizeF(m_frozenFrame.size()));
-    m_annotations.clear();
-    m_undoStack.clear();
-    m_redoStack.clear();
+    if (resetAnnotations) {
+        m_annotations.clear();
+        m_undoStack.clear();
+        m_redoStack.clear();
+        m_laserStrokes.clear();
+        m_laserDraft.reset();
+    }
     m_draft.reset();
     setSelectedAnnotations({});
-    m_nextNumber = 1;
-    m_nextAnnotationId = 1;
+    if (resetAnnotations) {
+        m_nextNumber = 1;
+        m_nextAnnotationId = 1;
+    }
     if (m_openWithPanel) {
         m_openWithPanel->hide();
     }
@@ -655,7 +688,63 @@ void ShotWindow::startFullscreenAnnotation()
         m_actionToolbar->hide();
     }
     updateToolbarGeometry();
+    updateToolbarState();
     update();
+}
+
+void ShotWindow::leaveFullscreenAnnotation()
+{
+    commitTextEditor();
+    m_dragging = false;
+    m_toolbarDragging = false;
+    m_toolbarUserPlaced = false;
+    m_fullscreenAnnotation = false;
+    m_selectionDrag = SelectionDrag::None;
+    m_annotationDrag = SelectionDrag::None;
+    m_annotationSelectionBoxActive = false;
+    m_draft.reset();
+    m_laserDraft.reset();
+
+    if (m_selectionBeforeFullscreenAnnotation.has_value()) {
+        m_selection = *m_selectionBeforeFullscreenAnnotation;
+    } else {
+        m_mode = Mode::Selecting;
+        m_selection = {};
+        if (m_toolbar) {
+            m_toolbar->hide();
+        }
+        if (m_actionToolbar) {
+            m_actionToolbar->hide();
+        }
+        setFullscreenActionButtonsVisible(false);
+        updateToolbarState();
+        update();
+        return;
+    }
+
+    m_mode = Mode::Editing;
+    setFullscreenActionButtonsVisible(false);
+    if (m_toolbar) {
+        m_toolbar->show();
+    }
+    if (m_actionToolbar) {
+        m_actionToolbar->show();
+    }
+    updateToolbarGeometry();
+    updateActionToolbarGeometry();
+    updateOpenWithPanelGeometry();
+    updateAnnotationPropertyPanelGeometry();
+    updateToolbarState();
+    update();
+}
+
+void ShotWindow::toggleCaptureScope()
+{
+    if (m_fullscreenAnnotation) {
+        leaveFullscreenAnnotation();
+    } else {
+        enterFullscreenAnnotation(false);
+    }
 }
 
 QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcutText, QWidget *parentToolbar)
@@ -700,6 +789,10 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
         connect(button, &QPushButton::clicked, this, [this] { setTool(Tool::Number); });
     } else if (action == Action::ToolMosaic) {
         connect(button, &QPushButton::clicked, this, [this] { setTool(Tool::Mosaic); });
+    } else if (action == Action::ToolLaser) {
+        connect(button, &QPushButton::clicked, this, [this] { setTool(Tool::Laser); });
+    } else if (action == Action::ToggleCaptureScope) {
+        connect(button, &QPushButton::clicked, this, [this] { toggleCaptureScope(); });
     } else if (action == Action::Clear) {
         connect(button, &QPushButton::clicked, this, [this] { clearAnnotations(); });
     } else if (action == Action::Undo) {
@@ -874,6 +967,16 @@ void ShotWindow::paintEvent(QPaintEvent *)
         }
         if (m_draft.has_value()) {
             drawAnnotation(painter, *m_draft, true);
+        }
+        const qint64 now = m_laserClock.isValid() ? m_laserClock.elapsed() : 0;
+        for (const LaserStroke &stroke : m_laserStrokes) {
+            const qreal opacity = std::clamp(static_cast<qreal>(stroke.expiresAt - now) / kLaserLifetimeMs, 0.0, 1.0);
+            if (opacity > 0.0) {
+                drawLaserStroke(painter, stroke, true, opacity);
+            }
+        }
+        if (m_laserDraft.has_value()) {
+            drawLaserStroke(painter, *m_laserDraft, true, 1.0);
         }
         drawSelectedAnnotationFrame(painter);
         if (m_annotationSelectionBoxActive) {
@@ -1072,6 +1175,11 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    if (m_tool == Tool::Laser) {
+        beginLaserStroke(imagePoint);
+        return;
+    }
+
     m_dragging = true;
     m_dragStart = imagePoint;
     Annotation annotation;
@@ -1232,6 +1340,11 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
+    if (m_mode == Mode::Editing && m_tool == Tool::Laser && m_dragging && m_laserDraft.has_value()) {
+        updateLaserStroke(imagePoint);
+        return;
+    }
+
     if (m_mode != Mode::Editing || !m_dragging || !m_draft.has_value()) {
         return;
     }
@@ -1314,6 +1427,9 @@ void ShotWindow::mouseDoubleClickEvent(QMouseEvent *event)
         // upcoming mouseReleaseEvent (which still fires for the second
         // click of the double-click) does not commit a tiny stamp.
         m_draft.reset();
+        break;
+    case Tool::Laser:
+        m_laserDraft.reset();
         break;
     case Tool::Text:
         // First press opened a fresh, empty text editor at the click point.
@@ -1403,6 +1519,13 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
+    if (m_tool == Tool::Laser && m_laserDraft.has_value()) {
+        commitLaserStroke();
+        updateCursor();
+        update();
+        return;
+    }
+
     commitDraft();
 }
 
@@ -1438,6 +1561,8 @@ void ShotWindow::wheelEvent(QWheelEvent *event)
         m_mosaicBlockSize = std::clamp(m_mosaicBlockSize + steps * 2.0, kMinMosaicBlockSize, kMaxMosaicBlockSize);
     } else if (m_tool == Tool::Number) {
         m_numberWidth = std::clamp(m_numberWidth + steps * 2.0, kMinNumberWidth, kMaxNumberWidth);
+    } else if (m_tool == Tool::Laser) {
+        m_laserWidth = std::clamp(m_laserWidth + steps * 2.0, kMinLaserWidth, kMaxLaserWidth);
     } else if (m_tool == Tool::Pen || m_tool == Tool::Highlighter) {
         m_penWidth = std::clamp(m_penWidth + steps * 1.0, kMinStrokeWidth, kMaxStrokeWidth);
     } else {
@@ -1533,6 +1658,12 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
     case Qt::Key_M:
         setTool(Tool::Mosaic);
         break;
+    case Qt::Key_G:
+        setTool(Tool::Laser);
+        break;
+    case Qt::Key_F:
+        toggleCaptureScope();
+        break;
     default:
         QWidget::keyPressEvent(event);
         break;
@@ -1546,6 +1677,7 @@ void ShotWindow::beginSelection(QPointF imagePoint)
     m_toolbarDragging = false;
     m_toolbarUserPlaced = false;
     m_selectionDrag = SelectionDrag::None;
+    m_selectionBeforeFullscreenAnnotation.reset();
     m_selectionStart = imagePoint;
     m_selection = QRectF(imagePoint, imagePoint);
     if (m_textEditor) {
@@ -1569,6 +1701,8 @@ void ShotWindow::beginSelection(QPointF imagePoint)
     m_undoStack.clear();
     m_redoStack.clear();
     m_draft.reset();
+    m_laserStrokes.clear();
+    m_laserDraft.reset();
     setSelectedAnnotations({});
     m_nextNumber = 1;
     m_nextAnnotationId = 1;
@@ -1618,6 +1752,9 @@ void ShotWindow::setTool(Tool tool)
     m_selectionDrag = SelectionDrag::None;
     m_annotationDrag = SelectionDrag::None;
     m_annotationSelectionBoxActive = false;
+    if (tool != Tool::Laser) {
+        m_laserDraft.reset();
+    }
     m_tool = tool;
     if (m_tool != Tool::Select) {
         setSelectedAnnotations({});
@@ -1785,6 +1922,7 @@ QRectF ShotWindow::annotationBounds(const Annotation &annotation) const
     switch (annotation.tool) {
     case Tool::Move:
     case Tool::Select:
+    case Tool::Laser:
         return {};
     case Tool::Pen:
     case Tool::Highlighter:
@@ -2131,6 +2269,7 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
     switch (annotation.tool) {
     case Tool::Move:
     case Tool::Select:
+    case Tool::Laser:
         return;
     case Tool::Rectangle:
     case Tool::Ellipse:
@@ -2309,6 +2448,8 @@ qreal ShotWindow::currentToolWidth() const
         return m_numberWidth;
     case Tool::Mosaic:
         return m_mosaicBlockSize;
+    case Tool::Laser:
+        return m_laserWidth;
     }
 
     return m_shapeWidth;
@@ -2338,6 +2479,8 @@ qreal ShotWindow::currentToolPreviewSize() const
         return std::max<qreal>(26.0, (13.0 + currentToolWidth() * 1.35) * scale * 2.0);
     case Tool::Mosaic:
         return std::max<qreal>(2.0, currentToolWidth() * scale);
+    case Tool::Laser:
+        return std::max<qreal>(8.0, currentToolWidth() * scale);
     }
 
     return std::max<qreal>(1.5, currentToolWidth() * scale);
@@ -2445,6 +2588,8 @@ QString ShotWindow::currentToolName() const
         return QStringLiteral("Number");
     case Tool::Mosaic:
         return QStringLiteral("Mosaic");
+    case Tool::Laser:
+        return QStringLiteral("Laser");
     }
 
     return QStringLiteral("Tool");
@@ -2619,6 +2764,7 @@ void ShotWindow::updateAnnotationPropertyPanel()
     const Tool panelTool = groupSelection ? Tool::Select : (annotation ? annotation->tool : m_tool);
     const QColor panelColor = firstSelectedAnnotation ? firstSelectedAnnotation->color : m_currentColor;
     const qreal panelWidth = firstSelectedAnnotation ? firstSelectedAnnotation->width : currentToolWidth();
+    const int panelOpacity = qRound(panelColor.alphaF() * 100.0);
     const bool panelFilled = annotation ? annotation->filled : m_shapeFilled;
     const qreal panelRadius = annotation ? annotation->cornerRadius : m_rectangleCornerRadius;
     const QString panelFontFamily = annotation ? annotation->fontFamily : m_textFontFamily;
@@ -2654,6 +2800,9 @@ void ShotWindow::updateAnnotationPropertyPanel()
         break;
     case Tool::Mosaic:
         title = QStringLiteral("Mosaic");
+        break;
+    case Tool::Laser:
+        title = QStringLiteral("Laser");
         break;
     }
 
@@ -2708,10 +2857,19 @@ void ShotWindow::updateAnnotationPropertyPanel()
             m_propertyWidthSlider->setRange(qRound(kMinMosaicBlockSize), qRound(kMaxMosaicBlockSize));
         } else if (panelTool == Tool::Number) {
             m_propertyWidthSlider->setRange(qRound(kMinNumberWidth), qRound(kMaxNumberWidth));
+        } else if (panelTool == Tool::Laser) {
+            m_propertyWidthSlider->setRange(qRound(kMinLaserWidth), qRound(kMaxLaserWidth));
         } else {
             m_propertyWidthSlider->setRange(qRound(kMinStrokeWidth), qRound(kMaxStrokeWidth));
         }
         m_propertyWidthSlider->setValue(qRound(panelWidth));
+    }
+    if (m_propertyOpacityLabel) {
+        m_propertyOpacityLabel->setText(QStringLiteral("Opacity %1%").arg(panelOpacity));
+    }
+    if (m_propertyOpacitySlider) {
+        const QSignalBlocker blocker(m_propertyOpacitySlider);
+        m_propertyOpacitySlider->setValue(panelOpacity);
     }
     if (m_propertyColorButton) {
         m_propertyColorButton->setStyleSheet(markshot::theme::propertyColorButtonStyleSheet(panelColor));
@@ -2887,6 +3045,9 @@ void ShotWindow::setSelectedAnnotationWidth(int width)
         case Tool::Mosaic:
             m_mosaicBlockSize = width;
             break;
+        case Tool::Laser:
+            m_laserWidth = std::clamp<qreal>(width, kMinLaserWidth, kMaxLaserWidth);
+            break;
         case Tool::Move:
         case Tool::Select:
             return;
@@ -2904,6 +3065,51 @@ void ShotWindow::setSelectedAnnotationWidth(int width)
     }
     updateAnnotationPropertyPanel();
     updateColorPalettePreview();
+    update();
+}
+
+void ShotWindow::setSelectedAnnotationOpacity(int opacity)
+{
+    opacity = std::clamp(opacity, 0, 100);
+    const int alpha = qRound(opacity * 255.0 / 100.0);
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        bool changed = false;
+        for (int id : selectedIds) {
+            const Annotation *annotation = annotationById(id);
+            if (annotation && annotation->color.alpha() != alpha) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
+            return;
+        }
+        pushHistorySnapshot();
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id)) {
+                annotation->color.setAlpha(alpha);
+            }
+        }
+    } else {
+        if (m_currentColor.alpha() == alpha) {
+            return;
+        }
+        m_currentColor.setAlpha(alpha);
+    }
+
+    if (m_draft.has_value()) {
+        m_draft->color.setAlpha(alpha);
+    }
+    if (m_laserDraft.has_value()) {
+        m_laserDraft->color.setAlpha(alpha);
+    }
+    if (m_propertyColorPicker && m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()) {
+        const QSignalBlocker blocker(m_propertyColorPicker);
+        m_propertyColorPicker->setColor(selectedIds.isEmpty() ? m_currentColor : annotationById(selectedIds.first())->color);
+    }
+    updateColorPalettePreview();
+    updateAnnotationPropertyPanel();
     update();
 }
 
@@ -3071,13 +3277,15 @@ void ShotWindow::applyPropertyColor(QColor color)
 void ShotWindow::clearAnnotations()
 {
     commitTextEditor();
-    if (m_annotations.isEmpty() && !m_draft.has_value()) {
+    if (m_annotations.isEmpty() && !m_draft.has_value() && m_laserStrokes.isEmpty() && !m_laserDraft.has_value()) {
         return;
     }
 
     pushHistorySnapshot();
     m_annotations.clear();
     m_draft.reset();
+    m_laserStrokes.clear();
+    m_laserDraft.reset();
     setSelectedAnnotations({});
     m_annotationDrag = SelectionDrag::None;
     m_annotationSelectionBoxActive = false;
@@ -3339,9 +3547,11 @@ void ShotWindow::updateToolbarState()
     }
 
     const QString active = currentToolName();
+    const QString scopeAction = markshot::ui::actionName(Action::ToggleCaptureScope);
     const auto buttons = m_toolbar->findChildren<QPushButton *>();
     for (QPushButton *button : buttons) {
-        const bool isActiveTool = button->property("action").toString() == active;
+        const QString action = button->property("action").toString();
+        const bool isActiveTool = action == active || (action == scopeAction && m_fullscreenAnnotation);
         button->setProperty("active", isActiveTool);
         button->style()->unpolish(button);
         button->style()->polish(button);
@@ -3372,6 +3582,7 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
     switch (annotation.tool) {
     case Tool::Move:
     case Tool::Select:
+    case Tool::Laser:
         break;
     case Tool::Pen: {
         if (annotation.points.size() < 2) {
@@ -3389,7 +3600,7 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
             break;
         }
         QColor color = annotation.color;
-        color.setAlpha(120);
+        color.setAlpha(qRound(annotation.color.alphaF() * 120.0));
         painter.save();
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
         painter.setPen(QPen(color, std::max<qreal>(6.0, penWidth), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
@@ -3449,7 +3660,10 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         }
         break;
     case Tool::Mosaic:
+        painter.save();
+        painter.setOpacity(annotation.color.alphaF());
         drawMosaic(painter, annotation.rect, annotation.width, widgetCoordinates);
+        painter.restore();
         break;
     }
     painter.restore();
@@ -3514,6 +3728,95 @@ void ShotWindow::drawWheelPreview(QPainter &painter)
     painter.setBrush(m_currentColor);
     painter.drawRect(preview);
     painter.restore();
+}
+
+void ShotWindow::drawLaserStroke(QPainter &painter, const LaserStroke &stroke, bool widgetCoordinates, qreal opacity) const
+{
+    if (stroke.points.size() < 2 || opacity <= 0.0) {
+        return;
+    }
+
+    auto mapPoint = [this, widgetCoordinates](QPointF point) {
+        return widgetCoordinates ? imageToWidget(point) : point;
+    };
+    const qreal scale = widgetCoordinates && !m_frozenImageRect.isEmpty()
+        ? m_frozenImageRect.width() / std::max(1, m_frozenFrame.width())
+        : 1.0;
+    const qreal width = std::max<qreal>(3.0, stroke.width * scale);
+
+    QPainterPath path(mapPoint(stroke.points.first()));
+    for (int i = 1; i < stroke.points.size(); ++i) {
+        path.lineTo(mapPoint(stroke.points.at(i)));
+    }
+
+    const qreal configuredOpacity = stroke.color.alphaF();
+    QColor glow = stroke.color;
+    glow.setAlpha(qRound(80 * opacity * configuredOpacity));
+    QColor core = stroke.color;
+    core.setAlpha(qRound(230 * opacity * configuredOpacity));
+    QColor hot(255, 255, 255, qRound(170 * opacity * configuredOpacity));
+
+    painter.save();
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    painter.setPen(QPen(glow, width * 2.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.drawPath(path);
+    painter.setPen(QPen(core, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.drawPath(path);
+    painter.setPen(QPen(hot, std::max<qreal>(1.4, width * 0.22), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.drawPath(path);
+    painter.restore();
+}
+
+void ShotWindow::beginLaserStroke(QPointF imagePoint)
+{
+    m_dragging = true;
+    m_dragStart = imagePoint;
+    LaserStroke stroke;
+    stroke.points.append(clampImagePoint(imagePoint));
+    stroke.color = m_currentColor;
+    stroke.width = m_laserWidth;
+    stroke.expiresAt = m_laserClock.elapsed() + kLaserLifetimeMs;
+    m_laserDraft = stroke;
+    update();
+}
+
+void ShotWindow::updateLaserStroke(QPointF imagePoint)
+{
+    if (!m_laserDraft.has_value()) {
+        return;
+    }
+    m_laserDraft->points.append(clampImagePoint(imagePoint));
+    update();
+}
+
+void ShotWindow::commitLaserStroke()
+{
+    if (!m_laserDraft.has_value()) {
+        return;
+    }
+    if (m_laserDraft->points.size() >= 2) {
+        m_laserDraft->expiresAt = m_laserClock.elapsed() + kLaserLifetimeMs;
+        m_laserStrokes.append(*m_laserDraft);
+        if (m_laserTimer && !m_laserTimer->isActive()) {
+            m_laserTimer->start();
+        }
+    }
+    m_laserDraft.reset();
+    update();
+}
+
+void ShotWindow::cleanupLaserStrokes()
+{
+    const qint64 now = m_laserClock.elapsed();
+    for (int i = m_laserStrokes.size() - 1; i >= 0; --i) {
+        if (m_laserStrokes.at(i).expiresAt <= now) {
+            m_laserStrokes.removeAt(i);
+        }
+    }
+    if (m_laserStrokes.isEmpty() && m_laserTimer) {
+        m_laserTimer->stop();
+    }
+    update();
 }
 
 void ShotWindow::drawNumber(QPainter &painter, QPointF imagePoint, int number, QColor color, qreal width, bool widgetCoordinates) const

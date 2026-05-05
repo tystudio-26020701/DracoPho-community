@@ -9,6 +9,7 @@
 - Captures the current output by default, with `--all-outputs` for a full compositor capture.
 - Supports region selection, fullscreen annotation, and selection resize or move.
 - Provides pen, line, highlighter, rectangle, ellipse, arrow, text, number, and mosaic tools.
+- Provides a laser pointer tool for temporary teaching marks that fade automatically.
 - Supports undo, redo, save, copy to Wayland clipboard, and open-with actions.
 - Uses a layer-shell overlay by default and can fall back to a regular fullscreen xdg window with `--xdg-window`.
 - Designed for compositors that support `wlr-screencopy`, especially niri.
@@ -70,11 +71,12 @@ Mod+Shift+S { spawn "mark-shot"; }
 ## Controls
 
 - Drag to create a selection.
-- `V`, `S`, `P`, `L`, `H`, `R`, `E`, `A`, `T`, `N`, and `M` switch to move, select, pen, line, highlighter, rectangle, ellipse, arrow, text, number, and mosaic.
+- `V`, `S`, `P`, `L`, `H`, `R`, `E`, `A`, `T`, `N`, `M`, and `G` switch to move, select, pen, line, highlighter, rectangle, ellipse, arrow, text, number, mosaic, and laser.
+- `F` toggles the annotation scope between the current selection and the full captured frame.
 - The move tool drags the selection or resizes it from edges and corners.
 - The select tool picks existing annotations; drag the object or its handles to move or resize it.
 - Middle click switches to the select tool.
-- Drawing tools and selected annotations show a toolbar-attached property panel with a width slider, an alpha-capable Qt color picker, shape fill options, rectangle corner radius, and text font editing where applicable.
+- Drawing tools and selected annotations show a toolbar-attached property panel with width and opacity sliders, an alpha-capable Qt color picker, shape fill options, rectangle corner radius, and text font editing where applicable.
 - Click the red `x` on a selected annotation to delete only that annotation.
 - Hold `Ctrl` while drawing rectangles or ellipses to constrain them to squares or circles.
 - Right click opens the radial color palette.

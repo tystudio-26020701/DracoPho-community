@@ -55,6 +55,10 @@ QString actionName(ShotWindow::Action action)
         return QStringLiteral("Number");
     case ShotWindow::Action::ToolMosaic:
         return QStringLiteral("Mosaic");
+    case ShotWindow::Action::ToolLaser:
+        return QStringLiteral("Laser");
+    case ShotWindow::Action::ToggleCaptureScope:
+        return QStringLiteral("Scope");
     case ShotWindow::Action::Clear:
         return QStringLiteral("Clear");
     case ShotWindow::Action::Undo:
@@ -273,6 +277,35 @@ QIcon makeToolIcon(ShotWindow::Action action)
                 p.drawRoundedRect(QRectF(x, y, tile, tile), 1.0, 1.0);
             }
         }
+        break;
+    }
+    case ShotWindow::Action::ToolLaser: {
+        p.setPen(QPen(QColor(248, 113, 113, 90), 9.0, Qt::SolidLine, Qt::RoundCap));
+        p.drawLine(QPointF(7, 22), QPointF(24, 10));
+        p.setPen(QPen(QColor(248, 113, 113, 210), 3.6, Qt::SolidLine, Qt::RoundCap));
+        p.drawLine(QPointF(7, 22), QPointF(24, 10));
+        p.setPen(QPen(QColor(255, 255, 255, 210), 1.2, Qt::SolidLine, Qt::RoundCap));
+        p.drawLine(QPointF(7, 22), QPointF(24, 10));
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(248, 113, 113, 220));
+        p.drawEllipse(QPointF(24, 10), 3.0, 3.0);
+        p.setBrush(Qt::NoBrush);
+        break;
+    }
+    case ShotWindow::Action::ToggleCaptureScope: {
+        p.setPen(makePen(kInk, 1.7));
+        p.drawRoundedRect(QRectF(6.5, 8.5, 19.0, 15.0), 2.4, 2.4);
+        p.setPen(makePen(kInkSoft, 1.3));
+        p.drawRoundedRect(QRectF(10.0, 12.0, 12.0, 8.0), 1.8, 1.8);
+        p.setPen(makePen(kInk, 1.6));
+        QPainterPath arrows;
+        arrows.moveTo(9.0, 6.5);
+        arrows.lineTo(6.5, 6.5);
+        arrows.lineTo(6.5, 9.0);
+        arrows.moveTo(23.0, 25.5);
+        arrows.lineTo(25.5, 25.5);
+        arrows.lineTo(25.5, 23.0);
+        p.drawPath(arrows);
         break;
     }
     case ShotWindow::Action::Clear: {

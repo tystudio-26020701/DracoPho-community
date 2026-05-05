@@ -3,9 +3,76 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QCursor>
 #include <QGuiApplication>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMessageBox>
+#include <QProcess>
 #include <QScreen>
+#include <QTimer>
+
+namespace {
+
+QRect virtualScreensGeometry()
+{
+    QRect geometry;
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    for (QScreen *screen : screens) {
+        if (!screen) {
+            continue;
+        }
+        geometry = geometry.isNull() ? screen->geometry() : geometry.united(screen->geometry());
+    }
+    return geometry;
+}
+
+QString niriFocusedOutputName()
+{
+    QProcess niri;
+    niri.setProgram(QStringLiteral("niri"));
+    niri.setArguments({QStringLiteral("msg"), QStringLiteral("-j"), QStringLiteral("focused-output")});
+    niri.start(QIODevice::ReadOnly);
+    if (!niri.waitForStarted(1000) || !niri.waitForFinished(1000)) {
+        return {};
+    }
+    if (niri.exitStatus() != QProcess::NormalExit || niri.exitCode() != 0) {
+        return {};
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(niri.readAllStandardOutput());
+    if (!document.isObject()) {
+        return {};
+    }
+    return document.object().value(QStringLiteral("name")).toString();
+}
+
+QScreen *screenByName(const QString &name)
+{
+    if (name.isEmpty()) {
+        return nullptr;
+    }
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    for (QScreen *screen : screens) {
+        if (screen && screen->name() == name) {
+            return screen;
+        }
+    }
+    return nullptr;
+}
+
+QScreen *focusedScreen()
+{
+    if (QScreen *screen = screenByName(niriFocusedOutputName())) {
+        return screen;
+    }
+    if (QScreen *screen = QGuiApplication::screenAt(QCursor::pos())) {
+        return screen;
+    }
+    return QGuiApplication::primaryScreen();
+}
+
+} // namespace
 
 int main(int argc, char *argv[])
 {
@@ -27,14 +94,12 @@ int main(int argc, char *argv[])
     parser.addOption(fullscreenAnnotationOption);
     parser.process(app);
 
-    QScreen *screen = QGuiApplication::screenAt(QCursor::pos());
-    if (!screen) {
-        screen = QGuiApplication::primaryScreen();
-    }
+    QScreen *screen = focusedScreen();
 
     const bool allOutputs = parser.isSet(allOutputsOption);
+    const QRect captureGeometry = allOutputs ? virtualScreensGeometry() : (screen ? screen->geometry() : QRect());
     const QString outputName = (!allOutputs && screen) ? screen->name() : QString();
-    CaptureResult capture = captureScreenFrame(outputName, allOutputs);
+    CaptureResult capture = captureScreenFrame({outputName, captureGeometry, allOutputs});
     if (capture.image.isNull()) {
         QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), capture.error);
         return 1;
@@ -46,16 +111,25 @@ int main(int argc, char *argv[])
     }
 
     const bool useRegularWindow = parser.isSet(xdgWindowOption);
-    const bool layerShellReady = !useRegularWindow && window->configureLayerShell(screen);
+    const bool layerShellReady = !allOutputs && !useRegularWindow && window->configureLayerShell(screen);
     if (layerShellReady) {
         window->show();
     } else {
-        window->showFullScreen();
+        if (capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()) {
+            window->setGeometry(capture.sourceGeometry);
+        }
+        if (allOutputs) {
+            window->show();
+        } else {
+            window->showFullScreen();
+        }
         window->raise();
         window->activateWindow();
     }
     if (parser.isSet(fullscreenAnnotationOption)) {
-        window->startFullscreenAnnotation();
+        QTimer::singleShot(0, window, [window] {
+            window->startFullscreenAnnotation();
+        });
     }
 
     return QApplication::exec();

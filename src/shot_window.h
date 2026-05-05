@@ -1,10 +1,10 @@
 #pragma once
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QImage>
 #include <QPointF>
 #include <QRectF>
-#include <QElapsedTimer>
 #include <QStringList>
 #include <QWidget>
 
@@ -17,6 +17,7 @@ class QPushButton;
 class QScreen;
 class QSlider;
 class QTextEdit;
+class QTimer;
 class QWheelEvent;
 
 namespace markshot::ui {
@@ -37,6 +38,8 @@ public:
         ToolText,
         ToolNumber,
         ToolMosaic,
+        ToolLaser,
+        ToggleCaptureScope,
         Clear,
         Undo,
         Redo,
@@ -87,6 +90,7 @@ private:
         Text,
         Number,
         Mosaic,
+        Laser,
     };
 
     enum class SelectionDrag {
@@ -122,6 +126,13 @@ private:
         QVector<int> selectedAnnotationIds;
         int nextNumber = 1;
         int nextAnnotationId = 1;
+    };
+
+    struct LaserStroke {
+        QVector<QPointF> points;
+        QColor color;
+        qreal width = 10.0;
+        qint64 expiresAt = 0;
     };
 
     QPushButton *addToolbarButton(Action action, const QString &shortcutText, QWidget *parentToolbar = nullptr);
@@ -175,8 +186,13 @@ private:
     void drawMosaic(QPainter &painter, QRectF imageRect, qreal blockSize, bool widgetCoordinates) const;
     void drawNumber(QPainter &painter, QPointF imagePoint, int number, QColor color, qreal width, bool widgetCoordinates) const;
     void drawWheelPreview(QPainter &painter);
+    void drawLaserStroke(QPainter &painter, const LaserStroke &stroke, bool widgetCoordinates, qreal opacity) const;
     void beginTextAnnotation(QPointF imagePoint);
     void beginEditingSelectedTextAnnotation();
+    void beginLaserStroke(QPointF imagePoint);
+    void updateLaserStroke(QPointF imagePoint);
+    void commitLaserStroke();
+    void cleanupLaserStrokes();
     void openSelectionWithDesktop(const DesktopApp &app);
     void pinSelection();
     QString saveSelectionToTempFile() const;
@@ -184,6 +200,9 @@ private:
     void saveSelection();
     void revealSelectionInfo();
     void setTool(Tool tool);
+    void toggleCaptureScope();
+    void enterFullscreenAnnotation(bool resetAnnotations);
+    void leaveFullscreenAnnotation();
     void toggleColorPalette(QPoint position);
     void toggleOpenWithPanel();
     void updateCursor();
@@ -197,6 +216,7 @@ private:
     void updatePropertyFontPanelGeometry();
     void adjustSelectedAnnotationWidth(qreal delta);
     void setSelectedAnnotationWidth(int width);
+    void setSelectedAnnotationOpacity(int opacity);
     void setSelectedAnnotationFilled(bool filled);
     void setSelectedAnnotationCornerRadius(int radius);
     void setSelectedTextFontFamily(const QString &fontFamily);
@@ -240,11 +260,13 @@ private:
     QElapsedTimer m_selectionInfoTimer;
     QPointF m_wheelPreviewPosition;
     QElapsedTimer m_wheelPreviewTimer;
+    QElapsedTimer m_laserClock;
     QColor m_currentColor = QColor(255, 77, 77);
     qreal m_penWidth = 2.0;
     qreal m_shapeWidth = 3.0;
     qreal m_numberWidth = 3.0;
     qreal m_mosaicBlockSize = 14.0;
+    qreal m_laserWidth = 10.0;
     bool m_shapeFilled = false;
     qreal m_rectangleCornerRadius = 0.0;
     QString m_textFontFamily = QStringLiteral("Sans Serif");
@@ -254,12 +276,16 @@ private:
     QVector<int> m_selectedAnnotationIds;
     QVector<Annotation> m_annotations;
     std::optional<Annotation> m_draft;
+    QVector<LaserStroke> m_laserStrokes;
+    std::optional<LaserStroke> m_laserDraft;
     QWidget *m_toolbar = nullptr;
     QWidget *m_actionToolbar = nullptr;
     QWidget *m_annotationPropertyPanel = nullptr;
     QLabel *m_annotationPropertyTitle = nullptr;
     QLabel *m_propertyWidthLabel = nullptr;
     QSlider *m_propertyWidthSlider = nullptr;
+    QLabel *m_propertyOpacityLabel = nullptr;
+    QSlider *m_propertyOpacitySlider = nullptr;
     QPushButton *m_propertyColorButton = nullptr;
     QPushButton *m_propertyFillButton = nullptr;
     QLabel *m_propertyRadiusLabel = nullptr;
@@ -277,7 +303,9 @@ private:
     QPoint m_colorPaletteAnchor;
     QPoint m_toolbarDragStart;
     QRect m_toolbarBeforeDrag;
+    std::optional<QRectF> m_selectionBeforeFullscreenAnnotation;
     QVector<QPushButton *> m_fullscreenActionButtons;
+    QTimer *m_laserTimer = nullptr;
     QTextEdit *m_textEditor = nullptr;
     QPointF m_textEditorImagePoint;
     std::optional<int> m_editingTextAnnotationId;
