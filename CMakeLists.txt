@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(mark-shot VERSION 0.1.4 LANGUAGES CXX)
+project(mark-shot VERSION 0.1.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,5 +36,13 @@ target_link_libraries(mark-shot
 )
 
 install(TARGETS mark-shot RUNTIME DESTINATION bin)
-install(FILES data/mark-shot.desktop DESTINATION share/applications)
-install(FILES data/icons/hicolor/scalable/apps/mark-shot.svg DESTINATION share/icons/hicolor/scalable/apps)
+install(FILES
+    data/mark-shot.desktop
+    data/mark-shot-edit.desktop
+    DESTINATION share/applications
+)
+install(FILES
+    data/icons/hicolor/scalable/apps/mark-shot.svg
+    data/icons/hicolor/scalable/apps/mark-shot-edit.svg
+    DESTINATION share/icons/hicolor/scalable/apps
+)

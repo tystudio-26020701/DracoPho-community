@@ -88,6 +88,7 @@ Mod+Shift+S { spawn "mark-shot"; }
 - Hold `Ctrl` while drawing rectangles or ellipses to constrain them to squares or circles.
 - Right click switches to the select tool, and double right click opens the radial color palette.
 - Mouse wheel changes stroke width, number size, text size, or mosaic block size for the active tool or selected annotation.
+- In regular editing mode, the select tool uses mouse wheel to zoom the view, and middle-button drag pans it; reselecting or toggling annotation scope resets the view.
 - In image-file mode, mouse wheel zooms around the cursor, middle-button drag pans the image, and double-tapping `Ctrl` resets the view.
 - `Ctrl+Z` undoes, and `Ctrl+Shift+Z` or `Ctrl+Y` redoes.
 - `Ctrl+C` copies the edited selection.

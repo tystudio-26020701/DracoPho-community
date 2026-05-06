@@ -802,6 +802,7 @@ void ShotWindow::leaveFullscreenAnnotation()
     if (m_selectionBeforeFullscreenAnnotation.has_value()) {
         m_selection = *m_selectionBeforeFullscreenAnnotation;
     } else {
+        resetImageZoom();
         m_mode = Mode::Selecting;
         m_selection = {};
         if (m_toolbar) {
@@ -834,6 +835,7 @@ void ShotWindow::leaveFullscreenAnnotation()
 
 void ShotWindow::toggleCaptureScope()
 {
+    resetImageZoom();
     if (m_fullscreenAnnotation) {
         leaveFullscreenAnnotation();
     } else {
@@ -1032,7 +1034,7 @@ bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
 
     if (watched == m_textEditor && event->type() == QEvent::KeyPress) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
-        if (m_imageNavigationEnabled && keyEvent->key() == Qt::Key_Control && !keyEvent->isAutoRepeat()) {
+        if (imageNavigationAvailable() && keyEvent->key() == Qt::Key_Control && !keyEvent->isAutoRepeat()) {
             if (m_ctrlTapTimer.isValid() && m_ctrlTapTimer.elapsed() <= kCtrlDoubleTapMs) {
                 resetImageZoom();
                 m_ctrlTapTimer.invalidate();
@@ -1191,7 +1193,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     clearWheelPreview();
 
     if (event->button() != Qt::LeftButton) {
-        if (event->button() == Qt::MiddleButton && m_imageNavigationEnabled && m_frozenImageRect.contains(event->position())) {
+        if (event->button() == Qt::MiddleButton && imageNavigationAvailable() && m_frozenImageRect.contains(event->position())) {
             commitTextEditor();
             m_dragging = false;
             m_annotationSelectionBoxActive = false;
@@ -1710,22 +1712,6 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
 
 void ShotWindow::wheelEvent(QWheelEvent *event)
 {
-    if (m_imageNavigationEnabled) {
-        const qreal factor = imageNavigationWheelFactor(event);
-        if (qFuzzyCompare(factor, 1.0)) {
-            QWidget::wheelEvent(event);
-            return;
-        }
-        zoomImageAt(factor, event->position());
-        m_showWheelPreview = true;
-        m_wheelPreviewPosition = event->position();
-        m_wheelPreviewTimer.restart();
-        updateCursor();
-        event->accept();
-        update();
-        return;
-    }
-
     const int steps = event->angleDelta().y() / 120;
     if (steps == 0 || m_mode != Mode::Editing) {
         QWidget::wheelEvent(event);
@@ -1747,6 +1733,22 @@ void ShotWindow::wheelEvent(QWheelEvent *event)
         }
         updateColorPalettePreview();
         updateAnnotationPropertyPanel();
+        event->accept();
+        update();
+        return;
+    }
+
+    if (wheelZoomsImage()) {
+        const qreal factor = imageNavigationWheelFactor(event);
+        if (qFuzzyCompare(factor, 1.0)) {
+            QWidget::wheelEvent(event);
+            return;
+        }
+        zoomImageAt(factor, event->position());
+        m_showWheelPreview = true;
+        m_wheelPreviewPosition = event->position();
+        m_wheelPreviewTimer.restart();
+        updateCursor();
         event->accept();
         update();
         return;
@@ -1781,7 +1783,7 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
 {
     clearWheelPreview();
 
-    if (m_imageNavigationEnabled && event->key() == Qt::Key_Control && !event->isAutoRepeat()) {
+    if (imageNavigationAvailable() && event->key() == Qt::Key_Control && !event->isAutoRepeat()) {
         if (m_ctrlTapTimer.isValid() && m_ctrlTapTimer.elapsed() <= kCtrlDoubleTapMs) {
             resetImageZoom();
             m_ctrlTapTimer.invalidate();
@@ -2066,6 +2068,16 @@ bool ShotWindow::hasUsableSelection() const
 {
     const QRectF selection = normalizedSelection();
     return selection.width() >= kMinSelectionSize && selection.height() >= kMinSelectionSize;
+}
+
+bool ShotWindow::imageNavigationAvailable() const
+{
+    return m_imageNavigationEnabled || m_mode == Mode::Editing;
+}
+
+bool ShotWindow::wheelZoomsImage() const
+{
+    return m_imageNavigationEnabled || (m_mode == Mode::Editing && m_tool == Tool::Select);
 }
 
 qreal ShotWindow::annotationSizeScale(bool widgetCoordinates) const
@@ -2978,7 +2990,7 @@ void ShotWindow::updateFrozenImageRect()
 
     QSizeF frameSize = m_frozenFrame.size();
     frameSize.scale(size(), Qt::KeepAspectRatio);
-    if (!m_imageNavigationEnabled) {
+    if (!imageNavigationAvailable()) {
         const QPointF topLeft((width() - frameSize.width()) / 2.0, (height() - frameSize.height()) / 2.0);
         m_frozenImageRect = QRectF(topLeft, frameSize);
         return;
@@ -3013,7 +3025,7 @@ void ShotWindow::updateFrozenImageRect()
 
 void ShotWindow::zoomImageAt(qreal factor, QPointF widgetAnchor)
 {
-    if (!m_imageNavigationEnabled || m_frozenFrame.isNull() || m_frozenImageRect.isEmpty() || factor <= 0.0) {
+    if (!imageNavigationAvailable() || m_frozenFrame.isNull() || m_frozenImageRect.isEmpty() || factor <= 0.0) {
         return;
     }
 
@@ -3036,7 +3048,7 @@ void ShotWindow::zoomImageAt(qreal factor, QPointF widgetAnchor)
 
 void ShotWindow::resetImageZoom()
 {
-    if (!m_imageNavigationEnabled || m_frozenFrame.isNull()) {
+    if (m_frozenFrame.isNull()) {
         return;
     }
 
@@ -3050,7 +3062,7 @@ void ShotWindow::resetImageZoom()
 
 void ShotWindow::panImageTo(QPointF widgetPosition)
 {
-    if (!m_imageNavigationEnabled || m_frozenFrame.isNull() || m_frozenImageRect.isEmpty()) {
+    if (!imageNavigationAvailable() || m_frozenFrame.isNull() || m_frozenImageRect.isEmpty()) {
         return;
     }
 
@@ -4258,7 +4270,7 @@ void ShotWindow::drawWheelPreview(QPainter &painter)
         return;
     }
 
-    if (m_imageNavigationEnabled) {
+    if (wheelZoomsImage()) {
         const QString zoomText = QStringLiteral("%1%").arg(qRound(m_imageZoom * 100.0));
         painter.save();
         painter.setRenderHint(QPainter::Antialiasing, true);

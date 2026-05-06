@@ -152,6 +152,8 @@ private:
     QRectF textContentRect(const Annotation &annotation, bool widgetCoordinates) const;
     QString defaultSavePath() const;
     bool hasUsableSelection() const;
+    bool imageNavigationAvailable() const;
+    bool wheelZoomsImage() const;
     qreal annotationSizeScale(bool widgetCoordinates) const;
     qreal currentToolWidth() const;
     qreal currentToolPreviewSize() const;
