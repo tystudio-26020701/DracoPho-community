@@ -2,7 +2,7 @@
 
 [English README](README.md)
 
-<video src="https://github.com/tystudio-26020701/mark-shot-community/releases/download/v0.1.5/mark-shot.mp4" width="100%" controls></video>
+<video src="https://github.com/user-attachments/assets/c2298867-06b4-404d-87bc-62ab8d81088b" width="100%" controls></video>
 
 `mark-shot` 是一款基于 Qt 6 开发的高性能、极速 Wayland 截图标注工具，专门针对 `niri` 等现代 Wayland 窗口管理器进行了原生级深度优化。
 
