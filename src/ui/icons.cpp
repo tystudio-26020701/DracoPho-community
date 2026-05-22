@@ -21,7 +21,7 @@ constexpr int kIconSize = 32;
 const QColor kInk(229, 231, 235);            // slate-200
 const QColor kInkSoft(229, 231, 235, 130);   // slate-200 @ 50%
 const QColor kInkFaint(229, 231, 235, 80);   // slate-200 @ 30%
-const QColor kSaveInk(31, 19, 0);            // dark amber for primary button
+const QColor kSaveInk(255, 255, 255);        // pure white for primary button
 
 QPen makePen(QColor color, qreal width = 1.75)
 {
@@ -94,23 +94,17 @@ QIcon makeToolIcon(ShotWindow::Action action)
 
     switch (action) {
     case ShotWindow::Action::ToolMove: {
-        // Four-direction cross with a small anchor dot at the pivot — reads
-        // as "move with respect to a reference point" rather than just an
-        // arrow cluster.
-        p.setPen(makePen(kInk, 1.8));
+        // High-end minimalist 4-directional move cursor.
+        p.setPen(makePen(kInk, 1.5));
         p.drawLine(QPointF(16, 7), QPointF(16, 25));
         p.drawLine(QPointF(7, 16), QPointF(25, 16));
+        
         QPainterPath head;
-        head.moveTo(12, 11); head.lineTo(16, 7);  head.lineTo(20, 11);
-        head.moveTo(12, 21); head.lineTo(16, 25); head.lineTo(20, 21);
-        head.moveTo(11, 12); head.lineTo(7, 16);  head.lineTo(11, 20);
-        head.moveTo(21, 12); head.lineTo(25, 16); head.lineTo(21, 20);
+        head.moveTo(12, 11); head.lineTo(16, 7); head.lineTo(20, 11); // Up
+        head.moveTo(12, 21); head.lineTo(16, 25); head.lineTo(20, 21); // Down
+        head.moveTo(11, 12); head.lineTo(7, 16); head.lineTo(11, 20); // Left
+        head.moveTo(21, 12); head.lineTo(25, 16); head.lineTo(21, 20); // Right
         p.drawPath(head);
-        // anchor dot
-        p.setPen(Qt::NoPen);
-        p.setBrush(kInk);
-        p.drawEllipse(QPointF(16, 16), 1.4, 1.4);
-        p.setBrush(Qt::NoBrush);
         break;
     }
     case ShotWindow::Action::ToolSelect: {
@@ -131,37 +125,24 @@ QIcon makeToolIcon(ShotWindow::Action action)
         break;
     }
     case ShotWindow::Action::ToolPen: {
-        // Tilted fountain-pen body with a wedge nib and a small ink dot at
-        // the tip. Drawn in a rotated frame so the body, nib, and cap all
-        // line up on the same axis.
+        // High-end elegant minimalist pen. A sleek diagonal stroke with a sharp nib and simple ink detail.
         p.save();
         p.translate(16, 16);
         p.rotate(-45);
 
-        // pen body — outlined rectangle with a divider near the cap
-        p.setPen(makePen(kInk, 1.6));
-        QRectF body(-2.4, -10.0, 4.8, 14.0);
-        p.drawRect(body);
-        p.drawLine(QPointF(-2.4, -6.0), QPointF(2.4, -6.0));
+        p.setPen(makePen(kInk, 1.5));
+        
+        QPainterPath penPath;
+        penPath.moveTo(-2.0, -11.0);
+        penPath.lineTo(2.0, -11.0);
+        penPath.lineTo(2.0, 3.0);
+        penPath.lineTo(0.0, 9.0);   // Tip
+        penPath.lineTo(-2.0, 3.0);
+        penPath.closeSubpath();
+        p.drawPath(penPath);
 
-        // cap — solid block at the rear
-        p.setPen(Qt::NoPen);
-        p.setBrush(kInk);
-        p.drawRect(QRectF(-2.4, -10.0, 4.8, 2.4));
-
-        // nib — solid triangle at the front
-        QPainterPath nib;
-        nib.moveTo(-2.4, 4.0);
-        nib.lineTo(0.0, 8.6);
-        nib.lineTo(2.4, 4.0);
-        nib.closeSubpath();
-        p.drawPath(nib);
-
-        // ink slit on the nib
-        p.setPen(makePen(QColor(15, 17, 23, 200), 0.9));
-        p.drawLine(QPointF(0.0, 4.6), QPointF(0.0, 7.6));
-
-        p.setBrush(Qt::NoBrush);
+        p.drawLine(QPointF(0.0, 3.0), QPointF(0.0, 9.0));
+        
         p.restore();
         break;
     }
@@ -177,38 +158,29 @@ QIcon makeToolIcon(ShotWindow::Action action)
         p.setBrush(Qt::NoBrush);
         break;
     case ShotWindow::Action::ToolHighlighter: {
-        // Translucent stroke laid down underneath, then a marker rendered in
-        // a rotated frame so the chisel tip points along the trail.
-        p.setPen(QPen(kInkFaint, 5.5, Qt::SolidLine, Qt::RoundCap));
-        p.drawLine(QPointF(7, 27), QPointF(22, 27));
+        // High-end minimalist highlighter. Elegantly curved soft brush line underneath a clean chisel pen.
+        p.save();
+        p.setPen(QPen(kInkFaint, 4.0, Qt::SolidLine, Qt::RoundCap));
+        p.drawLine(QPointF(6, 25), QPointF(24, 25));
+        p.restore();
 
         p.save();
-        p.translate(15.5, 15.5);
+        p.translate(15.5, 14.5);
         p.rotate(-45);
 
-        // body — outlined rectangle, slightly wider than the pen
-        p.setPen(makePen(kInk, 1.6));
-        QRectF body(-3.4, -8.6, 6.8, 12.0);
+        p.setPen(makePen(kInk, 1.5));
+        
+        QRectF body(-2.5, -9.0, 5.0, 12.0);
         p.drawRect(body);
-        p.drawLine(QPointF(-3.4, -4.6), QPointF(3.4, -4.6));
+        p.drawLine(QPointF(-2.5, -5.0), QPointF(2.5, -5.0));
 
-        // chisel tip — wider trapezoid that flares past the body
         QPainterPath tip;
-        tip.moveTo(-3.4, 3.4);
-        tip.lineTo(-4.6, 6.4);
-        tip.lineTo(4.6, 6.4);
-        tip.lineTo(3.4, 3.4);
+        tip.moveTo(-2.5, 3.0);
+        tip.lineTo(-1.5, 7.0);
+        tip.lineTo(1.5, 7.0);
+        tip.lineTo(2.5, 3.0);
         tip.closeSubpath();
-        p.setPen(Qt::NoPen);
-        p.setBrush(kInk);
         p.drawPath(tip);
-
-        // small protruding writing tip
-        p.setBrush(Qt::NoBrush);
-        p.setPen(makePen(kInk, 1.4));
-        p.drawLine(QPointF(-1.6, 6.4), QPointF(-1.6, 8.4));
-        p.drawLine(QPointF(1.6, 6.4), QPointF(1.6, 8.4));
-        p.drawLine(QPointF(-1.6, 8.4), QPointF(1.6, 8.4));
 
         p.restore();
         break;
@@ -238,18 +210,15 @@ QIcon makeToolIcon(ShotWindow::Action action)
         break;
     }
     case ShotWindow::Action::ToolText: {
-        // Capital T with serif feet. The thicker vertical reads as a glyph
-        // rather than a plus sign at small sizes.
-        p.setPen(makePen(kInk, 2.2));
-        p.drawLine(QPointF(8, 9.5), QPointF(24, 9.5));
-        p.setPen(makePen(kInk, 2.4));
-        p.drawLine(QPointF(16, 10), QPointF(16, 23.5));
+        // Modern minimalist letter 'A' representing text annotation, sleek and extremely clean.
         p.setPen(makePen(kInk, 1.6));
-        // top serifs
-        p.drawLine(QPointF(8, 8), QPointF(8, 11));
-        p.drawLine(QPointF(24, 8), QPointF(24, 11));
-        // bottom serif
-        p.drawLine(QPointF(13, 23.5), QPointF(19, 23.5));
+        QPainterPath aPath;
+        aPath.moveTo(16.0, 7.0);   // Top peak
+        aPath.lineTo(9.5, 23.0);   // Bottom-left leg
+        aPath.moveTo(16.0, 7.0);
+        aPath.lineTo(22.5, 23.0);  // Bottom-right leg
+        p.drawPath(aPath);
+        p.drawLine(QPointF(11.5, 18.0), QPointF(20.5, 18.0)); // Crossbar
         break;
     }
     case ShotWindow::Action::ToolNumber: {
@@ -346,42 +315,37 @@ QIcon makeToolIcon(ShotWindow::Action action)
         break;
     }
     case ShotWindow::Action::Undo: {
-        // Three-quarter arc sweeping clockwise from upper-left, terminating
-        // in a solid arrowhead that points back toward the start.
-        p.setPen(makePen(kInk, 2.1));
-        QPainterPath arc;
-        arc.moveTo(9, 13);
-        arc.cubicTo(12, 7, 22, 7, 24.5, 14.5);
-        arc.cubicTo(26.5, 21.5, 18.5, 25, 14, 22);
-        p.drawPath(arc);
-        // arrowhead at the start of the arc
+        // Highly recognizable minimalist Undo arrow. Sleek 45-degree tilted Feather/Lucide path perfectly snapping with corner head.
+        p.setPen(makePen(kInk, 1.8));
+        
         QPainterPath head;
-        head.moveTo(5.0, 9.0);
-        head.lineTo(9.5, 13.6);
-        head.lineTo(13.5, 10.5);
-        head.closeSubpath();
-        p.setBrush(kInk);
-        p.setPen(Qt::NoPen);
+        head.moveTo(6.0, 10.0);
+        head.lineTo(6.0, 18.0);
+        head.lineTo(14.0, 18.0);
         p.drawPath(head);
-        p.setBrush(Qt::NoBrush);
+
+        QPainterPath arc;
+        arc.moveTo(28.0, 22.0);
+        arc.cubicTo(28.0, 14.0, 20.0, 10.0, 15.0, 10.0);
+        arc.cubicTo(10.0, 10.0, 7.5, 14.0, 6.0, 18.0);
+        p.drawPath(arc);
         break;
     }
     case ShotWindow::Action::Redo: {
-        p.setPen(makePen(kInk, 2.1));
-        QPainterPath arc;
-        arc.moveTo(23, 13);
-        arc.cubicTo(20, 7, 10, 7, 7.5, 14.5);
-        arc.cubicTo(5.5, 21.5, 13.5, 25, 18, 22);
-        p.drawPath(arc);
+        // Highly recognizable minimalist Redo arrow, symmetric to Undo.
+        p.setPen(makePen(kInk, 1.8));
+        
         QPainterPath head;
-        head.moveTo(27.0, 9.0);
-        head.lineTo(22.5, 13.6);
-        head.lineTo(18.5, 10.5);
-        head.closeSubpath();
-        p.setBrush(kInk);
-        p.setPen(Qt::NoPen);
+        head.moveTo(26.0, 10.0);
+        head.lineTo(26.0, 18.0);
+        head.lineTo(18.0, 18.0);
         p.drawPath(head);
-        p.setBrush(Qt::NoBrush);
+
+        QPainterPath arc;
+        arc.moveTo(4.0, 22.0);
+        arc.cubicTo(4.0, 14.0, 12.0, 10.0, 17.0, 10.0);
+        arc.cubicTo(22.0, 10.0, 24.5, 14.0, 26.0, 18.0);
+        p.drawPath(arc);
         break;
     }
     case ShotWindow::Action::OpenWith: {
@@ -421,24 +385,21 @@ QIcon makeToolIcon(ShotWindow::Action action)
         break;
     }
     case ShotWindow::Action::Save: {
-        // Floppy disk silhouette in dark amber to contrast the orange button.
-        p.setPen(makePen(kSaveInk, 2.0));
-        p.drawRoundedRect(QRectF(7, 7, 18, 18), 2.4, 2.4);
-        // sliding cover (top)
-        p.drawLine(QPointF(11, 7), QPointF(11, 11.5));
-        p.drawLine(QPointF(20, 7), QPointF(20, 11.5));
-        p.drawLine(QPointF(11, 11.5), QPointF(20, 11.5));
-        // label area (bottom)
-        p.setPen(makePen(kSaveInk, 1.5));
-        p.drawRoundedRect(QRectF(10, 15, 12, 9), 1.0, 1.0);
-        p.drawLine(QPointF(12, 18.5), QPointF(20, 18.5));
-        p.drawLine(QPointF(12, 21), QPointF(20, 21));
+        // Exquisite minimalist high-fidelity floppy disk representation.
+        // Elegant geometry, thin lines and spacious negative space.
+        p.setPen(makePen(kSaveInk, 1.6));
+        p.drawRoundedRect(QRectF(7.5, 7.5, 17.0, 17.0), 2.0, 2.0);
+        
+        p.drawRoundedRect(QRectF(11.0, 7.5, 10.0, 5.0), 0.5, 0.5);
+        p.drawLine(QPointF(13.5, 7.5), QPointF(13.5, 10.0));
+        
+        p.drawRoundedRect(QRectF(10.0, 15.5, 12.0, 9.0), 0.8, 0.8);
+        p.drawLine(QPointF(12.5, 18.5), QPointF(19.5, 18.5));
         break;
     }
     case ShotWindow::Action::Cancel: {
-        // Slate cross — danger hue is delivered by the button background on
-        // hover, not by the glyph itself.
-        p.setPen(makePen(kInk, 2.1));
+        // Ultra-clean symmetrical cancel cross (1.6px stroke).
+        p.setPen(makePen(kInk, 1.6));
         p.drawLine(QPointF(10, 10), QPointF(22, 22));
         p.drawLine(QPointF(22, 10), QPointF(10, 22));
         break;

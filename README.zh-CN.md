@@ -2,6 +2,8 @@
 
 [English README](README.md)
 
+<video src="https://github.com/tystudio-26020701/mark-shot-community/releases/download/v0.1.5/mark-shot.mp4" width="100%" controls></video>
+
 `mark-shot` 是一个基于 Qt 6 的 Wayland 截图标注工具，适合 niri 等窗口管理器使用。它通过 `grim` 获取冻结的屏幕画面，打开全屏标注界面，然后支持选区、标注、保存、复制，或使用其他桌面应用打开处理后的图片。
 
 ## 功能
