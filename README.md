@@ -2,7 +2,7 @@
 
 [中文说明](README.zh-CN.md)
 
-<video src="https://github.com/tystudio-26020701/mark-shot-community/releases/download/v0.1.5/mark-shot.mp4" width="100%" controls></video>
+<video src="https://github.com/user-attachments/assets/c2298867-06b4-404d-87bc-62ab8d81088b" width="100%" controls></video>
 
 `mark-shot` is a high-performance, rapid Wayland screenshot and annotation tool built with Qt 6, deeply optimized at a native level for modern Wayland compositors such as `niri`.
 
