@@ -323,7 +323,29 @@ protected:
 
     void contextMenuEvent(QContextMenuEvent *event) override
     {
+        class LeftClickMenuFilter final : public QObject {
+        public:
+            explicit LeftClickMenuFilter(QObject *parent = nullptr) : QObject(parent) {}
+        protected:
+            bool eventFilter(QObject *obj, QEvent *event) override
+            {
+                if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseButtonDblClick) {
+                    QMouseEvent *me = static_cast<QMouseEvent *>(event);
+                    if (me->button() != Qt::LeftButton) {
+                        QWidget *widget = qobject_cast<QWidget *>(obj);
+                        if (widget && widget->rect().contains(me->position().toPoint())) {
+                            return true;
+                        }
+                    }
+                }
+                return QObject::eventFilter(obj, event);
+            }
+        };
+
         QMenu menu(this);
+        LeftClickMenuFilter filter(&menu);
+        menu.installEventFilter(&filter);
+
         menu.addAction(QStringLiteral("Rotate Left"), this, [this] { rotateImage(-90); });
         menu.addAction(QStringLiteral("Rotate Right"), this, [this] { rotateImage(90); });
         menu.addSeparator();
@@ -1726,6 +1748,15 @@ void ShotWindow::wheelEvent(QWheelEvent *event)
                     annotation->width = std::clamp(annotation->width + steps * 2.0, kMinMosaicBlockSize, kMaxMosaicBlockSize);
                 } else if (annotation->tool == Tool::Number) {
                     annotation->width = std::clamp(annotation->width + steps * 2.0, kMinNumberWidth, kMaxNumberWidth);
+                } else if (annotation->tool == Tool::Text) {
+                    const qreal oldWidth = annotation->width;
+                    annotation->width = std::clamp(annotation->width + steps * 1.5, 1.0, 1000.0);
+                    const qreal factor = ((19.0 + annotation->width) / (19.0 + oldWidth)) * 1.05;
+                    annotation->rect.setWidth(annotation->rect.width() * factor);
+                    annotation->rect = textContentRect(*annotation, false);
+                    if (!annotation->points.isEmpty()) {
+                        annotation->points[0] = annotation->rect.topLeft();
+                    }
                 } else {
                     annotation->width = std::clamp(annotation->width + steps * 1.0, kMinStrokeWidth, kMaxStrokeWidth);
                 }
@@ -1762,6 +1793,8 @@ void ShotWindow::wheelEvent(QWheelEvent *event)
         m_laserWidth = std::clamp(m_laserWidth + steps * 2.0, kMinLaserWidth, kMaxLaserWidth);
     } else if (m_tool == Tool::Pen || m_tool == Tool::Highlighter) {
         m_penWidth = std::clamp(m_penWidth + steps * 1.0, kMinStrokeWidth, kMaxStrokeWidth);
+    } else if (m_tool == Tool::Text) {
+        m_shapeWidth = std::clamp(m_shapeWidth + steps * 1.5, 1.0, 1000.0);
     } else {
         m_shapeWidth = std::clamp(m_shapeWidth + steps * 1.0, kMinStrokeWidth, kMaxStrokeWidth);
     }
@@ -2545,9 +2578,21 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
     case Tool::Rectangle:
     case Tool::Ellipse:
     case Tool::Mosaic:
+        annotation.rect = QRectF(mapPoint(annotation.rect.normalized().topLeft()),
+                                 mapPoint(annotation.rect.normalized().bottomRight())).normalized();
+        break;
     case Tool::Text:
         annotation.rect = QRectF(mapPoint(annotation.rect.normalized().topLeft()),
                                  mapPoint(annotation.rect.normalized().bottomRight())).normalized();
+        if (m_annotationDrag == SelectionDrag::TopLeft ||
+            m_annotationDrag == SelectionDrag::BottomRight ||
+            m_annotationDrag == SelectionDrag::TopRight ||
+            m_annotationDrag == SelectionDrag::BottomLeft) {
+            annotation.width = std::clamp((19.0 + annotation.width) * scaleFactor - 19.0, 1.0, 1000.0);
+            if (!annotation.points.isEmpty()) {
+                annotation.points[0] = annotation.rect.topLeft();
+            }
+        }
         break;
     case Tool::Pen:
     case Tool::Highlighter:
@@ -3311,6 +3356,8 @@ void ShotWindow::updateAnnotationPropertyPanel()
             m_propertyWidthSlider->setRange(qRound(kMinNumberWidth), qRound(kMaxNumberWidth));
         } else if (panelTool == Tool::Laser) {
             m_propertyWidthSlider->setRange(qRound(kMinLaserWidth), qRound(kMaxLaserWidth));
+        } else if (panelTool == Tool::Text) {
+            m_propertyWidthSlider->setRange(1, 1000);
         } else {
             m_propertyWidthSlider->setRange(qRound(kMinStrokeWidth), qRound(kMaxStrokeWidth));
         }
@@ -3493,6 +3540,15 @@ void ShotWindow::setSelectedAnnotationWidth(int width)
                     annotation->width = std::clamp<qreal>(width, kMinMosaicBlockSize, kMaxMosaicBlockSize);
                 } else if (annotation->tool == Tool::Number) {
                     annotation->width = std::clamp<qreal>(width, kMinNumberWidth, kMaxNumberWidth);
+                } else if (annotation->tool == Tool::Text) {
+                    const qreal oldWidth = annotation->width;
+                    annotation->width = std::clamp<qreal>(width, 1.0, 1000.0);
+                    const qreal factor = ((19.0 + annotation->width) / (19.0 + oldWidth)) * 1.05;
+                    annotation->rect.setWidth(annotation->rect.width() * factor);
+                    annotation->rect = textContentRect(*annotation, false);
+                    if (!annotation->points.isEmpty()) {
+                        annotation->points[0] = annotation->rect.topLeft();
+                    }
                 } else {
                     annotation->width = std::clamp<qreal>(width, kMinStrokeWidth, kMaxStrokeWidth);
                 }
@@ -3517,8 +3573,10 @@ void ShotWindow::setSelectedAnnotationWidth(int width)
         case Tool::Rectangle:
         case Tool::Ellipse:
         case Tool::Arrow:
-        case Tool::Text:
             m_shapeWidth = width;
+            break;
+        case Tool::Text:
+            m_shapeWidth = std::clamp<qreal>(width, 1.0, 1000.0);
             break;
         case Tool::Number:
             m_numberWidth = std::clamp<qreal>(width, kMinNumberWidth, kMaxNumberWidth);
@@ -4226,38 +4284,56 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
 void ShotWindow::drawArrow(QPainter &painter, QPointF start, QPointF end, qreal width) const
 {
     const QLineF line(start, end);
-    if (line.length() < 1.0) {
+    const qreal L = line.length();
+    if (L < 1.0) {
         return;
     }
 
     const QColor color = painter.pen().color();
-    const QPointF direction((end.x() - start.x()) / line.length(),
-                            (end.y() - start.y()) / line.length());
+
+    // 1. Calculate normalized direction and normal vectors
+    const QPointF direction = QPointF(line.dx() / L, line.dy() / L);
     const QPointF normal(-direction.y(), direction.x());
-    const qreal bodyHalfWidth = std::clamp(width * 0.72, 2.2, 11.0);
-    const qreal headLength = std::max<qreal>(1.0,
-                                             std::min(std::clamp(line.length() * 0.18, width * 5.0, width * 9.0),
-                                                      line.length() * 0.62));
-    const qreal headHalfWidth = std::clamp(width * 3.1, bodyHalfWidth * 2.2, 34.0);
-    const qreal neckInset = std::min(std::clamp(width * 2.2, 6.0, 28.0), headLength * 0.72);
+
+    // 2. Compute physical body half-width (perfectly aligned with pen brush width)
+    const qreal bodyHalfWidth = width * 0.5;
+
+    // 3. Compute adaptive arrow head length based on L (golden stretch ratio)
+    qreal headLength = L * 0.18;
+    headLength = std::clamp(headLength, width * 5.0, width * 9.0);
+    if (headLength > L * 0.62) {
+        headLength = L * 0.62;
+    }
+    headLength = std::clamp(headLength, 12.0, 60.0);
+    if (headLength > L * 0.62) {
+        headLength = L * 0.62;
+    }
+
+    // 4. Compute head half-width (sleeker, sharper aerodynamic 28% stretch ratio for acute angle nose)
+    qreal headHalfWidth = headLength * 0.28;
+    const qreal minHeadHalfWidth = bodyHalfWidth * 1.5;
+    if (headHalfWidth < minHeadHalfWidth) {
+        headHalfWidth = minHeadHalfWidth;
+    }
+
+    // 5. Locate headBase position
     const QPointF headBase = end - direction * headLength;
-    const QPointF neck = end - direction * neckInset;
 
+    // 6. Construct the elegant 6-vertex classic pointy-tailed gradient triangle polygon path
     QPainterPath arrow;
-    arrow.moveTo(start);
-    arrow.lineTo(headBase + normal * bodyHalfWidth);
-    arrow.lineTo(headBase + normal * headHalfWidth);
-    arrow.lineTo(neck + normal * bodyHalfWidth);
-    arrow.lineTo(end);
-    arrow.lineTo(neck - normal * bodyHalfWidth);
-    arrow.lineTo(headBase - normal * headHalfWidth);
-    arrow.lineTo(headBase - normal * bodyHalfWidth);
-    arrow.lineTo(start);
-    arrow.closeSubpath();
+    arrow.moveTo(start);                              // 1. Pointy start (sharp tail converges to 0 width)
+    arrow.lineTo(headBase + normal * bodyHalfWidth);  // 2. Left side body (gradient shaft)
+    arrow.lineTo(headBase + normal * headHalfWidth);  // 3. Left wing base (vertical fold-out)
+    arrow.lineTo(end);                                // 4. Arrow tip (aerodynamic nose)
+    arrow.lineTo(headBase - normal * headHalfWidth);  // 5. Right wing base (aerodynamic nose)
+    arrow.lineTo(headBase - normal * bodyHalfWidth);  // 6. Right side body (vertical fold-in)
+    arrow.closeSubpath();                             // 7. Close back to pointy start
 
+    // 7. Render the gorgeous hard-line polygon with anti-aliasing
     painter.save();
     painter.setPen(Qt::NoPen);
     painter.setBrush(color);
+    painter.setRenderHint(QPainter::Antialiasing, true);
     painter.drawPath(arrow);
     painter.restore();
 }

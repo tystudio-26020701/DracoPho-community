@@ -2,6 +2,8 @@
 
 [中文说明](README.zh-CN.md)
 
+<video src="https://github.com/tystudio-26020701/mark-shot-community/releases/download/v0.1.5/mark-shot.mp4" width="100%" controls></video>
+
 `mark-shot` is a Qt 6 screenshot tool for Wayland compositors such as niri. It captures a frozen screen frame with `grim`, opens a fullscreen annotation surface, and lets you select, mark, save, copy, or open the edited image with another desktop application.
 
 ## Features
