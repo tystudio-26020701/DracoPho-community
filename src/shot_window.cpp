@@ -1155,11 +1155,23 @@ QVector<ShotWindow::ExtensionCommand> ShotWindow::extensionCommands(QString *err
     QJsonArray commandArray;
     if (document.isArray()) {
         commandArray = document.array();
-    } else if (document.isObject() && document.object().value(QStringLiteral("commands")).isArray()) {
-        commandArray = document.object().value(QStringLiteral("commands")).toArray();
+    } else if (document.isObject()) {
+        const QJsonObject root = document.object();
+        if (root.value(QStringLiteral("commands")).isArray()) {
+            commandArray = root.value(QStringLiteral("commands")).toArray();
+        } else if (root.value(QStringLiteral("command")).isString()) {
+            commandArray.append(root);
+        }
     } else {
         if (errorMessage) {
-            *errorMessage = QStringLiteral("Expected a JSON array or an object with a commands array");
+            *errorMessage = QStringLiteral("Expected a JSON array, a command object, or an object with a commands array");
+        }
+        return {};
+    }
+
+    if (commandArray.isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("No extension commands found");
         }
         return {};
     }

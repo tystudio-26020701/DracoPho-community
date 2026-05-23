@@ -140,7 +140,6 @@ QString openWithPanelStyleSheet()
         " font-size: 11px;"
         " font-weight: 600;"
         " letter-spacing: 0.6px;"
-        " text-transform: uppercase;"
         " padding: 0 4px 4px 4px;"
         "}"
         "QListWidget {"
