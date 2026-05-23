@@ -130,7 +130,7 @@ QString panelStyleSheet()
 QString openWithPanelStyleSheet()
 {
     return QStringLiteral(
-        "QWidget#openWithPanel, QWidget#propertyFontPanel {"
+        "QWidget#openWithPanel, QWidget#extensionPanel, QWidget#propertyFontPanel {"
         " background: rgba(15, 17, 23, 240);"
         " border: 1px solid rgba(255, 255, 255, 14);"
         " border-radius: 14px;"
