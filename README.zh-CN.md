@@ -85,6 +85,30 @@ binds {
 }
 ```
 
+### 拓展命令
+
+右侧动作工具栏提供 **Extensions** 按钮，程序会从 `~/.config/mark-shot/extensions.json` 读取用户自定义命令。配置文件可以是 JSON 数组，也可以是包含 `commands` 数组的 JSON 对象。
+
+```json
+{
+  "commands": [
+    {
+      "name": "Long screenshot",
+      "command": "./target/release/wayscrollshot \"$(slurp)\"",
+      "workingDirectory": "~/Desktop/projecies/wayscrollshot",
+      "closeOnStart": true
+    },
+    {
+      "name": "OCR selection",
+      "command": "ocr-tool {image}",
+      "saveImage": true
+    }
+  ]
+}
+```
+
+`command` 会通过 `$SHELL -c` 执行，因此支持 `$(slurp)` 这类 shell 表达式。使用 `{image}` 或 `{imagePath}` 可把当前已渲染选区作为临时 PNG 路径传入命令，使用 `{imageUrl}` 可传入 `file://` URL。若未使用图片占位符，可设置 `saveImage` 或 `needsImage` 为 `true`，程序会自动把临时 PNG 路径追加到命令末尾。`workingDirectory` 与 `cwd` 等价。`closeOnStart` 默认值为 `true`，命令启动前会先隐藏并关闭 Mark Shot。
+
 ---
 
 ## 编译与安装

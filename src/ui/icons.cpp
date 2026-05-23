@@ -69,6 +69,8 @@ QString actionName(ShotWindow::Action action)
         return QStringLiteral("Redo");
     case ShotWindow::Action::OpenWith:
         return QStringLiteral("Open With");
+    case ShotWindow::Action::Extensions:
+        return QStringLiteral("Extensions");
     case ShotWindow::Action::Pin:
         return QStringLiteral("Pin");
     case ShotWindow::Action::Copy:
@@ -356,6 +358,18 @@ QIcon makeToolIcon(ShotWindow::Action action)
         // arrow head (open angle)
         p.drawLine(QPointF(18, 7.5), QPointF(24.5, 7.5));
         p.drawLine(QPointF(24.5, 7.5), QPointF(24.5, 14));
+        break;
+    }
+    case ShotWindow::Action::Extensions: {
+        // Terminal prompt with a spark mark: configurable commands.
+        p.setPen(makePen(kInk, 1.7));
+        p.drawRoundedRect(QRectF(6.5, 8.5, 19.0, 15.0), 2.6, 2.6);
+        p.drawLine(QPointF(10.0, 13.0), QPointF(13.5, 16.0));
+        p.drawLine(QPointF(10.0, 19.0), QPointF(13.5, 16.0));
+        p.drawLine(QPointF(15.5, 19.0), QPointF(22.0, 19.0));
+        p.setPen(makePen(kInkSoft, 1.3));
+        p.drawLine(QPointF(23.5, 6.5), QPointF(23.5, 11.0));
+        p.drawLine(QPointF(21.25, 8.75), QPointF(25.75, 8.75));
         break;
     }
     case ShotWindow::Action::Pin: {

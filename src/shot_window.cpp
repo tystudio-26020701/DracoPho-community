@@ -23,6 +23,11 @@
 #include <QFontDatabase>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLayout>
@@ -173,6 +178,75 @@ QString markShotPicturesDir()
         return markShotDir;
     }
     return pictures;
+}
+
+QString markShotConfigDir()
+{
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    if (!configDir.isEmpty()) {
+        return configDir;
+    }
+
+    const QString genericConfigDir = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+    if (!genericConfigDir.isEmpty()) {
+        return QDir(genericConfigDir).filePath(QStringLiteral("mark-shot"));
+    }
+    return QDir::home().filePath(QStringLiteral(".config/mark-shot"));
+}
+
+QString extensionCommandsConfigPath()
+{
+    return QDir(markShotConfigDir()).filePath(QStringLiteral("extensions.json"));
+}
+
+QString expandUserPath(const QString &path)
+{
+    if (path == QStringLiteral("~")) {
+        return QDir::homePath();
+    }
+    if (path.startsWith(QStringLiteral("~/"))) {
+        return QDir::home().filePath(path.mid(2));
+    }
+    return path;
+}
+
+QString shellQuote(QString value)
+{
+    if (value.isEmpty()) {
+        return QStringLiteral("''");
+    }
+    value.replace(QStringLiteral("'"), QStringLiteral("'\"'\"'"));
+    return QStringLiteral("'") + value + QStringLiteral("'");
+}
+
+bool extensionCommandUsesImagePlaceholder(const QString &command)
+{
+    return command.contains(QStringLiteral("{image}"))
+        || command.contains(QStringLiteral("{imagePath}"))
+        || command.contains(QStringLiteral("{imageUrl}"));
+}
+
+bool replaceExtensionImagePlaceholders(QString *command, const QString &imagePath)
+{
+    if (!command) {
+        return false;
+    }
+
+    bool replaced = false;
+    const QString quotedPath = shellQuote(imagePath);
+    if (command->contains(QStringLiteral("{image}"))) {
+        command->replace(QStringLiteral("{image}"), quotedPath);
+        replaced = true;
+    }
+    if (command->contains(QStringLiteral("{imagePath}"))) {
+        command->replace(QStringLiteral("{imagePath}"), quotedPath);
+        replaced = true;
+    }
+    if (command->contains(QStringLiteral("{imageUrl}"))) {
+        command->replace(QStringLiteral("{imageUrl}"), shellQuote(QUrl::fromLocalFile(imagePath).toString()));
+        replaced = true;
+    }
+    return replaced;
 }
 
 QStringList expandDesktopExec(const ShotWindow::DesktopApp &app, const QString &imagePath)
@@ -467,8 +541,16 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     m_toolbarLayout->addWidget(addToolbarButton(Action::Clear, QStringLiteral("Clear")));
     m_toolbarLayout->addWidget(addToolbarButton(Action::Undo, QStringLiteral("Ctrl+Z")));
     m_toolbarLayout->addWidget(addToolbarButton(Action::Redo, QStringLiteral("Ctrl+Shift+Z")));
-    for (Action action : {Action::ToggleCaptureScope, Action::ToggleToolbarLayout, Action::OpenWith, Action::Pin, Action::Copy, Action::Save, Action::Cancel}) {
+    for (Action action : {Action::ToggleCaptureScope,
+                          Action::ToggleToolbarLayout,
+                          Action::OpenWith,
+                          Action::Extensions,
+                          Action::Pin,
+                          Action::Copy,
+                          Action::Save,
+                          Action::Cancel}) {
         const QString shortcut = action == Action::OpenWith ? QStringLiteral("Open")
+            : action == Action::Extensions           ? QStringLiteral("Ext")
             : action == Action::Pin                  ? QStringLiteral("Pin")
             : action == Action::Copy                 ? QStringLiteral("Ctrl+C")
             : action == Action::Save                 ? QStringLiteral("Ctrl+S")
@@ -490,6 +572,7 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     actionLayout->setSpacing(7);
     actionLayout->addWidget(addToolbarButton(Action::ToggleCaptureScope, QStringLiteral("F"), m_actionToolbar));
     actionLayout->addWidget(addToolbarButton(Action::OpenWith, QStringLiteral("Open"), m_actionToolbar));
+    actionLayout->addWidget(addToolbarButton(Action::Extensions, QStringLiteral("Ext"), m_actionToolbar));
     actionLayout->addWidget(addToolbarButton(Action::Pin, QStringLiteral("Pin"), m_actionToolbar));
     actionLayout->addWidget(addToolbarButton(Action::Copy, QStringLiteral("Ctrl+C"), m_actionToolbar));
     actionLayout->addWidget(addToolbarButton(Action::Save, QStringLiteral("Ctrl+S"), m_actionToolbar));
@@ -648,6 +731,14 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent)
     openLayout->setSpacing(7);
     m_openWithPanel->hide();
 
+    m_extensionPanel = new QWidget(this);
+    m_extensionPanel->setObjectName(QStringLiteral("extensionPanel"));
+    m_extensionPanel->setStyleSheet(markshot::theme::openWithPanelStyleSheet());
+    auto *extensionLayout = new QVBoxLayout(m_extensionPanel);
+    extensionLayout->setContentsMargins(12, 12, 12, 12);
+    extensionLayout->setSpacing(7);
+    m_extensionPanel->hide();
+
     m_colorPalette = new QWidget(this);
     m_colorPalette->setObjectName(QStringLiteral("colorPalette"));
     m_colorPalette->setStyleSheet(markshot::theme::colorPaletteStyleSheet());
@@ -784,6 +875,9 @@ void ShotWindow::enterFullscreenAnnotation(bool resetAnnotations)
     if (m_openWithPanel) {
         m_openWithPanel->hide();
     }
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
+    }
     if (m_annotationPropertyPanel) {
         m_annotationPropertyPanel->hide();
     }
@@ -850,6 +944,7 @@ void ShotWindow::leaveFullscreenAnnotation()
     updateToolbarGeometry();
     updateActionToolbarGeometry();
     updateOpenWithPanelGeometry();
+    updateExtensionPanelGeometry();
     updateAnnotationPropertyPanelGeometry();
     updateToolbarState();
     update();
@@ -872,6 +967,7 @@ void ShotWindow::toggleToolbarLayout()
     applyToolbarLayout();
     updateToolbarGeometry();
     updateOpenWithPanelGeometry();
+    updateExtensionPanelGeometry();
     updateAnnotationPropertyPanelGeometry();
     updateToolbarState();
 }
@@ -903,7 +999,7 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
         button->setProperty("role", QStringLiteral("primary"));
     } else if (action == Action::Cancel) {
         button->setProperty("role", QStringLiteral("danger"));
-    } else if (action == Action::OpenWith || action == Action::Pin || action == Action::Copy) {
+    } else if (action == Action::OpenWith || action == Action::Extensions || action == Action::Pin || action == Action::Copy) {
         button->setProperty("role", QStringLiteral("secondary"));
     }
 
@@ -943,6 +1039,8 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
         connect(button, &QPushButton::clicked, this, [this] { redoAnnotation(); });
     } else if (action == Action::OpenWith) {
         connect(button, &QPushButton::clicked, this, [this] { toggleOpenWithPanel(); });
+    } else if (action == Action::Extensions) {
+        connect(button, &QPushButton::clicked, this, [this] { toggleExtensionPanel(); });
     } else if (action == Action::Pin) {
         connect(button, &QPushButton::clicked, this, [this] { pinSelection(); });
     } else if (action == Action::Copy) {
@@ -1006,6 +1104,75 @@ QVector<ShotWindow::DesktopApp> ShotWindow::imageDesktopApps() const
     return apps;
 }
 
+QVector<ShotWindow::ExtensionCommand> ShotWindow::extensionCommands(QString *errorMessage) const
+{
+    if (errorMessage) {
+        errorMessage->clear();
+    }
+
+    const QString configPath = extensionCommandsConfigPath();
+    QFile file(configPath);
+    if (!file.exists()) {
+        return {};
+    }
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("Cannot read %1").arg(configPath);
+        }
+        return {};
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("Invalid JSON at offset %1: %2").arg(parseError.offset).arg(parseError.errorString());
+        }
+        return {};
+    }
+
+    QJsonArray commandArray;
+    if (document.isArray()) {
+        commandArray = document.array();
+    } else if (document.isObject() && document.object().value(QStringLiteral("commands")).isArray()) {
+        commandArray = document.object().value(QStringLiteral("commands")).toArray();
+    } else {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("Expected a JSON array or an object with a commands array");
+        }
+        return {};
+    }
+
+    QVector<ExtensionCommand> commands;
+    for (const QJsonValue &value : commandArray) {
+        if (!value.isObject()) {
+            continue;
+        }
+
+        const QJsonObject object = value.toObject();
+        ExtensionCommand command;
+        command.name = object.value(QStringLiteral("name")).toString().trimmed();
+        command.command = object.value(QStringLiteral("command")).toString().trimmed();
+        command.workingDirectory = object.value(QStringLiteral("workingDirectory"))
+                                       .toString(object.value(QStringLiteral("cwd")).toString())
+                                       .trimmed();
+        command.description = object.value(QStringLiteral("description")).toString().trimmed();
+        command.saveImage = extensionCommandUsesImagePlaceholder(command.command)
+            || object.value(QStringLiteral("saveImage")).toBool(false)
+            || object.value(QStringLiteral("needsImage")).toBool(false);
+        if (object.value(QStringLiteral("closeOnStart")).isBool()) {
+            command.closeOnStart = object.value(QStringLiteral("closeOnStart")).toBool();
+        }
+
+        if (command.name.isEmpty() || command.command.isEmpty()) {
+            continue;
+        }
+        commands.append(command);
+    }
+
+    return commands;
+}
+
 bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
 {
     if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::KeyPress) {
@@ -1039,6 +1206,7 @@ bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
             m_toolbarUserPlaced = true;
             m_toolbar->setGeometry(clampedToolbarGeometry(m_toolbarBeforeDrag.translated(delta)));
             updateOpenWithPanelGeometry();
+            updateExtensionPanelGeometry();
             updateAnnotationPropertyPanelGeometry();
             return true;
         } else if (event->type() == QEvent::MouseButtonRelease && m_toolbarDragging) {
@@ -1048,6 +1216,7 @@ bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
                 m_toolbarDragging = false;
                 updateCursor();
                 updateOpenWithPanelGeometry();
+                updateExtensionPanelGeometry();
                 updateAnnotationPropertyPanelGeometry();
                 return true;
             }
@@ -1208,6 +1377,7 @@ void ShotWindow::resizeEvent(QResizeEvent *)
     updateActionToolbarGeometry();
     updateAnnotationPropertyPanelGeometry();
     updateOpenWithPanelGeometry();
+    updateExtensionPanelGeometry();
 }
 
 void ShotWindow::mousePressEvent(QMouseEvent *event)
@@ -1242,6 +1412,12 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         && (!m_actionToolbar || !m_actionToolbar->geometry().contains(event->pos()))
         && (!m_toolbar || !m_toolbar->geometry().contains(event->pos()))) {
         m_openWithPanel->hide();
+    }
+    if (m_extensionPanel && m_extensionPanel->isVisible()
+        && !m_extensionPanel->geometry().contains(event->pos())
+        && (!m_actionToolbar || !m_actionToolbar->geometry().contains(event->pos()))
+        && (!m_toolbar || !m_toolbar->geometry().contains(event->pos()))) {
+        m_extensionPanel->hide();
     }
     if (m_colorPalette && m_colorPalette->isVisible()
         && !m_colorPalette->geometry().contains(event->pos())) {
@@ -1440,6 +1616,7 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
             m_toolbar->setGeometry(clampedToolbarGeometry(toolbarGeometry));
         }
         updateOpenWithPanelGeometry();
+        updateExtensionPanelGeometry();
         updateAnnotationPropertyPanelGeometry();
         return;
     }
@@ -1513,6 +1690,7 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         updateToolbarGeometry();
         updateActionToolbarGeometry();
         updateOpenWithPanelGeometry();
+        updateExtensionPanelGeometry();
         updateTextEditorGeometry();
         update();
         return;
@@ -1657,6 +1835,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         m_toolbarDragging = false;
         updateCursor();
         updateOpenWithPanelGeometry();
+        updateExtensionPanelGeometry();
         updateAnnotationPropertyPanelGeometry();
         return;
     }
@@ -1718,6 +1897,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         updateToolbarGeometry();
         updateActionToolbarGeometry();
         updateOpenWithPanelGeometry();
+        updateExtensionPanelGeometry();
         update();
         return;
     }
@@ -1929,6 +2109,9 @@ void ShotWindow::beginSelection(QPointF imagePoint)
     }
     if (m_openWithPanel) {
         m_openWithPanel->hide();
+    }
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
     }
     if (m_annotationPropertyPanel) {
         m_annotationPropertyPanel->hide();
@@ -3131,6 +3314,7 @@ void ShotWindow::refreshViewGeometry()
     updateActionToolbarGeometry();
     updateAnnotationPropertyPanelGeometry();
     updateOpenWithPanelGeometry();
+    updateExtensionPanelGeometry();
 }
 
 QRect ShotWindow::clampedToolbarGeometry(QRect toolbarGeometry) const
@@ -3941,6 +4125,9 @@ void ShotWindow::toggleOpenWithPanel()
     if (m_colorPalette) {
         m_colorPalette->hide();
     }
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
+    }
 
     if (m_openWithPanel->isVisible()) {
         m_openWithPanel->hide();
@@ -4041,11 +4228,132 @@ void ShotWindow::updateOpenWithPanelGeometry()
     m_openWithPanel->setGeometry(x, y, panelSize.width(), panelSize.height());
 }
 
+void ShotWindow::toggleExtensionPanel()
+{
+    commitTextEditor();
+    if (!m_extensionPanel || !hasUsableSelection()) {
+        return;
+    }
+    if (m_colorPalette) {
+        m_colorPalette->hide();
+    }
+    if (m_openWithPanel) {
+        m_openWithPanel->hide();
+    }
+
+    if (m_extensionPanel->isVisible()) {
+        m_extensionPanel->hide();
+        return;
+    }
+
+    updateExtensionPanel();
+    updateExtensionPanelGeometry();
+    m_extensionPanel->show();
+    m_extensionPanel->raise();
+}
+
+void ShotWindow::updateExtensionPanel()
+{
+    if (!m_extensionPanel) {
+        return;
+    }
+
+    QLayout *layout = m_extensionPanel->layout();
+    while (QLayoutItem *item = layout->takeAt(0)) {
+        if (QWidget *widget = item->widget()) {
+            delete widget;
+        }
+        delete item;
+    }
+
+    auto *title = new QLabel(QStringLiteral("Extensions"), m_extensionPanel);
+    layout->addWidget(title);
+
+    QString errorMessage;
+    const QVector<ExtensionCommand> commands = extensionCommands(&errorMessage);
+    if (!errorMessage.isEmpty()) {
+        auto *error = new QLabel(errorMessage, m_extensionPanel);
+        error->setWordWrap(true);
+        layout->addWidget(error);
+        m_extensionPanel->adjustSize();
+        return;
+    }
+
+    if (commands.isEmpty()) {
+        auto *empty = new QLabel(QStringLiteral("No extension commands configured.\nCreate %1").arg(extensionCommandsConfigPath()),
+                                 m_extensionPanel);
+        empty->setWordWrap(true);
+        layout->addWidget(empty);
+        m_extensionPanel->adjustSize();
+        return;
+    }
+
+    auto *list = new QListWidget(m_extensionPanel);
+    list->setFocusPolicy(Qt::NoFocus);
+    list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    for (const ExtensionCommand &command : commands) {
+        auto *item = new QListWidgetItem(command.name, list);
+        const QString tooltip = command.description.isEmpty()
+            ? command.command
+            : QStringLiteral("%1\n%2").arg(command.description, command.command);
+        item->setToolTip(tooltip);
+        item->setData(Qt::UserRole, command.command);
+        item->setData(Qt::UserRole + 1, command.workingDirectory);
+        item->setData(Qt::UserRole + 2, command.description);
+        item->setData(Qt::UserRole + 3, command.saveImage);
+        item->setData(Qt::UserRole + 4, command.closeOnStart);
+    }
+    list->setFixedHeight(std::min(420, std::max(58, static_cast<int>(commands.size()) * 44)));
+    connect(list, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
+        if (!item) {
+            return;
+        }
+
+        ExtensionCommand command;
+        command.name = item->text();
+        command.command = item->data(Qt::UserRole).toString();
+        command.workingDirectory = item->data(Qt::UserRole + 1).toString();
+        command.description = item->data(Qt::UserRole + 2).toString();
+        command.saveImage = item->data(Qt::UserRole + 3).toBool();
+        command.closeOnStart = item->data(Qt::UserRole + 4).toBool();
+        runExtensionCommand(command);
+    });
+    layout->addWidget(list);
+
+    m_extensionPanel->adjustSize();
+}
+
+void ShotWindow::updateExtensionPanelGeometry()
+{
+    if (!m_extensionPanel) {
+        return;
+    }
+
+    m_extensionPanel->adjustSize();
+    const QSize panelSize(std::min(380, std::max(300, m_extensionPanel->sizeHint().width())),
+                          std::min(540, std::max(80, m_extensionPanel->sizeHint().height())));
+    const QRect toolbarRect = m_fullscreenAnnotation && m_toolbar
+        ? m_toolbar->geometry()
+        : (m_actionToolbar ? m_actionToolbar->geometry() : QRect(width() - 64, height() / 2 - 80, 56, 160));
+    int x = toolbarRect.left() - panelSize.width() - kToolbarMargin;
+    int y = toolbarRect.top();
+    if (x < 8) {
+        x = toolbarRect.right() + kToolbarMargin;
+    }
+    x = std::clamp(x, 8, std::max(8, width() - panelSize.width() - 8));
+    y = std::clamp(y, 8, std::max(8, height() - panelSize.height() - 8));
+    m_extensionPanel->setGeometry(x, y, panelSize.width(), panelSize.height());
+}
+
 void ShotWindow::toggleColorPalette(QPoint position)
 {
     commitTextEditor();
     if (m_openWithPanel) {
         m_openWithPanel->hide();
+    }
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
     }
     if (!m_colorPalette) {
         return;
@@ -4645,6 +4953,9 @@ void ShotWindow::openSelectionWithDesktop(const DesktopApp &app)
     if (m_openWithPanel) {
         m_openWithPanel->hide();
     }
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
+    }
 
     const QString imagePath = saveSelectionToTempFile();
     if (imagePath.isEmpty()) {
@@ -4659,6 +4970,64 @@ void ShotWindow::openSelectionWithDesktop(const DesktopApp &app)
     const QString program = command.takeFirst();
     if (QProcess::startDetached(program, command)) {
         close();
+    }
+}
+
+void ShotWindow::runExtensionCommand(const ExtensionCommand &command)
+{
+    commitTextEditor();
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
+    }
+    if (m_openWithPanel) {
+        m_openWithPanel->hide();
+    }
+
+    QString commandLine = command.command;
+    bool replacedImagePlaceholder = false;
+    QString imagePath;
+    if (command.saveImage) {
+        imagePath = saveSelectionToTempFile();
+        if (imagePath.isEmpty()) {
+            return;
+        }
+        replacedImagePlaceholder = replaceExtensionImagePlaceholders(&commandLine, imagePath);
+        if (!replacedImagePlaceholder) {
+            commandLine += QLatin1Char(' ');
+            commandLine += shellQuote(imagePath);
+        }
+    }
+
+    if (commandLine.trimmed().isEmpty()) {
+        return;
+    }
+
+    QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"), QStringLiteral("/bin/sh"));
+    if (shell.isEmpty()) {
+        shell = QStringLiteral("/bin/sh");
+    }
+    const QString workingDirectory = command.workingDirectory.isEmpty()
+        ? QString()
+        : expandUserPath(command.workingDirectory);
+
+    if (command.closeOnStart) {
+        hide();
+        QApplication::processEvents();
+    }
+
+    const bool started = QProcess::startDetached(shell, {QStringLiteral("-c"), commandLine}, workingDirectory);
+    if (started && command.closeOnStart) {
+        close();
+        return;
+    }
+
+    if (!started && command.closeOnStart) {
+        show();
+        raise();
+        activateWindow();
+        updateToolbarGeometry();
+        updateActionToolbarGeometry();
+        updateExtensionPanelGeometry();
     }
 }
 
@@ -4721,6 +5090,9 @@ void ShotWindow::saveSelection()
 
     if (m_openWithPanel) {
         m_openWithPanel->hide();
+    }
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
     }
     if (m_colorPalette) {
         m_colorPalette->hide();

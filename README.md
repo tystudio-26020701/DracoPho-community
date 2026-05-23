@@ -85,6 +85,30 @@ binds {
 }
 ```
 
+### Extension Commands
+
+The right-side action toolbar includes an **Extensions** button. It reads user-defined commands from `~/.config/mark-shot/extensions.json`. The file can be either a JSON array or an object with a `commands` array.
+
+```json
+{
+  "commands": [
+    {
+      "name": "Long screenshot",
+      "command": "./target/release/wayscrollshot \"$(slurp)\"",
+      "workingDirectory": "~/Desktop/projecies/wayscrollshot",
+      "closeOnStart": true
+    },
+    {
+      "name": "OCR selection",
+      "command": "ocr-tool {image}",
+      "saveImage": true
+    }
+  ]
+}
+```
+
+`command` is executed through `$SHELL -c`, so shell features like `$(slurp)` work. Use `{image}` or `{imagePath}` to pass the current rendered selection as a temporary PNG path, or `{imageUrl}` for a `file://` URL. Set `saveImage` or `needsImage` to `true` to append the temporary PNG path when no image placeholder is present. `workingDirectory` and `cwd` are aliases. `closeOnStart` defaults to `true`, hiding and closing Mark Shot before the command starts.
+
 ---
 
 ## Compilation & Installation

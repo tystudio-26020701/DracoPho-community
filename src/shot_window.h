@@ -46,6 +46,7 @@ public:
         Undo,
         Redo,
         OpenWith,
+        Extensions,
         Pin,
         Copy,
         Save,
@@ -57,6 +58,15 @@ public:
         QString desktopPath;
         QString exec;
         QString icon;
+    };
+
+    struct ExtensionCommand {
+        QString name;
+        QString command;
+        QString workingDirectory;
+        QString description;
+        bool saveImage = false;
+        bool closeOnStart = true;
     };
 
     explicit ShotWindow(QImage frozenFrame, QString outputName, QWidget *parent = nullptr);
@@ -141,6 +151,7 @@ private:
 
     QPushButton *addToolbarButton(Action action, const QString &shortcutText, QWidget *parentToolbar = nullptr);
     QVector<DesktopApp> imageDesktopApps() const;
+    QVector<ExtensionCommand> extensionCommands(QString *errorMessage = nullptr) const;
     QImage renderedSelection() const;
     QPointF clampImagePoint(QPointF point) const;
     QImage mosaicImage(QRect sourceRect, int blockSize) const;
@@ -202,6 +213,7 @@ private:
     void commitLaserStroke();
     void cleanupLaserStrokes();
     void openSelectionWithDesktop(const DesktopApp &app);
+    void runExtensionCommand(const ExtensionCommand &command);
     void pinSelection();
     QString saveSelectionToTempFile() const;
     void setCurrentColor(QColor color);
@@ -215,12 +227,15 @@ private:
     void leaveFullscreenAnnotation();
     void toggleColorPalette(QPoint position);
     void toggleOpenWithPanel();
+    void toggleExtensionPanel();
     void updateCursor();
     void clearWheelPreview();
     void updateColorPaletteGeometry(QPoint anchor);
     void updateColorPalettePreview();
     void updateOpenWithPanel();
     void updateOpenWithPanelGeometry();
+    void updateExtensionPanel();
+    void updateExtensionPanelGeometry();
     void updateAnnotationPropertyPanel();
     void updateAnnotationPropertyPanelGeometry();
     void updatePropertyColorDialogGeometry();
@@ -327,6 +342,7 @@ private:
     bool m_propertyColorEditHistoryCaptured = false;
     bool m_propertyColorEditingTextBackground = false;
     QWidget *m_openWithPanel = nullptr;
+    QWidget *m_extensionPanel = nullptr;
     QWidget *m_colorPalette = nullptr;
     QWidget *m_colorPalettePreview = nullptr;
     QPoint m_colorPaletteAnchor;
