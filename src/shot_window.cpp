@@ -4480,10 +4480,12 @@ void ShotWindow::updateTextEditorGeometry()
 
     const QPointF topLeft = imageToWidget(m_textEditorImagePoint);
     const QRectF selection = imageRectToWidget(normalizedSelection());
-    const int availableRight = std::max(80, qRound(selection.right() - topLeft.x() - 12));
-    const int availableBottom = std::max(36, qRound(selection.bottom() - topLeft.y() - 12));
-    const int editorWidth = std::clamp(220, 96, availableRight);
-    const int editorHeight = std::clamp(m_textEditor->fontMetrics().height() + 18, 38, availableBottom);
+    constexpr int kMinTextEditorWidth = 96;
+    constexpr int kMinTextEditorHeight = 38;
+    const int availableRight = std::max(kMinTextEditorWidth, qRound(selection.right() - topLeft.x() - 12));
+    const int availableBottom = std::max(kMinTextEditorHeight, qRound(selection.bottom() - topLeft.y() - 12));
+    const int editorWidth = std::clamp(220, kMinTextEditorWidth, availableRight);
+    const int editorHeight = std::clamp(m_textEditor->fontMetrics().height() + 18, kMinTextEditorHeight, availableBottom);
     QRect editorRect(qRound(topLeft.x()), qRound(topLeft.y()), editorWidth, editorHeight);
     editorRect.moveLeft(std::clamp(editorRect.left(), 8, std::max(8, width() - editorRect.width() - 8)));
     editorRect.moveTop(std::clamp(editorRect.top(), 8, std::max(8, height() - editorRect.height() - 8)));
