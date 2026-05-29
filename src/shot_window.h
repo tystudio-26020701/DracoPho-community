@@ -49,6 +49,7 @@ public:
         OpenWith,
         Extensions,
         Pin,
+        OcrCopy,
         Copy,
         Save,
         Cancel,
@@ -217,6 +218,8 @@ private:
     void openSelectionWithDesktop(const DesktopApp &app);
     void runExtensionCommand(const ExtensionCommand &command);
     void pinSelection();
+    void ocrCopySelection();
+    void showToast(const QString &text, int durationMs = 2000);
     QString saveSelectionToTempFile() const;
     void setCurrentColor(QColor color);
     void saveSelection();
@@ -360,4 +363,7 @@ private:
     std::optional<int> m_editingTextAnnotationId;
     QVector<HistorySnapshot> m_undoStack;
     QVector<HistorySnapshot> m_redoStack;
+    QVector<QRect> m_windowRects;
+    std::optional<QRect> m_hoveredWindowRect;
+    QPointF m_selectionClickStart;
 };
