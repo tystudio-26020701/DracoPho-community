@@ -1,0 +1,157 @@
+name: Release DEB
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Package version for test runs, for example 0.1.9+test1'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deb:
+    name: Build Ubuntu/Debian amd64 package
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            echo "No package version was provided" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            CHECKOUT_REF="$TAG"
+          else
+            CHECKOUT_REF="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$CHECKOUT_REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.version.outputs.checkout_ref }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            dpkg-dev \
+            fakeroot \
+            file \
+            libx11-xcb-dev \
+            libxcb1-dev \
+            ninja-build \
+            qt6-base-dev \
+            qt6-base-dev-tools
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Build deb package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PACKAGE_DIR="$PWD/deb-root"
+          INSTALL_DIR="$PACKAGE_DIR/usr"
+          CONTROL_DIR="$PACKAGE_DIR/DEBIAN"
+          VERSION="${{ steps.version.outputs.version }}"
+          ASSET="mark-shot_${VERSION}_amd64.deb"
+
+          rm -rf "$PACKAGE_DIR"
+          cmake --install build --prefix "$INSTALL_DIR"
+          install -Dm644 LICENSE "$PACKAGE_DIR/usr/share/doc/mark-shot/copyright"
+          install -Dm644 README.md "$PACKAGE_DIR/usr/share/doc/mark-shot/README.md"
+          install -Dm644 README.zh-CN.md "$PACKAGE_DIR/usr/share/doc/mark-shot/README.zh-CN.md"
+          install -d "$CONTROL_DIR"
+
+          mkdir -p debian
+          cat > debian/control <<EOF
+          Source: mark-shot
+          Section: graphics
+          Priority: optional
+          Maintainer: jswysnemc <snemc@qq.com>
+          Rules-Requires-Root: no
+          Standards-Version: 4.7.0
+
+          Package: mark-shot
+          Architecture: any
+          Depends: \${shlibs:Depends}
+          Description: Qt 6 screenshot selection and annotation tool
+           Mark Shot captures screenshots and annotates image regions.
+          EOF
+
+          SHLIB_DEPS="$(dpkg-shlibdeps -O -e"$PACKAGE_DIR/usr/bin/mark-shot" | sed 's/^shlibs:Depends=//')"
+          MANUAL_DEPS="python3"
+          RECOMMENDS="python3-venv, xdg-desktop-portal, grim, wl-clipboard, xclip"
+          if [ -n "$SHLIB_DEPS" ]; then
+            DEPENDS="$SHLIB_DEPS, $MANUAL_DEPS"
+          else
+            DEPENDS="$MANUAL_DEPS"
+          fi
+
+          cat > "$CONTROL_DIR/control" <<EOF
+          Package: mark-shot
+          Version: $VERSION
+          Section: graphics
+          Priority: optional
+          Architecture: amd64
+          Maintainer: jswysnemc <snemc@qq.com>
+          Depends: $DEPENDS
+          Recommends: $RECOMMENDS
+          Suggests: tesseract-ocr, tesseract-ocr-chi-sim
+          Description: Qt 6 screenshot selection and annotation tool
+           Mark Shot captures screenshots, annotates image regions, pins floating
+           image stickers, and provides OCR and translation helpers for pinned
+           image text.
+          EOF
+
+          fakeroot dpkg-deb --build --root-owner-group "$PACKAGE_DIR" "$ASSET"
+          sha256sum "$ASSET" > "$ASSET.sha256"
+
+          echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+          echo "checksum=$ASSET.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload deb artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mark-shot-deb-${{ steps.version.outputs.version }}
+          path: |
+            ${{ steps.package.outputs.asset }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+
+      - name: Upload deb to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            ${{ steps.package.outputs.asset }}
+            ${{ steps.package.outputs.checksum }}
