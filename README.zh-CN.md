@@ -202,11 +202,12 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 ### 构建与编译
 
 ```bash
-# Wayland（有 LayerShellQt）
+# 使用系统 Qt 6
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
-# X11 / Ubuntu（使用本地 Qt 6）
-cmake -S . -B build -DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64
+# 如果 Qt 6 安装在用户目录，额外指定 CMAKE_PREFIX_PATH
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64
 
 # 执行编译
 cmake --build build
@@ -279,3 +280,7 @@ cmake --install build --prefix "$HOME/.local"
 ## 许可证说明
 
 本项目基于 **MIT 许可证** 开源，详情请参阅 [LICENSE](LICENSE) 文件。
+
+## 致谢
+
+感谢 [serendipitywgy](https://github.com/serendipitywgy) 通过 `serendipitywgy/mark-shot` 贡献跨桌面兼容性改进、OCR 复制工具栏动作和智能矩形框预选功能。
