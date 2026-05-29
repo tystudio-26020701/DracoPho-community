@@ -202,11 +202,12 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 ### Build Steps
 
 ```bash
-# Wayland (with LayerShellQt)
+# With system Qt 6
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
-# X11 / Ubuntu with local Qt 6
-cmake -S . -B build -DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64
+# If Qt 6 is installed under the user directory, add CMAKE_PREFIX_PATH
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64
 
 # Build
 cmake --build build
@@ -279,3 +280,7 @@ This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-translate`
 ## License
 
 This project is licensed under the **MIT License**. For details, please refer to the [LICENSE](LICENSE) file.
+
+## Acknowledgements
+
+Thanks to [serendipitywgy](https://github.com/serendipitywgy) for contributions from `serendipitywgy/mark-shot`, including cross-desktop compatibility improvements, the OCR copy toolbar action, and smart rectangle preselection.
