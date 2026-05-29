@@ -11,7 +11,13 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets DBus)
 find_package(LayerShellQt QUIET)
 find_package(X11 COMPONENTS xcb QUIET)
 
-qt_standard_project_setup()
+if(COMMAND qt_standard_project_setup)
+    qt_standard_project_setup()
+else()
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTOUIC ON)
+    set(CMAKE_AUTORCC ON)
+endif()
 
 qt_add_executable(mark-shot
     src/main.cpp
