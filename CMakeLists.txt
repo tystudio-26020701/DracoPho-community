@@ -9,6 +9,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 find_package(LayerShellQt QUIET)
+find_package(X11 COMPONENTS xcb QUIET)
 
 qt_standard_project_setup()
 
@@ -34,6 +35,11 @@ target_link_libraries(mark-shot
         Qt6::Gui
         Qt6::Widgets
 )
+
+if(X11_xcb_FOUND)
+    target_link_libraries(mark-shot PRIVATE X11::xcb)
+    target_compile_definitions(mark-shot PRIVATE HAVE_XCB)
+endif()
 
 if(LayerShellQt_FOUND)
     target_link_libraries(mark-shot PRIVATE LayerShellQt::Interface)

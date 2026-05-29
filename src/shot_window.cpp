@@ -1,5 +1,6 @@
 #include "shot_window.h"
 
+#include "screen_capture.h"
 #include "ui/color_picker.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
@@ -1821,6 +1822,26 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QRect sourceGeome
     m_laserTimer = new QTimer(this);
     m_laserTimer->setInterval(33);
     connect(m_laserTimer, &QTimer::timeout, this, [this] { cleanupLaserStrokes(); });
+
+    const QVector<QRect> screenRects = enumerateX11WindowGeometries();
+    if (!screenRects.isEmpty() && m_sourceGeometry.isValid() && !m_sourceGeometry.isEmpty()) {
+        for (const QRect &r : screenRects) {
+            QRect imageRect(r.x() - m_sourceGeometry.x(),
+                            r.y() - m_sourceGeometry.y(),
+                            r.width(), r.height());
+            const QRect clipped = imageRect.intersected(QRect(QPoint(0, 0), m_frozenFrame.size()));
+            if (clipped.width() > 1 && clipped.height() > 1) {
+                m_windowRects.append(clipped);
+            }
+        }
+    } else if (!screenRects.isEmpty()) {
+        for (const QRect &r : screenRects) {
+            const QRect clipped = r.intersected(QRect(QPoint(0, 0), m_frozenFrame.size()));
+            if (clipped.width() > 1 && clipped.height() > 1) {
+                m_windowRects.append(clipped);
+            }
+        }
+    }
 }
 
 bool ShotWindow::configureLayerShell(QScreen *screen)
@@ -2416,6 +2437,13 @@ void ShotWindow::paintEvent(QPaintEvent *)
         }
     }
 
+    if (m_hoveredWindowRect.has_value() && m_mode == Mode::Selecting) {
+        const QRectF hoverWidget = imageRectToWidget(QRectF(*m_hoveredWindowRect));
+        painter.setPen(QPen(QColor(94, 234, 212), 2.0));
+        painter.setBrush(QColor(94, 234, 212, 32));
+        painter.drawRect(hoverWidget);
+    }
+
     if (!hasUsableSelection()) {
         const QString hint = QStringLiteral("Drag to select   Esc cancels");
         painter.setFont(QFont(QStringLiteral("Sans Serif"), 15, QFont::DemiBold));
@@ -2512,6 +2540,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         if (m_colorPalette) {
             m_colorPalette->hide();
         }
+        m_selectionClickStart = event->position();
         beginSelection(imagePoint);
         return;
     }
@@ -2639,6 +2668,24 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
     }
 
     const QPointF imagePoint = widgetToImage(event->position());
+    if (m_mode == Mode::Selecting && !m_dragging) {
+        std::optional<QRect> best;
+        qint64 bestArea = std::numeric_limits<qint64>::max();
+        const QPoint imgPt = imagePoint.toPoint();
+        for (const QRect &r : std::as_const(m_windowRects)) {
+            if (r.contains(imgPt)) {
+                qint64 area = static_cast<qint64>(r.width()) * r.height();
+                if (area < bestArea) {
+                    bestArea = area;
+                    best = r;
+                }
+            }
+        }
+        if (best != m_hoveredWindowRect) {
+            m_hoveredWindowRect = best;
+            update();
+        }
+    }
     if (m_mode == Mode::Selecting && m_dragging) {
         m_selection = normalizedRect(m_selectionStart, imagePoint);
         revealSelectionInfo();
@@ -2937,6 +2984,31 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
     }
 
     if (m_mode == Mode::Selecting) {
+        const QPointF releasePos = event->position();
+        const qreal clickDistance = QLineF(m_selectionClickStart, releasePos).length();
+        if (clickDistance < 5.0 && m_hoveredWindowRect.has_value()) {
+            m_selection = QRectF(*m_hoveredWindowRect);
+            m_hoveredWindowRect.reset();
+            m_dragging = false;
+            if (!hasUsableSelection()) {
+                m_selection = {};
+                update();
+                return;
+            }
+            m_mode = Mode::Editing;
+            m_fullscreenAnnotation = false;
+            m_toolbarUserPlaced = false;
+            setTool(Tool::Pen);
+            setFullscreenActionButtonsVisible(false);
+            m_toolbar->show();
+            m_actionToolbar->show();
+            revealSelectionInfo();
+            updateToolbarGeometry();
+            updateActionToolbarGeometry();
+            update();
+            return;
+        }
+        m_hoveredWindowRect.reset();
         m_selection = normalizedSelection();
         if (!hasUsableSelection()) {
             m_selection = {};

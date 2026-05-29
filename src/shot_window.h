@@ -363,4 +363,7 @@ private:
     std::optional<int> m_editingTextAnnotationId;
     QVector<HistorySnapshot> m_undoStack;
     QVector<HistorySnapshot> m_redoStack;
+    QVector<QRect> m_windowRects;
+    std::optional<QRect> m_hoveredWindowRect;
+    QPointF m_selectionClickStart;
 };
