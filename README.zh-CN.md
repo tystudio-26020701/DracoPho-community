@@ -4,9 +4,9 @@
 
 <video src="https://github.com/user-attachments/assets/c2298867-06b4-404d-87bc-62ab8d81088b" width="100%" controls></video>
 
-`mark-shot` 是一款基于 Qt 6 开发的高性能 Wayland 截图标注工具，针对 `niri` 等现代 Wayland 窗口管理器进行了原生级深度优化。
+`mark-shot` 是一款基于 Qt 6 开发的高性能截图标注工具。最初针对 `niri` 等 Wayland 窗口管理器设计，现已原生支持 X11/GNOME 桌面环境。
 
-它通过 `grim` 瞬间截取屏幕画面，并打开自适应全屏标注覆盖层，为用户提供区域裁切、标注、复制到剪贴板、保存以及桌面贴图等功能。
+它可以瞬间截取屏幕画面，并打开自适应全屏标注覆盖层，为用户提供区域裁切、标注、复制到剪贴板、保存以及桌面贴图等功能。
 
 ---
 
@@ -25,7 +25,7 @@
 - **马赛克**：支持对敏感信息执行毛玻璃区域模糊虚化。
 
 ### 贴图悬浮固定（Pin）
-- 支持将截图或标注区域作为一个独立、无边框且置顶的悬浮贴图窗口（`PinnedImageWindow`）固定在屏幕上。
+- 支持将截图或标注区域作为一个独立、无边框且置顶的悬浮贴图窗口固定在屏幕上。
 - 支持在贴图窗口中直接选择 OCR 识别出的文字，使用 `Ctrl + C` 或右键菜单复制图片文字。
 - 支持通过 OpenAI 兼容接口调用 LLM 翻译 OCR 文本，并将译文按原图位置覆盖渲染到贴图上。
 - **便捷交互**：
@@ -33,14 +33,17 @@
   - 滚动鼠标滚轮可等比例缩放贴图，双击 `Ctrl` 键复位大小。
   - 双击鼠标左键或按下 `Esc` 键即可关闭贴图。
   - 右键单击唤出菜单，支持多角度旋转、透明度微调（0.2 - 1.0）、复制图片文字、翻译、另存为、复制或关闭。
-- **右键误触拦截**：由于 Qt 6 原生上下文菜单的弹出点击机制，右键可能在弹出时误触发菜单项。我们为此设计了局部的 `LeftClickMenuFilter` 事件过滤器，拦截非左键在菜单范围内的动作，从而杜绝误触。
 
-### Wayland 与系统深度集成
-- **原生 Wayland 覆盖层**：默认借助 `layer-shell-qt` 创建高速覆盖层；亦支持通过 `--xdg-window` 降级至普通的 XDG 全屏窗口。
-- **桌面快捷方式与专属 SVG 图标**：
+### 跨显示服务器支持
+- **Wayland**：使用 `grim` 截屏、`layer-shell-qt` 创建原生覆盖层、`wl-copy` 持久化剪贴板。
+- **X11**：使用 `QScreen::grabWindow` 截屏、全屏置顶窗口作为覆盖层、`xclip` 持久化剪贴板。
+- 运行时通过 `$XDG_SESSION_TYPE` 自动检测，无需手动配置。
+
+### 桌面集成
+- **桌面快捷方式**：
   - `mark-shot.desktop`：配置为系统全局截图工具，支持系统快捷键直接调用。
-  - `mark-shot-edit.desktop`：注册为独立的“Mark Shot 图像编辑器”，可集成到文件管理器（如 Dolphin、Nautilus）的右键“打开方式”菜单中，用于直接打开并标注已有本地图像。
-  - 附带高分辨率的 `mark-shot.svg` 与 `mark-shot-edit.svg` 系统矢量图标。
+  - `mark-shot-edit.desktop`：注册为独立的图像编辑器，可集成到文件管理器（如 Dolphin、Nautilus）的右键"打开方式"菜单中。
+- 附带高分辨率的 `mark-shot.svg` 与 `mark-shot-edit.svg` 系统矢量图标。
 
 ---
 
@@ -76,16 +79,18 @@ mark-shot --xdg-window
 | `--xdg-window` | 强制使用标准的 XDG 全屏普通窗口（xdg-shell）替代默认的 Wayland 覆盖层（layer-shell）。 |
 | `--fullscreen` | 跳过选区步骤，直接对捕获的完整屏幕截图进行标注。 |
 
-### 窗口管理器配置绑定
+### 快捷键绑定
 
-若要将 `mark-shot` 绑定为系统快捷键，可以修改窗口管理器配置。
+将 `mark-shot` 绑定为系统截图快捷键：
 
-以 `niri` 配置为例（修改 `~/.config/niri/config.kdl`）：
+**niri**（修改 `~/.config/niri/config.kdl`）：
 ```kdl
 binds {
     Mod+Shift+S { spawn "mark-shot"; }
 }
 ```
+
+**GNOME**：在系统设置 → 键盘 → 自定义快捷键中添加。
 
 ### 拓展命令
 
@@ -97,7 +102,7 @@ binds {
     {
       "name": "Long screenshot",
       "command": "./target/release/wayscrollshot {slurp}",
-      "workingDirectory": "~/Desktop/projecies/wayscrollshot",
+      "workingDirectory": "~/Desktop/projects/wayscrollshot",
       "closeOnStart": true
     },
     {
@@ -138,48 +143,84 @@ binds {
 }
 ```
 
-如果手动安装到 `/usr/bin`，必须同时安装 `mark-shot`、`mark-shot-ocr` 和 `mark-shot-translate`。否则贴图窗口可以打开，但复制图片文字与翻译功能无法调用后端脚本。
+手动安装时，必须同时安装 `mark-shot`、`mark-shot-ocr` 和 `mark-shot-translate`。否则贴图窗口可以打开，但复制图片文字与翻译功能无法调用后端脚本。
 
 ---
 
 ## 编译与安装
 
-### 系统依赖 (以 Arch Linux 为例)
+### 系统依赖
 
-在构建前，请先安装以下必要依赖包：
+#### Wayland (Arch Linux)
 
 ```bash
 sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-wayland layer-shell-qt grim wl-clipboard
 ```
 
-若要使用 RapidOCR 后端，建议创建用户级 Python 虚拟环境：
+#### X11/GNOME (Ubuntu/Debian)
 
 ```bash
-python -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/python -m pip install -U pip rapidocr onnxruntime
+# 构建工具
+sudo apt install build-essential cmake ninja-build
+
+# 剪贴板工具
+sudo apt install xclip
+
+# Qt 6（若系统仓库无 Qt 6，可通过 aqtinstall 安装到用户目录）
+pip install aqtinstall
+aqt install-qt linux desktop 6.7.3 gcc_64 --outputdir ~/Qt
+```
+
+> **说明**：在 Ubuntu 22.04 等系统自带 Qt 5 的环境下，将 Qt 6 安装到 `~/Qt` 不会影响系统。编译时传入 `-DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64` 即可。
+
+#### fcitx5 中文输入支持（X11 环境下的 Qt 6）
+
+Qt 6 未自带 fcitx5 输入法插件。若需在 X11 环境下使用 fcitx5 中文输入，需从源码编译该插件：
+
+```bash
+sudo apt install libfcitx5utils-dev libfcitx5config-dev libfcitx5core-dev libfcitx5-qt-dev extra-cmake-modules
+
+git clone --depth 1 --branch 5.0.10 https://github.com/fcitx/fcitx5-qt.git /tmp/fcitx5-qt
+cmake -B /tmp/fcitx5-qt/build -S /tmp/fcitx5-qt \
+  -DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64 \
+  -DENABLE_QT4=OFF -DENABLE_QT5=OFF -DENABLE_QT6=ON
+cmake --build /tmp/fcitx5-qt/build
+
+cp /tmp/fcitx5-qt/build/qt6/platforminputcontext/libfcitx5platforminputcontextplugin.so \
+   ~/Qt/6.7.3/gcc_64/plugins/platforminputcontexts/
+cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
+   ~/Qt/6.7.3/gcc_64/lib/
+```
+
+#### OCR 后端（可选）
+
+```bash
+python3 -m venv ~/.local/share/mark-shot/ocr-venv
+~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
 
 ### 构建与编译
 
-使用 CMake 和 Ninja 进行工程构建：
-
 ```bash
-# 配置项目并输出到 build 目录
+# Wayland（有 LayerShellQt）
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+# X11 / Ubuntu（使用本地 Qt 6）
+cmake -S . -B build -DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64
 
 # 执行编译
 cmake --build build
 ```
 
-编译成功后，可执行文件将生成在 `./build/mark-shot` 路径下。
+LayerShellQt 会被自动检测。找到时启用完整 Wayland layer-shell 支持；未找到时编译照常成功，运行时自动降级为标准全屏窗口。
 
 ### 安装与集成
-
-要将软件安装到本地用户目录下并自动关联快捷方式和系统右键菜单，请运行：
 
 ```bash
 cmake --install build --prefix "$HOME/.local"
 ```
+
+此命令会安装可执行文件、辅助脚本（`mark-shot-ocr`、`mark-shot-translate`）、桌面快捷方式和图标。
 
 ---
 
@@ -190,7 +231,7 @@ cmake --install build --prefix "$HOME/.local"
 | 快捷键 | 切换的目标工具 | 对应功能说明 |
 | :---: | :--- | :--- |
 | **V** | 移动 / 导航 (Move / Pan) | 在已有图像模式下，用于平移和拖动图像画布。 |
-| **S** | 选择 (Select) | 选中并移动、缩放或删除已绘制的矢量标注，或右键点击选区进行贴图。 |
+| **S** | 选择 (Select) | 选中并移动、缩放或删除已绘制的矢量标注。 |
 | **P** | 画笔 (Pen) | 自由曲线绘制。 |
 | **L** | 直线 (Line) | 绘制笔直的矢量线条。 |
 | **H** | 荧光笔 (Highlighter) | 半透明的高亮覆盖，适合标记重点。 |
@@ -207,7 +248,7 @@ cmake --install build --prefix "$HOME/.local"
 | 快捷键 | 触发动作 |
 | :---: | :--- |
 | **Esc** | 立即退出并关闭标注窗口。 |
-| **Ctrl + C** | 确认所有文字编辑，并将当前截图/已标注选区复制到 Wayland 系统剪贴板。 |
+| **Ctrl + C** | 确认所有文字编辑，并将当前截图/已标注选区复制到系统剪贴板。 |
 | **Ctrl + S** 或 **Enter / Return** | 确认所有文字编辑，并保存当前截图。 |
 | **Ctrl + Z** | 撤销上一步标注操作。 |
 | **Ctrl + Y** 或 **Ctrl + Shift + Z** | 重做已被撤销的标注操作。 |
@@ -230,11 +271,11 @@ cmake --install build --prefix "$HOME/.local"
 | **鼠标滚轮向上/向下** | 贴图窗口等比例无级放大/缩小。 |
 | **双击鼠标左键** | 极速关闭该贴图窗口。 |
 | **双击 Ctrl 键** | 一键复位贴图窗口的物理尺寸为原始比例。 |
-| **鼠标右键单击** | 弹出功能菜单（包括旋转、调整透明度、保存、复制、关闭等）。 |
+| **鼠标右键单击** | 弹出功能菜单（包括旋转、调整透明度、复制图片文字、翻译、保存、复制、关闭等）。 |
 | **Esc 键** | 关闭当前获得焦点的贴图窗口。 |
 
 ---
 
 ## 许可证说明
 
-本项目基于 **MIT 许可证** 开源，详情请参阅 [LICENSE](LICENSE) file。
+本项目基于 **MIT 许可证** 开源，详情请参阅 [LICENSE](LICENSE) 文件。

@@ -5,9 +5,11 @@ project(mark-shot VERSION 0.1.9 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-find_package(LayerShellQt REQUIRED)
+find_package(LayerShellQt QUIET)
+find_package(X11 COMPONENTS xcb QUIET)
 
 qt_standard_project_setup()
 
@@ -32,8 +34,17 @@ target_link_libraries(mark-shot
         Qt6::Core
         Qt6::Gui
         Qt6::Widgets
-        LayerShellQt::Interface
 )
+
+if(X11_xcb_FOUND)
+    target_link_libraries(mark-shot PRIVATE X11::xcb)
+    target_compile_definitions(mark-shot PRIVATE HAVE_XCB)
+endif()
+
+if(LayerShellQt_FOUND)
+    target_link_libraries(mark-shot PRIVATE LayerShellQt::Interface)
+    target_compile_definitions(mark-shot PRIVATE HAVE_LAYER_SHELL)
+endif()
 
 install(TARGETS mark-shot RUNTIME DESTINATION bin)
 install(PROGRAMS

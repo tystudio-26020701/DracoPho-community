@@ -3,6 +3,7 @@
 #include <QImage>
 #include <QRect>
 #include <QString>
+#include <QVector>
 
 struct CaptureResult {
     QImage image;
@@ -18,3 +19,4 @@ struct CaptureRequest {
 };
 
 CaptureResult captureScreenFrame(const CaptureRequest &request);
+QVector<QRect> enumerateX11WindowGeometries();
