@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-find_package(LayerShellQt REQUIRED)
+find_package(LayerShellQt QUIET)
 
 qt_standard_project_setup()
 
@@ -32,8 +32,12 @@ target_link_libraries(mark-shot
         Qt6::Core
         Qt6::Gui
         Qt6::Widgets
-        LayerShellQt::Interface
 )
+
+if(LayerShellQt_FOUND)
+    target_link_libraries(mark-shot PRIVATE LayerShellQt::Interface)
+    target_compile_definitions(mark-shot PRIVATE HAVE_LAYER_SHELL)
+endif()
 
 install(TARGETS mark-shot RUNTIME DESTINATION bin)
 install(PROGRAMS

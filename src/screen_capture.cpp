@@ -1,10 +1,44 @@
 #include "screen_capture.h"
 
+#include <QGuiApplication>
+#include <QPixmap>
 #include <QProcess>
+#include <QProcessEnvironment>
 #include <QRect>
+#include <QScreen>
 #include <QStringList>
 
 namespace {
+
+bool isWaylandSession()
+{
+    const QString sessionType = QProcessEnvironment::systemEnvironment().value(QStringLiteral("XDG_SESSION_TYPE")).toLower();
+    return sessionType == QStringLiteral("wayland");
+}
+
+CaptureResult captureWithQScreen(const CaptureRequest &request)
+{
+    QScreen *screen = QGuiApplication::primaryScreen();
+    if (!screen) {
+        return {{}, QStringLiteral("no screen available for capture"), {}, {}};
+    }
+
+    QPixmap pixmap = screen->grabWindow(0);
+    if (pixmap.isNull()) {
+        return {{}, QStringLiteral("QScreen::grabWindow returned null pixmap"), {}, {}};
+    }
+
+    QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied);
+
+    if (request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {
+        const QRect geo = request.sourceGeometry.normalized().intersected(image.rect());
+        if (!geo.isEmpty()) {
+            image = image.copy(geo);
+        }
+    }
+
+    return {image, {}, {}, request.sourceGeometry};
+}
 
 QString grimGeometry(QRect geometry)
 {
@@ -56,6 +90,10 @@ CaptureResult runGrim(const QStringList &arguments, const QString &outputName, Q
 
 CaptureResult captureScreenFrame(const CaptureRequest &request)
 {
+    if (!isWaylandSession()) {
+        return captureWithQScreen(request);
+    }
+
     const QStringList baseArguments{QStringLiteral("-t"), QStringLiteral("ppm"), QStringLiteral("-s"), QStringLiteral("1")};
 
     if (request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {

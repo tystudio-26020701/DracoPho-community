@@ -4,9 +4,9 @@
 
 <video src="https://github.com/user-attachments/assets/c2298867-06b4-404d-87bc-62ab8d81088b" width="100%" controls></video>
 
-`mark-shot` is a high-performance Wayland screenshot and annotation tool built with Qt 6, deeply optimized for modern Wayland compositors such as `niri`.
+`mark-shot` is a high-performance screenshot and annotation tool built with Qt 6. Originally designed for Wayland compositors such as `niri`, it now also runs natively on X11/GNOME desktops.
 
-It captures lossless screen frames instantly using `grim` and opens an interactive fullscreen overlay, providing region cropping, rich annotation, clipboard copying, saving, and desktop pinning features.
+It captures screen frames instantly and opens an interactive fullscreen overlay, providing region cropping, rich annotation, clipboard copying, saving, and desktop pinning features.
 
 ---
 
@@ -25,7 +25,7 @@ It captures lossless screen frames instantly using `grim` and opens an interacti
 - **Mosaic**: Applies high-fidelity acrylic frost blur to obscure sensitive information.
 
 ### Pinned Window Stickers
-- Pins any cropped region or annotated screenshot as an independent, frameless, and top-level floating window (`PinnedImageWindow`).
+- Pins any cropped region or annotated screenshot as an independent, frameless, and top-level floating window.
 - Supports direct selection of OCR-recognized text in the pinned window, with `Ctrl + C` and context-menu copying.
 - Supports OpenAI-compatible LLM translation for OCR text, rendering translated text back onto the image at the original layout positions.
 - **Interactive Gestures**:
@@ -33,10 +33,13 @@ It captures lossless screen frames instantly using `grim` and opens an interacti
   - Scroll mouse wheel to scale, or double-tap `Ctrl` to reset to original aspect ratio.
   - Double left-click or press `Esc` to close.
   - Right-click to open a context menu with options to rotate, copy image text, translate, save, copy, or adjust opacity (0.2 to 1.0).
-- **Accidental Click Filter**: Integrates a `LeftClickMenuFilter` that blocks non-left-click triggers within the popup menu area to avoid accidental triggers in Qt 6 environments.
 
-### Wayland & Desktop Integration
-- **Wayland Native**: Utilizes `layer-shell-qt` for native overlay layouts; falls back to standard XDG fullscreen windows via `--xdg-window`.
+### Cross-Platform Display Server Support
+- **Wayland**: Uses `grim` for screen capture, `layer-shell-qt` for native overlay, and `wl-copy` for clipboard persistence.
+- **X11**: Uses `QScreen::grabWindow` for screen capture, fullscreen top-level window for overlay, and `xclip` for clipboard persistence.
+- Runtime auto-detection via `$XDG_SESSION_TYPE` — no configuration needed.
+
+### Desktop Integration
 - **Desktop Entries**:
   - `mark-shot.desktop`: Configures the utility system-wide, triggerable by custom shortcuts.
   - `mark-shot-edit.desktop`: Registers as an image editor, enabling users to right-click local files in file managers (Dolphin, Nautilus, etc.) and open them directly in annotation mode.
@@ -76,16 +79,18 @@ mark-shot --xdg-window
 | `--xdg-window` | Forces the use of a standard XDG fullscreen window (xdg-shell) instead of layer-shell. |
 | `--fullscreen` | Skips region selection and opens annotation mode on the full screen frame directly. |
 
-### Compositor Hotkey Integration
+### Compositor / Desktop Hotkey Integration
 
-To bind `mark-shot` to a system screenshot shortcut, configure your compositor config. 
+To bind `mark-shot` to a system screenshot shortcut, configure your compositor or desktop environment.
 
-For example, in `niri` (`~/.config/niri/config.kdl`):
+**niri** (`~/.config/niri/config.kdl`):
 ```kdl
 binds {
     Mod+Shift+S { spawn "mark-shot"; }
 }
 ```
+
+**GNOME** (via custom keyboard shortcut in Settings → Keyboard → Custom Shortcuts).
 
 ### Extension Commands
 
@@ -97,7 +102,7 @@ The right-side action toolbar includes an **Extensions** button. It reads user-d
     {
       "name": "Long screenshot",
       "command": "./target/release/wayscrollshot {slurp}",
-      "workingDirectory": "~/Desktop/projecies/wayscrollshot",
+      "workingDirectory": "~/Desktop/projects/wayscrollshot",
       "closeOnStart": true
     },
     {
@@ -109,7 +114,7 @@ The right-side action toolbar includes an **Extensions** button. It reads user-d
 }
 ```
 
-`command` is executed through `$SHELL -c`, so shell features work. Use `{slurp}` to pass the current selection as `x,y widthxheight` geometry. Use `{image}` or `{imagePath}` to pass the current rendered selection as a temporary PNG path, or `{imageUrl}` for a `file://` URL. These placeholders are shell-quoted automatically, so write them without extra quotes. Set `saveImage` or `needsImage` to `true` to append the temporary PNG path when no image placeholder is present. `workingDirectory` and `cwd` are aliases. `closeOnStart` defaults to `true`, hiding and closing Mark Shot before the command starts.
+`command` is executed through `$SHELL -c`, so shell features work. Use `{slurp}` to pass the current selection as `x,y widthxheight` geometry. Use `{image}` or `{imagePath}` to pass the current rendered selection as a temporary PNG path, or `{imageUrl}` for a `file://` URL. These placeholders are shell-quoted automatically. Set `saveImage` or `needsImage` to `true` to append the temporary PNG path when no image placeholder is present. `workingDirectory` and `cwd` are aliases. `closeOnStart` defaults to `true`, hiding and closing Mark Shot before the command starts.
 
 ### Pinned OCR and LLM Translation Config
 
@@ -138,48 +143,84 @@ Pinned windows read OCR and translation settings from `~/.config/mark-shot/confi
 }
 ```
 
-When installing manually to `/usr/bin`, install `mark-shot`, `mark-shot-ocr`, and `mark-shot-translate` together. Otherwise the pinned window opens, but image-text copying and translation cannot call the backend helpers.
+When installing manually, install `mark-shot`, `mark-shot-ocr`, and `mark-shot-translate` together. Otherwise the pinned window opens, but image-text copying and translation cannot call the backend helpers.
 
 ---
 
 ## Compilation & Installation
 
-### Dependencies (Arch Linux)
+### Dependencies
 
-Install the necessary dependencies before building:
+#### Wayland (Arch Linux)
 
 ```bash
 sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-wayland layer-shell-qt grim wl-clipboard
 ```
 
-For the RapidOCR backend, create a user-level Python virtual environment:
+#### X11/GNOME (Ubuntu/Debian)
 
 ```bash
-python -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/python -m pip install -U pip rapidocr onnxruntime
+# Build essentials
+sudo apt install build-essential cmake ninja-build
+
+# Clipboard tool
+sudo apt install xclip
+
+# Qt 6 (if not available in system repos, install via aqtinstall)
+pip install aqtinstall
+aqt install-qt linux desktop 6.7.3 gcc_64 --outputdir ~/Qt
+```
+
+> **Note**: On Ubuntu 22.04 where the system ships Qt 5, installing Qt 6 to `~/Qt` keeps the system untouched. Pass `-DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64` when configuring.
+
+#### fcitx5 Chinese Input Method (Qt 6 on X11)
+
+Qt 6 does not ship a fcitx5 input context plugin. To enable Chinese input, build the plugin from source:
+
+```bash
+sudo apt install libfcitx5utils-dev libfcitx5config-dev libfcitx5core-dev libfcitx5-qt-dev extra-cmake-modules
+
+git clone --depth 1 --branch 5.0.10 https://github.com/fcitx/fcitx5-qt.git /tmp/fcitx5-qt
+cmake -B /tmp/fcitx5-qt/build -S /tmp/fcitx5-qt \
+  -DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64 \
+  -DENABLE_QT4=OFF -DENABLE_QT5=OFF -DENABLE_QT6=ON
+cmake --build /tmp/fcitx5-qt/build
+
+cp /tmp/fcitx5-qt/build/qt6/platforminputcontext/libfcitx5platforminputcontextplugin.so \
+   ~/Qt/6.7.3/gcc_64/plugins/platforminputcontexts/
+cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
+   ~/Qt/6.7.3/gcc_64/lib/
+```
+
+#### OCR Backend (Optional)
+
+```bash
+python3 -m venv ~/.local/share/mark-shot/ocr-venv
+~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
 
 ### Build Steps
 
-Build the binary using CMake and Ninja:
-
 ```bash
-# Configure the project
+# Wayland (with LayerShellQt)
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
-# Build the executable
+# X11 / Ubuntu with local Qt 6
+cmake -S . -B build -DCMAKE_PREFIX_PATH=$HOME/Qt/6.7.3/gcc_64
+
+# Build
 cmake --build build
 ```
 
-The compiled binary will be located at `./build/mark-shot`.
+LayerShellQt is detected automatically. When found, full Wayland layer-shell support is enabled. When absent, the build succeeds and falls back to standard fullscreen windows at runtime.
 
 ### Installation
-
-Install the application and register desktop launchers with system mime associations:
 
 ```bash
 cmake --install build --prefix "$HOME/.local"
 ```
+
+This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-translate`), desktop entries, and icons.
 
 ---
 
@@ -190,7 +231,7 @@ cmake --install build --prefix "$HOME/.local"
 | Hotkey | Tool | Description |
 | :---: | :--- | :--- |
 | **V** | Move / Pan | Moves and pans the image canvas (in local file mode). |
-| **S** | Select | Selects, moves, scales, or deletes existing vector annotations. Right-click selected area to pin. |
+| **S** | Select | Selects, moves, scales, or deletes existing vector annotations. |
 | **P** | Pen | Draws smooth freehand curves. |
 | **L** | Line | Draws straight lines. |
 | **H** | Highlighter | Semi-transparent highlight strokes. |
@@ -207,7 +248,7 @@ cmake --install build --prefix "$HOME/.local"
 | Hotkey | Action |
 | :---: | :--- |
 | **Esc** | Closes the screenshot/annotation window. |
-| **Ctrl + C** | Confirms pending text edits and copies selection to Wayland system clipboard. |
+| **Ctrl + C** | Confirms pending text edits and copies selection to system clipboard. |
 | **Ctrl + S** or **Enter** | Confirms pending text edits and saves selection to a file. |
 | **Ctrl + Z** | Undoes the last annotation. |
 | **Ctrl + Y** or **Ctrl + Shift + Z** | Redoes the last undone annotation. |
@@ -230,7 +271,7 @@ cmake --install build --prefix "$HOME/.local"
 | **Scroll Wheel Up / Down** | Scales the floating window size proportionally. |
 | **Double Left Click** | Closes the pinned window immediately. |
 | **Double Tap Ctrl Key** | Resets the window size to original aspect ratio. |
-| **Right Click** | Opens the context menu (Rotate, Opacity, Save, Copy, Close). |
+| **Right Click** | Opens the context menu (Rotate, Opacity, Copy Image Text, Translate, Save, Copy, Close). |
 | **Esc Key** | Closes the currently active pinned window. |
 
 ---
