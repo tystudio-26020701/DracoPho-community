@@ -1,5 +1,6 @@
 #include "screen_capture.h"
 #include "shot_window.h"
+#include "ui/i18n.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -102,7 +103,9 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QApplication::setApplicationName(QStringLiteral("mark-shot"));
     QApplication::setApplicationDisplayName(QStringLiteral("Mark Shot"));
-    QApplication::setApplicationVersion(QStringLiteral("0.1.10"));
+    QApplication::setApplicationVersion(QStringLiteral("0.1.11"));
+
+    markshot::i18n::initialize();
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("Wayland screenshot selection and annotation tool for niri."));
@@ -120,7 +123,7 @@ int main(int argc, char *argv[])
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (positionalArguments.size() > 1) {
-        QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), QStringLiteral("Only one image file can be opened at a time."));
+        QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), MS_TR("Only one image file can be opened at a time."));
         return 1;
     }
 
@@ -130,7 +133,7 @@ int main(int argc, char *argv[])
     if (fileMode) {
         QFileInfo imageFile(imagePath);
         if (!imageFile.exists() || !imageFile.isFile()) {
-            QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), QStringLiteral("Image file does not exist: %1").arg(imagePath));
+            QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), MS_TR("Image file does not exist: %1").arg(imagePath));
             return 1;
         }
 
@@ -140,7 +143,7 @@ int main(int argc, char *argv[])
         if (image.isNull()) {
             QMessageBox::critical(nullptr,
                                   QStringLiteral("Mark Shot"),
-                                  QStringLiteral("Failed to load image: %1\n%2").arg(imageFile.absoluteFilePath(), reader.errorString()));
+                                  MS_TR("Failed to load image: %1\n%2").arg(imageFile.absoluteFilePath(), reader.errorString()));
             return 1;
         }
 
