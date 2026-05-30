@@ -304,7 +304,7 @@ CaptureResult captureWithPortalScreenshot(const CaptureRequest &request)
 
 CaptureResult captureWithGrim(const CaptureRequest &request)
 {
-    const QStringList baseArguments{QStringLiteral("-t"), QStringLiteral("ppm"), QStringLiteral("-s"), QStringLiteral("1")};
+    const QStringList baseArguments{QStringLiteral("-t"), QStringLiteral("ppm")};
 
     if (request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {
         QStringList arguments = baseArguments;
