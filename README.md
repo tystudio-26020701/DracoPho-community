@@ -281,7 +281,7 @@ This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-translate`
 
 This project is licensed under the **MIT License**. For details, please refer to the [LICENSE](LICENSE) file.
 ## Friendly Links
-[linux.do](linux.do) Thanks to the promotion from the linux.do community
+[linux.do](https://linux.do) Thanks to the promotion from the linux.do community
 
 ## Acknowledgements
 
