@@ -6605,14 +6605,22 @@ void ShotWindow::copySelection()
         .value(QStringLiteral("XDG_SESSION_TYPE")).toLower() == QStringLiteral("wayland");
 
     if (isWayland) {
-        QProcess wlCopy;
-        wlCopy.setProgram(QStringLiteral("wl-copy"));
-        wlCopy.setArguments({QStringLiteral("--type"), QStringLiteral("image/png")});
-        wlCopy.start(QIODevice::WriteOnly);
-        if (wlCopy.waitForStarted(1000)) {
-            wlCopy.write(png);
-            wlCopy.closeWriteChannel();
-            wlCopy.waitForFinished(2500);
+        // wl-copy must keep running to serve the clipboard. A synchronous
+        // QProcess would be killed when this function returns, dropping the
+        // clipboard contents, so write the PNG to a temp file and let a
+        // detached `wl-copy --foreground` own it (then clean the file up).
+        QTemporaryFile tempFile(QDir::tempPath() + QStringLiteral("/mark-shot-clipboard-XXXXXX.png"));
+        tempFile.setAutoRemove(false);
+        if (tempFile.open()) {
+            tempFile.write(png);
+            const QString tempPath = tempFile.fileName();
+            tempFile.close();
+
+            QProcess::startDetached(QStringLiteral("sh"),
+                                    {QStringLiteral("-c"),
+                                     QStringLiteral("wl-copy --foreground --type image/png < \"$1\"; rm -f \"$1\""),
+                                     QStringLiteral("mark-shot-clipboard"),
+                                     tempPath});
         }
     } else {
         QProcess xclip;
