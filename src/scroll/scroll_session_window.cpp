@@ -2,7 +2,6 @@
 
 #include "annotation_launch.h"
 #include "screen_capture.h"
-#include "scroll/scroll_config.h"
 #include "ui/i18n.h"
 #include "ui/theme.h"
 
@@ -21,11 +20,13 @@
 #include <QFont>
 #include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
+#include <QPixmap>
 #include <QProcess>
 #include <QProcessEnvironment>
 #include <QPushButton>
@@ -33,6 +34,7 @@
 #include <QResizeEvent>
 #include <QScreen>
 #include <QShortcut>
+#include <QSize>
 #include <QShowEvent>
 #include <QSignalBlocker>
 #include <QStandardPaths>
@@ -53,22 +55,19 @@ namespace markshot::scroll {
 namespace {
 
 constexpr int kCaptureIntervalMs = 45;
-constexpr int kBlinkIntervalMs = 500;
 constexpr int kSignatureCols = 18;
 constexpr int kSignatureRows = 24;
 constexpr float kDuplicateAvgDiff = 1.1f;
 constexpr int kDuplicateMaxDiff = 4;
 
-constexpr int kBorderWidth = 3;       // thickness of the blinking capture frame
+constexpr int kBorderWidth = 3;       // thickness of the capture frame
 constexpr int kBorderGap = 2;         // gap between region and border (kept outside)
 constexpr int kPanelWidth = 340;      // preview panel width
 constexpr int kPanelGap = 14;         // gap between region and preview panel
 constexpr int kPanelPadding = 12;
-constexpr int kControlBarHeight = 76;   // two rows: algorithm/axis + actions
+constexpr int kControlBarHeight = 54;   // single row of icon actions
 constexpr int kStatusHeight = 22;
 constexpr int kScrubberHeight = 22;     // non-destructive position slider
-constexpr qint64 kStoppedUiDelayMs = 650;
-constexpr qint64 kOverlaySettleMs = 180;
 
 std::uint8_t grayPixel(const QImage &frame, int x, int y)
 {
@@ -80,8 +79,8 @@ std::uint8_t grayPixel(const QImage &frame, int x, int y)
 
 // A coarse grayscale grid used to tell whether the latest capture is the same
 // as the previous one (the user has not scrolled yet). Mirrors wayscrollshot's
-// frame_signature. Only hidden clean frames use this signature; visible UI frames
-// are never stitched or used as the final scroll decision.
+// frame_signature. Duplicate frames are skipped so idle captures are not sent
+// into the stitcher as real scroll movement.
 QVector<std::uint8_t> frameSignature(const QImage &frame, int cols, int rows)
 {
     QVector<std::uint8_t> signature;
@@ -130,9 +129,9 @@ QString scrollSavePath()
     return QDir(pictures).filePath(filename);
 }
 
-const char *algorithmDebugName(StitchAlgorithm algorithm)
+const char *algorithmDebugName()
 {
-    return algorithm == StitchAlgorithm::OpenCvOrb ? "opencv-orb" : "col-sample";
+    return "col-sample";
 }
 
 const char *axisDebugName(ScrollAxis axis)
@@ -184,17 +183,127 @@ void logScrollDebug(const char *format, ...)
     std::fclose(file);
 }
 
+enum class ControlIcon {
+    AxisVertical,
+    AxisHorizontal,
+    Pause,
+    Resume,
+    Annotate,
+    Save,
+    Copy,
+    Cancel,
+};
+
+QPen iconPen(const QColor &color, qreal width = 1.8)
+{
+    return QPen(color, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+}
+
+QIcon makeControlIcon(ControlIcon icon)
+{
+    constexpr int size = 32;
+    const QColor ink(229, 231, 235);
+    const QColor soft(229, 231, 235, 130);
+    QPixmap pixmap(size, size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter p(&pixmap);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setBrush(Qt::NoBrush);
+    p.setPen(iconPen(ink));
+
+    switch (icon) {
+    case ControlIcon::AxisVertical:
+        p.drawLine(QPointF(16, 7), QPointF(16, 25));
+        p.drawLine(QPointF(11, 12), QPointF(16, 7));
+        p.drawLine(QPointF(21, 12), QPointF(16, 7));
+        p.drawLine(QPointF(11, 20), QPointF(16, 25));
+        p.drawLine(QPointF(21, 20), QPointF(16, 25));
+        break;
+    case ControlIcon::AxisHorizontal:
+        p.drawLine(QPointF(7, 16), QPointF(25, 16));
+        p.drawLine(QPointF(12, 11), QPointF(7, 16));
+        p.drawLine(QPointF(12, 21), QPointF(7, 16));
+        p.drawLine(QPointF(20, 11), QPointF(25, 16));
+        p.drawLine(QPointF(20, 21), QPointF(25, 16));
+        break;
+    case ControlIcon::Pause:
+        p.setPen(Qt::NoPen);
+        p.setBrush(ink);
+        p.drawRoundedRect(QRectF(10, 8, 4.5, 16), 1.2, 1.2);
+        p.drawRoundedRect(QRectF(17.5, 8, 4.5, 16), 1.2, 1.2);
+        break;
+    case ControlIcon::Resume: {
+        QPainterPath play;
+        play.moveTo(11, 8);
+        play.lineTo(24, 16);
+        play.lineTo(11, 24);
+        play.closeSubpath();
+        p.setPen(iconPen(ink, 1.4));
+        p.setBrush(QColor(229, 231, 235, 70));
+        p.drawPath(play);
+        break;
+    }
+    case ControlIcon::Annotate: {
+        p.save();
+        p.translate(16, 16);
+        p.rotate(-45);
+        p.setPen(iconPen(ink, 1.6));
+        QPainterPath pen;
+        pen.moveTo(-2.4, -10.5);
+        pen.lineTo(2.4, -10.5);
+        pen.lineTo(2.4, 3.0);
+        pen.lineTo(0.0, 9.5);
+        pen.lineTo(-2.4, 3.0);
+        pen.closeSubpath();
+        p.drawPath(pen);
+        p.drawLine(QPointF(0.0, 3.0), QPointF(0.0, 9.5));
+        p.restore();
+        break;
+    }
+    case ControlIcon::Save:
+        p.setPen(iconPen(ink, 1.6));
+        p.drawRoundedRect(QRectF(7.5, 7.5, 17.0, 17.0), 2.0, 2.0);
+        p.drawRoundedRect(QRectF(11.0, 7.5, 10.0, 5.0), 0.6, 0.6);
+        p.drawRoundedRect(QRectF(10.0, 15.5, 12.0, 9.0), 0.9, 0.9);
+        p.drawLine(QPointF(12.5, 18.5), QPointF(19.5, 18.5));
+        break;
+    case ControlIcon::Copy:
+        p.setPen(iconPen(soft, 1.5));
+        p.drawRoundedRect(QRectF(11.5, 7.5, 13, 14), 2.5, 2.5);
+        p.setPen(iconPen(ink, 1.8));
+        p.drawRoundedRect(QRectF(7.5, 11.5, 13, 14), 2.5, 2.5);
+        break;
+    case ControlIcon::Cancel:
+        p.setPen(iconPen(ink, 1.8));
+        p.drawLine(QPointF(10, 10), QPointF(22, 22));
+        p.drawLine(QPointF(22, 10), QPointF(10, 22));
+        break;
+    }
+
+    p.end();
+    return QIcon(pixmap);
+}
+
+void configureIconButton(QPushButton *button, const QIcon &icon, const QString &label)
+{
+    button->setText(QString());
+    button->setIcon(icon);
+    button->setIconSize(QSize(21, 21));
+    button->setToolTip(label);
+    button->setAccessibleName(label);
+}
+
 }  // namespace
 
 ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
                                          QString outputName,
-                                         StitchAlgorithm algorithm,
                                          QScreen *screen,
                                          QWidget *parent)
     : QWidget(parent)
     , m_geometry(globalGeometry)
     , m_outputName(std::move(outputName))
-    , m_stitcher(defaultConfigFor(algorithm))
+    , m_stitcher(defaultConfig())
 {
     setWindowTitle(MS_TR("Scroll Capture"));
     setAttribute(Qt::WA_DeleteOnClose);
@@ -228,18 +337,10 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
     m_timer->setInterval(kCaptureIntervalMs);
     connect(m_timer, &QTimer::timeout, this, [this] { captureTick(); });
 
-    m_blinkTimer = new QTimer(this);
-    m_blinkTimer->setInterval(kBlinkIntervalMs);
-    connect(m_blinkTimer, &QTimer::timeout, this, [this] {
-        m_blinkOn = !m_blinkOn;
-        update();
-    });
-
-    logScrollDebug("start time=%lld geom=%d,%d %dx%d output=%s algorithm=%s opencv_available=%d",
+    logScrollDebug("start time=%lld geom=%d,%d %dx%d output=%s algorithm=%s",
                    QDateTime::currentMSecsSinceEpoch(),
                    m_geometry.x(), m_geometry.y(), m_geometry.width(), m_geometry.height(),
-                   m_outputName.toUtf8().constData(), algorithmDebugName(algorithm),
-                   openCvAvailable() ? 1 : 0);
+                   m_outputName.toUtf8().constData(), algorithmDebugName());
 }
 
 bool ScrollSessionWindow::configureLayerShell(QScreen *screen)
@@ -300,50 +401,46 @@ void ScrollSessionWindow::buildControlBar()
     m_controlBar->setObjectName(QStringLiteral("shotToolbar"));
     m_controlBar->setStyleSheet(markshot::theme::panelStyleSheet());
 
-    auto *rows = new QVBoxLayout(m_controlBar);
-    rows->setContentsMargins(6, 6, 6, 6);
-    rows->setSpacing(4);
+    auto *row = new QHBoxLayout(m_controlBar);
+    row->setContentsMargins(7, 7, 7, 7);
+    row->setSpacing(7);
 
-    auto *topRow = new QHBoxLayout;
-    topRow->setContentsMargins(0, 0, 0, 0);
-    topRow->setSpacing(4);
-    auto *bottomRow = new QHBoxLayout;
-    bottomRow->setContentsMargins(0, 0, 0, 0);
-    bottomRow->setSpacing(4);
-    rows->addLayout(topRow);
-    rows->addLayout(bottomRow);
-
-    auto makeButton = [this](QHBoxLayout *row, const QString &text) {
-        auto *button = new QPushButton(text, m_controlBar);
+    auto makeButton = [this, row](const QIcon &icon, const QString &label, const QString &role = QString()) {
+        auto *button = new QPushButton(m_controlBar);
+        button->setProperty("role", role.isEmpty() ? QStringLiteral("secondary") : role);
+        configureIconButton(button, icon, label);
+        button->setFixedSize(QSize(40, 36));
         button->setFocusPolicy(Qt::NoFocus);
         button->setCursor(Qt::PointingHandCursor);
         button->setStyleSheet(QStringLiteral(
             "QPushButton {"
             " color: #E5E7EB; background: rgba(255,255,255,16);"
-            " border: 1px solid rgba(255,255,255,24); border-radius: 7px;"
-            " padding: 5px 8px; min-width: 0;"
-            " min-height: 24px; max-height: 28px; font-size: 12px; font-weight: 600; }"
+            " border: 1px solid rgba(255,255,255,24); border-radius: 10px;"
+            " padding: 0; min-width: 40px; max-width: 40px;"
+            " min-height: 36px; max-height: 36px; }"
             "QPushButton:hover { background: rgba(45,212,191,30);"
             " border-color: rgba(45,212,191,90); }"
+            "QPushButton[role=\"primary\"] { background: rgba(45,212,191,92);"
+            " border-color: rgba(94,234,212,150); }"
+            "QPushButton[role=\"primary\"]:hover { background: rgba(45,212,191,126);"
+            " border-color: rgba(153,246,228,190); }"
+            "QPushButton[role=\"danger\"]:hover { background: rgba(248,113,113,42);"
+            " border-color: rgba(248,113,113,105); }"
+            "QPushButton:focus { border-color: rgba(94,234,212,180); }"
             "QPushButton:disabled { color: rgba(229,231,235,90);"
             " background: rgba(255,255,255,8); border-color: rgba(255,255,255,14); }"));
-        row->addWidget(button);
+        row->addWidget(button, 0, Qt::AlignCenter);
         return button;
     };
 
-    // Top row: capture-control toggles (algorithm switch, scroll axis). The axis
-    // button locks after the first frame (the long image's orientation is fixed).
-    m_algorithmButton = makeButton(topRow, QString());
-    m_axisButton = makeButton(topRow, QString());
+    m_axisButton = makeButton(makeControlIcon(ControlIcon::AxisVertical), MS_TR("Dir: Vertical"));
+    row->addSpacing(4);
+    m_pauseButton = makeButton(makeControlIcon(ControlIcon::Pause), MS_TR("Pause"));
+    m_annotateButton = makeButton(makeControlIcon(ControlIcon::Annotate), MS_TR("Annotate"));
+    m_saveButton = makeButton(makeControlIcon(ControlIcon::Save), MS_TR("Save"), QStringLiteral("primary"));
+    m_copyButton = makeButton(makeControlIcon(ControlIcon::Copy), MS_TR("Copy"));
+    m_cancelButton = makeButton(makeControlIcon(ControlIcon::Cancel), MS_TR("Cancel"), QStringLiteral("danger"));
 
-    // Bottom row: session actions.
-    m_pauseButton = makeButton(bottomRow, MS_TR("Pause"));
-    m_annotateButton = makeButton(bottomRow, MS_TR("Annotate"));
-    m_saveButton = makeButton(bottomRow, MS_TR("Save"));
-    m_copyButton = makeButton(bottomRow, MS_TR("Copy"));
-    m_cancelButton = makeButton(bottomRow, MS_TR("Cancel"));
-
-    connect(m_algorithmButton, &QPushButton::clicked, this, [this] { toggleAlgorithm(); });
     connect(m_axisButton, &QPushButton::clicked, this, [this] { toggleAxis(); });
     connect(m_pauseButton, &QPushButton::clicked, this, [this] { togglePause(); });
     connect(m_annotateButton, &QPushButton::clicked, this, [this] { annotateResult(); });
@@ -416,67 +513,6 @@ QRect ScrollSessionWindow::previewPanelRect() const
     return QRect(left, top, kPanelWidth, panelHeight);
 }
 
-QRect ScrollSessionWindow::overlayUiFrameRect(const QImage &frame) const
-{
-    if (frame.isNull()) {
-        return {};
-    }
-
-    const QRect region = regionLocalRect();
-    const QRect overlap = previewPanelRect().intersected(region);
-    if (overlap.isEmpty() || region.width() <= 0 || region.height() <= 0) {
-        return {};
-    }
-
-    const qreal scaleX = static_cast<qreal>(frame.width()) / region.width();
-    const qreal scaleY = static_cast<qreal>(frame.height()) / region.height();
-    const QRectF frameRect((overlap.left() - region.left()) * scaleX,
-                           (overlap.top() - region.top()) * scaleY,
-                           overlap.width() * scaleX,
-                           overlap.height() * scaleY);
-    return frameRect.toAlignedRect()
-        .adjusted(-8, -8, 8, 8)
-        .intersected(QRect(QPoint(0, 0), frame.size()));
-}
-
-bool ScrollSessionWindow::previewCanFitOutsideRegion() const
-{
-    const QRect region = regionLocalRect();
-    const QRect bounds(QPoint(0, 0), size());
-    const bool fitsRight = region.right() + kPanelGap + kPanelWidth <= bounds.right() - 4;
-    const bool fitsLeft = region.left() - kPanelGap - kPanelWidth >= 4;
-    return fitsRight || fitsLeft;
-}
-
-bool ScrollSessionWindow::shouldAutoHideOverlayUi() const
-{
-    return !previewCanFitOutsideRegion();
-}
-
-void ScrollSessionWindow::setOverlayUiVisible(bool visible)
-{
-    if (m_overlayUiVisible == visible) {
-        return;
-    }
-
-    logScrollDebug("overlay-ui visible=%d auto_hide=%d suspended=%d probe=%d resume_at=%lld detect_at=%lld",
-                   visible ? 1 : 0,
-                   m_autoHideOverlayUi ? 1 : 0,
-                   m_captureSuspendedForUi ? 1 : 0,
-                   m_hiddenProbePending ? 1 : 0,
-                   m_resumeCaptureAt,
-                   m_nextVisibleDetectAt);
-    m_overlayUiVisible = visible;
-    if (m_controlBar) {
-        m_controlBar->setVisible(visible);
-    }
-    if (m_scrubber) {
-        m_scrubber->setVisible(visible);
-    }
-    updateInputMask();
-    repaint();
-}
-
 void ScrollSessionWindow::layoutOverlay()
 {
     const QRect panel = previewPanelRect();
@@ -493,17 +529,11 @@ void ScrollSessionWindow::layoutOverlay()
                                 barWidth,
                                 kScrubberHeight);
     }
-    if (m_controlBar) {
-        m_controlBar->setVisible(m_overlayUiVisible);
-    }
-    if (m_scrubber) {
-        m_scrubber->setVisible(m_overlayUiVisible);
-    }
 }
 
 void ScrollSessionWindow::updateInputMask()
 {
-    // Only the blinking border ring and the preview panel should catch input;
+    // Only the border ring and the preview panel should catch input;
     // the captured region interior and everything else stays click-through so
     // the user can keep scrolling the page underneath.
     const QRect region = regionLocalRect();
@@ -515,32 +545,17 @@ void ScrollSessionWindow::updateInputMask()
 
     QRegion mask(outer);
     mask -= QRegion(inner);
-    if (m_overlayUiVisible) {
-        mask += QRegion(previewPanelRect());
-    }
+    mask += QRegion(previewPanelRect());
     setMask(mask);
 }
 
 void ScrollSessionWindow::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    m_autoHideOverlayUi = shouldAutoHideOverlayUi();
-    if (m_autoHideOverlayUi) {
-        const qint64 now = QDateTime::currentMSecsSinceEpoch();
-        m_captureSuspendedForUi = false;
-        m_hiddenProbePending = false;
-        m_idleSince = 0;
-        m_nextVisibleDetectAt = 0;
-        m_resumeCaptureAt = now + kOverlaySettleMs;
-        setOverlayUiVisible(false);
-    }
     layoutOverlay();
     updateInputMask();
     if (m_timer && !m_timer->isActive()) {
         m_timer->start();
-    }
-    if (m_blinkTimer && !m_blinkTimer->isActive()) {
-        m_blinkTimer->start();
     }
     raise();
     activateWindow();
@@ -550,23 +565,6 @@ void ScrollSessionWindow::showEvent(QShowEvent *event)
 void ScrollSessionWindow::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
-    m_autoHideOverlayUi = shouldAutoHideOverlayUi();
-    if (!m_autoHideOverlayUi) {
-        m_captureSuspendedForUi = false;
-        m_hiddenProbePending = false;
-        m_idleSince = 0;
-        m_resumeCaptureAt = 0;
-        m_nextVisibleDetectAt = 0;
-        setOverlayUiVisible(true);
-    } else {
-        const qint64 now = QDateTime::currentMSecsSinceEpoch();
-        m_captureSuspendedForUi = false;
-        m_hiddenProbePending = false;
-        m_idleSince = 0;
-        m_nextVisibleDetectAt = 0;
-        m_resumeCaptureAt = now + kOverlaySettleMs;
-        setOverlayUiVisible(false);
-    }
     layoutOverlay();
     updateInputMask();
 }
@@ -577,7 +575,6 @@ void ScrollSessionWindow::captureTick()
         return;
     }
 
-    const qint64 now = QDateTime::currentMSecsSinceEpoch();
     QImage frame;
     auto captureFrame = [&](const char *debugTag) {
         CaptureRequest request;
@@ -590,9 +587,6 @@ void ScrollSessionWindow::captureTick()
         if (result.image.isNull()) {
             m_paused = true;
             stopActiveScreencastCapture();
-            setOverlayUiVisible(true);
-            m_captureSuspendedForUi = false;
-            m_hiddenProbePending = false;
             m_statusText = MS_TR("Capture error");
             refreshControlLabels();
             logScrollDebug("%s-capture-error geom=%d,%d %dx%d output=%s error=%s",
@@ -609,73 +603,6 @@ void ScrollSessionWindow::captureTick()
         return true;
     };
 
-    m_autoHideOverlayUi = shouldAutoHideOverlayUi();
-    if (m_autoHideOverlayUi) {
-        if (m_hiddenProbePending) {
-            if (m_overlayUiVisible) {
-                m_resumeCaptureAt = now + kOverlaySettleMs;
-                setOverlayUiVisible(false);
-                return;
-            }
-            if (now < m_resumeCaptureAt) {
-                return;
-            }
-            if (!captureFrame("hidden-probe")) {
-                return;
-            }
-
-            m_hiddenProbePending = false;
-            const QVector<std::uint8_t> probeSignature =
-                frameSignature(frame, kSignatureCols, kSignatureRows);
-            if (!m_lastSignature.isEmpty()
-                && isDuplicateSignature(m_lastSignature, probeSignature)) {
-                m_captureSuspendedForUi = true;
-                m_nextVisibleDetectAt = now + kStoppedUiDelayMs;
-                setOverlayUiVisible(true);
-                logScrollDebug("hidden-probe-idle frame=%dx%d axis=%s",
-                               frame.width(), frame.height(), axisDebugName(m_stitcher.axis()));
-                update();
-                return;
-            }
-
-            m_captureSuspendedForUi = false;
-            m_idleSince = 0;
-            logScrollDebug("hidden-probe-motion frame=%dx%d axis=%s",
-                           frame.width(), frame.height(), axisDebugName(m_stitcher.axis()));
-        }
-
-        if (m_captureSuspendedForUi) {
-            if (!m_overlayUiVisible) {
-                m_nextVisibleDetectAt = now + kStoppedUiDelayMs;
-                setOverlayUiVisible(true);
-                return;
-            }
-            if (now < m_nextVisibleDetectAt) {
-                return;
-            }
-            m_hiddenProbePending = true;
-            m_resumeCaptureAt = now + kOverlaySettleMs;
-            setOverlayUiVisible(false);
-            return;
-        }
-
-        if (m_overlayUiVisible) {
-            m_resumeCaptureAt = now + kOverlaySettleMs;
-            setOverlayUiVisible(false);
-            return;
-        }
-        if (now < m_resumeCaptureAt) {
-            return;
-        }
-    } else if (!m_overlayUiVisible) {
-        m_captureSuspendedForUi = false;
-        m_hiddenProbePending = false;
-        m_idleSince = 0;
-        m_resumeCaptureAt = 0;
-        m_nextVisibleDetectAt = 0;
-        setOverlayUiVisible(true);
-    }
-
     if (frame.isNull() && !captureFrame("normal")) {
         return;
     }
@@ -683,28 +610,12 @@ void ScrollSessionWindow::captureTick()
     const QVector<std::uint8_t> signature = frameSignature(frame, kSignatureCols, kSignatureRows);
     if (!m_lastSignature.isEmpty() && isDuplicateSignature(m_lastSignature, signature)) {
         m_statusText = MS_TR("Waiting for scroll");
-        if (m_autoHideOverlayUi) {
-            if (m_idleSince == 0) {
-                m_idleSince = now;
-            }
-            if (now - m_idleSince >= kStoppedUiDelayMs) {
-                m_captureSuspendedForUi = true;
-                m_nextVisibleDetectAt = now + kStoppedUiDelayMs;
-                setOverlayUiVisible(true);
-                logScrollDebug("auto-ui-suspend frame=%dx%d idle_ms=%lld excluded=%dx%d axis=%s",
-                               frame.width(), frame.height(), now - m_idleSince,
-                               overlayUiFrameRect(frame).width(),
-                               overlayUiFrameRect(frame).height(),
-                               axisDebugName(m_stitcher.axis()));
-            }
-        }
-        logScrollDebug("skip-duplicate frame=%dx%d idle_ms=%lld axis=%s",
-                       frame.width(), frame.height(), m_idleSince > 0 ? now - m_idleSince : 0,
+        logScrollDebug("skip-duplicate frame=%dx%d axis=%s",
+                       frame.width(), frame.height(),
                        axisDebugName(m_stitcher.axis()));
         update();
         return;
     }
-    m_idleSince = 0;
     m_lastSignature = signature;
 
     const StitchResult outcome = m_stitcher.pushFrame(frame);
@@ -742,31 +653,9 @@ void ScrollSessionWindow::captureTick()
 void ScrollSessionWindow::togglePause()
 {
     m_paused = !m_paused;
-    if (m_paused) {
-        m_captureSuspendedForUi = false;
-        m_hiddenProbePending = false;
-        setOverlayUiVisible(true);
-    }
     if (!m_paused) {
         m_lastSignature.clear();
-        if (m_autoHideOverlayUi) {
-            const qint64 now = QDateTime::currentMSecsSinceEpoch();
-            m_resumeCaptureAt = now + kOverlaySettleMs;
-            setOverlayUiVisible(false);
-        }
     }
-    refreshControlLabels();
-    update();
-}
-
-void ScrollSessionWindow::toggleAlgorithm()
-{
-    const StitchAlgorithm next = m_stitcher.algorithm() == StitchAlgorithm::OpenCvOrb
-        ? StitchAlgorithm::ColSample
-        : StitchAlgorithm::OpenCvOrb;
-    m_stitcher.setAlgorithm(next);
-    // Force the next frame through, since the anchor's match basis changed.
-    m_lastSignature.clear();
     refreshControlLabels();
     update();
 }
@@ -889,17 +778,15 @@ void ScrollSessionWindow::syncScrubber(const StitchResult &outcome)
 void ScrollSessionWindow::refreshControlLabels()
 {
     if (m_pauseButton) {
-        m_pauseButton->setText(m_paused ? MS_TR("Resume") : MS_TR("Pause"));
-    }
-    if (m_algorithmButton) {
-        const bool orb = m_stitcher.algorithm() == StitchAlgorithm::OpenCvOrb;
-        // Label shows the algorithm currently in use; clicking switches it.
-        m_algorithmButton->setText(orb ? MS_TR("Algo: ORB") : MS_TR("Algo: Fast"));
-        m_algorithmButton->setEnabled(openCvAvailable());
+        configureIconButton(m_pauseButton,
+                            makeControlIcon(m_paused ? ControlIcon::Resume : ControlIcon::Pause),
+                            m_paused ? MS_TR("Resume") : MS_TR("Pause"));
     }
     if (m_axisButton) {
         const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
-        m_axisButton->setText(horizontal ? MS_TR("Dir: Horizontal") : MS_TR("Dir: Vertical"));
+        configureIconButton(m_axisButton,
+                            makeControlIcon(horizontal ? ControlIcon::AxisHorizontal : ControlIcon::AxisVertical),
+                            horizontal ? MS_TR("Dir: Horizontal") : MS_TR("Dir: Vertical"));
         // Direction stays switchable until the first directional stitch lands;
         // capturing the idle seed frame alone does not commit an orientation.
         m_axisButton->setEnabled(!m_stitcher.axisLocked());
@@ -916,9 +803,6 @@ void ScrollSessionWindow::annotateResult()
     const QImage result = currentResult();
     if (m_timer) {
         m_timer->stop();
-    }
-    if (m_blinkTimer) {
-        m_blinkTimer->stop();
     }
     if (result.isNull()) {
         close();
@@ -1019,7 +903,7 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
-    // 1. Blinking capture border, drawn just outside the captured region so grim
+    // 1. Capture border, drawn just outside the captured region so grim
     //    never records it.
     const QRect region = regionLocalRect();
     const QRect borderRect = region.adjusted(-(kBorderGap + kBorderWidth / 2),
@@ -1028,17 +912,10 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
                                              kBorderGap + kBorderWidth / 2);
     const QColor borderColor = m_paused
         ? QColor(250, 204, 21, 235)                       // amber while paused
-        : (m_blinkOn ? QColor(45, 212, 191, 255) : QColor(45, 212, 191, 90));
+        : QColor(45, 212, 191, 255);
     painter.setPen(QPen(borderColor, kBorderWidth));
     painter.setBrush(Qt::NoBrush);
     painter.drawRect(borderRect);
-
-    if (!m_overlayUiVisible) {
-        painter.setCompositionMode(QPainter::CompositionMode_Clear);
-        painter.fillRect(previewPanelRect().adjusted(-6, -6, 6, 6), Qt::transparent);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        return;
-    }
 
     // 2. Preview panel.
     const QRect panel = previewPanelRect();
@@ -1191,9 +1068,6 @@ void ScrollSessionWindow::closeEvent(QCloseEvent *event)
 {
     if (m_timer) {
         m_timer->stop();
-    }
-    if (m_blinkTimer) {
-        m_blinkTimer->stop();
     }
     stopActiveScreencastCapture();
     event->accept();
