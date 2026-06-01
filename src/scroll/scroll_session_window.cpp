@@ -584,6 +584,7 @@ void ScrollSessionWindow::captureTick()
         request.preferredOutputName = m_outputName;
         request.sourceGeometry = m_geometry;
         request.allOutputs = false;
+        request.preferScreencast = true;
 
         const CaptureResult result = captureScreenFrame(request);
         if (result.image.isNull()) {
@@ -1187,6 +1188,7 @@ void ScrollSessionWindow::closeEvent(QCloseEvent *event)
     if (m_blinkTimer) {
         m_blinkTimer->stop();
     }
+    stopActiveScreencastCapture();
     event->accept();
 }
 
