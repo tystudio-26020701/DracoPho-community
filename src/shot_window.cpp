@@ -2771,7 +2771,7 @@ void ShotWindow::paintEvent(QPaintEvent *)
     }
 
     if (!hasUsableSelection()) {
-        const QString hint = MS_TR("Drag to select   Esc cancels");
+        const QString hint = MS_TR("Drag to select   Middle switches   Right/Esc cancels");
         painter.setFont(QFont(QStringLiteral("Sans Serif"), 15, QFont::DemiBold));
         const QFontMetrics metrics(painter.font());
         const QRectF hintRect((width() - metrics.horizontalAdvance(hint) - 44.0) / 2.0,
