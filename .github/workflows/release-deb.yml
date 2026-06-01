@@ -57,9 +57,11 @@ jobs:
             fakeroot \
             file \
             libgl1-mesa-dev \
+            libpipewire-0.3-dev \
             libx11-xcb-dev \
             libxcb1-dev \
             ninja-build \
+            pkg-config \
             qt6-base-dev \
             qt6-base-dev-tools
 
@@ -109,7 +111,7 @@ jobs:
 
           SHLIB_DEPS="$(dpkg-shlibdeps -O -e"$PACKAGE_DIR/usr/bin/mark-shot" | sed 's/^shlibs:Depends=//')"
           MANUAL_DEPS="python3"
-          RECOMMENDS="python3-venv, xdg-desktop-portal, grim, wl-clipboard, xclip"
+          RECOMMENDS="python3-venv, xdg-desktop-portal, pipewire, grim, wl-clipboard, xclip"
           if [ -n "$SHLIB_DEPS" ]; then
             DEPENDS="$SHLIB_DEPS, $MANUAL_DEPS"
           else

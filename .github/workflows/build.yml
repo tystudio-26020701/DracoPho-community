@@ -28,6 +28,8 @@ jobs:
             cmake \
             gcc \
             ninja \
+            pkgconf \
+            pipewire \
             qt6-base \
             qt6-wayland \
             layer-shell-qt
