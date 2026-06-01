@@ -321,7 +321,7 @@ void ScrollSessionWindow::buildControlBar()
             "QPushButton {"
             " color: #E5E7EB; background: rgba(255,255,255,16);"
             " border: 1px solid rgba(255,255,255,24); border-radius: 7px;"
-            " padding: 5px 8px; min-width: 0; max-width: 16777215;"
+            " padding: 5px 8px; min-width: 0;"
             " min-height: 24px; max-height: 28px; font-size: 12px; font-weight: 600; }"
             "QPushButton:hover { background: rgba(45,212,191,30);"
             " border-color: rgba(45,212,191,90); }"
@@ -588,12 +588,19 @@ void ScrollSessionWindow::captureTick()
 
         const CaptureResult result = captureScreenFrame(request);
         if (result.image.isNull()) {
+            m_paused = true;
+            stopActiveScreencastCapture();
+            setOverlayUiVisible(true);
+            m_captureSuspendedForUi = false;
+            m_hiddenProbePending = false;
             m_statusText = MS_TR("Capture error");
-            logScrollDebug("%s-capture-error geom=%d,%d %dx%d output=%s",
+            refreshControlLabels();
+            logScrollDebug("%s-capture-error geom=%d,%d %dx%d output=%s error=%s",
                            debugTag,
                            request.sourceGeometry.x(), request.sourceGeometry.y(),
                            request.sourceGeometry.width(), request.sourceGeometry.height(),
-                           request.preferredOutputName.toUtf8().constData());
+                           request.preferredOutputName.toUtf8().constData(),
+                           result.error.toUtf8().constData());
             update();
             return false;
         }

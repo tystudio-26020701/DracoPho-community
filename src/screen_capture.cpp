@@ -8,6 +8,7 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusUnixFileDescriptor>
+#include <QDBusVariant>
 #include <QEventLoop>
 #include <QFile>
 #include <QGuiApplication>
@@ -28,6 +29,7 @@
 #include <QWaitCondition>
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <memory>
 
@@ -123,6 +125,17 @@ bool prefersGrim()
         || desktop.contains(QStringLiteral("wlroots"));
 }
 
+bool hasMatchingAspectRatio(const QSize &a, const QSize &b)
+{
+    if (a.isEmpty() || b.isEmpty()) {
+        return false;
+    }
+
+    const qreal lhs = static_cast<qreal>(a.width()) / a.height();
+    const qreal rhs = static_cast<qreal>(b.width()) / b.height();
+    return std::abs(lhs - rhs) < 0.01;
+}
+
 CaptureResult captureWithQScreen(const CaptureRequest &request)
 {
     QScreen *screen = nullptr;
@@ -142,6 +155,10 @@ CaptureResult captureWithQScreen(const CaptureRequest &request)
     }
 
     QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    const QSize logicalScreenSize = screen->geometry().size();
+    if (image.size() != logicalScreenSize && hasMatchingAspectRatio(image.size(), logicalScreenSize)) {
+        image = image.scaled(logicalScreenSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    }
 
     if (request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {
         QRect geo = request.sourceGeometry.normalized();
@@ -445,6 +462,13 @@ bool readPairVariant(const QVariant &value, int *first, int *second)
         return false;
     }
 
+    if (value.canConvert<QDBusVariant>()) {
+        const QVariant nested = qvariant_cast<QDBusVariant>(value).variant();
+        if (nested.isValid() && nested != value) {
+            return readPairVariant(nested, first, second);
+        }
+    }
+
     if (value.metaType() == QMetaType::fromType<QDBusArgument>()) {
         const QDBusArgument argument = qvariant_cast<QDBusArgument>(value);
         argument.beginStructure();
@@ -466,6 +490,18 @@ bool readPairVariant(const QVariant &value, int *first, int *second)
         }
     }
     return false;
+}
+
+QVariant unwrappedVariant(QVariant value)
+{
+    while (value.canConvert<QDBusVariant>()) {
+        const QVariant nested = qvariant_cast<QDBusVariant>(value).variant();
+        if (!nested.isValid() || nested == value) {
+            break;
+        }
+        value = nested;
+    }
+    return value;
 }
 
 QRect streamGeometryFromProperties(const QVariantMap &properties, const QSize &frameSize)
@@ -550,23 +586,39 @@ public:
 
     void stop()
     {
-        if (m_stream) {
-            pw_stream_disconnect(m_stream);
-            pw_stream_destroy(m_stream);
-            m_stream = nullptr;
-        }
-        if (m_core) {
-            pw_core_disconnect(m_core);
-            m_core = nullptr;
-        }
-        if (m_context) {
-            pw_context_destroy(m_context);
-            m_context = nullptr;
-        }
         if (m_loop) {
+            pw_thread_loop_lock(m_loop);
+            if (m_stream) {
+                pw_stream_disconnect(m_stream);
+                pw_stream_destroy(m_stream);
+                m_stream = nullptr;
+            }
+            if (m_core) {
+                pw_core_disconnect(m_core);
+                m_core = nullptr;
+            }
+            if (m_context) {
+                pw_context_destroy(m_context);
+                m_context = nullptr;
+            }
+            pw_thread_loop_unlock(m_loop);
             pw_thread_loop_stop(m_loop);
             pw_thread_loop_destroy(m_loop);
             m_loop = nullptr;
+        } else {
+            if (m_stream) {
+                pw_stream_disconnect(m_stream);
+                pw_stream_destroy(m_stream);
+                m_stream = nullptr;
+            }
+            if (m_core) {
+                pw_core_disconnect(m_core);
+                m_core = nullptr;
+            }
+            if (m_context) {
+                pw_context_destroy(m_context);
+                m_context = nullptr;
+            }
         }
         if (!m_sessionHandle.isEmpty()) {
             QDBusInterface session(QStringLiteral("org.freedesktop.portal.Desktop"),
@@ -672,7 +724,7 @@ private:
         }
         m_nodeId = streams.first().nodeId;
         m_streamProperties = streams.first().properties;
-        m_targetObject = m_streamProperties.value(QStringLiteral("pipewire.node.serial")).toString();
+        m_targetObject = unwrappedVariant(m_streamProperties.value(QStringLiteral("pipewire.node.serial"))).toString();
 
         QDBusPendingReply<QDBusUnixFileDescriptor> pending =
             portal.asyncCall(QStringLiteral("OpenPipeWireRemote"),
@@ -1060,14 +1112,8 @@ CaptureResult captureWaylandFrame(const CaptureRequest &request)
             return grimCapture;
         }
 
-        CaptureResult portalCapture = captureWithPortalScreenshot(request);
-        if (!portalCapture.image.isNull()) {
-            return portalCapture;
-        }
-
         return {{},
-                QStringLiteral("%1\nGrim fallback: %2\nScreenshot portal fallback: %3")
-                    .arg(screencastCapture.error, grimCapture.error, portalCapture.error),
+                QStringLiteral("%1\nGrim fallback: %2").arg(screencastCapture.error, grimCapture.error),
                 {},
                 request.sourceGeometry};
     }

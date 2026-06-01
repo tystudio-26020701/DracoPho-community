@@ -35,7 +35,7 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
   - Right-click to open a context menu with options to rotate, copy image text, translate, save, copy, or adjust opacity (0.2 to 1.0).
 
 ### Cross-Platform Display Server Support
-- **Wayland**: Uses `grim` for screen capture, `layer-shell-qt` for native overlay, and `wl-copy` for clipboard persistence.
+- **Wayland**: Uses PipeWire portal screencast for scrolling capture, `grim` for wlroots screenshot capture, `layer-shell-qt` for native overlay, and `wl-copy` for clipboard persistence.
 - **X11**: Uses `QScreen::grabWindow` for screen capture, fullscreen top-level window for overlay, and `xclip` for clipboard persistence.
 - Runtime auto-detection via `$XDG_SESSION_TYPE` — no configuration needed.
 
@@ -154,17 +154,17 @@ When installing manually, install `mark-shot`, `mark-shot-ocr`, and `mark-shot-t
 #### Wayland (Arch Linux)
 
 ```bash
-sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-wayland layer-shell-qt grim wl-clipboard
+sudo pacman -S --needed base-devel cmake ninja pkgconf qt6-base qt6-wayland layer-shell-qt pipewire grim wl-clipboard
 ```
 
 #### X11/GNOME (Ubuntu/Debian)
 
 ```bash
 # Build essentials
-sudo apt install build-essential cmake ninja-build
+sudo apt install build-essential cmake ninja-build pkg-config libpipewire-0.3-dev
 
-# Clipboard tool
-sudo apt install xclip
+# Portal and clipboard tools
+sudo apt install xdg-desktop-portal pipewire xclip
 
 # Qt 6 (if not available in system repos, install via aqtinstall)
 pip install aqtinstall
