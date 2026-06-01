@@ -8,20 +8,12 @@
 
 // Scrolling screenshot stitcher. Accumulates frames captured while the user
 // scrolls a region and splices them into a single tall image by detecting the
-// vertical overlap between consecutive frames. Ported from the Rust project
-// wayscrollshot (src/stitch.rs): the col-sample algorithm is a dependency-free
-// column-average MAD search; the OpenCV ORB path lives in stitch_orb.cpp and is
-// compiled in only when OpenCV is available.
+// vertical overlap between consecutive frames.
 namespace markshot::scroll {
 
 // Confidence sentinel for "no usable match" (lower confidence is better, so a
 // large value means reject). Mirrors f32::MAX in the Rust source.
 inline constexpr float kNoMatchConfidence = 1.0e9f;
-
-enum class StitchAlgorithm {
-    ColSample,
-    OpenCvOrb,
-};
 
 // The direction the user scrolls (and the long image grows). Vertical grows
 // top-to-bottom; Horizontal grows left-to-right. Horizontal is implemented by
@@ -36,15 +28,9 @@ struct StitchConfig {
     float acceptDiff;
     int minAppend;
     float approxDiff;
-    StitchAlgorithm algorithm;
 };
 
-// Parameter presets for the available matching algorithms.
-StitchConfig defaultConfigFor(StitchAlgorithm algorithm);
-
-// Whether the ORB path was compiled in. When false, requesting OpenCvOrb still
-// works but silently behaves like ColSample.
-bool openCvAvailable();
+StitchConfig defaultConfig();
 
 enum class StitchStatus {
     FirstFrame,
@@ -90,11 +76,6 @@ public:
 
     StitchStats stats() const;
 
-    // Switches the matching algorithm mid-session, adopting that algorithm's
-    // parameter preset while keeping the accumulated image and anchor state.
-    void setAlgorithm(StitchAlgorithm algorithm);
-    StitchAlgorithm algorithm() const;
-
     // The scroll axis. Horizontal capture is implemented by transposing every
     // frame so the whole vertical pipeline runs unchanged, then transposing the
     // result back in fullImage(). The axis can still be switched while only the
@@ -108,15 +89,23 @@ public:
 private:
     using ColSamples = QVector<std::array<float, 3>>;
 
+    struct EdgeLineMatch {
+        int position = 0;
+        float diff = kNoMatchConfidence;
+        int bottomTrim = 0;
+        int matchedRows = 0;
+    };
+
     ColSamples computeCols(const QImage &frame) const;
     std::pair<int, float> findOffsetColSample(const QImage &frame) const;
-    std::pair<int, float> findOffsetOrb(const QImage &frame) const;
     float knownOverlapDiff(const ColSamples &frameCols, int framePos, int *overlapLen = nullptr) const;
     std::pair<int, float> findKnownPosition(const ColSamples &frameCols, int predictedPos) const;
+    std::pair<int, float> findEdgePosition(const ColSamples &frameCols, int predictedPos) const;
+    EdgeLineMatch findLineRunPosition(const QImage &frame, int predictedPos) const;
     // Appends the bottom `amount` rows of `frame` below the accumulated image
     // (forward scroll); prependSlice puts the top `amount` rows above it
     // (reverse scroll).
-    void appendSlice(const QImage &frame, int amount);
+    void appendSlice(const QImage &frame, int amount, int trimBottom = 0);
     void prependSlice(const QImage &frame, int amount);
     void rememberFrame(const QImage &frame);
 
@@ -128,6 +117,7 @@ private:
     ColSamples m_fullCols;
     ColSamples m_lastCols;
     int m_lastOffset = 0;
+    int m_bestBottomTrim = 0;
     // Absolute position of the anchor frame's top edge within the long image,
     // along the scroll axis. The frame the next match is measured against sits at
     // [m_anchorPos, m_anchorPos + frameLen) in long-image coordinates. Scrolling
