@@ -22,7 +22,7 @@ namespace markshot::scroll {
 // Fullscreen, click-through layer-shell overlay that drives a scrolling capture
 // session. It periodically captures the selected screen region, stitches each
 // frame into a growing tall image, and paints two things on top of the live
-// desktop: a blinking border drawn just outside the captured region (so grim
+// desktop: a border drawn just outside the captured region (so grim
 // never records it), and a preview panel docked to the region's right side that
 // shows the full stitched image plus a marker for the current capture range.
 // The input mask keeps only the border edges and the preview panel interactive,
@@ -33,7 +33,6 @@ class ScrollSessionWindow final : public QWidget {
 public:
     ScrollSessionWindow(QRect globalGeometry,
                          QString outputName,
-                         StitchAlgorithm algorithm,
                          QScreen *screen = nullptr,
                          QWidget *parent = nullptr);
 
@@ -52,7 +51,6 @@ protected:
 private:
     void captureTick();
     void togglePause();
-    void toggleAlgorithm();
     void toggleAxis();
     void annotateResult();
     void saveResult();
@@ -61,9 +59,6 @@ private:
     void layoutOverlay();
     void updateInputMask();
     void refreshControlLabels();
-    bool previewCanFitOutsideRegion() const;
-    bool shouldAutoHideOverlayUi() const;
-    void setOverlayUiVisible(bool visible);
     QImage currentResult() const;
 
     // Geometry shared by the scrubber and the painter so their notions of "how
@@ -93,24 +88,14 @@ private:
     QRect regionLocalRect() const;
     // The preview panel rectangle in local coordinates.
     QRect previewPanelRect() const;
-    QRect overlayUiFrameRect(const QImage &frame) const;
 
     QRect m_geometry;          // captured region, global coordinates
     QPoint m_screenOrigin;     // this overlay's top-left in global coordinates
     QString m_outputName;
     Stitcher m_stitcher;
     QTimer *m_timer = nullptr;
-    QTimer *m_blinkTimer = nullptr;
-    bool m_blinkOn = true;
     bool m_paused = false;
     bool m_layerShell = false;
-    bool m_autoHideOverlayUi = false;
-    bool m_overlayUiVisible = true;
-    bool m_captureSuspendedForUi = false;
-    bool m_hiddenProbePending = false;
-    qint64 m_idleSince = 0;
-    qint64 m_resumeCaptureAt = 0;
-    qint64 m_nextVisibleDetectAt = 0;
     QVector<std::uint8_t> m_lastSignature;
     QString m_statusText;
     int m_lastAppend = 0;       // pixels added by the most recent frame
@@ -125,7 +110,6 @@ private:
     int m_captureLen = 0;       // current screen selection extent along the scroll axis
 
     QWidget *m_controlBar = nullptr;
-    QPushButton *m_algorithmButton = nullptr;
     QPushButton *m_axisButton = nullptr;
     QPushButton *m_pauseButton = nullptr;
     QPushButton *m_annotateButton = nullptr;

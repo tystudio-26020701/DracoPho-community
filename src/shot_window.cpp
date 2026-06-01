@@ -1,7 +1,6 @@
 #include "shot_window.h"
 
 #include "screen_capture.h"
-#include "scroll/scroll_config.h"
 #include "scroll/scroll_session_window.h"
 #include "scroll/stitcher.h"
 #include "ui/color_picker.h"
@@ -6664,15 +6663,10 @@ void ShotWindow::startScrollCapture()
         return;
     }
 
-    // The starting algorithm comes from the CLI override, else config.json, else
-    // the built-in default (col-sample). The session window lets the user switch
-    // mid-capture regardless of this initial choice.
-    const markshot::scroll::StitchAlgorithm algorithm = markshot::scroll::resolveScrollAlgorithm();
-
     // The session window configures its own layer-shell overlay (with a
     // plain-window fallback) in its constructor.
     auto *window =
-        new markshot::scroll::ScrollSessionWindow(geometry, m_outputName, algorithm, screen());
+        new markshot::scroll::ScrollSessionWindow(geometry, m_outputName, screen());
     window->show();
     window->raise();
     window->activateWindow();
