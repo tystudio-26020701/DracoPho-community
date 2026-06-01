@@ -113,8 +113,8 @@ const QHash<QString, QString> &chineseTable()
          QStringLiteral("回车换行，点击外部确认，Esc 取消")},
 
         // Selection overlay hint.
-        {QStringLiteral("Drag to select   Esc cancels"),
-         QStringLiteral("拖动选择区域   Esc 取消")},
+        {QStringLiteral("Drag to select   Middle switches   Right/Esc cancels"),
+         QStringLiteral("拖动选择区域   中键切换全屏标注   右键/Esc 取消")},
 
         // Open-with / extensions panels.
         {QStringLiteral("Open with"), QStringLiteral("打开方式")},
