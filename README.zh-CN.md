@@ -35,7 +35,7 @@
   - 右键单击唤出菜单，支持多角度旋转、透明度微调（0.2 - 1.0）、复制图片文字、翻译、另存为、复制或关闭。
 
 ### 跨显示服务器支持
-- **Wayland**：使用 `grim` 截屏、`layer-shell-qt` 创建原生覆盖层、`wl-copy` 持久化剪贴板。
+- **Wayland**：使用 PipeWire portal screencast 支持滚动截图，使用 `grim` 支持 wlroots 截屏，使用 `layer-shell-qt` 创建原生覆盖层，使用 `wl-copy` 持久化剪贴板。
 - **X11**：使用 `QScreen::grabWindow` 截屏、全屏置顶窗口作为覆盖层、`xclip` 持久化剪贴板。
 - 运行时通过 `$XDG_SESSION_TYPE` 自动检测，无需手动配置。
 
@@ -154,17 +154,17 @@ binds {
 #### Wayland (Arch Linux)
 
 ```bash
-sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-wayland layer-shell-qt grim wl-clipboard
+sudo pacman -S --needed base-devel cmake ninja pkgconf qt6-base qt6-wayland layer-shell-qt pipewire grim wl-clipboard
 ```
 
 #### X11/GNOME (Ubuntu/Debian)
 
 ```bash
 # 构建工具
-sudo apt install build-essential cmake ninja-build
+sudo apt install build-essential cmake ninja-build pkg-config libpipewire-0.3-dev
 
-# 剪贴板工具
-sudo apt install xclip
+# Portal 与剪贴板工具
+sudo apt install xdg-desktop-portal pipewire xclip
 
 # Qt 6（若系统仓库无 Qt 6，可通过 aqtinstall 安装到用户目录）
 pip install aqtinstall
