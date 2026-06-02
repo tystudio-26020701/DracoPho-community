@@ -1,6 +1,7 @@
 #include "scroll/scroll_session_window.h"
 
 #include "annotation_launch.h"
+#include "debug_log.h"
 #include "screen_capture.h"
 #include "ui/i18n.h"
 #include "ui/theme.h"
@@ -169,18 +170,13 @@ const char *edgeDebugName(StitchEdge edge)
 
 void logScrollDebug(const char *format, ...)
 {
-    FILE *file = std::fopen("/tmp/mark-shot-scroll.log", "a");
-    if (!file) {
+    if (!markshot::debugEnabled()) {
         return;
     }
-
-    std::fprintf(file, "[session] ");
     va_list args;
     va_start(args, format);
-    std::vfprintf(file, format, args);
+    markshot::debugLogV("session", format, args);
     va_end(args);
-    std::fprintf(file, "\n");
-    std::fclose(file);
 }
 
 enum class ControlIcon {
@@ -303,6 +299,7 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
     : QWidget(parent)
     , m_geometry(globalGeometry)
     , m_outputName(std::move(outputName))
+    , m_sessionId(QDateTime::currentMSecsSinceEpoch())
     , m_stitcher(defaultConfig())
 {
     setWindowTitle(MS_TR("Scroll Capture"));
@@ -338,7 +335,7 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
     connect(m_timer, &QTimer::timeout, this, [this] { captureTick(); });
 
     logScrollDebug("start time=%lld geom=%d,%d %dx%d output=%s algorithm=%s",
-                   QDateTime::currentMSecsSinceEpoch(),
+                   m_sessionId,
                    m_geometry.x(), m_geometry.y(), m_geometry.width(), m_geometry.height(),
                    m_outputName.toUtf8().constData(), algorithmDebugName());
 }
@@ -556,8 +553,20 @@ void ScrollSessionWindow::showEvent(QShowEvent *event)
     QWidget::showEvent(event);
     layoutOverlay();
     updateInputMask();
+    const QRect region = regionLocalRect();
+    const QRect panel = previewPanelRect();
+    logScrollDebug("layout region=%d,%d %dx%d panel=%d,%d %dx%d panel_overlap=%d layer_shell=%d",
+                   region.x(), region.y(), region.width(), region.height(),
+                   panel.x(), panel.y(), panel.width(), panel.height(),
+                   panel.intersects(region) ? 1 : 0, m_layerShell ? 1 : 0);
     if (m_timer && !m_timer->isActive()) {
-        m_timer->start();
+        // Let the compositor apply the window mask before the first X11 capture;
+        // otherwise the seed frame can include the scroll overlay itself.
+        QTimer::singleShot(120, this, [this] {
+            if (m_timer && !m_timer->isActive() && !m_paused) {
+                m_timer->start();
+            }
+        });
     }
     raise();
     activateWindow();
@@ -603,6 +612,7 @@ void ScrollSessionWindow::captureTick()
             return false;
         }
 
+        Q_UNUSED(debugTag);
         frame = result.image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
         return true;
     };
@@ -621,6 +631,7 @@ void ScrollSessionWindow::captureTick()
         return;
     }
     m_lastSignature = signature;
+    dumpDebugFrame(frame, "candidate");
 
     const StitchResult outcome = m_stitcher.pushFrame(frame);
     const StitchStats stats = m_stitcher.stats();
@@ -652,6 +663,25 @@ void ScrollSessionWindow::captureTick()
                    outcome.position, outcome.frameLength, stats.totalHeight, stats.frameCount,
                    m_scrubPos, m_following ? 1 : 0, axisDebugName(m_stitcher.axis()));
     update();
+}
+
+void ScrollSessionWindow::dumpDebugFrame(const QImage &frame, const char *tag)
+{
+    if (!markshot::debugEnabled() || frame.isNull() || m_debugFrameDumpCount >= 12) {
+        return;
+    }
+
+    const QString safeTag = QString::fromLatin1(tag ? tag : "frame").remove(QLatin1Char('/'));
+    const QString path = QDir::temp().filePath(
+        QStringLiteral("mark-shot-scroll-%1-%2-%3.png")
+            .arg(m_sessionId)
+            .arg(m_debugFrameDumpCount, 2, 10, QLatin1Char('0'))
+            .arg(safeTag));
+    const bool saved = frame.save(path, "PNG");
+    logScrollDebug("dump-frame index=%d saved=%d path=%s frame=%dx%d",
+                   m_debugFrameDumpCount, saved ? 1 : 0,
+                   path.toUtf8().constData(), frame.width(), frame.height());
+    ++m_debugFrameDumpCount;
 }
 
 void ScrollSessionWindow::togglePause()

@@ -48,6 +48,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPointer>
 #include <QPixmap>
 #include <QProcess>
 #include <QProcessEnvironment>
@@ -1817,6 +1818,10 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QRect sourceGeome
     if (m_frozenFrame.format() != QImage::Format_ARGB32_Premultiplied) {
         m_frozenFrame = m_frozenFrame.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
+    // Annotation and selection geometry are stored in image pixels. Clear any
+    // high-DPI metadata from screen grabs so Qt painting does not apply a second
+    // device-pixel-ratio scale on top of our explicit image-to-widget mapping.
+    m_frozenFrame.setDevicePixelRatio(1.0);
 
     m_toolbar = new QWidget(this);
     m_toolbar->setObjectName(QStringLiteral("shotToolbar"));
@@ -4584,7 +4589,8 @@ QRect ShotWindow::selectionGlobalRect() const
     }
 
     const QRect sourceBounds(QPoint(0, 0), m_frozenFrame.size());
-    QRect selectionRect = normalizedSelection().toAlignedRect().intersected(sourceBounds);
+    const QRectF selection = normalizedSelection();
+    QRect selectionRect = selection.toAlignedRect().intersected(sourceBounds);
     if (selectionRect.isEmpty()) {
         return {};
     }
@@ -4600,10 +4606,12 @@ QRect ShotWindow::selectionGlobalRect() const
         // logical. Map the image-space selection back before passing it to grim.
         const qreal scaleX = static_cast<qreal>(sourceGeometry.width()) / imageSize.width();
         const qreal scaleY = static_cast<qreal>(sourceGeometry.height()) / imageSize.height();
-        const int left = sourceGeometry.left() + qRound(selectionRect.left() * scaleX);
-        const int top = sourceGeometry.top() + qRound(selectionRect.top() * scaleY);
-        const int right = sourceGeometry.left() + qRound((selectionRect.left() + selectionRect.width()) * scaleX);
-        const int bottom = sourceGeometry.top() + qRound((selectionRect.top() + selectionRect.height()) * scaleY);
+        const int left = sourceGeometry.left() + qRound(selection.left() * scaleX);
+        const int top = sourceGeometry.top() + qRound(selection.top() * scaleY);
+        const int right =
+            sourceGeometry.left() + qRound((selection.left() + selection.width()) * scaleX);
+        const int bottom =
+            sourceGeometry.top() + qRound((selection.top() + selection.height()) * scaleY);
         selectionRect = QRect(left,
                               top,
                               std::max(1, right - left),
@@ -6812,14 +6820,25 @@ void ShotWindow::startScrollCapture()
         return;
     }
 
-    // The session window configures its own layer-shell overlay (with a
-    // plain-window fallback) in its constructor.
-    auto *window =
-        new markshot::scroll::ScrollSessionWindow(geometry, m_outputName, screen());
-    window->show();
-    window->raise();
-    window->activateWindow();
-    close();
+    const QString outputName = m_outputName;
+    QScreen *targetScreen = screen();
+    QPointer<ShotWindow> self(this);
+
+    // On X11, QScreen::grabWindow captures visible top-level windows. Hide the
+    // selection UI and give the compositor one repaint before seeding the scroll
+    // stitcher, otherwise the first frame can contain our own toolbar/overlay.
+    hide();
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+    QTimer::singleShot(120, qApp, [self, geometry, outputName, targetScreen] {
+        auto *window =
+            new markshot::scroll::ScrollSessionWindow(geometry, outputName, targetScreen);
+        window->show();
+        window->raise();
+        window->activateWindow();
+        if (self) {
+            self->close();
+        }
+    });
 }
 
 void ShotWindow::pinSelection()
