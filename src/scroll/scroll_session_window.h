@@ -59,6 +59,7 @@ private:
     void layoutOverlay();
     void updateInputMask();
     void refreshControlLabels();
+    void dumpDebugFrame(const QImage &frame, const char *tag);
     QImage currentResult() const;
 
     // Geometry shared by the scrubber and the painter so their notions of "how
@@ -92,6 +93,7 @@ private:
     QRect m_geometry;          // captured region, global coordinates
     QPoint m_screenOrigin;     // this overlay's top-left in global coordinates
     QString m_outputName;
+    qint64 m_sessionId = 0;
     Stitcher m_stitcher;
     QTimer *m_timer = nullptr;
     bool m_paused = false;
@@ -108,6 +110,7 @@ private:
     int m_scrubPos = 0;         // top/left of the viewed window, stitched pixels
     int m_capturePos = 0;       // current screen selection top/left in stitched pixels
     int m_captureLen = 0;       // current screen selection extent along the scroll axis
+    int m_debugFrameDumpCount = 0;
 
     QWidget *m_controlBar = nullptr;
     QPushButton *m_axisButton = nullptr;
