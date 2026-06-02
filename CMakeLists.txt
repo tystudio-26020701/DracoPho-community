@@ -25,6 +25,8 @@ endif()
 
 qt_add_executable(mark-shot
     src/main.cpp
+    src/debug_log.cpp
+    src/debug_log.h
     src/screen_capture.cpp
     src/screen_capture.h
     src/shot_window.cpp
