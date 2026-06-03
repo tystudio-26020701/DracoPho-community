@@ -10,6 +10,15 @@ on:
         description: 'Release tag or package version for test runs, for example v0.1.16'
         required: true
         type: string
+      checkout_ref:
+        description: 'Optional source ref for manual runs, for example v0.1.16'
+        required: false
+        type: string
+      upload_to_release:
+        description: 'Attach manual-run rpm assets to the GitHub Release matching tag'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -42,8 +51,11 @@ jobs:
             exit 1
           fi
           VERSION="${TAG#v}"
+          CHECKOUT_INPUT="${{ inputs.checkout_ref }}"
           if [ "${{ github.event_name }}" = "release" ]; then
             CHECKOUT_REF="$TAG"
+          elif [ -n "$CHECKOUT_INPUT" ]; then
+            CHECKOUT_REF="$CHECKOUT_INPUT"
           else
             CHECKOUT_REF="${{ github.ref_name }}"
           fi
@@ -64,7 +76,6 @@ jobs:
             cmake \
             cmake-rpm-macros \
             gcc-c++ \
-            git \
             layer-shell-qt-devel \
             libX11-devel \
             libxcb-devel \
@@ -99,8 +110,10 @@ jobs:
           rm -rf "$RPM_TOP"
           mkdir -p "$RPM_TOP"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
 
-          git config --global --add safe.directory "$PWD"
-          git archive --format=tar --prefix="$SOURCE_ROOT/" HEAD | gzip -9 > "$SOURCE_ARCHIVE"
+          tar \
+            --exclude='./rpmbuild' \
+            --transform "s|^\.$|$SOURCE_ROOT|;s|^\./|$SOURCE_ROOT/|" \
+            -czf "$SOURCE_ARCHIVE" .
           cp packaging/rpm/mark-shot.spec "$SPEC_FILE"
           sed -i -E "s/^Version:.*/Version:        $VERSION/" "$SPEC_FILE"
 
@@ -134,7 +147,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload rpm to release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || inputs.upload_to_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
