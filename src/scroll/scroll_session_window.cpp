@@ -14,6 +14,7 @@
 #include <QCloseEvent>
 #include <QDateTime>
 #include <QDir>
+#include <QEvent>
 #include <QFileDialog>
 #include <QFont>
 #include <QGuiApplication>
@@ -21,6 +22,7 @@
 #include <QIcon>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
@@ -32,11 +34,10 @@
 #include <QShortcut>
 #include <QSize>
 #include <QShowEvent>
-#include <QSignalBlocker>
 #include <QStandardPaths>
-#include <QSlider>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QWheelEvent>
 #include <QWindow>
 
 #include <algorithm>
@@ -63,7 +64,6 @@ constexpr int kNoLayerPanelGap = 96;  // GNOME xdg windows can bleed into PipeWi
 constexpr int kPanelPadding = 12;
 constexpr int kControlBarHeight = 54;   // single row of icon actions
 constexpr int kStatusHeight = 22;
-constexpr int kScrubberHeight = 22;     // non-destructive position slider
 
 std::uint8_t grayPixel(const QImage &frame, int x, int y)
 {
@@ -425,6 +425,7 @@ void ScrollSessionWindow::buildControlBar()
     };
 
     m_axisButton = makeButton(makeControlIcon(ControlIcon::AxisVertical), MS_TR("Dir: Vertical"));
+    m_axisButton->installEventFilter(this);
     row->addSpacing(4);
     m_pauseButton = makeButton(makeControlIcon(ControlIcon::Pause), MS_TR("Pause"));
     m_annotateButton = makeButton(makeControlIcon(ControlIcon::Annotate), MS_TR("Annotate"));
@@ -438,33 +439,6 @@ void ScrollSessionWindow::buildControlBar()
     connect(m_saveButton, &QPushButton::clicked, this, [this] { saveResult(); });
     connect(m_copyButton, &QPushButton::clicked, this, [this] { copyResult(); });
     connect(m_cancelButton, &QPushButton::clicked, this, [this] { close(); });
-
-    // Scrubber: a thin slider above the control bar. It moves which window of the
-    // long image the detail view shows, without ever discarding stitched content.
-    m_scrubber = new QSlider(Qt::Horizontal, this);
-    m_scrubber->setObjectName(QStringLiteral("scrollScrubber"));
-    m_scrubber->setFocusPolicy(Qt::NoFocus);
-    m_scrubber->setCursor(Qt::PointingHandCursor);
-    m_scrubber->setRange(0, 0);
-    m_scrubber->setStyleSheet(QStringLiteral(
-        "QSlider { min-height: 18px; max-height: 18px; }"
-        "QSlider::groove:horizontal { height: 4px; border-radius: 2px;"
-        " background: rgba(255,255,255,28); }"
-        "QSlider::handle:horizontal { width: 14px; margin: -6px 0; border-radius: 7px;"
-        " background: #2DD4BF; }"
-        "QSlider::handle:horizontal:hover { background: #5EEAD4; }"));
-    connect(m_scrubber, &QSlider::sliderPressed, this, [this] { m_following = false; });
-    connect(m_scrubber, &QSlider::valueChanged, this, [this](int value) {
-        m_scrubPos = value;
-        update();
-    });
-    connect(m_scrubber, &QSlider::sliderReleased, this, [this] {
-        // Releasing at the very end resumes following the live edge.
-        if (m_scrubber->value() >= m_scrubber->maximum()) {
-            m_following = true;
-        }
-        update();
-    });
 
     refreshControlLabels();
 }
@@ -505,6 +479,59 @@ QRect ScrollSessionWindow::previewPanelRect() const
     return QRect(left, top, kPanelWidth, panelHeight);
 }
 
+QRect ScrollSessionWindow::captureBoundsGlobal() const
+{
+    QScreen *targetScreen = screen();
+    if (!targetScreen) {
+        targetScreen = QGuiApplication::screenAt(m_geometry.center());
+    }
+    if (!targetScreen) {
+        targetScreen = QGuiApplication::primaryScreen();
+    }
+    return targetScreen ? targetScreen->geometry() : m_geometry.normalized();
+}
+
+QRegion ScrollSessionWindow::overlayPaintRegion() const
+{
+    const QRect bounds(QPoint(0, 0), size());
+    if (bounds.isEmpty()) {
+        return {};
+    }
+
+    const QRect region = regionLocalRect();
+    constexpr int kAntialiasPad = 2;
+    const int outerPad = kBorderGap + kBorderWidth + kAntialiasPad;
+    const int innerPad = std::max(0, kBorderGap - kAntialiasPad);
+
+    QRegion painted(region.adjusted(-outerPad, -outerPad, outerPad, outerPad));
+    painted -= QRegion(region.adjusted(-innerPad, -innerPad, innerPad, innerPad));
+    painted += QRegion(previewPanelRect().adjusted(-kAntialiasPad,
+                                                   -kAntialiasPad,
+                                                   kAntialiasPad,
+                                                   kAntialiasPad));
+    return painted.intersected(QRegion(bounds));
+}
+
+void ScrollSessionWindow::setRegionGeometry(QRect geometry)
+{
+    geometry = geometry.normalized();
+    if (!geometry.isValid() || geometry.isEmpty() || geometry == m_geometry.normalized()) {
+        return;
+    }
+
+    const QRegion oldPaint = overlayPaintRegion();
+    m_geometry = geometry;
+    layoutOverlay();
+    m_transientPaintMask += oldPaint;
+    m_transientPaintMask += overlayPaintRegion();
+    updateInputMask();
+    if (!m_transientPaintMask.isEmpty()) {
+        update(m_transientPaintMask);
+    } else {
+        update();
+    }
+}
+
 void ScrollSessionWindow::layoutOverlay()
 {
     const QRect panel = previewPanelRect();
@@ -514,30 +541,19 @@ void ScrollSessionWindow::layoutOverlay()
                               barTop,
                               barWidth,
                               kControlBarHeight);
-    if (m_scrubber) {
-        // The scrubber sits just above the control bar, spanning the panel width.
-        m_scrubber->setGeometry(panel.left() + kPanelPadding,
-                                barTop - kScrubberHeight,
-                                barWidth,
-                                kScrubberHeight);
-    }
 }
 
 void ScrollSessionWindow::updateInputMask()
 {
-    // Only the border ring and the preview panel should catch input;
-    // the captured region interior and everything else stays click-through so
-    // the user can keep scrolling the page underneath.
-    const QRect region = regionLocalRect();
-    const QRect outer = region.adjusted(-(kBorderGap + kBorderWidth),
-                                        -(kBorderGap + kBorderWidth),
-                                        kBorderGap + kBorderWidth,
-                                        kBorderGap + kBorderWidth);
-    const QRect inner = region.adjusted(-kBorderGap, -kBorderGap, kBorderGap, kBorderGap);
-
-    QRegion mask(outer);
-    mask -= QRegion(inner);
+    // Only the preview panel should catch input; the captured region
+    // interior and the rest of the overlay stay click-through so the user
+    // can keep scrolling the page underneath. The axis button drag-to-
+    // translate is handled via an event filter on the button itself. During
+    // a drag, old paint locations stay in the mask until one cleanup paint
+    // has been submitted.
+    QRegion mask;
     mask += QRegion(previewPanelRect());
+    mask += m_transientPaintMask;
     setMask(mask);
     if (QWindow *nativeWindow = windowHandle()) {
         nativeWindow->setMask(mask);
@@ -658,7 +674,7 @@ void ScrollSessionWindow::captureTick()
         m_capturePos = outcome.position;
         m_captureLen = outcome.frameLength;
     }
-    syncScrubber(outcome);
+    syncPreviewScroll(outcome);
     refreshControlLabels();
     logScrollDebug("tick status=%s edge=%s added=%d pos=%d frame_len=%d full_len=%d frames=%d "
                    "scrub=%d following=%d axis=%s",
@@ -705,6 +721,7 @@ void ScrollSessionWindow::toggleAxis()
         ? ScrollAxis::Vertical
         : ScrollAxis::Horizontal;
     m_stitcher.setAxis(next);
+    updateInputMask();
     refreshControlLabels();
     update();
 }
@@ -715,10 +732,9 @@ QRect ScrollSessionWindow::imageAreaRect() const
     const int left = panel.left() + kPanelPadding;
     const int top = panel.top() + kPanelPadding + kStatusHeight + kPanelPadding;
     const int width = panel.width() - kPanelPadding * 2;
-    // Below the image area sit (in order) the scrubber and the control bar, each
-    // separated by a padding gap from the image and from the panel edge.
-    const int height = panel.height() - kStatusHeight - kControlBarHeight
-                       - kScrubberHeight - kPanelPadding * 4;
+    // Below the image area sits the control bar, separated by a padding gap from
+    // the image and from the panel edge.
+    const int height = panel.height() - kStatusHeight - kControlBarHeight - kPanelPadding * 4;
     return QRect(left, top, width, std::max(0, height));
 }
 
@@ -778,11 +794,8 @@ ScrollSessionWindow::PreviewLayout ScrollSessionWindow::computePreviewLayout() c
     return layout;
 }
 
-void ScrollSessionWindow::syncScrubber(const StitchResult &outcome)
+void ScrollSessionWindow::syncPreviewScroll(const StitchResult &outcome)
 {
-    if (!m_scrubber) {
-        return;
-    }
     const PreviewLayout layout = computePreviewLayout();
     const int maxScrub = layout.maxScrub;
 
@@ -805,11 +818,134 @@ void ScrollSessionWindow::syncScrubber(const StitchResult &outcome)
         }
     }
     m_scrubPos = std::clamp(m_scrubPos, 0, maxScrub);
+    if (maxScrub == 0) {
+        m_following = true;
+    }
+}
 
-    const QSignalBlocker blocker(m_scrubber);
-    m_scrubber->setRange(0, maxScrub);
-    m_scrubber->setValue(m_scrubPos);
-    m_scrubber->setEnabled(maxScrub > 0);
+QRect ScrollSessionWindow::overviewTargetRect(const PreviewLayout &layout,
+                                              const QImage &result) const
+{
+    if (layout.globalRect.isEmpty() || result.isNull()) {
+        return {};
+    }
+
+    const QSize fitted = result.size().scaled(layout.globalRect.size(), Qt::KeepAspectRatio);
+    if (fitted.isEmpty()) {
+        return {};
+    }
+
+    return QRect(layout.globalRect.left() + (layout.globalRect.width() - fitted.width()) / 2,
+                 layout.globalRect.top() + (layout.globalRect.height() - fitted.height()) / 2,
+                 fitted.width(),
+                 fitted.height());
+}
+
+QRect ScrollSessionWindow::overviewViewportRect(const QRect &target,
+                                                const PreviewLayout &layout) const
+{
+    if (target.isEmpty() || layout.longLen <= 0 || layout.viewportLen <= 0) {
+        return {};
+    }
+
+    const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
+    const int axisStart = horizontal ? target.left() : target.top();
+    const int axisLen = horizontal ? target.width() : target.height();
+    if (axisLen <= 0) {
+        return {};
+    }
+
+    const int pos = std::clamp(m_scrubPos, 0, layout.maxScrub);
+    const qreal scale = static_cast<qreal>(axisLen) / layout.longLen;
+    const int markerLen = std::clamp(
+        static_cast<int>(std::lround(layout.viewportLen * scale)),
+        2,
+        axisLen);
+    const int markerStart = std::clamp(
+        axisStart + static_cast<int>(std::lround(pos * scale)),
+        axisStart,
+        axisStart + axisLen - markerLen);
+
+    if (horizontal) {
+        return QRect(markerStart, target.top(), markerLen, target.height());
+    }
+    return QRect(target.left(), markerStart, target.width(), markerLen);
+}
+
+int ScrollSessionWindow::scrubPosFromOverviewPoint(const QPoint &point,
+                                                   const QRect &target,
+                                                   const PreviewLayout &layout,
+                                                   int markerOffsetPx) const
+{
+    if (target.isEmpty() || layout.maxScrub <= 0 || layout.longLen <= 0) {
+        return 0;
+    }
+
+    const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
+    const int axisPoint = horizontal ? point.x() : point.y();
+    const int axisStart = horizontal ? target.left() : target.top();
+    const int axisLen = horizontal ? target.width() : target.height();
+    if (axisLen <= 0) {
+        return 0;
+    }
+
+    const qreal scale = static_cast<qreal>(axisLen) / layout.longLen;
+    const int pos = static_cast<int>(
+        std::lround((axisPoint - axisStart - markerOffsetPx) / scale));
+    return std::clamp(pos, 0, layout.maxScrub);
+}
+
+void ScrollSessionWindow::setScrubPosition(int pos, bool followAtEnd)
+{
+    const PreviewLayout layout = computePreviewLayout();
+    const int maxScrub = layout.maxScrub;
+    m_scrubPos = std::clamp(pos, 0, maxScrub);
+    m_following = maxScrub == 0 || (followAtEnd && m_scrubPos >= maxScrub);
+    update();
+}
+
+bool ScrollSessionWindow::beginOverviewDrag(const QPoint &point)
+{
+    const QImage result = currentResult();
+    const PreviewLayout layout = computePreviewLayout();
+    if (!layout.valid || layout.maxScrub <= 0) {
+        return false;
+    }
+
+    const QRect target = overviewTargetRect(layout, result);
+    if (!target.contains(point)) {
+        return false;
+    }
+
+    const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
+    const QRect marker = overviewViewportRect(target, layout);
+    const QRect hitRect = marker.adjusted(-6, -6, 6, 6);
+    if (hitRect.contains(point)) {
+        m_overviewDragOffsetPx = horizontal ? point.x() - marker.left()
+                                            : point.y() - marker.top();
+    } else {
+        const int markerLen = horizontal ? marker.width() : marker.height();
+        m_overviewDragOffsetPx = markerLen / 2;
+    }
+
+    m_overviewDragging = true;
+    m_following = false;
+    setCursor(Qt::ClosedHandCursor);
+    updateOverviewDrag(point);
+    return true;
+}
+
+void ScrollSessionWindow::updateOverviewDrag(const QPoint &point)
+{
+    const QImage result = currentResult();
+    const PreviewLayout layout = computePreviewLayout();
+    if (!layout.valid || layout.maxScrub <= 0) {
+        return;
+    }
+
+    const QRect target = overviewTargetRect(layout, result);
+    const int pos = scrubPosFromOverviewPoint(point, target, layout, m_overviewDragOffsetPx);
+    setScrubPosition(pos, false);
 }
 
 void ScrollSessionWindow::refreshControlLabels()
@@ -933,7 +1069,7 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
     painter.drawText(statusRect, Qt::AlignVCenter | Qt::AlignLeft,
                      m_statusText.isEmpty() ? MS_TR("Scroll down to capture") : m_statusText);
 
-    // Preview image area: between the status row and the scrubber/control bar.
+    // Preview image area: between the status row and the control bar.
     const QRect imageArea = imageAreaRect();
     if (imageArea.height() > 10) {
         painter.fillRect(imageArea, QColor(8, 13, 19, 220));
@@ -981,8 +1117,8 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
 
             // Detail view: shows the window [m_scrubPos, m_scrubPos + viewportLen)
             // of the long image along the scroll axis, scaled to the detail rect.
-            // Following tracks the current captured frame; the scrubber moves it
-            // without ever discarding stitched content.
+            // Following tracks the current captured frame; the overview frame moves
+            // it without ever discarding stitched content.
             {
                 const QRect &rect = layout.detailRect;
                 const int pos = std::clamp(m_scrubPos, 0, layout.maxScrub);
@@ -1011,41 +1147,33 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
             // boxing the window the detail view currently shows, plus an amber
             // marker for the current screen selection range.
             if (!layout.globalRect.isEmpty()) {
-                const QRect &rect = layout.globalRect;
-                const QSize fitted = result.size().scaled(rect.size(), Qt::KeepAspectRatio);
-                const QRect target(rect.left() + (rect.width() - fitted.width()) / 2,
-                                   rect.top() + (rect.height() - fitted.height()) / 2,
-                                   fitted.width(),
-                                   fitted.height());
+                const QRect target = overviewTargetRect(layout, result);
                 painter.drawImage(target, result);
                 painter.setPen(QPen(QColor(255, 255, 255, 40), 1));
                 painter.setBrush(Qt::NoBrush);
                 painter.drawRect(target);
 
-                const int pos = std::clamp(m_scrubPos, 0, layout.maxScrub);
-                QRect marker;
-                if (horizontal) {
-                    const qreal gscale = static_cast<qreal>(target.width()) / result.width();
-                    const int mx = target.left() + static_cast<int>(std::lround(pos * gscale));
-                    const int mw =
-                        std::max(2, static_cast<int>(std::lround(layout.viewportLen * gscale)));
-                    marker = QRect(mx, target.top(), mw, target.height());
-                } else {
-                    const qreal gscale = static_cast<qreal>(target.height()) / result.height();
-                    const int my = target.top() + static_cast<int>(std::lround(pos * gscale));
-                    const int mh =
-                        std::max(2, static_cast<int>(std::lround(layout.viewportLen * gscale)));
-                    marker = QRect(target.left(), my, target.width(), mh);
-                }
-                painter.setPen(QPen(QColor(45, 212, 191, 235), 2));
-                painter.setBrush(QColor(45, 212, 191, 45));
-                painter.drawRect(marker.intersected(target));
                 drawCaptureMarker(target,
                                   0,
                                   horizontal ? result.width() : result.height(),
                                   true);
+                const QRect marker = overviewViewportRect(target, layout);
+                painter.setPen(QPen(QColor(45, 212, 191, m_overviewDragging ? 255 : 235), 2));
+                painter.setBrush(QColor(45, 212, 191, m_overviewDragging ? 70 : 45));
+                painter.drawRect(marker.intersected(target));
             }
         }
+    }
+
+    if (m_restoreMaskAfterPaint && !m_axisDragging) {
+        m_restoreMaskAfterPaint = false;
+        QTimer::singleShot(0, this, [this] {
+            if (m_axisDragging) {
+                return;
+            }
+            m_transientPaintMask = {};
+            updateInputMask();
+        });
     }
 }
 
@@ -1057,6 +1185,193 @@ void ScrollSessionWindow::keyPressEvent(QKeyEvent *event)
         return;
     }
     QWidget::keyPressEvent(event);
+}
+
+void ScrollSessionWindow::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && beginOverviewDrag(event->pos())) {
+        event->accept();
+        return;
+    }
+    QWidget::mousePressEvent(event);
+}
+
+void ScrollSessionWindow::mouseMoveEvent(QMouseEvent *event)
+{
+    if (m_overviewDragging) {
+        updateOverviewDrag(event->pos());
+        event->accept();
+        return;
+    }
+    QWidget::mouseMoveEvent(event);
+}
+
+void ScrollSessionWindow::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && m_overviewDragging) {
+        updateOverviewDrag(event->pos());
+        m_overviewDragging = false;
+        const PreviewLayout layout = computePreviewLayout();
+        if (m_scrubPos >= layout.maxScrub) {
+            m_following = true;
+        }
+        unsetCursor();
+        update();
+        event->accept();
+        return;
+    }
+    QWidget::mouseReleaseEvent(event);
+}
+
+void ScrollSessionWindow::wheelEvent(QWheelEvent *event)
+{
+    if (!previewPanelRect().contains(event->position().toPoint())) {
+        QWidget::wheelEvent(event);
+        return;
+    }
+
+    const PreviewLayout layout = computePreviewLayout();
+    if (!layout.valid || layout.maxScrub <= 0) {
+        event->accept();
+        return;
+    }
+
+    const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
+    const QPoint pixelDelta = event->pixelDelta();
+    int delta = horizontal && pixelDelta.x() != 0 ? pixelDelta.x() : pixelDelta.y();
+    if (delta == 0) {
+        const QPoint angleDelta = event->angleDelta();
+        const int angle = horizontal && angleDelta.x() != 0 ? angleDelta.x() : angleDelta.y();
+        if (angle == 0) {
+            event->accept();
+            return;
+        }
+        const int step = std::max(24, layout.viewportLen / 8);
+        delta = static_cast<int>(std::lround(static_cast<qreal>(angle) / 120.0 * step));
+    }
+
+    setScrubPosition(m_scrubPos - delta, true);
+    event->accept();
+}
+
+bool ScrollSessionWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched != m_axisButton) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    switch (event->type()) {
+    case QEvent::MouseButtonPress: {
+        auto *me = static_cast<QMouseEvent *>(event);
+        if (me->button() == Qt::LeftButton) {
+            m_axisDragArmed = true;
+            m_axisDragging = false;
+            m_axisDragStartGlobal = me->globalPosition().toPoint();
+            m_axisDragStartGeometry = m_geometry.normalized();
+        }
+        // Let the button see the press so it can still emit clicked on release.
+        return false;
+    }
+
+    case QEvent::MouseMove: {
+        auto *me = static_cast<QMouseEvent *>(event);
+        if (!m_axisDragArmed || !(me->buttons() & Qt::LeftButton)) {
+            return false;
+        }
+
+        constexpr int kDragThresholdPx = 5;
+        const QPoint globalPos = me->globalPosition().toPoint();
+        const QPoint delta = globalPos - m_axisDragStartGlobal;
+
+        if (!m_axisDragging) {
+            if (std::abs(delta.x()) < kDragThresholdPx &&
+                std::abs(delta.y()) < kDragThresholdPx) {
+                return false;  // below threshold, not yet dragging
+            }
+            // Threshold exceeded: enter drag mode.
+            // Capture stays active so the stitcher appends continuously as
+            // the region moves, giving a smooth live-stitching feel.
+            m_axisDragging = true;
+            m_lastSignature.clear();
+            m_transientPaintMask = overlayPaintRegion();
+            m_restoreMaskAfterPaint = false;
+            m_statusText = MS_TR("Dragging region");
+            refreshControlLabels();
+            setCursor(Qt::ClosedHandCursor);
+        }
+
+        // Constrain movement to the current scroll axis only.
+        const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
+        QPoint constrainedDelta = delta;
+        if (horizontal) {
+            constrainedDelta.setY(0);
+        } else {
+            constrainedDelta.setX(0);
+        }
+
+        QRect next = m_axisDragStartGeometry.translated(constrainedDelta);
+        // Clamp to screen bounds.
+        const QRect bounds = captureBoundsGlobal();
+        if (next.left() < bounds.left()) {
+            next.translate(bounds.left() - next.left(), 0);
+        }
+        if (next.top() < bounds.top()) {
+            next.translate(0, bounds.top() - next.top());
+        }
+        if (next.right() > bounds.right()) {
+            next.translate(bounds.right() - next.right(), 0);
+        }
+        if (next.bottom() > bounds.bottom()) {
+            next.translate(0, bounds.bottom() - next.bottom());
+        }
+
+        setRegionGeometry(next);
+        m_statusText = MS_TR("Dragging region");
+        return true;  // consume the move so the button doesn't highlight
+    }
+
+    case QEvent::MouseButtonRelease: {
+        auto *me = static_cast<QMouseEvent *>(event);
+        if (me->button() != Qt::LeftButton || !m_axisDragArmed) {
+            return false;
+        }
+
+        const bool wasDragging = m_axisDragging;
+        m_axisDragArmed = false;
+        m_axisDragging = false;
+        unsetCursor();
+
+        if (!wasDragging) {
+            // Treat as a plain click: let the button fire its clicked signal.
+            return false;
+        }
+
+        // Drag just finished: clear the frame signature so the next capture
+        // tick is accepted as a fresh frame. Capture was never paused during
+        // the drag, so the timer keeps running and stitching resumes
+        // immediately — no delayed resume needed.
+        m_lastSignature.clear();
+        m_statusText = MS_TR("Region adjusted");
+        refreshControlLabels();
+        m_transientPaintMask += overlayPaintRegion();
+        m_restoreMaskAfterPaint = !m_transientPaintMask.isEmpty();
+        // Keep the temporary paint mask active for one cleanup repaint. If it
+        // is dropped immediately, coalesced mouse-move damage can leave old
+        // border or panel pixels on the compositor surface.
+        updateInputMask();
+        if (!m_transientPaintMask.isEmpty()) {
+            update(m_transientPaintMask);
+        } else {
+            update();
+        }
+        // Consume the release so the button does NOT emit clicked (which
+        // would toggle the axis).
+        return true;
+    }
+
+    default:
+        return QWidget::eventFilter(watched, event);
+    }
 }
 
 void ScrollSessionWindow::closeEvent(QCloseEvent *event)
