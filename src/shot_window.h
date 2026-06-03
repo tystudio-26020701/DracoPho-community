@@ -61,6 +61,21 @@ public:
         Cancel,
     };
 
+    enum class Tool {
+        Move,
+        Select,
+        Pen,
+        Line,
+        Highlighter,
+        Rectangle,
+        Ellipse,
+        Arrow,
+        Text,
+        Number,
+        Mosaic,
+        Laser,
+    };
+
     struct DesktopApp {
         QString name;
         QString desktopPath;
@@ -82,9 +97,14 @@ public:
                         QRect sourceGeometry = {},
                         QVector<QRect> windowGeometries = {},
                         QWidget *parent = nullptr);
+    static std::optional<Tool> toolFromName(QString name);
+    static QStringList supportedToolNames();
     bool configureLayerShell(QScreen *screen);
     void startFullscreenAnnotation();
     void setImageNavigationEnabled(bool enabled);
+    void setDefaultTool(Tool tool);
+    void setDefaultTools(Tool tool, Tool fullscreenTool);
+    void setDefaultColor(QColor color);
 
 signals:
     void selectionActivated(ShotWindow *window);
@@ -107,19 +127,10 @@ private:
         Editing,
     };
 
-    enum class Tool {
-        Move,
-        Select,
-        Pen,
-        Line,
-        Highlighter,
-        Rectangle,
-        Ellipse,
-        Arrow,
-        Text,
-        Number,
-        Mosaic,
-        Laser,
+    enum class StartupTool {
+        None,
+        ColorPicker,
+        Ruler,
     };
 
     enum class ArrowStyle {
@@ -186,6 +197,7 @@ private:
     QRectF imageRectToWidget(QRectF rect) const;
     QRectF textContentRect(const Annotation &annotation, bool widgetCoordinates) const;
     QString defaultSavePath() const;
+    Tool defaultEditingTool() const;
     bool hasUsableSelection() const;
     bool imageNavigationAvailable() const;
     bool wheelZoomsImage() const;
@@ -294,6 +306,13 @@ private:
     void updateToolbarState();
     void setFullscreenActionButtonsVisible(bool visible);
     QRect clampedToolbarGeometry(QRect toolbarGeometry) const;
+    void setStartupTool(StartupTool tool);
+    void leaveStartupTool();
+    QColor sampledImageColor(QPointF imagePoint) const;
+    void showStartupColorDialog(QColor color, QPoint anchor);
+    void drawStartupToolOverlay(QPainter &painter);
+    void drawStartupColorLoupe(QPainter &painter, QPointF imagePoint) const;
+    void drawStartupRuler(QPainter &painter) const;
 
     QImage m_frozenFrame;
     QString m_outputName;
@@ -306,6 +325,14 @@ private:
     bool m_imageSelected = false;
     bool m_imagePanning = false;
     bool m_syncingImageScrollBars = false;
+    StartupTool m_startupTool = StartupTool::None;
+    bool m_startupHoverValid = false;
+    bool m_startupRulerDragging = false;
+    bool m_startupRulerHasMeasure = false;
+    qreal m_startupColorLoupeSize = 112.0;
+    QPointF m_startupHoverImagePoint;
+    QPointF m_startupRulerStart;
+    QPointF m_startupRulerEnd;
     QImage m_sharpViewportCache;
     QRectF m_sharpViewportCacheSourceRect;
     QSize m_sharpViewportCacheTargetSize;
@@ -324,6 +351,8 @@ private:
     SelectionDrag m_annotationDrag = SelectionDrag::None;
     Mode m_mode = Mode::Selecting;
     Tool m_tool = Tool::Pen;
+    Tool m_defaultTool = Tool::Pen;
+    Tool m_fullscreenDefaultTool = Tool::Pen;
     bool m_dragging = false;
     bool m_annotationHistoryCaptured = false;
     bool m_annotationSelectionBoxActive = false;
@@ -386,6 +415,7 @@ private:
     bool m_propertyColorEditingTextBackground = false;
     QWidget *m_openWithPanel = nullptr;
     QWidget *m_extensionPanel = nullptr;
+    QWidget *m_startupColorPanel = nullptr;
     QWidget *m_colorPalette = nullptr;
     QWidget *m_colorPalettePreview = nullptr;
     QPoint m_colorPaletteAnchor;

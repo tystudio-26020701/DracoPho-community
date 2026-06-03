@@ -5,21 +5,32 @@
 
 #include <QApplication>
 #include <QByteArray>
+#include <QColor>
 #include <QCommandLineParser>
 #include <QCursor>
+#include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImageReader>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
 #include <QMessageBox>
 #include <QPointer>
 #include <QProcess>
 #include <QScreen>
+#include <QStringList>
 #include <QTimer>
 #include <QVector>
 
+#include <algorithm>
+
 namespace {
+
+constexpr int kDefaultAnnotationRed = 255;
+constexpr int kDefaultAnnotationGreen = 77;
+constexpr int kDefaultAnnotationBlue = 77;
 
 QRect virtualScreensGeometry()
 {
@@ -32,6 +43,266 @@ QRect virtualScreensGeometry()
         geometry = geometry.isNull() ? screen->geometry() : geometry.united(screen->geometry());
     }
     return geometry;
+}
+
+QJsonObject objectValue(const QJsonObject &object, const QString &key)
+{
+    const QJsonValue value = object.value(key);
+    return value.isObject() ? value.toObject() : QJsonObject();
+}
+
+QString stringValue(const QJsonObject &object, const QStringList &keys)
+{
+    for (const QString &key : keys) {
+        const QString value = object.value(key).toString().trimmed();
+        if (!value.isEmpty()) {
+            return value;
+        }
+    }
+    return {};
+}
+
+QString firstStringValue(const QStringList &values)
+{
+    for (const QString &value : values) {
+        const QString trimmed = value.trimmed();
+        if (!trimmed.isEmpty()) {
+            return trimmed;
+        }
+    }
+    return {};
+}
+
+QJsonValue jsonValue(const QJsonObject &object, const QStringList &keys)
+{
+    for (const QString &key : keys) {
+        const QJsonValue value = object.value(key);
+        if (!value.isUndefined()) {
+            return value;
+        }
+    }
+    return {};
+}
+
+bool isHexDigits(const QString &text)
+{
+    for (const QChar ch : text) {
+        if (!ch.isDigit()
+            && (ch < QLatin1Char('a') || ch > QLatin1Char('f'))
+            && (ch < QLatin1Char('A') || ch > QLatin1Char('F'))) {
+            return false;
+        }
+    }
+    return !text.isEmpty();
+}
+
+std::optional<int> intValue(const QJsonValue &value)
+{
+    if (value.isDouble()) {
+        return std::clamp(value.toInt(), 0, 255);
+    }
+    if (value.isString()) {
+        bool ok = false;
+        const int number = value.toString().trimmed().toInt(&ok);
+        if (ok) {
+            return std::clamp(number, 0, 255);
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<int> channelValue(const QJsonObject &object, const QStringList &keys)
+{
+    return intValue(jsonValue(object, keys));
+}
+
+std::optional<QColor> colorFromObject(const QJsonObject &object)
+{
+    const std::optional<int> red = channelValue(object, {QStringLiteral("r"), QStringLiteral("red")});
+    const std::optional<int> green = channelValue(object, {QStringLiteral("g"), QStringLiteral("green")});
+    const std::optional<int> blue = channelValue(object, {QStringLiteral("b"), QStringLiteral("blue")});
+    if (!red.has_value() || !green.has_value() || !blue.has_value()) {
+        return std::nullopt;
+    }
+
+    const std::optional<int> alpha = channelValue(object, {QStringLiteral("a"), QStringLiteral("alpha")});
+    return QColor(*red, *green, *blue, alpha.value_or(255));
+}
+
+std::optional<QColor> colorFromString(QString value)
+{
+    QString text = value.trimmed();
+    if (text.isEmpty()) {
+        return std::nullopt;
+    }
+    if (text.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)) {
+        text = text.mid(2);
+    }
+    if (!text.startsWith(QLatin1Char('#')) && (text.size() == 6 || text.size() == 8) && isHexDigits(text)) {
+        text.prepend(QLatin1Char('#'));
+    }
+    if (text.startsWith(QLatin1Char('#')) && text.size() == 9 && isHexDigits(text.mid(1))) {
+        bool ok = false;
+        const int red = text.mid(1, 2).toInt(&ok, 16);
+        if (!ok) {
+            return std::nullopt;
+        }
+        const int green = text.mid(3, 2).toInt(&ok, 16);
+        if (!ok) {
+            return std::nullopt;
+        }
+        const int blue = text.mid(5, 2).toInt(&ok, 16);
+        if (!ok) {
+            return std::nullopt;
+        }
+        const int alpha = text.mid(7, 2).toInt(&ok, 16);
+        if (!ok) {
+            return std::nullopt;
+        }
+        return QColor(red, green, blue, alpha);
+    }
+
+    const QColor color(text);
+    if (color.isValid()) {
+        return color;
+    }
+    return std::nullopt;
+}
+
+std::optional<QColor> colorFromValue(const QJsonValue &value)
+{
+    if (value.isString()) {
+        return colorFromString(value.toString());
+    }
+    if (value.isObject()) {
+        return colorFromObject(value.toObject());
+    }
+    return std::nullopt;
+}
+
+struct DefaultTools {
+    ShotWindow::Tool normal = ShotWindow::Tool::Pen;
+    ShotWindow::Tool fullscreen = ShotWindow::Tool::Pen;
+    QColor color = QColor(kDefaultAnnotationRed, kDefaultAnnotationGreen, kDefaultAnnotationBlue);
+};
+
+DefaultTools configuredDefaultTools(QString *warning)
+{
+    if (warning) {
+        warning->clear();
+    }
+
+    DefaultTools tools;
+    QFile file(markshot::appConfigPath());
+    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return tools;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        return tools;
+    }
+
+    const QJsonObject root = document.object();
+    const QJsonObject annotation = objectValue(root, QStringLiteral("annotation"));
+    const QJsonObject defaultTools = objectValue(annotation, QStringLiteral("defaultTools"));
+    const QJsonObject rootDefaultTools = objectValue(root, QStringLiteral("defaultTools"));
+    QStringList warnings;
+    bool hasToolWarnings = false;
+    bool hasColorWarnings = false;
+
+    auto parseTool = [&warnings, &hasToolWarnings](const QString &name, const QString &source) -> std::optional<ShotWindow::Tool> {
+        if (name.isEmpty()) {
+            return std::nullopt;
+        }
+        const std::optional<ShotWindow::Tool> tool = ShotWindow::toolFromName(name);
+        if (tool.has_value()) {
+            return tool;
+        }
+        warnings.append(MS_TR("Unsupported default tool in config %1: %2").arg(source, name));
+        hasToolWarnings = true;
+        return std::nullopt;
+    };
+
+    const QString commonDefault = firstStringValue({
+        stringValue(annotation, {QStringLiteral("defaultTool"), QStringLiteral("defaultAnnotationTool")}),
+        stringValue(root, {QStringLiteral("defaultTool"), QStringLiteral("defaultAnnotationTool")}),
+    });
+    if (const std::optional<ShotWindow::Tool> tool =
+            parseTool(commonDefault, QStringLiteral("annotation.defaultTool"))) {
+        tools.normal = *tool;
+        tools.fullscreen = *tool;
+    }
+
+    const QString normalDefault = firstStringValue({
+        stringValue(defaultTools,
+                    {QStringLiteral("normal"), QStringLiteral("region"), QStringLiteral("selection")}),
+        stringValue(rootDefaultTools,
+                    {QStringLiteral("normal"), QStringLiteral("region"), QStringLiteral("selection")}),
+        stringValue(annotation,
+                    {QStringLiteral("normalDefaultTool"),
+                     QStringLiteral("regionDefaultTool"),
+                     QStringLiteral("selectionDefaultTool")}),
+        stringValue(root,
+                    {QStringLiteral("normalDefaultTool"),
+                     QStringLiteral("regionDefaultTool"),
+                     QStringLiteral("selectionDefaultTool")}),
+    });
+    if (const std::optional<ShotWindow::Tool> tool =
+            parseTool(normalDefault, QStringLiteral("annotation.defaultTools.normal"))) {
+        tools.normal = *tool;
+    }
+
+    const QString fullscreenDefault = firstStringValue({
+        stringValue(defaultTools,
+                    {QStringLiteral("fullscreen"), QStringLiteral("fullScreen"), QStringLiteral("full-screen")}),
+        stringValue(rootDefaultTools,
+                    {QStringLiteral("fullscreen"), QStringLiteral("fullScreen"), QStringLiteral("full-screen")}),
+        stringValue(annotation,
+                    {QStringLiteral("fullscreenDefaultTool"),
+                     QStringLiteral("fullScreenDefaultTool"),
+                     QStringLiteral("defaultFullscreenTool")}),
+        stringValue(root,
+                    {QStringLiteral("fullscreenDefaultTool"),
+                     QStringLiteral("fullScreenDefaultTool"),
+                     QStringLiteral("defaultFullscreenTool")}),
+    });
+    if (const std::optional<ShotWindow::Tool> tool =
+            parseTool(fullscreenDefault, QStringLiteral("annotation.fullscreenDefaultTool"))) {
+        tools.fullscreen = *tool;
+    }
+
+    const QJsonValue defaultColor = jsonValue(annotation,
+                                             {QStringLiteral("defaultColor"),
+                                              QStringLiteral("defaultAnnotationColor")});
+    const QJsonValue rootDefaultColor = jsonValue(root,
+                                                 {QStringLiteral("defaultColor"),
+                                                  QStringLiteral("defaultAnnotationColor")});
+    const QJsonValue configuredColor = !defaultColor.isUndefined() ? defaultColor : rootDefaultColor;
+    if (!configuredColor.isUndefined()) {
+        if (const std::optional<QColor> color = colorFromValue(configuredColor)) {
+            tools.color = *color;
+        } else {
+            warnings.append(MS_TR("Unsupported default color in config annotation.defaultColor"));
+            hasColorWarnings = true;
+        }
+    }
+
+    if (warning && !warnings.isEmpty()) {
+        QStringList supportLines;
+        if (hasToolWarnings) {
+            supportLines.append(MS_TR("Supported tools: %1").arg(ShotWindow::supportedToolNames().join(QStringLiteral(", "))));
+        }
+        if (hasColorWarnings) {
+            supportLines.append(MS_TR("Supported color formats: #RRGGBB or #RRGGBBAA"));
+        }
+        *warning = warnings.join(QStringLiteral("\n"));
+        if (!supportLines.isEmpty()) {
+            *warning += QStringLiteral("\n") + supportLines.join(QStringLiteral("\n"));
+        }
+    }
+    return tools;
 }
 
 QString niriFocusedOutputName()
@@ -122,6 +393,7 @@ ShotWindow *showCaptureWindow(QScreen *screen,
                               bool allOutputs,
                               bool useRegularWindow,
                               bool fullscreenAnnotation,
+                              const DefaultTools &defaultTools,
                               QString *error)
 {
     const QRect captureGeometry = allOutputs ? virtualScreensGeometry() : (screen ? screen->geometry() : QRect());
@@ -140,6 +412,8 @@ ShotWindow *showCaptureWindow(QScreen *screen,
         ? capture.sourceGeometry
         : captureGeometry;
     ShotWindow *window = new ShotWindow(capture.image, capture.outputName, sourceGeometry, windowGeometries);
+    window->setDefaultTools(defaultTools.normal, defaultTools.fullscreen);
+    window->setDefaultColor(defaultTools.color);
     if (screen && !allOutputs) {
         window->setScreen(screen);
     }
@@ -192,15 +466,76 @@ int main(int argc, char *argv[])
     QCommandLineOption xdgWindowOption(QStringLiteral("xdg-window"), QStringLiteral("Use a regular fullscreen xdg window instead of layer-shell."));
     QCommandLineOption fullscreenAnnotationOption({QStringLiteral("fullscreen"), QStringLiteral("full-screen")},
                                                   QStringLiteral("Skip region selection and annotate the full captured frame."));
+    QCommandLineOption defaultToolOption(QStringLiteral("default-tool"),
+                                         QStringLiteral("Set the default annotation tool after a selected region. Also seeds fullscreen mode unless overridden. Supported: %1.")
+                                             .arg(ShotWindow::supportedToolNames().join(QStringLiteral(", "))),
+                                         QStringLiteral("tool"));
+    QCommandLineOption fullscreenDefaultToolOption(QStringLiteral("fullscreen-default-tool"),
+                                                   QStringLiteral("Set the default annotation tool for fullscreen annotation mode. Supported: %1.")
+                                                       .arg(ShotWindow::supportedToolNames().join(QStringLiteral(", "))),
+                                                   QStringLiteral("tool"));
+    QCommandLineOption defaultColorOption(QStringLiteral("default-color"),
+                                          QStringLiteral("Set the default annotation color. Supported formats: #RRGGBB or #RRGGBBAA."),
+                                          QStringLiteral("color"));
     parser.addOption(allOutputsOption);
     parser.addOption(xdgWindowOption);
     parser.addOption(fullscreenAnnotationOption);
+    parser.addOption(defaultToolOption);
+    parser.addOption(fullscreenDefaultToolOption);
+    parser.addOption(defaultColorOption);
     parser.process(app);
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (positionalArguments.size() > 1) {
         QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), MS_TR("Only one image file can be opened at a time."));
         return 1;
+    }
+
+    QString configDefaultToolWarning;
+    DefaultTools defaultTools = configuredDefaultTools(&configDefaultToolWarning);
+    auto parseRuntimeTool = [](const QString &optionValue) {
+        return ShotWindow::toolFromName(optionValue);
+    };
+    if (parser.isSet(defaultToolOption)) {
+        const QString optionValue = parser.value(defaultToolOption);
+        const std::optional<ShotWindow::Tool> parsedTool = parseRuntimeTool(optionValue);
+        if (!parsedTool.has_value()) {
+            QMessageBox::critical(nullptr,
+                                  QStringLiteral("Mark Shot"),
+                                  MS_TR("Unsupported default tool: %1\nSupported tools: %2")
+                                      .arg(optionValue, ShotWindow::supportedToolNames().join(QStringLiteral(", "))));
+            return 1;
+        }
+        defaultTools.normal = *parsedTool;
+        defaultTools.fullscreen = *parsedTool;
+        configDefaultToolWarning.clear();
+    }
+    if (parser.isSet(fullscreenDefaultToolOption)) {
+        const QString optionValue = parser.value(fullscreenDefaultToolOption);
+        const std::optional<ShotWindow::Tool> parsedTool = parseRuntimeTool(optionValue);
+        if (!parsedTool.has_value()) {
+            QMessageBox::critical(nullptr,
+                                  QStringLiteral("Mark Shot"),
+                                  MS_TR("Unsupported fullscreen default tool: %1\nSupported tools: %2")
+                                      .arg(optionValue, ShotWindow::supportedToolNames().join(QStringLiteral(", "))));
+            return 1;
+        }
+        defaultTools.fullscreen = *parsedTool;
+    }
+    if (parser.isSet(defaultColorOption)) {
+        const QString optionValue = parser.value(defaultColorOption);
+        const std::optional<QColor> parsedColor = colorFromString(optionValue);
+        if (!parsedColor.has_value()) {
+            QMessageBox::critical(nullptr,
+                                  QStringLiteral("Mark Shot"),
+                                  MS_TR("Unsupported default color: %1\nSupported color formats: #RRGGBB or #RRGGBBAA")
+                                      .arg(optionValue));
+            return 1;
+        }
+        defaultTools.color = *parsedColor;
+    }
+    if (!configDefaultToolWarning.isEmpty()) {
+        QMessageBox::warning(nullptr, QStringLiteral("Mark Shot"), configDefaultToolWarning);
     }
 
     QScreen *screen = focusedScreen();
@@ -224,6 +559,8 @@ int main(int argc, char *argv[])
         }
 
         ShotWindow *window = new ShotWindow(image, imageFile.fileName());
+        window->setDefaultTools(defaultTools.normal, defaultTools.fullscreen);
+        window->setDefaultColor(defaultTools.color);
         if (screen) {
             window->setScreen(screen);
         }
@@ -254,7 +591,7 @@ int main(int argc, char *argv[])
                 continue;
             }
             ShotWindow *window =
-                showCaptureWindow(candidate, false, useRegularWindow, fullscreenAnnotation, &captureError);
+                showCaptureWindow(candidate, false, useRegularWindow, fullscreenAnnotation, defaultTools, &captureError);
             if (!window) {
                 for (const QPointer<ShotWindow> &existingWindow : std::as_const(windows)) {
                     if (existingWindow) {
@@ -305,7 +642,7 @@ int main(int argc, char *argv[])
 
     QString captureError;
     ShotWindow *window =
-        showCaptureWindow(allOutputs ? nullptr : screen, allOutputs, useRegularWindow, fullscreenAnnotation, &captureError);
+        showCaptureWindow(allOutputs ? nullptr : screen, allOutputs, useRegularWindow, fullscreenAnnotation, defaultTools, &captureError);
     if (!window) {
         QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), captureError);
         return 1;
