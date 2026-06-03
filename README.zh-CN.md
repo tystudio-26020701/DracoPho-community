@@ -131,6 +131,10 @@ binds {
 {
   "windowDetection": {
     "command": "mark-shot-window-detection-niri",
+    "env": {
+      "MARK_SHOT_NIRI_PANEL_EDGE": "top",
+      "MARK_SHOT_NIRI_OFFSET_Y": 0
+    },
     "timeoutMs": 1000
   },
   "ocr": {
@@ -153,6 +157,8 @@ binds {
   }
 }
 ```
+
+`windowDetection.env`（别名：`environment`）会作为环境变量传给检测脚本。内置 niri 脚本支持 `MARK_SHOT_NIRI_PANEL_EDGE`（`top`、`bottom`、`left`、`right` 或 `none`），也支持通过 `MARK_SHOT_NIRI_OFFSET_X`、`MARK_SHOT_NIRI_OFFSET_Y`、`MARK_SHOT_NIRI_OFFSET_WIDTH`、`MARK_SHOT_NIRI_OFFSET_HEIGHT` 做像素级调整。
 
 ### 截图前窗口检测与脚本贡献指南
 
