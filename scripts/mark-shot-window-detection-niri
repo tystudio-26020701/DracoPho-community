@@ -1,0 +1,307 @@
+#!/usr/bin/env python3
+import json
+import os
+import shutil
+import subprocess
+import sys
+
+
+def niri_json(command):
+    niri = shutil.which("niri")
+    if not niri:
+        raise RuntimeError("niri command not found")
+    result = subprocess.run(
+        [niri, "msg", "-j", *command],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=2,
+    )
+    return json.loads(result.stdout)
+
+
+def pair(value):
+    if not isinstance(value, list) or len(value) < 2:
+        return None
+    try:
+        return float(value[0]), float(value[1])
+    except (TypeError, ValueError):
+        return None
+
+
+def env_int(name):
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def capture_rect():
+    x = env_int("MARK_SHOT_CAPTURE_X")
+    y = env_int("MARK_SHOT_CAPTURE_Y")
+    width = env_int("MARK_SHOT_CAPTURE_WIDTH")
+    height = env_int("MARK_SHOT_CAPTURE_HEIGHT")
+    if x is None or y is None or width is None or height is None:
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return x, y, width, height
+
+
+def intersects(left, right):
+    ax, ay, aw, ah = left
+    bx, by, bw, bh = right
+    return ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
+
+
+def append_rect(result, seen, rect):
+    key = tuple(rect)
+    if key in seen:
+        return
+    seen.add(key)
+    result.append({
+        "x": rect[0],
+        "y": rect[1],
+        "width": rect[2],
+        "height": rect[3],
+    })
+
+
+def output_origin(outputs, output_name):
+    output = outputs.get(output_name)
+    if not isinstance(output, dict):
+        return 0, 0
+    logical = output.get("logical")
+    if not isinstance(logical, dict):
+        return 0, 0
+    return int(round(logical.get("x", 0))), int(round(logical.get("y", 0)))
+
+
+def workspace_targets(workspaces):
+    all_outputs = os.environ.get("MARK_SHOT_CAPTURE_ALL_OUTPUTS") == "1"
+    target_output = os.environ.get("MARK_SHOT_CAPTURE_OUTPUT", "")
+    targets = {}
+
+    for workspace in workspaces:
+        if not workspace.get("is_active") and not workspace.get("is_focused"):
+            continue
+        output = workspace.get("output", "")
+        if target_output and not all_outputs and output != target_output:
+            continue
+        workspace_id = workspace.get("id")
+        if workspace_id is not None:
+            targets[workspace_id] = {
+                "output": output,
+                "active_window_id": workspace.get("active_window_id"),
+            }
+
+    return targets
+
+
+def focus_stamp(window):
+    timestamp = window.get("focus_timestamp")
+    if not isinstance(timestamp, dict):
+        return 0, 0
+    return int(timestamp.get("secs", 0)), int(timestamp.get("nanos", 0))
+
+
+def tile_position(layout):
+    pos = pair(layout.get("pos_in_scrolling_layout"))
+    if pos is None:
+        return None
+    return int(round(pos[0])), int(round(pos[1]))
+
+
+def visible_position(layout):
+    return pair(layout.get("tile_pos_in_workspace_view"))
+
+
+def window_rect(window, outputs, workspace_outputs):
+    workspace_id = window.get("workspace_id")
+    if workspace_id not in workspace_outputs:
+        return None
+
+    layout = window.get("layout")
+    if not isinstance(layout, dict):
+        return None
+
+    tile_pos = pair(layout.get("tile_pos_in_workspace_view"))
+    window_size = pair(layout.get("window_size"))
+    if tile_pos is None or window_size is None:
+        return None
+
+    offset = pair(layout.get("window_offset_in_tile")) or (0.0, 0.0)
+    origin_x, origin_y = output_origin(outputs, workspace_outputs[workspace_id]["output"])
+    x = int(round(origin_x + tile_pos[0] + offset[0]))
+    y = int(round(origin_y + tile_pos[1] + offset[1]))
+    width = int(round(window_size[0]))
+    height = int(round(window_size[1]))
+    if width <= 1 or height <= 1:
+        return None
+
+    return x, y, width, height
+
+
+def output_size(outputs, output_name):
+    output = outputs.get(output_name)
+    if not isinstance(output, dict):
+        return 0, 0
+    logical = output.get("logical")
+    if not isinstance(logical, dict):
+        return 0, 0
+    return int(round(logical.get("width", 0))), int(round(logical.get("height", 0)))
+
+
+def tiled_windows(windows, workspace_id):
+    result = []
+    for window in windows:
+        if window.get("workspace_id") != workspace_id:
+            continue
+        if window.get("is_floating"):
+            continue
+        layout = window.get("layout")
+        if not isinstance(layout, dict):
+            continue
+        pos = tile_position(layout)
+        window_size = pair(layout.get("window_size"))
+        tile_size = pair(layout.get("tile_size"))
+        if pos is None or window_size is None or tile_size is None:
+            continue
+        result.append({
+            "window": window,
+            "layout": layout,
+            "column": pos[0],
+            "row": pos[1],
+            "window_size": window_size,
+            "tile_size": tile_size,
+        })
+    return result
+
+
+def visible_anchor(entries):
+    for entry in entries:
+        pos = visible_position(entry["layout"])
+        if pos is not None:
+            return entry["column"], pos[0]
+    return None
+
+
+def active_column(entries, workspace_info):
+    active_window_id = workspace_info.get("active_window_id")
+    for entry in entries:
+        if entry["window"].get("id") == active_window_id:
+            return entry["column"]
+
+    focused = [entry for entry in entries if entry["window"].get("is_focused")]
+    if focused:
+        return focused[0]["column"]
+
+    latest = max(entries, key=lambda entry: focus_stamp(entry["window"]))
+    return latest["column"]
+
+
+def tiled_rects_for_workspace(windows, outputs, workspace_id, workspace_info):
+    entries = tiled_windows(windows, workspace_id)
+    if not entries:
+        return []
+
+    output_name = workspace_info["output"]
+    origin_x, origin_y = output_origin(outputs, output_name)
+    output_width, output_height = output_size(outputs, output_name)
+    if output_width <= 0 or output_height <= 0:
+        return []
+
+    columns = {}
+    for entry in entries:
+        columns.setdefault(entry["column"], []).append(entry)
+
+    column_widths = {
+        column: max(entry["tile_size"][0] for entry in column_entries)
+        for column, column_entries in columns.items()
+    }
+
+    sorted_columns = sorted(columns)
+    column_starts = {}
+    total_width = 0.0
+    for column in sorted_columns:
+        column_starts[column] = total_width
+        total_width += column_widths[column]
+
+    anchor = visible_anchor(entries)
+    if anchor is not None:
+        anchor_column, anchor_x = anchor
+        viewport_left = column_starts[anchor_column] - anchor_x
+    else:
+        viewport_left = 0.0
+        active = active_column(entries, workspace_info)
+        if total_width > output_width and active in column_starts:
+            active_start = column_starts[active]
+            active_end = active_start + column_widths[active]
+            max_viewport_left = max(0.0, total_width - output_width)
+            viewport_left = min(active_start, max(0.0, active_end - output_width))
+            viewport_left = max(0.0, min(viewport_left, max_viewport_left))
+
+    column_x = {
+        column: origin_x + column_starts[column] - viewport_left
+        for column in sorted_columns
+    }
+
+    result = []
+    for column, column_entries in columns.items():
+        ordered = sorted(column_entries, key=lambda entry: entry["row"])
+        total_height = sum(entry["tile_size"][1] for entry in ordered)
+        y = origin_y + max(0.0, (output_height - total_height) / 2.0)
+        for entry in ordered:
+            offset = pair(entry["layout"].get("window_offset_in_tile")) or (0.0, 0.0)
+            width = int(round(entry["window_size"][0]))
+            height = int(round(entry["window_size"][1]))
+            if width > 1 and height > 1:
+                result.append((
+                    int(round(column_x[column] + offset[0])),
+                    int(round(y + offset[1])),
+                    width,
+                    height,
+                ))
+            y += entry["tile_size"][1]
+    return result
+
+
+def main():
+    outputs = niri_json(["outputs"])
+    workspaces = niri_json(["workspaces"])
+    windows = niri_json(["windows"])
+    if not isinstance(outputs, dict) or not isinstance(workspaces, list) or not isinstance(windows, list):
+        raise RuntimeError("unexpected niri JSON shape")
+
+    workspace_outputs = workspace_targets(workspaces)
+    capture = capture_rect()
+    result = []
+    seen = set()
+
+    for window in windows:
+        rect = window_rect(window, outputs, workspace_outputs)
+        if rect is None:
+            continue
+        if capture is not None and not intersects(rect, capture):
+            continue
+        append_rect(result, seen, rect)
+
+    for workspace_id, workspace_info in workspace_outputs.items():
+        for rect in tiled_rects_for_workspace(windows, outputs, workspace_id, workspace_info):
+            if capture is not None and not intersects(rect, capture):
+                continue
+            append_rect(result, seen, rect)
+
+    print(json.dumps({"windows": result}, separators=(",", ":")))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        print(str(error), file=sys.stderr)
+        sys.exit(1)

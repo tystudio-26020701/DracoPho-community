@@ -129,6 +129,10 @@ Pinned windows read OCR and translation settings from `~/.config/mark-shot/confi
 
 ```json
 {
+  "windowDetection": {
+    "command": "mark-shot-window-detection-niri",
+    "timeoutMs": 1000
+  },
   "ocr": {
     "enabled": true,
     "backend": "rapidocr",
@@ -149,6 +153,76 @@ Pinned windows read OCR and translation settings from `~/.config/mark-shot/confi
   }
 }
 ```
+
+### Pre-Capture Window Detection & Script Contribution Guide
+
+To ensure precise window boundary detection across different Wayland compositors (such as niri, Hyprland, etc.), Mark Shot uses a flexible external script invocation mechanism. Users can configure a detection script via `windowDetection.command`. The script is responsible for querying window geometries from the compositor and outputting the data in a unified format for Mark Shot to consume.
+
+We highly welcome and encourage community members to contribute adapter scripts for various desktop environments and Wayland compositors to expand compatibility.
+
+#### 1. Input Provided to the Script (Environment Variables)
+
+When invoked, Mark Shot passes the following environment variables to provide context about the current screen capture session:
+
+| Variable Name | Type | Description |
+| :--- | :--- | :--- |
+| `MARK_SHOT_CONFIG` | String | Path to the config file (typically `~/.config/mark-shot/config.json`) |
+| `MARK_SHOT_CAPTURE_OUTPUT` | String | Name of the output display to capture (e.g., `eDP-1`, `DP-2`) |
+| `MARK_SHOT_CAPTURE_ALL_OUTPUTS` | Integer | `1` to capture all outputs; `0` to capture only the active screen |
+| `MARK_SHOT_CAPTURE_X` | Integer | The logical start X coordinate of the capture area in the compositor |
+| `MARK_SHOT_CAPTURE_Y` | Integer | The logical start Y coordinate of the capture area in the compositor |
+| `MARK_SHOT_CAPTURE_WIDTH` | Integer | Logical width of the capture area |
+| `MARK_SHOT_CAPTURE_HEIGHT` | Integer | Logical height of the capture area |
+
+> [!NOTE]
+> All window coordinates returned by the script must be in **global logical compositor coordinates**, matching the screen geometry queried by Qt. This prevents scaling or layout offset issues in multi-monitor setups.
+
+#### 2. Agreed Output JSON Formats
+
+The script must print detected window metadata as JSON to its standard output (`stdout`). The parser supports a wide range of compatible formats:
+
+##### Root Node Schema
+The root element can be an object containing a `windows` or `windowGeometries` array, or it can be a JSON array directly.
+- **Option A (Wrapped Object)**: `{ "windows": [ ... ] }` or `{ "windowGeometries": [ ... ] }`
+- **Option B (Direct Object representing one window)**: `{ "x": 100, "y": 100, "w": 400, "h": 300 }`
+- **Option C (Direct Array)**: `[ ... ]`
+
+##### Window Geometry Object Structures
+Each element in the array (or the root object itself) can take one of the following four formats:
+
+- **Key-Value Properties (Object)**:
+  Directly defines integer fields for positions and sizes.
+  - Horizontal coordinate keys: `x` or `left`
+  - Vertical coordinate keys: `y` or `top`
+  - Width keys: `width` or `w`
+  - Height keys: `height` or `h`
+  *Example*: `{ "x": 100, "y": 200, "w": 800, "h": 600 }`
+
+- **Nested Coordinates/Sizes (Object)**:
+  Uses the `at` field (as `[x, y]`) and the `size` field (as `[width, height]`).
+  *Example*: `{ "at": [100, 200], "size": [800, 600] }`
+
+- **Array / Inner Array Representation**:
+  Directly lists 4 integers: `[x, y, width, height]`.
+  Alternatively, specified under the `rect` property of an object.
+  *Example*: `[100, 200, 800, 600]` or `{ "rect": [100, 200, 800, 600] }`
+
+- **Geometry String Representation**:
+  Uses a string matching the `x,y widthxheight` pattern (allows negative coordinates and spaces).
+  Alternatively, specified under the `geometry` property of an object.
+  *Example*: `"100,200 800x600"` or `{ "geometry": "100,200 800x600" }`
+
+#### 3. How to Contribute Adapters
+
+Currently, the repository only ships an adapter script for the niri window manager: `mark-shot-window-detection-niri`.
+
+If you run Mark Shot on Hyprland, Sway, KDE (KWin Wayland), or GNOME (Mutter Wayland) and have configured a working script, please submit a Pull Request to share it with the community. Here are implementation guidelines for different environments:
+- **Hyprland**: Use `hyprctl clients -j` and parse the output JSON.
+- **Sway**: Use `swaymsg -t get_tree` to fetch the layout tree.
+- **KDE / KWin**: Implement a simple KWin Script, or query KWin's D-Bus interfaces.
+- **GNOME**: Since GNOME Wayland lacks an official client-side shell command to query window geometry, you typically need to write a GNOME Shell extension that exports Mutter's window geometry over D-Bus, then query that D-Bus interface in your script.
+
+If the script fails to execute or times out (default: `1000ms`), Mark Shot will proceed with screenshot capture normally and fall back to its internal X11-based window detector where applicable.
 
 When installing manually, install `mark-shot`, `mark-shot-ocr`, and `mark-shot-translate` together. Otherwise the pinned window opens, but image-text copying and translation cannot call the backend helpers.
 
