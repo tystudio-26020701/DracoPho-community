@@ -20,18 +20,6 @@
 #include <optional>
 
 namespace markshot {
-namespace {
-
-constexpr int kDefaultWindowDetectionTimeoutMs = 1000;
-constexpr int kMinWindowDetectionTimeoutMs = 100;
-constexpr int kMaxWindowDetectionTimeoutMs = 10000;
-
-struct WindowDetectionConfig {
-    QString command;
-    QString workingDirectory;
-    QMap<QString, QString> environment;
-    int timeoutMs = kDefaultWindowDetectionTimeoutMs;
-};
 
 QString markShotConfigDir()
 {
@@ -51,6 +39,19 @@ QString appConfigPath()
 {
     return QDir(markShotConfigDir()).filePath(QStringLiteral("config.json"));
 }
+
+namespace {
+
+constexpr int kDefaultWindowDetectionTimeoutMs = 1000;
+constexpr int kMinWindowDetectionTimeoutMs = 100;
+constexpr int kMaxWindowDetectionTimeoutMs = 10000;
+
+struct WindowDetectionConfig {
+    QString command;
+    QString workingDirectory;
+    QMap<QString, QString> environment;
+    int timeoutMs = kDefaultWindowDetectionTimeoutMs;
+};
 
 QString expandUserPath(const QString &path)
 {
