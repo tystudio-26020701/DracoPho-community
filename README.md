@@ -369,6 +369,13 @@ This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-translate`
 
 ## Release Notes
 
+### 0.1.15
+
+- Added draggable scrolling screenshot region adjustment and fixed stale overlay pixels after moving the region.
+- Replaced the scrolling preview panel's bottom scrubber with a directly draggable overview viewport frame.
+- Added mouse wheel navigation inside the scrolling preview panel, with live-follow restoration at the captured edge.
+- Added explicit LayerShellQt build switches and AppImage release packaging for both `layershell` and `nolayershell` x86_64 builds.
+
 ### 0.1.14
 
 - Improved portal screencast negotiation, crop normalization, and first-frame timing for scrolling capture.
