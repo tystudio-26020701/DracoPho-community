@@ -13,9 +13,11 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
+#include <QPointer>
 #include <QProcess>
 #include <QScreen>
 #include <QTimer>
+#include <QVector>
 
 namespace {
 
@@ -116,6 +118,57 @@ QRect centeredImageWindowGeometry(const QSize &imageSize, QScreen *screen)
     return QRect(topLeft, targetSize);
 }
 
+ShotWindow *showCaptureWindow(QScreen *screen,
+                              bool allOutputs,
+                              bool useRegularWindow,
+                              bool fullscreenAnnotation,
+                              QString *error)
+{
+    const QRect captureGeometry = allOutputs ? virtualScreensGeometry() : (screen ? screen->geometry() : QRect());
+    const QString outputName = (!allOutputs && screen) ? screen->name() : QString();
+    const QVector<QRect> windowGeometries =
+        markshot::collectConfiguredWindowGeometries(captureGeometry, outputName, allOutputs);
+    CaptureResult capture = captureScreenFrame({outputName, captureGeometry, allOutputs});
+    if (capture.image.isNull()) {
+        if (error) {
+            *error = capture.error;
+        }
+        return nullptr;
+    }
+
+    const QRect sourceGeometry = capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()
+        ? capture.sourceGeometry
+        : captureGeometry;
+    ShotWindow *window = new ShotWindow(capture.image, capture.outputName, sourceGeometry, windowGeometries);
+    if (screen && !allOutputs) {
+        window->setScreen(screen);
+    }
+
+    const bool layerShellReady = !allOutputs && !useRegularWindow && window->configureLayerShell(screen);
+    if (layerShellReady) {
+        window->show();
+    } else {
+        if (capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()) {
+            window->setGeometry(capture.sourceGeometry);
+        }
+        if (allOutputs) {
+            window->show();
+        } else {
+            window->showFullScreen();
+        }
+        window->raise();
+        window->activateWindow();
+    }
+
+    if (fullscreenAnnotation) {
+        QTimer::singleShot(0, window, [window] {
+            window->startFullscreenAnnotation();
+        });
+    }
+
+    return window;
+}
+
 } // namespace
 
 int main(int argc, char *argv[])
@@ -190,45 +243,72 @@ int main(int argc, char *argv[])
     }
 
     const bool allOutputs = parser.isSet(allOutputsOption);
-    const QRect captureGeometry = allOutputs ? virtualScreensGeometry() : (screen ? screen->geometry() : QRect());
-    const QString outputName = (!allOutputs && screen) ? screen->name() : QString();
-    const QVector<QRect> windowGeometries =
-        markshot::collectConfiguredWindowGeometries(captureGeometry, outputName, allOutputs);
-    CaptureResult capture = captureScreenFrame({outputName, captureGeometry, allOutputs});
-    if (capture.image.isNull()) {
-        QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), capture.error);
+    const bool useRegularWindow = parser.isSet(xdgWindowOption);
+    const bool fullscreenAnnotation = parser.isSet(fullscreenAnnotationOption);
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    if (!allOutputs && !fullscreenAnnotation && screens.size() > 1) {
+        QVector<QPointer<ShotWindow>> windows;
+        QString captureError;
+        for (QScreen *candidate : screens) {
+            if (!candidate || candidate->geometry().isEmpty()) {
+                continue;
+            }
+            ShotWindow *window =
+                showCaptureWindow(candidate, false, useRegularWindow, fullscreenAnnotation, &captureError);
+            if (!window) {
+                for (const QPointer<ShotWindow> &existingWindow : std::as_const(windows)) {
+                    if (existingWindow) {
+                        existingWindow->close();
+                    }
+                }
+                QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), captureError);
+                return 1;
+            }
+            windows.append(window);
+        }
+
+        if (!windows.isEmpty()) {
+            bool closingSession = false;
+            for (const QPointer<ShotWindow> &candidateWindow : std::as_const(windows)) {
+                ShotWindow *window = candidateWindow.data();
+                if (!window) {
+                    continue;
+                }
+                QObject::connect(window, &ShotWindow::selectionActivated, &app, [&windows, &closingSession](ShotWindow *activeWindow) {
+                    if (closingSession) {
+                        return;
+                    }
+                    closingSession = true;
+                    for (const QPointer<ShotWindow> &peerWindow : std::as_const(windows)) {
+                        if (peerWindow && peerWindow.data() != activeWindow) {
+                            peerWindow->close();
+                        }
+                    }
+                    closingSession = false;
+                });
+                QObject::connect(window, &ShotWindow::sessionCancelRequested, &app, [&windows, &closingSession] {
+                    if (closingSession) {
+                        return;
+                    }
+                    closingSession = true;
+                    for (const QPointer<ShotWindow> &peerWindow : std::as_const(windows)) {
+                        if (peerWindow) {
+                            peerWindow->close();
+                        }
+                    }
+                    closingSession = false;
+                });
+            }
+            return QApplication::exec();
+        }
+    }
+
+    QString captureError;
+    ShotWindow *window =
+        showCaptureWindow(allOutputs ? nullptr : screen, allOutputs, useRegularWindow, fullscreenAnnotation, &captureError);
+    if (!window) {
+        QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), captureError);
         return 1;
     }
-
-    const QRect sourceGeometry = capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()
-        ? capture.sourceGeometry
-        : captureGeometry;
-    ShotWindow *window = new ShotWindow(capture.image, capture.outputName, sourceGeometry, windowGeometries);
-    if (screen && !allOutputs) {
-        window->setScreen(screen);
-    }
-
-    const bool useRegularWindow = parser.isSet(xdgWindowOption);
-    const bool layerShellReady = !allOutputs && !useRegularWindow && window->configureLayerShell(screen);
-    if (layerShellReady) {
-        window->show();
-    } else {
-        if (capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()) {
-            window->setGeometry(capture.sourceGeometry);
-        }
-        if (allOutputs) {
-            window->show();
-        } else {
-            window->showFullScreen();
-        }
-        window->raise();
-        window->activateWindow();
-    }
-    if (parser.isSet(fullscreenAnnotationOption)) {
-        QTimer::singleShot(0, window, [window] {
-            window->startFullscreenAnnotation();
-        });
-    }
-
     return QApplication::exec();
 }
