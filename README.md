@@ -293,12 +293,13 @@ When installing manually, install `mark-shot`, `mark-shot-ocr`, and `mark-shot-t
 
 ### Official Release Artifacts
 
-Each release publishes Linux binary archives and Debian packages:
+Each release publishes Linux binary archives, Debian packages, and Fedora RPM packages:
 
 - `linux-x86_64.tar.gz` and `linux-arm64.tar.gz`
 - `amd64.deb` and `arm64.deb`
+- `fedora_x86_64.rpm` and `fedora_aarch64.rpm`
 
-The Debian package installs `mark-shot`, helper scripts, desktop entries, icons, and runtime metadata together.
+The distribution packages install `mark-shot`, helper scripts, desktop entries, icons, and runtime metadata together.
 
 ### Dependencies
 

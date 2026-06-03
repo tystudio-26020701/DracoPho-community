@@ -15,6 +15,8 @@
 - `mark-shot-v0.1.16-linux-arm64.tar.gz`
 - `mark-shot_0.1.16_amd64.deb`
 - `mark-shot_0.1.16_arm64.deb`
+- `mark-shot_0.1.16_fedora_x86_64.rpm`
+- `mark-shot_0.1.16_fedora_aarch64.rpm`
 - `mark-shot-v0.1.16-linux-x86_64-layershell.AppImage`
 - `mark-shot-v0.1.16-linux-x86_64-nolayershell.AppImage`
 
