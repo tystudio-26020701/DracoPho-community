@@ -106,6 +106,8 @@ constexpr int kImageWindowMinimumToolbarPadding = 24;
 constexpr qsizetype kMaxSharpViewportPixels = 50'000'000;
 constexpr double kSharpKernelRadius = 2.5;
 constexpr int kMinSharpRowsPerThread = 64;
+constexpr qreal kMinStartupColorLoupeSize = 72.0;
+constexpr qreal kMaxStartupColorLoupeSize = 260.0;
 
 QColor propertyIconInkForFill(const QColor &fillColor)
 {
@@ -115,6 +117,73 @@ QColor propertyIconInkForFill(const QColor &fillColor)
     const int luma =
         (fillColor.red() * 299 + fillColor.green() * 587 + fillColor.blue() * 114) / 1000;
     return luma > 150 ? QColor(15, 23, 42) : QColor(248, 250, 252);
+}
+
+QString colorHexRgb(QColor color)
+{
+    return color.name(QColor::HexRgb).toUpper();
+}
+
+QString colorHexRgba(QColor color)
+{
+    return QStringLiteral("#%1%2%3%4")
+        .arg(color.red(), 2, 16, QLatin1Char('0'))
+        .arg(color.green(), 2, 16, QLatin1Char('0'))
+        .arg(color.blue(), 2, 16, QLatin1Char('0'))
+        .arg(color.alpha(), 2, 16, QLatin1Char('0'))
+        .toUpper();
+}
+
+QString alphaText(QColor color)
+{
+    if (color.alpha() == 255) {
+        return QStringLiteral("1");
+    }
+    if (color.alpha() == 0) {
+        return QStringLiteral("0");
+    }
+    return QString::number(color.alphaF(), 'f', 3);
+}
+
+QString normalizedColorChannel(int value)
+{
+    return QString::number(static_cast<qreal>(value) / 255.0, 'f', 3);
+}
+
+int colorHueOrZero(int hue)
+{
+    return hue < 0 ? 0 : hue;
+}
+
+int rulerTickStep(qreal pixels)
+{
+    if (pixels <= 0.0) {
+        return 1;
+    }
+
+    const qreal raw = pixels / 8.0;
+    const qreal magnitude = std::pow(10.0, std::floor(std::log10(std::max<qreal>(1.0, raw))));
+    const qreal normalized = raw / magnitude;
+    qreal nice = 10.0;
+    if (normalized <= 1.0) {
+        nice = 1.0;
+    } else if (normalized <= 2.0) {
+        nice = 2.0;
+    } else if (normalized <= 5.0) {
+        nice = 5.0;
+    }
+    return std::max(1, qRound(nice * magnitude));
+}
+
+void drawRoundedLabel(QPainter &painter, QRectF rect, const QString &text, QColor fill = QColor(8, 13, 19, 225))
+{
+    painter.save();
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(fill);
+    painter.drawRoundedRect(rect, 9.0, 9.0);
+    painter.setPen(QColor(229, 231, 235));
+    painter.drawText(rect, Qt::AlignCenter, text);
+    painter.restore();
 }
 
 QRectF normalizedRect(QPointF a, QPointF b)
@@ -1830,6 +1899,68 @@ private:
 
 } // namespace
 
+std::optional<ShotWindow::Tool> ShotWindow::toolFromName(QString name)
+{
+    QString key = name.trimmed().toLower();
+    key.replace(QLatin1Char('_'), QLatin1Char('-'));
+
+    if (key == QStringLiteral("move")) {
+        return Tool::Move;
+    }
+    if (key == QStringLiteral("select") || key == QStringLiteral("selection") || key == QStringLiteral("cursor")) {
+        return Tool::Select;
+    }
+    if (key == QStringLiteral("pen")) {
+        return Tool::Pen;
+    }
+    if (key == QStringLiteral("line")) {
+        return Tool::Line;
+    }
+    if (key == QStringLiteral("highlighter") || key == QStringLiteral("highlight")) {
+        return Tool::Highlighter;
+    }
+    if (key == QStringLiteral("rectangle") || key == QStringLiteral("rect")) {
+        return Tool::Rectangle;
+    }
+    if (key == QStringLiteral("ellipse") || key == QStringLiteral("oval") || key == QStringLiteral("circle")) {
+        return Tool::Ellipse;
+    }
+    if (key == QStringLiteral("arrow")) {
+        return Tool::Arrow;
+    }
+    if (key == QStringLiteral("text")) {
+        return Tool::Text;
+    }
+    if (key == QStringLiteral("number") || key == QStringLiteral("counter")) {
+        return Tool::Number;
+    }
+    if (key == QStringLiteral("mosaic") || key == QStringLiteral("blur")) {
+        return Tool::Mosaic;
+    }
+    if (key == QStringLiteral("laser")) {
+        return Tool::Laser;
+    }
+    return std::nullopt;
+}
+
+QStringList ShotWindow::supportedToolNames()
+{
+    return {
+        QStringLiteral("move"),
+        QStringLiteral("select"),
+        QStringLiteral("pen"),
+        QStringLiteral("line"),
+        QStringLiteral("highlighter"),
+        QStringLiteral("rectangle"),
+        QStringLiteral("ellipse"),
+        QStringLiteral("arrow"),
+        QStringLiteral("text"),
+        QStringLiteral("number"),
+        QStringLiteral("mosaic"),
+        QStringLiteral("laser"),
+    };
+}
+
 ShotWindow::ShotWindow(QImage frozenFrame,
                        QString outputName,
                        QRect sourceGeometry,
@@ -1891,7 +2022,7 @@ ShotWindow::ShotWindow(QImage frozenFrame,
         const QString shortcut = action == Action::OpenWith ? QStringLiteral("Open")
             : action == Action::Extensions           ? QStringLiteral("Ext")
             : action == Action::ScrollCapture        ? QStringLiteral("Scroll")
-            : action == Action::Pin                  ? QStringLiteral("Pin")
+            : action == Action::Pin                  ? QStringLiteral("Ctrl+P")
             : action == Action::OcrCopy              ? QStringLiteral("OCR")
             : action == Action::Copy                 ? QStringLiteral("Ctrl+C")
             : action == Action::Save                 ? QStringLiteral("Ctrl+S")
@@ -1947,7 +2078,7 @@ ShotWindow::ShotWindow(QImage frozenFrame,
              addToolbarButton(Action::OpenWith, QStringLiteral("Open"), m_actionToolbar),
              addToolbarButton(Action::Extensions, QStringLiteral("Ext"), m_actionToolbar),
              addToolbarButton(Action::ScrollCapture, QStringLiteral("Scroll"), m_actionToolbar),
-             addToolbarButton(Action::Pin, QStringLiteral("Pin"), m_actionToolbar),
+             addToolbarButton(Action::Pin, QStringLiteral("Ctrl+P"), m_actionToolbar),
              addToolbarButton(Action::OcrCopy, QStringLiteral("OCR"), m_actionToolbar),
              addToolbarButton(Action::Copy, QStringLiteral("Ctrl+C"), m_actionToolbar),
              addToolbarButton(Action::Save, QStringLiteral("Ctrl+S"), m_actionToolbar),
@@ -1982,7 +2113,13 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     addPlainShortcut(QKeySequence(Qt::Key_P), [this] { setTool(Tool::Pen); });
     addPlainShortcut(QKeySequence(Qt::Key_L), [this] { setTool(Tool::Line); });
     addPlainShortcut(QKeySequence(Qt::Key_H), [this] { setTool(Tool::Highlighter); });
-    addPlainShortcut(QKeySequence(Qt::Key_R), [this] { setTool(Tool::Rectangle); });
+    addPlainShortcut(QKeySequence(Qt::Key_R), [this] {
+        if (m_mode == Mode::Selecting) {
+            setStartupTool(StartupTool::Ruler);
+            return;
+        }
+        setTool(Tool::Rectangle);
+    });
     addPlainShortcut(QKeySequence(Qt::Key_E), [this] { setTool(Tool::Ellipse); });
     addPlainShortcut(QKeySequence(Qt::Key_A), [this] { setTool(Tool::Arrow); });
     addPlainShortcut(QKeySequence(Qt::Key_T), [this] { setTool(Tool::Text); });
@@ -1990,6 +2127,7 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     addPlainShortcut(QKeySequence(Qt::Key_M), [this] { setTool(Tool::Mosaic); });
     addPlainShortcut(QKeySequence(Qt::Key_G), [this] { setTool(Tool::Laser); });
     addPlainShortcut(QKeySequence(Qt::Key_F), [this] { toggleCaptureScope(); });
+    addPlainShortcut(QKeySequence(Qt::CTRL | Qt::Key_P), [this] { pinSelection(); });
 
     m_annotationPropertyPanel = new QWidget(this);
     m_annotationPropertyPanel->setObjectName(QStringLiteral("annotationPropertyPanel"));
@@ -2293,6 +2431,22 @@ void ShotWindow::setImageNavigationEnabled(bool enabled)
     update();
 }
 
+void ShotWindow::setDefaultTool(Tool tool)
+{
+    setDefaultTools(tool, tool);
+}
+
+void ShotWindow::setDefaultTools(Tool tool, Tool fullscreenTool)
+{
+    m_defaultTool = tool;
+    m_fullscreenDefaultTool = fullscreenTool;
+}
+
+void ShotWindow::setDefaultColor(QColor color)
+{
+    setCurrentColor(color);
+}
+
 void ShotWindow::enterFullscreenAnnotation(bool resetAnnotations)
 {
     commitTextEditor();
@@ -2340,7 +2494,7 @@ void ShotWindow::enterFullscreenAnnotation(bool resetAnnotations)
     if (m_propertyFontPanel) {
         m_propertyFontPanel->hide();
     }
-    setTool(Tool::Pen);
+    setTool(defaultEditingTool());
     if (m_toolbar) {
         setFullscreenActionButtonsVisible(true);
         m_toolbar->show();
@@ -2733,6 +2887,386 @@ void ShotWindow::setFullscreenActionButtonsVisible(bool visible)
     }
 }
 
+void ShotWindow::setStartupTool(StartupTool tool)
+{
+    if (m_mode != Mode::Selecting) {
+        return;
+    }
+
+    if (m_startupTool == tool) {
+        leaveStartupTool();
+        return;
+    }
+
+    m_startupTool = tool;
+    m_dragging = false;
+    m_hoveredWindowRect.reset();
+    m_startupHoverValid = false;
+    m_startupRulerDragging = false;
+    m_startupRulerHasMeasure = false;
+    if (m_startupColorPanel) {
+        m_startupColorPanel->hide();
+    }
+    setCursor(tool == StartupTool::ColorPicker ? Qt::CrossCursor : Qt::SizeAllCursor);
+    update();
+}
+
+void ShotWindow::leaveStartupTool()
+{
+    m_startupTool = StartupTool::None;
+    m_startupHoverValid = false;
+    m_startupRulerDragging = false;
+    m_startupRulerHasMeasure = false;
+    m_dragging = false;
+    if (m_startupColorPanel) {
+        m_startupColorPanel->hide();
+    }
+    setCursor(Qt::CrossCursor);
+    update();
+}
+
+QColor ShotWindow::sampledImageColor(QPointF imagePoint) const
+{
+    if (m_frozenFrame.isNull()) {
+        return {};
+    }
+
+    const QPointF clamped = clampImagePoint(imagePoint);
+    const int x = std::clamp(qRound(clamped.x()), 0, std::max(0, m_frozenFrame.width() - 1));
+    const int y = std::clamp(qRound(clamped.y()), 0, std::max(0, m_frozenFrame.height() - 1));
+    return m_frozenFrame.pixelColor(x, y);
+}
+
+void ShotWindow::showStartupColorDialog(QColor color, QPoint anchor)
+{
+    if (!color.isValid()) {
+        return;
+    }
+
+    if (m_startupColorPanel) {
+        m_startupColorPanel->deleteLater();
+        m_startupColorPanel = nullptr;
+    }
+
+    m_startupColorPanel = new QWidget(this);
+    m_startupColorPanel->setObjectName(QStringLiteral("startupColorInspector"));
+    m_startupColorPanel->setAttribute(Qt::WA_DeleteOnClose, true);
+    m_startupColorPanel->setStyleSheet(QStringLiteral(
+        "QWidget#startupColorInspector {"
+        " background: rgba(229, 231, 235, 238);"
+        " border: 1px solid rgba(15, 23, 42, 55);"
+        " border-radius: 16px;"
+        "}"
+        "QLabel { color: #172033; font-size: 12px; }"
+        "QLabel#formatName { font-weight: 700; color: #475569; min-width: 76px; }"
+        "QLabel#formatValue {"
+        " font-family: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;"
+        " font-weight: 700;"
+        " color: #172033;"
+        "}"
+        "QFrame#formatRow {"
+        " background: rgba(248, 250, 252, 228);"
+        " border-radius: 9px;"
+        "}"
+        "QPushButton {"
+        " background: rgba(148, 163, 184, 70);"
+        " border: 0;"
+        " border-radius: 7px;"
+        " padding: 5px 9px;"
+        " color: #334155;"
+        " font-weight: 700;"
+        "}"
+        "QPushButton:hover { background: rgba(45, 212, 191, 150); color: #042F2E; }"));
+
+    auto *layout = new QVBoxLayout(m_startupColorPanel);
+    layout->setContentsMargins(12, 12, 12, 12);
+    layout->setSpacing(9);
+
+    const QString hex = colorHexRgb(color);
+    auto *preview = new QLabel(hex, m_startupColorPanel);
+    preview->setAlignment(Qt::AlignCenter);
+    preview->setMinimumSize(300, 88);
+    preview->setStyleSheet(QStringLiteral(
+        "QLabel {"
+        " background: %1;"
+        " border-radius: 13px;"
+        " color: %2;"
+        " font-size: 20px;"
+        " font-weight: 800;"
+        "}").arg(hex, propertyIconInkForFill(color).name()));
+    layout->addWidget(preview);
+
+    struct FormatRow {
+        QString name;
+        QString value;
+    };
+    const QVector<FormatRow> rows = {
+        {QStringLiteral("HEX"), hex},
+        {QStringLiteral("hex lower"), hex.toLower()},
+        {QStringLiteral("RGBA hex"), colorHexRgba(color)},
+        {QStringLiteral("RGB"), QStringLiteral("rgb(%1, %2, %3)").arg(color.red()).arg(color.green()).arg(color.blue())},
+        {QStringLiteral("RGBA"), QStringLiteral("rgba(%1, %2, %3, %4)").arg(color.red()).arg(color.green()).arg(color.blue()).arg(alphaText(color))},
+        {QStringLiteral("HSL"), QStringLiteral("hsl(%1, %2%, %3%)")
+             .arg(colorHueOrZero(color.hslHue()))
+             .arg(qRound(color.hslSaturationF() * 100.0))
+             .arg(qRound(color.lightnessF() * 100.0))},
+        {QStringLiteral("HSV"), QStringLiteral("hsv(%1, %2%, %3%)")
+             .arg(colorHueOrZero(color.hsvHue()))
+             .arg(qRound(color.hsvSaturationF() * 100.0))
+             .arg(qRound(color.valueF() * 100.0))},
+        {QStringLiteral("Qt"), QStringLiteral("Qt.rgba(%1, %2, %3, %4)")
+             .arg(normalizedColorChannel(color.red()),
+                  normalizedColorChannel(color.green()),
+                  normalizedColorChannel(color.blue()),
+                  alphaText(color))},
+    };
+
+    for (const FormatRow &row : rows) {
+        auto *frame = new QFrame(m_startupColorPanel);
+        frame->setObjectName(QStringLiteral("formatRow"));
+        auto *rowLayout = new QHBoxLayout(frame);
+        rowLayout->setContentsMargins(10, 7, 8, 7);
+        rowLayout->setSpacing(8);
+
+        auto *nameLabel = new QLabel(row.name, frame);
+        nameLabel->setObjectName(QStringLiteral("formatName"));
+        rowLayout->addWidget(nameLabel);
+
+        auto *valueLabel = new QLabel(row.value, frame);
+        valueLabel->setObjectName(QStringLiteral("formatValue"));
+        valueLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        rowLayout->addWidget(valueLabel, 1);
+
+        auto *copyButton = new QPushButton(MS_TR("Copy"), frame);
+        copyButton->setFocusPolicy(Qt::NoFocus);
+        connect(copyButton, &QPushButton::clicked, this, [this, value = row.value] {
+            QApplication::clipboard()->setText(value);
+            emit sessionCancelRequested();
+            close();
+        });
+        rowLayout->addWidget(copyButton);
+        layout->addWidget(frame);
+    }
+
+    m_startupColorPanel->adjustSize();
+    const QSize panelSize = m_startupColorPanel->sizeHint();
+    int x = anchor.x() + 22;
+    int y = anchor.y() + 22;
+    if (x + panelSize.width() > width() - 12) {
+        x = anchor.x() - panelSize.width() - 22;
+    }
+    if (y + panelSize.height() > height() - 12) {
+        y = anchor.y() - panelSize.height() - 22;
+    }
+    x = std::clamp(x, 12, std::max(12, width() - panelSize.width() - 12));
+    y = std::clamp(y, 12, std::max(12, height() - panelSize.height() - 12));
+    m_startupColorPanel->setGeometry(QRect(QPoint(x, y), panelSize));
+    m_startupColorPanel->show();
+    m_startupColorPanel->raise();
+}
+
+void ShotWindow::drawStartupColorLoupe(QPainter &painter, QPointF imagePoint) const
+{
+    if (!m_startupHoverValid || m_frozenFrame.isNull()) {
+        return;
+    }
+
+    const QColor color = sampledImageColor(imagePoint);
+    const QPointF widgetPoint = imageToWidget(imagePoint);
+    QRectF loupe(widgetPoint.x() + 22.0,
+                 widgetPoint.y() + 22.0,
+                 m_startupColorLoupeSize,
+                 m_startupColorLoupeSize);
+    if (loupe.right() > width() - 12.0) {
+        loupe.moveRight(widgetPoint.x() - 22.0);
+    }
+    if (loupe.bottom() > height() - 12.0) {
+        loupe.moveBottom(widgetPoint.y() - 22.0);
+    }
+    loupe.moveLeft(std::clamp(loupe.left(), 12.0, std::max(12.0, width() - loupe.width() - 12.0)));
+    loupe.moveTop(std::clamp(loupe.top(), 12.0, std::max(12.0, height() - loupe.height() - 12.0)));
+
+    const QPoint center = clampImagePoint(imagePoint).toPoint();
+    const QRect sourceCandidate(center.x() - 6, center.y() - 6, 13, 13);
+    const QRect sourceRect = sourceCandidate.intersected(QRect(QPoint(0, 0), m_frozenFrame.size()));
+
+    painter.save();
+    QPainterPath clip;
+    clip.addEllipse(loupe);
+    painter.setClipPath(clip);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+    painter.drawImage(loupe, m_frozenFrame.copy(sourceRect));
+    painter.setClipping(false);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen(QColor(59, 40, 46), 3.0));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(loupe);
+
+    const QPointF c = loupe.center();
+    painter.setPen(QPen(QColor(96, 165, 250), 2.0));
+    painter.drawLine(QPointF(c.x() - 12.0, c.y()), QPointF(c.x() + 12.0, c.y()));
+    painter.drawLine(QPointF(c.x(), c.y() - 12.0), QPointF(c.x(), c.y() + 12.0));
+
+    painter.setFont(QFont(QStringLiteral("Sans Serif"), 11, QFont::DemiBold));
+    const QString hex = colorHexRgb(color);
+    const QFontMetrics metrics(painter.font());
+    const QRectF label(loupe.center().x() - (metrics.horizontalAdvance(hex) + 20.0) / 2.0,
+                       loupe.bottom() - metrics.height() - 11.0,
+                       metrics.horizontalAdvance(hex) + 20.0,
+                       metrics.height() + 7.0);
+    drawRoundedLabel(painter, label, hex, QColor(8, 13, 19, 210));
+    painter.restore();
+}
+
+void ShotWindow::drawStartupRuler(QPainter &painter) const
+{
+    if (!m_startupHoverValid && !m_startupRulerHasMeasure && !m_startupRulerDragging) {
+        return;
+    }
+
+    painter.save();
+    painter.setFont(QFont(QStringLiteral("Sans Serif"), 10, QFont::DemiBold));
+    painter.setPen(QPen(QColor(45, 212, 191, 150), 1.0, Qt::DashLine));
+    auto clampFloatingRect = [this](QRectF rect) {
+        if (rect.right() > width() - 8.0) {
+            rect.moveRight(width() - 8.0);
+        }
+        if (rect.left() < 8.0) {
+            rect.moveLeft(8.0);
+        }
+        if (rect.bottom() > height() - 8.0) {
+            rect.moveBottom(height() - 8.0);
+        }
+        if (rect.top() < 8.0) {
+            rect.moveTop(8.0);
+        }
+        return rect;
+    };
+
+    std::optional<QRectF> hoverLabelRect;
+    if (m_startupHoverValid) {
+        const QPointF hover = imageToWidget(m_startupHoverImagePoint);
+        painter.drawLine(QPointF(m_frozenImageRect.left(), hover.y()), QPointF(m_frozenImageRect.right(), hover.y()));
+        painter.drawLine(QPointF(hover.x(), m_frozenImageRect.top()), QPointF(hover.x(), m_frozenImageRect.bottom()));
+
+        const QColor color = sampledImageColor(m_startupHoverImagePoint);
+        const QString hoverText = QStringLiteral("x %1  y %2  %3")
+                                      .arg(qRound(m_startupHoverImagePoint.x()))
+                                      .arg(qRound(m_startupHoverImagePoint.y()))
+                                      .arg(colorHexRgb(color));
+        const QFontMetrics metrics(painter.font());
+        QRectF hoverLabel(hover.x() + 14.0,
+                          hover.y() + 14.0,
+                          metrics.horizontalAdvance(hoverText) + 18.0,
+                          metrics.height() + 10.0);
+        if (hoverLabel.right() > width() - 8.0) {
+            hoverLabel.moveRight(hover.x() - 14.0);
+        }
+        if (hoverLabel.bottom() > height() - 8.0) {
+            hoverLabel.moveBottom(hover.y() - 14.0);
+        }
+        hoverLabel = clampFloatingRect(hoverLabel);
+        hoverLabelRect = hoverLabel;
+        drawRoundedLabel(painter, hoverLabel, hoverText, QColor(8, 13, 19, 225));
+    }
+
+    if (!m_startupRulerHasMeasure && !m_startupRulerDragging) {
+        painter.restore();
+        return;
+    }
+
+    const QRectF imageRect = normalizedRect(m_startupRulerStart, m_startupRulerEnd);
+    if (imageRect.width() < 1.0 && imageRect.height() < 1.0) {
+        painter.restore();
+        return;
+    }
+
+    const QRectF widgetRect = imageRectToWidget(imageRect);
+    painter.setPen(QPen(QColor(45, 212, 191), 2.0));
+    painter.setBrush(QColor(45, 212, 191, 26));
+    painter.drawRoundedRect(widgetRect, 3.0, 3.0);
+
+    const int widthPx = qRound(imageRect.width());
+    const int heightPx = qRound(imageRect.height());
+    const qreal diagonal = std::hypot(imageRect.width(), imageRect.height());
+    const QString info = QStringLiteral("%1 x %2 px   diag %3 px   area %4 px")
+                             .arg(widthPx)
+                             .arg(heightPx)
+                             .arg(qRound(diagonal))
+                             .arg(widthPx * heightPx);
+    const QFontMetrics metrics(painter.font());
+    const QSizeF infoSize(metrics.horizontalAdvance(info) + 20.0, metrics.height() + 10.0);
+    const QVector<QRectF> infoCandidates = {
+        QRectF(QPointF(widgetRect.left(), widgetRect.bottom() + 8.0), infoSize),
+        QRectF(QPointF(widgetRect.left(), widgetRect.top() - infoSize.height() - 8.0), infoSize),
+        QRectF(QPointF(widgetRect.right() + 8.0, widgetRect.top()), infoSize),
+        QRectF(QPointF(widgetRect.left() - infoSize.width() - 8.0, widgetRect.top()), infoSize),
+    };
+
+    QRectF infoRect = clampFloatingRect(infoCandidates.first());
+    if (hoverLabelRect.has_value()) {
+        const QRectF occupied = hoverLabelRect->adjusted(-8.0, -8.0, 8.0, 8.0);
+        for (const QRectF &candidate : infoCandidates) {
+            const QRectF clamped = clampFloatingRect(candidate);
+            if (!clamped.intersects(occupied)) {
+                infoRect = clamped;
+                break;
+            }
+        }
+    }
+    drawRoundedLabel(painter, infoRect, info);
+
+    const int stepX = rulerTickStep(imageRect.width());
+    const int stepY = rulerTickStep(imageRect.height());
+    const int minorX = std::max(1, stepX / 5);
+    const int minorY = std::max(1, stepY / 5);
+    painter.setPen(QPen(QColor(204, 251, 241, 230), 1.0));
+    auto drawXTick = [&](int tick, bool major) {
+        if (imageRect.width() <= 0.0) {
+            return;
+        }
+        const qreal x = widgetRect.left() + tick * widgetRect.width() / imageRect.width();
+        const qreal length = major ? 13.0 : 6.0;
+        painter.drawLine(QPointF(x, widgetRect.top()), QPointF(x, widgetRect.top() - length));
+        painter.drawLine(QPointF(x, widgetRect.bottom()), QPointF(x, widgetRect.bottom() + length));
+        if (major) {
+            const QString text = QString::number(tick);
+            painter.drawText(QRectF(x - 34.0, widgetRect.top() - 30.0, 68.0, 16.0), Qt::AlignCenter, text);
+        }
+    };
+    auto drawYTick = [&](int tick, bool major) {
+        if (imageRect.height() <= 0.0) {
+            return;
+        }
+        const qreal y = widgetRect.top() + tick * widgetRect.height() / imageRect.height();
+        const qreal length = major ? 13.0 : 6.0;
+        painter.drawLine(QPointF(widgetRect.left(), y), QPointF(widgetRect.left() - length, y));
+        painter.drawLine(QPointF(widgetRect.right(), y), QPointF(widgetRect.right() + length, y));
+        if (major) {
+            const QString text = QString::number(tick);
+            painter.drawText(QRectF(widgetRect.left() - 62.0, y - 8.0, 48.0, 16.0), Qt::AlignRight | Qt::AlignVCenter, text);
+        }
+    };
+
+    for (int x = 0; x <= widthPx; x += minorX) {
+        drawXTick(x, x % stepX == 0);
+    }
+    for (int y = 0; y <= heightPx; y += minorY) {
+        drawYTick(y, y % stepY == 0);
+    }
+
+    painter.restore();
+}
+
+void ShotWindow::drawStartupToolOverlay(QPainter &painter)
+{
+    if (m_startupTool == StartupTool::ColorPicker) {
+        drawStartupColorLoupe(painter, m_startupHoverImagePoint);
+    } else if (m_startupTool == StartupTool::Ruler) {
+        drawStartupRuler(painter);
+    }
+}
+
 void ShotWindow::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
@@ -2856,15 +3390,17 @@ void ShotWindow::paintEvent(QPaintEvent *)
         }
     }
 
-    if (m_hoveredWindowRect.has_value() && m_mode == Mode::Selecting) {
+    if (m_hoveredWindowRect.has_value() && m_mode == Mode::Selecting && m_startupTool == StartupTool::None) {
         const QRectF hoverWidget = imageRectToWidget(QRectF(*m_hoveredWindowRect));
         painter.setPen(QPen(QColor(94, 234, 212), 2.0));
         painter.setBrush(QColor(94, 234, 212, 32));
         painter.drawRect(hoverWidget);
     }
 
-    if (!hasUsableSelection()) {
-        const QString hint = MS_TR("Drag to select   Middle switches   Right/Esc cancels");
+    drawStartupToolOverlay(painter);
+
+    if (!hasUsableSelection() && m_startupTool == StartupTool::None) {
+        const QString hint = MS_TR("Drag to select   C color picker   R ruler   Middle switches   Right/Esc cancels");
         painter.setFont(QFont(QStringLiteral("Sans Serif"), 15, QFont::DemiBold));
         const QFontMetrics metrics(painter.font());
         const QRectF hintRect((width() - metrics.horizontalAdvance(hint) - 44.0) / 2.0,
@@ -2899,6 +3435,41 @@ void ShotWindow::resizeEvent(QResizeEvent *)
 void ShotWindow::mousePressEvent(QMouseEvent *event)
 {
     clearWheelPreview();
+
+    if (m_mode == Mode::Selecting && m_startupTool != StartupTool::None) {
+        if (event->button() == Qt::RightButton) {
+            leaveStartupTool();
+            event->accept();
+            return;
+        }
+        if (event->button() != Qt::LeftButton) {
+            event->accept();
+            return;
+        }
+        if (!m_frozenImageRect.contains(event->position())) {
+            event->accept();
+            return;
+        }
+
+        const QPointF imagePoint = clampImagePoint(widgetToImage(event->position()));
+        m_startupHoverImagePoint = imagePoint;
+        m_startupHoverValid = true;
+        if (m_startupTool == StartupTool::ColorPicker) {
+            showStartupColorDialog(sampledImageColor(imagePoint), event->pos());
+            update();
+            event->accept();
+            return;
+        }
+        if (m_startupTool == StartupTool::Ruler) {
+            m_startupRulerDragging = true;
+            m_startupRulerHasMeasure = true;
+            m_startupRulerStart = imagePoint;
+            m_startupRulerEnd = imagePoint;
+            update();
+            event->accept();
+            return;
+        }
+    }
 
     if (event->button() != Qt::LeftButton) {
         if (m_mode == Mode::Selecting) {
@@ -3102,6 +3673,21 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
     }
 
     const QPointF imagePoint = widgetToImage(event->position());
+    if (m_mode == Mode::Selecting && m_startupTool != StartupTool::None) {
+        if (m_frozenImageRect.contains(event->position()) || m_startupRulerDragging) {
+            m_startupHoverImagePoint = clampImagePoint(imagePoint);
+            m_startupHoverValid = true;
+            if (m_startupTool == StartupTool::Ruler && m_startupRulerDragging) {
+                m_startupRulerEnd = m_startupHoverImagePoint;
+            }
+        } else {
+            m_startupHoverValid = false;
+        }
+        update();
+        event->accept();
+        return;
+    }
+
     if (m_mode == Mode::Selecting && !m_dragging) {
         std::optional<QRect> best;
         qint64 bestArea = std::numeric_limits<qint64>::max();
@@ -3368,6 +3954,21 @@ void ShotWindow::mouseDoubleClickEvent(QMouseEvent *event)
 
 void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (m_mode == Mode::Selecting
+        && m_startupTool == StartupTool::Ruler
+        && event->button() == Qt::LeftButton
+        && m_startupRulerDragging) {
+        m_startupRulerDragging = false;
+        if (m_frozenImageRect.contains(event->position())) {
+            m_startupRulerEnd = clampImagePoint(widgetToImage(event->position()));
+            m_startupHoverImagePoint = m_startupRulerEnd;
+            m_startupHoverValid = true;
+        }
+        update();
+        event->accept();
+        return;
+    }
+
     if ((event->button() == Qt::LeftButton || event->button() == Qt::MiddleButton) && m_imagePanning) {
         m_imagePanning = false;
         updateCursor();
@@ -3432,7 +4033,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
             m_mode = Mode::Editing;
             m_fullscreenAnnotation = false;
             m_toolbarUserPlaced = false;
-            setTool(Tool::Pen);
+            setTool(defaultEditingTool());
             setFullscreenActionButtonsVisible(false);
             m_toolbar->show();
             m_actionToolbar->show();
@@ -3453,7 +4054,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         m_mode = Mode::Editing;
         m_fullscreenAnnotation = false;
         m_toolbarUserPlaced = false;
-        setTool(Tool::Pen);
+        setTool(defaultEditingTool());
         setFullscreenActionButtonsVisible(false);
         m_toolbar->show();
         m_actionToolbar->show();
@@ -3490,6 +4091,26 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
 
 void ShotWindow::wheelEvent(QWheelEvent *event)
 {
+    if (m_mode == Mode::Selecting && m_startupTool == StartupTool::ColorPicker) {
+        const int delta = event->angleDelta().y() != 0 ? event->angleDelta().y() : event->pixelDelta().y();
+        if (delta == 0) {
+            QWidget::wheelEvent(event);
+            return;
+        }
+
+        const qreal factor = std::pow(1.12, static_cast<qreal>(delta) / 120.0);
+        m_startupColorLoupeSize = std::clamp(m_startupColorLoupeSize * factor,
+                                             kMinStartupColorLoupeSize,
+                                             kMaxStartupColorLoupeSize);
+        if (m_frozenImageRect.contains(event->position())) {
+            m_startupHoverImagePoint = clampImagePoint(widgetToImage(event->position()));
+            m_startupHoverValid = true;
+        }
+        event->accept();
+        update();
+        return;
+    }
+
     const int steps = event->angleDelta().y() / 120;
     if (steps == 0 || m_mode != Mode::Editing) {
         QWidget::wheelEvent(event);
@@ -3572,6 +4193,25 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
 {
     clearWheelPreview();
 
+    if (m_mode == Mode::Selecting && m_startupTool != StartupTool::None && event->key() == Qt::Key_Escape) {
+        leaveStartupTool();
+        event->accept();
+        return;
+    }
+
+    if (m_mode == Mode::Selecting && event->modifiers() == Qt::NoModifier) {
+        if (event->key() == Qt::Key_C) {
+            setStartupTool(StartupTool::ColorPicker);
+            event->accept();
+            return;
+        }
+        if (event->key() == Qt::Key_R) {
+            setStartupTool(StartupTool::Ruler);
+            event->accept();
+            return;
+        }
+    }
+
     if (imageNavigationAvailable() && event->key() == Qt::Key_Control && !event->isAutoRepeat()) {
         if (m_ctrlTapTimer.isValid() && m_ctrlTapTimer.elapsed() <= kCtrlDoubleTapMs) {
             resetImageZoom();
@@ -3598,6 +4238,11 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
     if (event->matches(QKeySequence::Save)) {
         commitTextEditor();
         saveSelection();
+        return;
+    }
+
+    if (event->modifiers() == Qt::ControlModifier && event->key() == Qt::Key_P) {
+        pinSelection();
         return;
     }
 
@@ -4721,6 +5366,15 @@ QString ShotWindow::currentToolName() const
     }
 
     return QStringLiteral("Tool");
+}
+
+ShotWindow::Tool ShotWindow::defaultEditingTool() const
+{
+    const Tool tool = m_fullscreenAnnotation ? m_fullscreenDefaultTool : m_defaultTool;
+    if (m_fullscreenAnnotation && tool == Tool::Move) {
+        return Tool::Select;
+    }
+    return tool;
 }
 
 QImage ShotWindow::mosaicImage(QRect sourceRect, int blockSize) const

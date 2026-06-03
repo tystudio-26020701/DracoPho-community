@@ -118,6 +118,12 @@ const QHash<QString, QString> &chineseTable()
         // Selection overlay hint.
         {QStringLiteral("Drag to select   Middle switches   Right/Esc cancels"),
          QStringLiteral("拖动选择区域   中键切换全屏标注   右键/Esc 取消")},
+        {QStringLiteral("Drag to select   C color picker   R ruler   Middle switches   Right/Esc cancels"),
+         QStringLiteral("拖动选择区域   C 取色   R 尺子   中键切换全屏标注   右键/Esc 取消")},
+        {QStringLiteral("Color picker: left click samples a pixel   Right/Esc returns"),
+         QStringLiteral("取色器：左键采样像素   右键/Esc 返回")},
+        {QStringLiteral("Ruler: hover reads coordinates, drag measures pixels   Right/Esc returns"),
+         QStringLiteral("尺子：悬停读取坐标，拖动测量像素   右键/Esc 返回")},
 
         // Open-with / extensions panels.
         {QStringLiteral("Open with"), QStringLiteral("打开方式")},

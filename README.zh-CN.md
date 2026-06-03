@@ -68,6 +68,9 @@ mark-shot --all-outputs
 # 跳过选区步骤，直接对捕获的完整屏幕截图进行标注
 mark-shot --fullscreen
 
+# 选区完成后默认使用移动工具，全屏标注默认使用激光笔，并设置默认颜色
+mark-shot --default-tool move --fullscreen-default-tool laser --default-color '#2DD4BF'
+
 # 打开一个已有的本地图片文件并直接进入标注模式
 mark-shot path/to/image.png
 
@@ -85,6 +88,9 @@ mark-shot --xdg-window
 | `--all-outputs` | 捕获虚拟显示桌面的所有输出屏幕，而不是仅捕获当前的活动屏幕。 |
 | `--xdg-window` | 强制使用标准的 XDG 全屏普通窗口（xdg-shell）替代默认的 Wayland 覆盖层（layer-shell）。 |
 | `--fullscreen` | 跳过选区步骤，直接对捕获的完整屏幕截图进行标注。 |
+| `--default-tool <tool>` | 指定普通选区完成后的默认标注工具；未设置 `--fullscreen-default-tool` 时也作为全屏模式默认工具。 |
+| `--fullscreen-default-tool <tool>` | 指定全屏标注模式的默认工具。 |
+| `--default-color <color>` | 指定默认标注颜色。支持 `#RRGGBB` 与 `#RRGGBBAA`。 |
 
 ### 快捷键绑定
 
@@ -123,12 +129,17 @@ binds {
 
 `command` 会通过 `$SHELL -c` 执行，因此支持 shell 表达式。使用 `{slurp}` 可把当前选区作为 `x,y widthxheight` 几何字符串传入命令。使用 `{image}` 或 `{imagePath}` 可把当前已渲染选区作为临时 PNG 路径传入命令，使用 `{imageUrl}` 可传入 `file://` URL。这些占位符会自动进行 shell 引用转义，配置中不要再额外加引号。若未使用图片占位符，可设置 `saveImage` 或 `needsImage` 为 `true`，程序会自动把临时 PNG 路径追加到命令末尾。`workingDirectory` 与 `cwd` 等价。`closeOnStart` 默认值为 `true`，命令启动前会先隐藏并关闭 Mark Shot。
 
-### 贴图 OCR 与 LLM 翻译配置
+### 应用配置文件
 
-贴图窗口会从 `~/.config/mark-shot/config.json` 读取 OCR 与翻译配置。默认 OCR helper 会优先使用 `rapidocr`，也可以回退到 `tesseract`。翻译 helper 使用 OpenAI 兼容的 `/chat/completions` 接口。
+Mark Shot 会从 `~/.config/mark-shot/config.json` 读取应用配置。贴图窗口同样使用该文件中的 OCR 与翻译配置。默认 OCR helper 会优先使用 `rapidocr`，也可以回退到 `tesseract`。翻译 helper 使用 OpenAI 兼容的 `/chat/completions` 接口。
 
 ```json
 {
+  "annotation": {
+    "defaultTool": "move",
+    "fullscreenDefaultTool": "laser",
+    "defaultColor": "#2DD4BF"
+  },
   "windowDetection": {
     "command": "mark-shot-window-detection-niri",
     "env": {
@@ -157,6 +168,12 @@ binds {
   }
 }
 ```
+
+`annotation.defaultTool` 用于指定普通选区完成后默认选中的工具。`annotation.fullscreenDefaultTool` 用于指定全屏标注模式的默认工具，包括 `--fullscreen` 与图片文件标注模式。支持值为 `move`、`select`、`pen`、`line`、`highlighter`、`rectangle`、`ellipse`、`arrow`、`text`、`number`、`mosaic`、`laser`。运行参数 `--default-tool <tool>` 会覆盖普通模式默认工具，并出于兼容性在未设置 `--fullscreen-default-tool <tool>` 时同时作为全屏默认工具。
+
+全屏标注模式没有独立截图选区可移动。如果把全屏默认工具配置为 `move`，Mark Shot 会改用 `select` 进入全屏模式。
+
+`annotation.defaultColor` 用于指定初始标注颜色。使用 `#RRGGBB` 可设置不透明颜色，使用 `#RRGGBBAA` 可包含透明度。运行参数 `--default-color <color>` 会覆盖配置文件中的值。
 
 `windowDetection.env`（别名：`environment`）会作为环境变量传给检测脚本。内置 niri 脚本支持 `MARK_SHOT_NIRI_PANEL_EDGE`（`top`、`bottom`、`left`、`right` 或 `none`），也支持通过 `MARK_SHOT_NIRI_OFFSET_X`、`MARK_SHOT_NIRI_OFFSET_Y`、`MARK_SHOT_NIRI_OFFSET_WIDTH`、`MARK_SHOT_NIRI_OFFSET_HEIGHT` 做像素级调整。
 
@@ -372,6 +389,13 @@ cmake --install build --prefix "$HOME/.local"
 | **M** | 马赛克 (Mosaic) | 进行毛玻璃敏感区域虚化。 |
 | **G** | 激光笔 (Laser) | 教学或展示使用的临时痕迹，会自动平滑消融。 |
 
+### 启动界面辅助工具
+
+| 快捷键 | 工具 | 功能说明 |
+| :---: | :--- | :--- |
+| **C** | 取色器 (Color Picker) | 在选择截图区域之前采样截图像素。滚动鼠标滚轮可调整放大镜大小，左键单击会打开颜色面板，可复制 HEX、RGB、HSL、HSV 和 Qt 等格式。右键或 Esc 返回普通选区。 |
+| **R** | 尺子 (Ruler) | 在选择截图区域之前测量坐标。悬停显示当前像素，左键拖拽绘制带像素刻度的测量矩形，并显示宽度、高度、对角线和面积。右键或 Esc 返回普通选区。 |
+
 ### 全局操作快捷键
 
 | 快捷键 | 触发动作 |
@@ -379,6 +403,7 @@ cmake --install build --prefix "$HOME/.local"
 | **Esc** | 立即退出并关闭标注窗口。 |
 | **Ctrl + C** | 确认所有文字编辑，并将当前截图/已标注选区复制到系统剪贴板。 |
 | **Ctrl + S** 或 **Enter / Return** | 确认所有文字编辑，并保存当前截图。 |
+| **Ctrl + P** | 将当前选区固定为悬浮贴图窗口。 |
 | **Ctrl + Z** | 撤销上一步标注操作。 |
 | **Ctrl + Y** 或 **Ctrl + Shift + Z** | 重做已被撤销的标注操作。 |
 | **Backspace** 或 **Delete** | 在 **选择 (Select)** 工具激活且选中了某标注时，删除被选中的标注。 |

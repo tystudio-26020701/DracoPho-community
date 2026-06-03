@@ -68,6 +68,9 @@ mark-shot --all-outputs
 # Annotate full captured screen directly (skipping selection)
 mark-shot --fullscreen
 
+# Start with Move after region selection, Laser in fullscreen, and a teal default color
+mark-shot --default-tool move --fullscreen-default-tool laser --default-color '#2DD4BF'
+
 # Open and annotate an existing local image file
 mark-shot path/to/image.png
 
@@ -85,6 +88,9 @@ mark-shot --xdg-window
 | `--all-outputs` | Captures all screens on the virtual display environment instead of only the active one. |
 | `--xdg-window` | Forces the use of a standard XDG fullscreen window (xdg-shell) instead of layer-shell. |
 | `--fullscreen` | Skips region selection and opens annotation mode on the full screen frame directly. |
+| `--default-tool <tool>` | Sets the annotation tool selected after region selection. Also seeds fullscreen mode unless `--fullscreen-default-tool` is set. |
+| `--fullscreen-default-tool <tool>` | Sets the annotation tool selected in fullscreen annotation mode. |
+| `--default-color <color>` | Sets the default annotation color. Supports `#RRGGBB` and `#RRGGBBAA`. |
 
 ### Compositor / Desktop Hotkey Integration
 
@@ -123,12 +129,17 @@ The right-side action toolbar includes an **Extensions** button. It reads user-d
 
 `command` is executed through `$SHELL -c`, so shell features work. Use `{slurp}` to pass the current selection as `x,y widthxheight` geometry. Use `{image}` or `{imagePath}` to pass the current rendered selection as a temporary PNG path, or `{imageUrl}` for a `file://` URL. These placeholders are shell-quoted automatically. Set `saveImage` or `needsImage` to `true` to append the temporary PNG path when no image placeholder is present. `workingDirectory` and `cwd` are aliases. `closeOnStart` defaults to `true`, hiding and closing Mark Shot before the command starts.
 
-### Pinned OCR and LLM Translation Config
+### Application Config
 
-Pinned windows read OCR and translation settings from `~/.config/mark-shot/config.json`. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`. The translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
+Mark Shot reads application settings from `~/.config/mark-shot/config.json`. Pinned windows use the OCR and translation settings in the same file. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`; the translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
 
 ```json
 {
+  "annotation": {
+    "defaultTool": "move",
+    "fullscreenDefaultTool": "laser",
+    "defaultColor": "#2DD4BF"
+  },
   "windowDetection": {
     "command": "mark-shot-window-detection-niri",
     "env": {
@@ -157,6 +168,12 @@ Pinned windows read OCR and translation settings from `~/.config/mark-shot/confi
   }
 }
 ```
+
+`annotation.defaultTool` sets the tool selected after region selection. `annotation.fullscreenDefaultTool` sets the tool selected in fullscreen annotation mode, including `--fullscreen` and image-file annotation. Supported values are `move`, `select`, `pen`, `line`, `highlighter`, `rectangle`, `ellipse`, `arrow`, `text`, `number`, `mosaic`, and `laser`. `--default-tool <tool>` overrides the normal default and, for compatibility, also seeds fullscreen mode unless `--fullscreen-default-tool <tool>` is set.
+
+Fullscreen annotation has no separate capture selection to move. If its default tool is configured as `move`, Mark Shot starts fullscreen mode with `select` instead.
+
+`annotation.defaultColor` sets the initial annotation color. Use `#RRGGBB` for opaque colors or `#RRGGBBAA` to include alpha. The runtime option `--default-color <color>` overrides this config value.
 
 `windowDetection.env` (alias: `environment`) is passed to the detection script as environment variables. The bundled niri script supports `MARK_SHOT_NIRI_PANEL_EDGE` (`top`, `bottom`, `left`, `right`, or `none`) and pixel adjustments through `MARK_SHOT_NIRI_OFFSET_X`, `MARK_SHOT_NIRI_OFFSET_Y`, `MARK_SHOT_NIRI_OFFSET_WIDTH`, and `MARK_SHOT_NIRI_OFFSET_HEIGHT`.
 
@@ -372,6 +389,13 @@ This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-translate`
 | **M** | Mosaic | Covers sensitive data with acrylic frost blur. |
 | **G** | Laser | Places temporary laser markings that dissolve automatically over time. |
 
+### Startup Overlay Tools
+
+| Hotkey | Tool | Description |
+| :---: | :--- | :--- |
+| **C** | Color Picker | Samples a screenshot pixel before selecting a region. Use the mouse wheel to resize the loupe, left click to open a color panel with copyable HEX, RGB, HSL, HSV, and Qt formats. Right click or Esc returns to normal selection. |
+| **R** | Ruler | Measures coordinates before selecting a region. Hover reads the current pixel, and left-drag draws a measured rectangle with pixel ticks, width, height, diagonal, and area. Right click or Esc returns to normal selection. |
+
 ### Global Actions
 
 | Hotkey | Action |
@@ -379,6 +403,7 @@ This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-translate`
 | **Esc** | Closes the screenshot/annotation window. |
 | **Ctrl + C** | Confirms pending text edits and copies selection to system clipboard. |
 | **Ctrl + S** or **Enter** | Confirms pending text edits and saves selection to a file. |
+| **Ctrl + P** | Pins the current selection as a floating sticker window. |
 | **Ctrl + Z** | Undoes the last annotation. |
 | **Ctrl + Y** or **Ctrl + Shift + Z** | Redoes the last undone annotation. |
 | **Backspace** or **Delete** | Deletes the selected annotation object (under Select tool). |
