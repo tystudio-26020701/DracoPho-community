@@ -30,6 +30,8 @@ qt_add_executable(mark-shot
     src/clipboard_image.h
     src/debug_log.cpp
     src/debug_log.h
+    src/window_detection.cpp
+    src/window_detection.h
     src/screen_capture.cpp
     src/screen_capture.h
     src/shot_window.cpp
@@ -91,6 +93,7 @@ install(TARGETS mark-shot RUNTIME DESTINATION bin)
 install(PROGRAMS
     scripts/mark-shot-ocr
     scripts/mark-shot-translate
+    scripts/mark-shot-window-detection-niri
     DESTINATION bin
 )
 install(FILES

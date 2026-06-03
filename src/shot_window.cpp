@@ -122,6 +122,33 @@ QRectF normalizedRect(QPointF a, QPointF b)
     return QRectF(a, b).normalized();
 }
 
+QRect windowGeometryToImageRect(QRect windowGeometry, QRect sourceGeometry, QSize imageSize)
+{
+    if (windowGeometry.isEmpty() || imageSize.isEmpty()) {
+        return {};
+    }
+
+    windowGeometry = windowGeometry.normalized();
+    const QRect imageBounds(QPoint(0, 0), imageSize);
+    if (!sourceGeometry.isValid() || sourceGeometry.isEmpty()) {
+        return windowGeometry.intersected(imageBounds);
+    }
+
+    sourceGeometry = sourceGeometry.normalized();
+    const QRect clipped = windowGeometry.intersected(sourceGeometry);
+    if (clipped.isEmpty()) {
+        return {};
+    }
+
+    const qreal scaleX = static_cast<qreal>(imageSize.width()) / std::max(1, sourceGeometry.width());
+    const qreal scaleY = static_cast<qreal>(imageSize.height()) / std::max(1, sourceGeometry.height());
+    const QRectF imageRect((clipped.left() - sourceGeometry.left()) * scaleX,
+                           (clipped.top() - sourceGeometry.top()) * scaleY,
+                           clipped.width() * scaleX,
+                           clipped.height() * scaleY);
+    return imageRect.toAlignedRect().intersected(imageBounds);
+}
+
 // Builds a smoothed stroke path from raw sample points. Each sample point is
 // used as the control point of a quadratic segment whose endpoints are the
 // midpoints of adjacent samples, so the curve passes through every midpoint
@@ -1803,7 +1830,11 @@ private:
 
 } // namespace
 
-ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QRect sourceGeometry, QWidget *parent)
+ShotWindow::ShotWindow(QImage frozenFrame,
+                       QString outputName,
+                       QRect sourceGeometry,
+                       QVector<QRect> windowGeometries,
+                       QWidget *parent)
     : QWidget(parent)
     , m_frozenFrame(std::move(frozenFrame))
     , m_outputName(std::move(outputName))
@@ -2175,23 +2206,15 @@ ShotWindow::ShotWindow(QImage frozenFrame, QString outputName, QRect sourceGeome
     m_laserTimer->setInterval(33);
     connect(m_laserTimer, &QTimer::timeout, this, [this] { cleanupLaserStrokes(); });
 
-    const QVector<QRect> screenRects = enumerateX11WindowGeometries();
-    if (!screenRects.isEmpty() && m_sourceGeometry.isValid() && !m_sourceGeometry.isEmpty()) {
-        for (const QRect &r : screenRects) {
-            QRect imageRect(r.x() - m_sourceGeometry.x(),
-                            r.y() - m_sourceGeometry.y(),
-                            r.width(), r.height());
-            const QRect clipped = imageRect.intersected(QRect(QPoint(0, 0), m_frozenFrame.size()));
-            if (clipped.width() > 1 && clipped.height() > 1) {
-                m_windowRects.append(clipped);
-            }
-        }
-    } else if (!screenRects.isEmpty()) {
-        for (const QRect &r : screenRects) {
-            const QRect clipped = r.intersected(QRect(QPoint(0, 0), m_frozenFrame.size()));
-            if (clipped.width() > 1 && clipped.height() > 1) {
-                m_windowRects.append(clipped);
-            }
+    if (windowGeometries.isEmpty()) {
+        windowGeometries = enumerateX11WindowGeometries();
+    }
+    for (const QRect &windowGeometry : std::as_const(windowGeometries)) {
+        const QRect imageRect = windowGeometryToImageRect(windowGeometry,
+                                                          m_sourceGeometry,
+                                                          m_frozenFrame.size());
+        if (imageRect.width() > 1 && imageRect.height() > 1) {
+            m_windowRects.append(imageRect);
         }
     }
 }

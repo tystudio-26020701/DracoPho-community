@@ -1,0 +1,349 @@
+#include "window_detection.h"
+
+#include "debug_log.h"
+
+#include <QDir>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
+#include <QProcess>
+#include <QProcessEnvironment>
+#include <QRegularExpression>
+#include <QStandardPaths>
+#include <QStringList>
+
+#include <algorithm>
+#include <optional>
+
+namespace markshot {
+namespace {
+
+constexpr int kDefaultWindowDetectionTimeoutMs = 1000;
+constexpr int kMinWindowDetectionTimeoutMs = 100;
+constexpr int kMaxWindowDetectionTimeoutMs = 10000;
+
+struct WindowDetectionConfig {
+    QString command;
+    QString workingDirectory;
+    int timeoutMs = kDefaultWindowDetectionTimeoutMs;
+};
+
+QString markShotConfigDir()
+{
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    if (!configDir.isEmpty()) {
+        return configDir;
+    }
+
+    const QString genericConfigDir = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+    if (!genericConfigDir.isEmpty()) {
+        return QDir(genericConfigDir).filePath(QStringLiteral("mark-shot"));
+    }
+    return QDir::home().filePath(QStringLiteral(".config/mark-shot"));
+}
+
+QString appConfigPath()
+{
+    return QDir(markShotConfigDir()).filePath(QStringLiteral("config.json"));
+}
+
+QString expandUserPath(const QString &path)
+{
+    if (path == QStringLiteral("~")) {
+        return QDir::homePath();
+    }
+    if (path.startsWith(QStringLiteral("~/"))) {
+        return QDir::home().filePath(path.mid(2));
+    }
+    return path;
+}
+
+QJsonObject objectValue(const QJsonObject &object, const QString &key)
+{
+    const QJsonValue value = object.value(key);
+    return value.isObject() ? value.toObject() : QJsonObject();
+}
+
+std::optional<int> intValue(const QJsonValue &value)
+{
+    if (value.isDouble()) {
+        return value.toInt();
+    }
+    if (value.isString()) {
+        bool ok = false;
+        const int number = value.toString().trimmed().toInt(&ok);
+        if (ok) {
+            return number;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<int> namedIntValue(const QJsonObject &object, const QStringList &keys)
+{
+    for (const QString &key : keys) {
+        const std::optional<int> value = intValue(object.value(key));
+        if (value.has_value()) {
+            return value;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<QRect> rectFromArray(const QJsonArray &array)
+{
+    if (array.size() < 4) {
+        return std::nullopt;
+    }
+
+    const std::optional<int> x = intValue(array.at(0));
+    const std::optional<int> y = intValue(array.at(1));
+    const std::optional<int> width = intValue(array.at(2));
+    const std::optional<int> height = intValue(array.at(3));
+    if (!x.has_value() || !y.has_value() || !width.has_value() || !height.has_value()) {
+        return std::nullopt;
+    }
+    return QRect(*x, *y, *width, *height);
+}
+
+std::optional<QRect> rectFromGeometryText(const QString &geometry)
+{
+    static const QRegularExpression pattern(
+        QStringLiteral("^\\s*(-?\\d+)\\s*,\\s*(-?\\d+)\\s+(-?\\d+)\\s*x\\s*(-?\\d+)\\s*$"));
+    const QRegularExpressionMatch match = pattern.match(geometry);
+    if (!match.hasMatch()) {
+        return std::nullopt;
+    }
+
+    bool ok = true;
+    const int x = match.captured(1).toInt(&ok);
+    if (!ok) {
+        return std::nullopt;
+    }
+    const int y = match.captured(2).toInt(&ok);
+    if (!ok) {
+        return std::nullopt;
+    }
+    const int width = match.captured(3).toInt(&ok);
+    if (!ok) {
+        return std::nullopt;
+    }
+    const int height = match.captured(4).toInt(&ok);
+    if (!ok) {
+        return std::nullopt;
+    }
+    return QRect(x, y, width, height);
+}
+
+std::optional<QRect> rectFromWindowObject(const QJsonObject &object)
+{
+    if (object.value(QStringLiteral("geometry")).isString()) {
+        return rectFromGeometryText(object.value(QStringLiteral("geometry")).toString());
+    }
+
+    if (object.value(QStringLiteral("rect")).isArray()) {
+        return rectFromArray(object.value(QStringLiteral("rect")).toArray());
+    }
+
+    if (object.value(QStringLiteral("at")).isArray() && object.value(QStringLiteral("size")).isArray()) {
+        const QJsonArray at = object.value(QStringLiteral("at")).toArray();
+        const QJsonArray size = object.value(QStringLiteral("size")).toArray();
+        if (at.size() >= 2 && size.size() >= 2) {
+            QJsonArray rect;
+            rect.append(at.at(0));
+            rect.append(at.at(1));
+            rect.append(size.at(0));
+            rect.append(size.at(1));
+            return rectFromArray(rect);
+        }
+    }
+
+    const std::optional<int> x = namedIntValue(object, {QStringLiteral("x"), QStringLiteral("left")});
+    const std::optional<int> y = namedIntValue(object, {QStringLiteral("y"), QStringLiteral("top")});
+    const std::optional<int> width = namedIntValue(object, {QStringLiteral("width"), QStringLiteral("w")});
+    const std::optional<int> height = namedIntValue(object, {QStringLiteral("height"), QStringLiteral("h")});
+    if (!x.has_value() || !y.has_value() || !width.has_value() || !height.has_value()) {
+        return std::nullopt;
+    }
+    return QRect(*x, *y, *width, *height);
+}
+
+void appendValidRect(QVector<QRect> *rects, QRect rect)
+{
+    if (!rects) {
+        return;
+    }
+    rect = rect.normalized();
+    if (rect.width() <= 1 || rect.height() <= 1) {
+        return;
+    }
+    if (!rects->contains(rect)) {
+        rects->append(rect);
+    }
+}
+
+QVector<QRect> parseWindowDetectionOutput(const QByteArray &output)
+{
+    QVector<QRect> results;
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(output, &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        markshot::debugLog("window-detection",
+                           "script returned invalid JSON offset=%d error=%s",
+                           parseError.offset,
+                           parseError.errorString().toUtf8().constData());
+        return results;
+    }
+
+    QJsonArray windows;
+    if (document.isArray()) {
+        windows = document.array();
+    } else if (document.isObject()) {
+        const QJsonObject root = document.object();
+        if (root.value(QStringLiteral("windows")).isArray()) {
+            windows = root.value(QStringLiteral("windows")).toArray();
+        } else if (root.value(QStringLiteral("windowGeometries")).isArray()) {
+            windows = root.value(QStringLiteral("windowGeometries")).toArray();
+        } else if (const std::optional<QRect> rect = rectFromWindowObject(root)) {
+            appendValidRect(&results, *rect);
+            return results;
+        }
+    }
+
+    for (const QJsonValue &value : windows) {
+        std::optional<QRect> rect;
+        if (value.isObject()) {
+            rect = rectFromWindowObject(value.toObject());
+        } else if (value.isArray()) {
+            rect = rectFromArray(value.toArray());
+        } else if (value.isString()) {
+            rect = rectFromGeometryText(value.toString());
+        }
+        if (rect.has_value()) {
+            appendValidRect(&results, *rect);
+        }
+    }
+
+    return results;
+}
+
+std::optional<WindowDetectionConfig> readWindowDetectionConfig()
+{
+    QFile file(appConfigPath());
+    if (!file.exists()) {
+        return std::nullopt;
+    }
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        markshot::debugLog("window-detection",
+                           "cannot read config path=%s",
+                           appConfigPath().toUtf8().constData());
+        return std::nullopt;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        markshot::debugLog("window-detection",
+                           "config parse failed offset=%d error=%s",
+                           parseError.offset,
+                           parseError.errorString().toUtf8().constData());
+        return std::nullopt;
+    }
+
+    const QJsonObject root = document.object();
+    const QJsonObject windowDetection = objectValue(root, QStringLiteral("windowDetection"));
+    WindowDetectionConfig config;
+    if (windowDetection.value(QStringLiteral("enabled")).isBool()
+        && !windowDetection.value(QStringLiteral("enabled")).toBool()) {
+        return std::nullopt;
+    }
+    config.command = windowDetection.value(QStringLiteral("command")).toString().trimmed();
+    config.workingDirectory = windowDetection.value(QStringLiteral("workingDirectory")).toString().trimmed();
+    if (config.workingDirectory.isEmpty()) {
+        config.workingDirectory = windowDetection.value(QStringLiteral("cwd")).toString().trimmed();
+    }
+    if (const std::optional<int> timeoutMs = intValue(windowDetection.value(QStringLiteral("timeoutMs")))) {
+        config.timeoutMs = std::clamp(*timeoutMs, kMinWindowDetectionTimeoutMs, kMaxWindowDetectionTimeoutMs);
+    }
+
+    if (config.command.isEmpty()) {
+        return std::nullopt;
+    }
+    return config;
+}
+
+QProcessEnvironment scriptEnvironment(const QRect &captureGeometry,
+                                      const QString &outputName,
+                                      bool allOutputs)
+{
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    environment.insert(QStringLiteral("MARK_SHOT_CONFIG"), appConfigPath());
+    environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_OUTPUT"), outputName);
+    environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_ALL_OUTPUTS"),
+                       allOutputs ? QStringLiteral("1") : QStringLiteral("0"));
+    if (captureGeometry.isValid() && !captureGeometry.isEmpty()) {
+        const QRect geometry = captureGeometry.normalized();
+        environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_X"), QString::number(geometry.x()));
+        environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_Y"), QString::number(geometry.y()));
+        environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_WIDTH"), QString::number(geometry.width()));
+        environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_HEIGHT"), QString::number(geometry.height()));
+    }
+    return environment;
+}
+
+} // namespace
+
+QVector<QRect> collectConfiguredWindowGeometries(const QRect &captureGeometry,
+                                                 const QString &outputName,
+                                                 bool allOutputs)
+{
+    const std::optional<WindowDetectionConfig> config = readWindowDetectionConfig();
+    if (!config.has_value()) {
+        return {};
+    }
+
+    QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"), QStringLiteral("/bin/sh"));
+    if (shell.isEmpty()) {
+        shell = QStringLiteral("/bin/sh");
+    }
+
+    QProcess process;
+    process.setProgram(shell);
+    process.setArguments({QStringLiteral("-c"), config->command});
+    process.setProcessEnvironment(scriptEnvironment(captureGeometry, outputName, allOutputs));
+    if (!config->workingDirectory.isEmpty()) {
+        process.setWorkingDirectory(expandUserPath(config->workingDirectory));
+    }
+    process.start(QIODevice::ReadOnly);
+
+    if (!process.waitForStarted(1000)) {
+        markshot::debugLog("window-detection", "script did not start");
+        return {};
+    }
+    if (!process.waitForFinished(config->timeoutMs)) {
+        process.kill();
+        process.waitForFinished(1000);
+        markshot::debugLog("window-detection",
+                           "script timed out timeout_ms=%d",
+                           config->timeoutMs);
+        return {};
+    }
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        const QByteArray stderrText = process.readAllStandardError().trimmed().left(512);
+        markshot::debugLog("window-detection",
+                           "script failed exit_code=%d stderr=%s",
+                           process.exitCode(),
+                           stderrText.constData());
+        return {};
+    }
+
+    const QVector<QRect> windows = parseWindowDetectionOutput(process.readAllStandardOutput());
+    markshot::debugLog("window-detection", "script returned windows=%d", windows.size());
+    return windows;
+}
+
+} // namespace markshot

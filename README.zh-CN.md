@@ -129,6 +129,10 @@ binds {
 
 ```json
 {
+  "windowDetection": {
+    "command": "mark-shot-window-detection-niri",
+    "timeoutMs": 1000
+  },
   "ocr": {
     "enabled": true,
     "backend": "rapidocr",
@@ -149,6 +153,76 @@ binds {
   }
 }
 ```
+
+### 截图前窗口检测与脚本贡献指南
+
+为了使 Mark Shot 在各种 Wayland 合成器（例如 niri、Hyprland 等）中都能实现精准的窗口边界识别，项目采用了一种灵活的外部脚本调用机制：用户可通过 `windowDetection.command` 配置检测脚本，由脚本负责调用合成器的特定命令提取窗口位置，最终将数据转换为统一格式回传给 Mark Shot 消费。
+
+我们强烈欢迎并鼓励社区用户为各类桌面环境与 Wayland 合成器贡献适配脚本，以扩充软件的兼容性。
+
+#### 1. 脚本执行时的输入（环境变量）
+
+脚本被调用时，Mark Shot 会传入以下环境变量以提供当前截图的上下文信息：
+
+| 环境变量名称 | 数据类型 | 描述 |
+| :--- | :--- | :--- |
+| `MARK_SHOT_CONFIG` | 字符串 | 配置文件路径（通常为 `~/.config/mark-shot/config.json`） |
+| `MARK_SHOT_CAPTURE_OUTPUT` | 字符串 | 当前要捕获的输出显示器名称（如 `eDP-1`、`DP-2`） |
+| `MARK_SHOT_CAPTURE_ALL_OUTPUTS` | 整数 | `1` 表示捕获全部屏幕；`0` 表示仅捕获当前活动屏幕 |
+| `MARK_SHOT_CAPTURE_X` | 整数 | 待捕获区域在全局逻辑合成器中的 X 坐标起始点 |
+| `MARK_SHOT_CAPTURE_Y` | 整数 | 待捕获区域在全局逻辑合成器中的 Y 坐标起始点 |
+| `MARK_SHOT_CAPTURE_WIDTH` | 整数 | 待捕获区域的逻辑像素宽度 |
+| `MARK_SHOT_CAPTURE_HEIGHT` | 整数 | 待捕获区域的逻辑像素高度 |
+
+> [!NOTE]
+> 脚本返回的所有窗口坐标值必须使用**全局逻辑合成器坐标系**，该坐标系需要与 Qt 获取到的屏幕几何保持一致，从而避免在多屏缩放时发生位置偏移。
+
+#### 2. 约定的输出 JSON 数据格式
+
+脚本必须将检测到的窗口信息以 JSON 格式输出至标准输出（`stdout`）。Mark Shot 支持多种兼容的宽容解析格式：
+
+##### 根节点格式
+根节点可以是一个包含 `windows` 或 `windowGeometries` 数组的对象，也可以直接是包含窗口几何信息的数组。例如：
+- 方式 A（对象包裹）：`{ "windows": [ ... ] }` 或 `{ "windowGeometries": [ ... ] }`
+- 方式 B（对象本身即为窗口）：`{ "x": 100, "y": 100, "w": 400, "h": 300 }`
+- 方式 C（纯数组）：`[ ... ]`
+
+##### 窗口几何数据结构
+数组内的每一个元素（或根对象）可以表示为以下四种形式之一：
+
+- **键值对对象格式**：
+  直接提供位置和大小的整型字段。
+  - 横坐标键名支持：`x` 或 `left`
+  - 纵坐标键名支持：`y` 或 `top`
+  - 宽度键名支持：`width` 或 `w`
+  - 高度键名支持：`height` 或 `h`
+  *示例*：`{ "x": 100, "y": 200, "w": 800, "h": 600 }`
+
+- **子嵌套对象格式**：
+  使用 `at`（表示起始点 `[x, y]`）与 `size`（表示尺寸 `[width, height]`）字段。
+  *示例*：`{ "at": [100, 200], "size": [800, 600] }`
+
+- **数组及内嵌数组格式**：
+  直接包含 4 个整数的数组，代表 `[x, y, width, height]`。
+  也可以是对象中以 `rect` 命名的小数组。
+  *示例*：`[100, 200, 800, 600]` 或 `{ "rect": [100, 200, 800, 600] }`
+
+- **几何字符串格式**：
+  使用字符串描述几何，格式需符合 `x,y widthxheight`（允许包含负数与空格）。
+  也可以是对象中以 `geometry` 命名的字符串字段。
+  *示例*：`"100,200 800x600"` 或 `{ "geometry": "100,200 800x600" }`
+
+#### 3. 如何贡献适配脚本
+
+目前，仓库仅内置了适用于 niri 窗口管理器的适配器：`mark-shot-window-detection-niri`。
+
+如果您在 Hyprland、Sway、KDE (KWin Wayland) 或 GNOME (Mutter Wayland) 等环境中使用，欢迎编写适配脚本并向本项目提交 Pull Request。以下是不同环境的实现思路提示：
+- **Hyprland**：可以通过调用 `hyprctl clients -j` 解析生成的 JSON 信息。
+- **Sway**：可以使用 `swaymsg -t get_tree` 获取完整的树形窗口布局。
+- **KDE / KWin**：可以通过调用 KWin Script 获取窗口对象，或者查询相应的 D-Bus 接口获取。
+- **GNOME**：由于 GNOME Wayland 没有内置导出窗口位置的 CLI 命令，通常需借助 GNOME Shell 扩展读取窗口逻辑边界，再通过 D-Bus 对外暴露接口。
+
+若脚本执行失败或超时（默认为 `1000ms`），Mark Shot 将继续截图流程，并在 X11 模式下自动回退至内置的窗口检测器。
 
 手动安装时，必须同时安装 `mark-shot`、`mark-shot-ocr` 和 `mark-shot-translate`。否则贴图窗口可以打开，但复制图片文字与翻译功能无法调用后端脚本。
 

@@ -7,6 +7,7 @@
 #include <QRect>
 #include <QRectF>
 #include <QStringList>
+#include <QVector>
 #include <QWidget>
 
 #include <optional>
@@ -74,7 +75,11 @@ public:
         bool closeOnStart = true;
     };
 
-    explicit ShotWindow(QImage frozenFrame, QString outputName, QRect sourceGeometry = {}, QWidget *parent = nullptr);
+    explicit ShotWindow(QImage frozenFrame,
+                        QString outputName,
+                        QRect sourceGeometry = {},
+                        QVector<QRect> windowGeometries = {},
+                        QWidget *parent = nullptr);
     bool configureLayerShell(QScreen *screen);
     void startFullscreenAnnotation();
     void setImageNavigationEnabled(bool enabled);
