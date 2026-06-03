@@ -9,6 +9,16 @@ import subprocess
 import sys
 
 
+def default_model_dir():
+    xdg_data_home = os.environ.get("XDG_DATA_HOME", "").strip()
+    base = xdg_data_home if xdg_data_home else os.path.expanduser("~/.local/share")
+    return os.path.join(base, "mark-shot", "models")
+
+
+def configured_model_dir():
+    return os.environ.get("MARK_SHOT_OCR_MODEL_DIR", "").strip() or default_model_dir()
+
+
 def maybe_reexec_venv():
     if os.environ.get("MARK_SHOT_OCR_REEXEC") == "1":
         return
@@ -159,6 +169,20 @@ def build_rapidocr_engine(engine_class, backend):
                     "Rec.model_type": ModelType.SERVER,
                 }
             )
+
+        model_dir = configured_model_dir()
+        os.makedirs(model_dir, exist_ok=True)
+        for key in (
+            "Global.model_dir",
+            "Global.models_dir",
+            "Global.root_dir",
+            "Global.save_dir",
+            "ModelRoot",
+        ):
+            try:
+                return engine_class(params={**params, key: model_dir})
+            except Exception:
+                pass
 
         return engine_class(params=params)
     except Exception as exc:
