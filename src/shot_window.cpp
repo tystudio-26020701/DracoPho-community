@@ -19,11 +19,13 @@
 #include <QBoxLayout>
 #include <QComboBox>
 #include <QBrush>
-#include <QClipboard>
 #include <QContextMenuEvent>
 #include <QCoreApplication>
 #include <QCursor>
 #include <QDateTime>
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusMessage>
 #include <QDir>
 #include <QDirIterator>
 #include <QEvent>
@@ -106,6 +108,28 @@ constexpr int kImageWindowMinimumToolbarPadding = 24;
 constexpr qsizetype kMaxSharpViewportPixels = 50'000'000;
 constexpr double kSharpKernelRadius = 2.5;
 constexpr int kMinSharpRowsPerThread = 64;
+
+bool sendDesktopNotification(const QString &summary, const QString &body, int timeoutMs = 2500)
+{
+    QDBusInterface notifications(QStringLiteral("org.freedesktop.Notifications"),
+                                 QStringLiteral("/org/freedesktop/Notifications"),
+                                 QStringLiteral("org.freedesktop.Notifications"),
+                                 QDBusConnection::sessionBus());
+    if (!notifications.isValid()) {
+        return false;
+    }
+
+    QDBusMessage reply = notifications.call(QStringLiteral("Notify"),
+                                            QStringLiteral("mark-shot"),
+                                            static_cast<uint>(0),
+                                            QString(),
+                                            summary,
+                                            body,
+                                            QStringList(),
+                                            QVariantMap(),
+                                            timeoutMs);
+    return reply.type() != QDBusMessage::ErrorMessage;
+}
 
 QColor propertyIconInkForFill(const QColor &fillColor)
 {
@@ -1894,7 +1918,7 @@ ShotWindow::ShotWindow(QImage frozenFrame,
             : action == Action::Pin                  ? QStringLiteral("Pin")
             : action == Action::OcrCopy              ? QStringLiteral("OCR")
             : action == Action::Copy                 ? QStringLiteral("Ctrl+C")
-            : action == Action::Save                 ? QStringLiteral("Ctrl+S")
+            : action == Action::Save                 ? QStringLiteral("Save As")
             : action == Action::ToggleToolbarLayout  ? QStringLiteral("Layout")
             : action == Action::ToggleCaptureScope   ? QStringLiteral("F")
                                                      : QStringLiteral("Esc");
@@ -1950,7 +1974,7 @@ ShotWindow::ShotWindow(QImage frozenFrame,
              addToolbarButton(Action::Pin, QStringLiteral("Pin"), m_actionToolbar),
              addToolbarButton(Action::OcrCopy, QStringLiteral("OCR"), m_actionToolbar),
              addToolbarButton(Action::Copy, QStringLiteral("Ctrl+C"), m_actionToolbar),
-             addToolbarButton(Action::Save, QStringLiteral("Ctrl+S"), m_actionToolbar),
+             addToolbarButton(Action::Save, QStringLiteral("Save As"), m_actionToolbar),
              addToolbarButton(Action::Cancel, QStringLiteral("Esc"), m_actionToolbar),
          }) {
         button->setIconSize(QSize(20, 20));
@@ -2503,7 +2527,7 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
     } else if (action == Action::Copy) {
         connect(button, &QPushButton::clicked, this, [this] { copySelection(); });
     } else if (action == Action::Save) {
-        connect(button, &QPushButton::clicked, this, [this] { saveSelection(); });
+        connect(button, &QPushButton::clicked, this, [this] { saveSelectionAs(); });
     } else if (action == Action::Cancel) {
         connect(button, &QPushButton::clicked, this, [this] { close(); });
     }
@@ -7108,6 +7132,33 @@ void ShotWindow::saveSelection()
         return;
     }
 
+    const QString path = defaultSavePath();
+    if (output.save(path, "PNG")) {
+        const QString message = MS_TR("Saved to %1").arg(path);
+        // Keyboard save should finish without another dialog round-trip.
+        if (!sendDesktopNotification(QStringLiteral("Mark Shot"), message, 3000)) {
+            showToast(message, 2500);
+        }
+        QTimer::singleShot(150, this, [this] { close(); });
+        return;
+    }
+
+    showToast(MS_TR("Save failed"), 2500);
+}
+
+void ShotWindow::saveSelectionAs()
+{
+    commitTextEditor();
+
+    if (!hasUsableSelection()) {
+        return;
+    }
+
+    const QImage output = renderedSelection();
+    if (output.isNull()) {
+        return;
+    }
+
     if (m_openWithPanel) {
         m_openWithPanel->hide();
     }
@@ -7141,9 +7192,15 @@ void ShotWindow::saveSelection()
     connect(dialog, &QFileDialog::accepted, this, [this, dialog, output] {
         const QStringList files = dialog->selectedFiles();
         if (!files.isEmpty() && output.save(files.first(), "PNG")) {
-            close();
+            const QString message = MS_TR("Saved to %1").arg(files.first());
+            // Prefer desktop notifications because the window may close immediately after saving.
+            if (!sendDesktopNotification(QStringLiteral("Mark Shot"), message, 3000)) {
+                showToast(message, 2500);
+            }
+            QTimer::singleShot(150, this, [this] { close(); });
             return;
         }
+        showToast(MS_TR("Save failed"), 2500);
         show();
         raise();
         activateWindow();

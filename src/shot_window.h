@@ -238,6 +238,7 @@ private:
     void showToast(const QString &text, int durationMs = 2000);
     QString saveSelectionToTempFile() const;
     void setCurrentColor(QColor color);
+    void saveSelectionAs();
     void saveSelection();
     void revealSelectionInfo();
     void setTool(Tool tool);

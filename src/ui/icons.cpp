@@ -86,7 +86,7 @@ QString actionName(ShotWindow::Action action)
     case ShotWindow::Action::Copy:
         return QStringLiteral("Copy");
     case ShotWindow::Action::Save:
-        return QStringLiteral("Save");
+        return QStringLiteral("Save As");
     case ShotWindow::Action::Cancel:
         return QStringLiteral("Cancel");
     }
