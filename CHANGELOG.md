@@ -2,13 +2,18 @@
 
 ## 0.1.15 - 2026-06-03
 
-### Highlights
+### Features & Enhancements
 
-- Added draggable scrolling screenshot region adjustment from the direction control, with cleanup for stale overlay pixels after region movement.
-- Removed the scrolling preview panel's bottom scrubber and replaced it with direct dragging on the overview viewport frame.
-- Added mouse wheel navigation inside the scrolling preview panel, with automatic live-follow restoration at the captured edge.
-- Added explicit CMake switches for LayerShellQt support so release builds can produce both layer-shell and no-layer-shell variants.
-- Added AppImage release packaging for both `layershell` and `nolayershell` x86_64 builds.
+- **Flexible Scrolling Area Adjustment**: Supported dragging edges from the direction controls to dynamically resize the scrolling capture region on the fly.
+- **Interactive Overview Navigation**: Replaced the bottom scrollbar in the preview panel with direct viewport dragging on the mini-map, offering a cleaner and more intuitive navigation experience.
+- **Seamless Live-Follow Scrolling**: Added mouse-wheel navigation within the preview panel, which automatically snaps back to tracking live capture updates once you scroll back to the active edge.
+- **Configurable Window Borders Detection**: Introduced an external script execution mechanism to auto-detect window boundaries on Wayland. Included a default helper for `niri` window manager and supported custom detection scripts for other compositors (e.g., Hyprland, Sway).
+- **Dual-Mode Desktop Builds**: Added dedicated compilation flags and released dual-variant binaries (supporting native Wayland Layer Shell layer and standard XDG window shells separately) to ensure compatibility across diverse desktop environments.
+- **AppImage Formats Support**: Provided portable x86_64 AppImage packages for both `layershell` and `nolayershell` variants, simplifying deployment on modern Linux distributions.
+
+### Bug Fixes
+
+- **Persistent Clipboard Storage**: Resolved clipboard data loss issues after application exit. Images are now kept reliably in the system clipboard via background integration with Wayland (`wl-copy`) and X11 (`xclip`).
 
 ### Release Artifacts
 
