@@ -1,6 +1,7 @@
 #include "screen_capture.h"
 #include "shot_window.h"
 #include "ui/i18n.h"
+#include "window_detection.h"
 
 #include <QApplication>
 #include <QByteArray>
@@ -191,6 +192,8 @@ int main(int argc, char *argv[])
     const bool allOutputs = parser.isSet(allOutputsOption);
     const QRect captureGeometry = allOutputs ? virtualScreensGeometry() : (screen ? screen->geometry() : QRect());
     const QString outputName = (!allOutputs && screen) ? screen->name() : QString();
+    const QVector<QRect> windowGeometries =
+        markshot::collectConfiguredWindowGeometries(captureGeometry, outputName, allOutputs);
     CaptureResult capture = captureScreenFrame({outputName, captureGeometry, allOutputs});
     if (capture.image.isNull()) {
         QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), capture.error);
@@ -200,7 +203,7 @@ int main(int argc, char *argv[])
     const QRect sourceGeometry = capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()
         ? capture.sourceGeometry
         : captureGeometry;
-    ShotWindow *window = new ShotWindow(capture.image, capture.outputName, sourceGeometry);
+    ShotWindow *window = new ShotWindow(capture.image, capture.outputName, sourceGeometry, windowGeometries);
     if (screen && !allOutputs) {
         window->setScreen(screen);
     }
