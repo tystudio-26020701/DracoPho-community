@@ -131,6 +131,10 @@ Pinned windows read OCR and translation settings from `~/.config/mark-shot/confi
 {
   "windowDetection": {
     "command": "mark-shot-window-detection-niri",
+    "env": {
+      "MARK_SHOT_NIRI_PANEL_EDGE": "top",
+      "MARK_SHOT_NIRI_OFFSET_Y": 0
+    },
     "timeoutMs": 1000
   },
   "ocr": {
@@ -153,6 +157,8 @@ Pinned windows read OCR and translation settings from `~/.config/mark-shot/confi
   }
 }
 ```
+
+`windowDetection.env` (alias: `environment`) is passed to the detection script as environment variables. The bundled niri script supports `MARK_SHOT_NIRI_PANEL_EDGE` (`top`, `bottom`, `left`, `right`, or `none`) and pixel adjustments through `MARK_SHOT_NIRI_OFFSET_X`, `MARK_SHOT_NIRI_OFFSET_Y`, `MARK_SHOT_NIRI_OFFSET_WIDTH`, and `MARK_SHOT_NIRI_OFFSET_HEIGHT`.
 
 ### Pre-Capture Window Detection & Script Contribution Guide
 

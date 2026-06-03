@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QJsonValue>
+#include <QMap>
 #include <QProcess>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
@@ -28,6 +29,7 @@ constexpr int kMaxWindowDetectionTimeoutMs = 10000;
 struct WindowDetectionConfig {
     QString command;
     QString workingDirectory;
+    QMap<QString, QString> environment;
     int timeoutMs = kDefaultWindowDetectionTimeoutMs;
 };
 
@@ -91,6 +93,41 @@ std::optional<int> namedIntValue(const QJsonObject &object, const QStringList &k
         }
     }
     return std::nullopt;
+}
+
+std::optional<QString> environmentStringValue(const QJsonValue &value)
+{
+    if (value.isString()) {
+        return value.toString();
+    }
+    if (value.isDouble()) {
+        return QString::number(value.toDouble(), 'g', 15);
+    }
+    if (value.isBool()) {
+        return value.toBool() ? QStringLiteral("1") : QStringLiteral("0");
+    }
+    return std::nullopt;
+}
+
+QMap<QString, QString> environmentOverrides(const QJsonObject &windowDetection)
+{
+    QJsonObject environment = objectValue(windowDetection, QStringLiteral("env"));
+    const QJsonObject namedEnvironment = objectValue(windowDetection, QStringLiteral("environment"));
+    for (auto it = namedEnvironment.constBegin(); it != namedEnvironment.constEnd(); ++it) {
+        environment.insert(it.key(), it.value());
+    }
+
+    QMap<QString, QString> overrides;
+    for (auto it = environment.constBegin(); it != environment.constEnd(); ++it) {
+        const QString key = it.key().trimmed();
+        if (key.isEmpty()) {
+            continue;
+        }
+        if (const std::optional<QString> value = environmentStringValue(it.value())) {
+            overrides.insert(key, *value);
+        }
+    }
+    return overrides;
 }
 
 std::optional<QRect> rectFromArray(const QJsonArray &array)
@@ -263,6 +300,7 @@ std::optional<WindowDetectionConfig> readWindowDetectionConfig()
     }
     config.command = windowDetection.value(QStringLiteral("command")).toString().trimmed();
     config.workingDirectory = windowDetection.value(QStringLiteral("workingDirectory")).toString().trimmed();
+    config.environment = environmentOverrides(windowDetection);
     if (config.workingDirectory.isEmpty()) {
         config.workingDirectory = windowDetection.value(QStringLiteral("cwd")).toString().trimmed();
     }
@@ -278,7 +316,8 @@ std::optional<WindowDetectionConfig> readWindowDetectionConfig()
 
 QProcessEnvironment scriptEnvironment(const QRect &captureGeometry,
                                       const QString &outputName,
-                                      bool allOutputs)
+                                      bool allOutputs,
+                                      const QMap<QString, QString> &overrides)
 {
     QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
     environment.insert(QStringLiteral("MARK_SHOT_CONFIG"), appConfigPath());
@@ -291,6 +330,9 @@ QProcessEnvironment scriptEnvironment(const QRect &captureGeometry,
         environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_Y"), QString::number(geometry.y()));
         environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_WIDTH"), QString::number(geometry.width()));
         environment.insert(QStringLiteral("MARK_SHOT_CAPTURE_HEIGHT"), QString::number(geometry.height()));
+    }
+    for (auto it = overrides.constBegin(); it != overrides.constEnd(); ++it) {
+        environment.insert(it.key(), it.value());
     }
     return environment;
 }
@@ -314,7 +356,10 @@ QVector<QRect> collectConfiguredWindowGeometries(const QRect &captureGeometry,
     QProcess process;
     process.setProgram(shell);
     process.setArguments({QStringLiteral("-c"), config->command});
-    process.setProcessEnvironment(scriptEnvironment(captureGeometry, outputName, allOutputs));
+    process.setProcessEnvironment(scriptEnvironment(captureGeometry,
+                                                   outputName,
+                                                   allOutputs,
+                                                   config->environment));
     if (!config->workingDirectory.isEmpty()) {
         process.setWorkingDirectory(expandUserPath(config->workingDirectory));
     }
