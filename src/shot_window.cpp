@@ -2296,6 +2296,7 @@ void ShotWindow::setImageNavigationEnabled(bool enabled)
 void ShotWindow::enterFullscreenAnnotation(bool resetAnnotations)
 {
     commitTextEditor();
+    emit selectionActivated(this);
     if (m_colorPalette) {
         m_colorPalette->hide();
     }
@@ -2902,6 +2903,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     if (event->button() != Qt::LeftButton) {
         if (m_mode == Mode::Selecting) {
             if (event->button() == Qt::RightButton) {
+                emit sessionCancelRequested();
                 close();
                 event->accept();
                 return;
@@ -3434,6 +3436,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
             setFullscreenActionButtonsVisible(false);
             m_toolbar->show();
             m_actionToolbar->show();
+            emit selectionActivated(this);
             revealSelectionInfo();
             updateToolbarGeometry();
             updateActionToolbarGeometry();
@@ -3454,6 +3457,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         setFullscreenActionButtonsVisible(false);
         m_toolbar->show();
         m_actionToolbar->show();
+        emit selectionActivated(this);
         revealSelectionInfo();
         updateToolbarGeometry();
         updateActionToolbarGeometry();
@@ -3580,6 +3584,7 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
     }
 
     if (event->key() == Qt::Key_Escape) {
+        emit sessionCancelRequested();
         close();
         return;
     }

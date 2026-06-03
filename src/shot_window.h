@@ -30,6 +30,8 @@ class ColorPicker;
 }
 
 class ShotWindow final : public QWidget {
+    Q_OBJECT
+
 public:
     enum class Action {
         ToolMove,
@@ -83,6 +85,10 @@ public:
     bool configureLayerShell(QScreen *screen);
     void startFullscreenAnnotation();
     void setImageNavigationEnabled(bool enabled);
+
+signals:
+    void selectionActivated(ShotWindow *window);
+    void sessionCancelRequested();
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
