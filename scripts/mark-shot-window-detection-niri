@@ -21,6 +21,107 @@ def niri_json(command):
     return json.loads(result.stdout)
 
 
+def niri_layers():
+    try:
+        layers = niri_json(["layers"])
+    except (RuntimeError, subprocess.SubprocessError, json.JSONDecodeError):
+        return []
+    return layers if isinstance(layers, list) else []
+
+
+def strip_json_comments(text):
+    result = []
+    index = 0
+    in_string = False
+    escaped = False
+    while index < len(text):
+        char = text[index]
+        next_char = text[index + 1] if index + 1 < len(text) else ""
+
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            result.append(char)
+            index += 1
+            continue
+
+        if char == "/" and next_char == "/":
+            index += 2
+            while index < len(text) and text[index] not in "\r\n":
+                index += 1
+            continue
+
+        if char == "/" and next_char == "*":
+            index += 2
+            while index + 1 < len(text) and not (text[index] == "*" and text[index + 1] == "/"):
+                index += 1
+            index += 2
+            continue
+
+        result.append(char)
+        index += 1
+
+    return "".join(result)
+
+
+def config_home():
+    return os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+
+
+def waybar_config_paths():
+    names = ("config", "config.jsonc", "config.json")
+    candidates = [os.path.join(config_home(), "waybar", name) for name in names]
+    xdg_dirs = os.environ.get("XDG_CONFIG_DIRS", "/etc/xdg")
+    for base in xdg_dirs.split(":"):
+        if base:
+            candidates.extend(os.path.join(base, "waybar", name) for name in names)
+    return candidates
+
+
+def waybar_position():
+    for path in waybar_config_paths():
+        try:
+            with open(path, "r", encoding="utf-8") as file:
+                payload = json.loads(strip_json_comments(file.read()))
+        except (OSError, json.JSONDecodeError):
+            continue
+
+        configs = payload if isinstance(payload, list) else [payload]
+        for config in configs:
+            if not isinstance(config, dict):
+                continue
+            position = config.get("position")
+            if position in ("top", "bottom", "left", "right"):
+                return position
+
+    return "top"
+
+
+def panel_edge(layers, output_name):
+    override = os.environ.get("MARK_SHOT_NIRI_PANEL_EDGE", "").strip().lower()
+    if override in ("top", "bottom", "left", "right", "none"):
+        return None if override == "none" else override
+
+    for layer in layers:
+        if not isinstance(layer, dict):
+            continue
+        if output_name and layer.get("output") != output_name:
+            continue
+        if layer.get("namespace") == "waybar":
+            return waybar_position()
+    return None
+
+
 def pair(value):
     if not isinstance(value, list) or len(value) < 2:
         return None
@@ -59,6 +160,8 @@ def intersects(left, right):
 
 
 def append_rect(result, seen, rect):
+    if rect[2] <= 1 or rect[3] <= 1:
+        return
     key = tuple(rect)
     if key in seen:
         return
@@ -69,6 +172,33 @@ def append_rect(result, seen, rect):
         "width": rect[2],
         "height": rect[3],
     })
+
+
+def rect_adjustment():
+    return (
+        env_int("MARK_SHOT_NIRI_OFFSET_X") or 0,
+        env_int("MARK_SHOT_NIRI_OFFSET_Y") or 0,
+        env_int("MARK_SHOT_NIRI_OFFSET_WIDTH") or 0,
+        env_int("MARK_SHOT_NIRI_OFFSET_HEIGHT") or 0,
+    )
+
+
+def adjusted_rect(rect):
+    dx, dy, dw, dh = rect_adjustment()
+    x, y, width, height = rect
+    adjusted = (x + dx, y + dy, width + dw, height + dh)
+    if adjusted[2] <= 1 or adjusted[3] <= 1:
+        return None
+    return adjusted
+
+
+def append_candidate(result, seen, rect, capture):
+    rect = adjusted_rect(rect)
+    if rect is None:
+        return
+    if capture is not None and not intersects(rect, capture):
+        return
+    append_rect(result, seen, rect)
 
 
 def output_origin(outputs, output_name):
@@ -204,7 +334,7 @@ def active_column(entries, workspace_info):
     return latest["column"]
 
 
-def tiled_rects_for_workspace(windows, outputs, workspace_id, workspace_info):
+def tiled_rects_for_workspace(windows, outputs, layers, workspace_id, workspace_info):
     entries = tiled_windows(windows, workspace_id)
     if not entries:
         return []
@@ -251,10 +381,17 @@ def tiled_rects_for_workspace(windows, outputs, workspace_id, workspace_info):
     }
 
     result = []
+    edge = panel_edge(layers, output_name)
     for column, column_entries in columns.items():
         ordered = sorted(column_entries, key=lambda entry: entry["row"])
         total_height = sum(entry["tile_size"][1] for entry in ordered)
-        y = origin_y + max(0.0, (output_height - total_height) / 2.0)
+        remaining_height = max(0.0, output_height - total_height)
+        if edge == "top":
+            y = origin_y + remaining_height
+        elif edge == "bottom":
+            y = origin_y
+        else:
+            y = origin_y + remaining_height / 2.0
         for entry in ordered:
             offset = pair(entry["layout"].get("window_offset_in_tile")) or (0.0, 0.0)
             width = int(round(entry["window_size"][0]))
@@ -274,7 +411,10 @@ def main():
     outputs = niri_json(["outputs"])
     workspaces = niri_json(["workspaces"])
     windows = niri_json(["windows"])
-    if not isinstance(outputs, dict) or not isinstance(workspaces, list) or not isinstance(windows, list):
+    layers = niri_layers()
+    if (not isinstance(outputs, dict)
+            or not isinstance(workspaces, list)
+            or not isinstance(windows, list)):
         raise RuntimeError("unexpected niri JSON shape")
 
     workspace_outputs = workspace_targets(workspaces)
@@ -286,15 +426,11 @@ def main():
         rect = window_rect(window, outputs, workspace_outputs)
         if rect is None:
             continue
-        if capture is not None and not intersects(rect, capture):
-            continue
-        append_rect(result, seen, rect)
+        append_candidate(result, seen, rect, capture)
 
     for workspace_id, workspace_info in workspace_outputs.items():
-        for rect in tiled_rects_for_workspace(windows, outputs, workspace_id, workspace_info):
-            if capture is not None and not intersects(rect, capture):
-                continue
-            append_rect(result, seen, rect)
+        for rect in tiled_rects_for_workspace(windows, outputs, layers, workspace_id, workspace_info):
+            append_candidate(result, seen, rect, capture)
 
     print(json.dumps({"windows": result}, separators=(",", ":")))
 
