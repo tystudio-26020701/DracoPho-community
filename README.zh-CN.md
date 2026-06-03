@@ -369,6 +369,13 @@ cmake --install build --prefix "$HOME/.local"
 
 ## 发版说明
 
+### 0.1.15
+
+- 新增滚动截图区域拖动调整，并修复移动区域后的覆盖层残留像素。
+- 移除滚动预览面板底部滚动条，改为直接拖动总览图中的视口框。
+- 新增滚动预览面板内鼠标滚轮导航，到达捕获边缘后恢复实时跟随。
+- 新增 LayerShellQt 显式构建开关，并新增 `layershell` 与 `nolayershell` 两份 x86_64 AppImage 发布产物。
+
 ### 0.1.14
 
 - 改进 portal screencast 协商、裁剪尺寸归一化和首帧等待时序，提高滚动截图稳定性。

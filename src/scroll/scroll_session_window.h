@@ -3,7 +3,9 @@
 #include "scroll/stitcher.h"
 
 #include <QImage>
+#include <QPoint>
 #include <QRect>
+#include <QRegion>
 #include <QString>
 #include <QVector>
 #include <QWidget>
@@ -12,10 +14,11 @@
 
 class QLabel;
 class QKeyEvent;
+class QMouseEvent;
 class QPushButton;
 class QScreen;
-class QSlider;
 class QTimer;
+class QWheelEvent;
 
 namespace markshot::scroll {
 
@@ -25,8 +28,8 @@ namespace markshot::scroll {
 // desktop: a border drawn just outside the captured region (so grim
 // never records it), and a preview panel docked to the region's right side that
 // shows the full stitched image plus a marker for the current capture range.
-// The input mask keeps only the border edges and the preview panel interactive,
-// so the user can keep scrolling the page underneath.
+// The input mask keeps the preview panel interactive, so the user can keep
+// scrolling the page underneath.
 class ScrollSessionWindow final : public QWidget {
     Q_OBJECT
 
@@ -42,11 +45,16 @@ public:
     bool configureLayerShell(QScreen *screen);
 
 protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 
 private:
     void captureTick();
@@ -61,9 +69,12 @@ private:
     void refreshControlLabels();
     void dumpDebugFrame(const QImage &frame, const char *tag);
     QImage currentResult() const;
+    QRect captureBoundsGlobal() const;
+    void setRegionGeometry(QRect geometry);
+    QRegion overlayPaintRegion() const;
 
-    // Geometry shared by the scrubber and the painter so their notions of "how
-    // much of the long image is visible" and "how far the slider can travel"
+    // Geometry shared by preview interaction and painting so their notions of
+    // "how much of the long image is visible" and "how far the view can travel"
     // never diverge (an off-by-one there makes the view jump when content is
     // prepended). All lengths are in stitched-image pixels along the scroll axis.
     struct PreviewLayout {
@@ -76,13 +87,22 @@ private:
         int viewportLen = 0;    // source px visible in the detail view
         int maxScrub = 0;       // longLen - viewportLen, clamped to >= 0
     };
-    // The image preview rectangle, between the status row and the scrubber.
+    // The image preview rectangle, between the status row and the control bar.
     QRect imageAreaRect() const;
     // Derives the preview layout from the current result, axis, and panel rects.
     PreviewLayout computePreviewLayout() const;
-    // Re-derives the scrubber range, then either follows the current captured
+    // Re-derives the preview range, then either follows the current captured
     // frame or shifts the manual view when content was prepended.
-    void syncScrubber(const StitchResult &outcome);
+    void syncPreviewScroll(const StitchResult &outcome);
+    QRect overviewTargetRect(const PreviewLayout &layout, const QImage &result) const;
+    QRect overviewViewportRect(const QRect &target, const PreviewLayout &layout) const;
+    int scrubPosFromOverviewPoint(const QPoint &point,
+                                  const QRect &target,
+                                  const PreviewLayout &layout,
+                                  int markerOffsetPx) const;
+    void setScrubPosition(int pos, bool followAtEnd);
+    bool beginOverviewDrag(const QPoint &point);
+    void updateOverviewDrag(const QPoint &point);
 
     // Maps the captured region (global compositor coordinates) into this
     // overlay's local coordinate space.
@@ -102,15 +122,27 @@ private:
     QString m_statusText;
     int m_lastAppend = 0;       // pixels added by the most recent frame
 
-    // Non-destructive scrubber: the whole long image is always kept; the slider
-    // only moves which window of it the detail view shows. While following, it
-    // tracks the current captured frame; dragging it away stops following until
-    // the user releases it back at the end.
+    // Non-destructive preview position: the whole long image is always kept;
+    // dragging the overview frame or using the wheel only moves which window of
+    // it the detail view shows. While following, it tracks the current captured
+    // frame until the user moves away from the live edge.
     bool m_following = true;
     int m_scrubPos = 0;         // top/left of the viewed window, stitched pixels
     int m_capturePos = 0;       // current screen selection top/left in stitched pixels
     int m_captureLen = 0;       // current screen selection extent along the scroll axis
     int m_debugFrameDumpCount = 0;
+
+    // Axis button drag-to-translate state. Dragging the axis button moves the
+    // entire capture region along the current scroll axis, allowing the user to
+    // reach content beyond the normal scroll range.
+    bool m_axisDragging = false;
+    bool m_axisDragArmed = false;   // press recorded, waiting for threshold
+    QPoint m_axisDragStartGlobal;
+    QRect m_axisDragStartGeometry;
+    QRegion m_transientPaintMask;
+    bool m_restoreMaskAfterPaint = false;
+    bool m_overviewDragging = false;
+    int m_overviewDragOffsetPx = 0;
 
     QWidget *m_controlBar = nullptr;
     QPushButton *m_axisButton = nullptr;
@@ -119,7 +151,6 @@ private:
     QPushButton *m_saveButton = nullptr;
     QPushButton *m_copyButton = nullptr;
     QPushButton *m_cancelButton = nullptr;
-    QSlider *m_scrubber = nullptr;
 };
 
 }  // namespace markshot::scroll

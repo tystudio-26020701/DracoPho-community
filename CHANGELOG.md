@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.15 - 2026-06-03
+
+### Highlights
+
+- Added draggable scrolling screenshot region adjustment from the direction control, with cleanup for stale overlay pixels after region movement.
+- Removed the scrolling preview panel's bottom scrubber and replaced it with direct dragging on the overview viewport frame.
+- Added mouse wheel navigation inside the scrolling preview panel, with automatic live-follow restoration at the captured edge.
+- Added explicit CMake switches for LayerShellQt support so release builds can produce both layer-shell and no-layer-shell variants.
+- Added AppImage release packaging for both `layershell` and `nolayershell` x86_64 builds.
+
+### Release Artifacts
+
+- `mark-shot-v0.1.15-linux-x86_64.tar.gz`
+- `mark-shot-v0.1.15-linux-arm64.tar.gz`
+- `mark-shot_0.1.15_amd64.deb`
+- `mark-shot_0.1.15_arm64.deb`
+- `mark-shot-v0.1.15-linux-x86_64-layershell.AppImage`
+- `mark-shot-v0.1.15-linux-x86_64-nolayershell.AppImage`
+
 ## 0.1.14 - 2026-06-02
 
 ### Highlights
