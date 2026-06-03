@@ -212,6 +212,38 @@ Each element in the array (or the root object itself) can take one of the follow
   Alternatively, specified under the `geometry` property of an object.
   *Example*: `"100,200 800x600"` or `{ "geometry": "100,200 800x600" }`
 
+##### Complete JSON Output Example
+
+```json
+{
+  "windows": [
+    {
+      "x": 100,
+      "y": 150,
+      "width": 800,
+      "height": 600
+    },
+    {
+      "left": 950,
+      "top": 150,
+      "w": 400,
+      "h": 300
+    },
+    {
+      "at": [100, 800],
+      "size": [800, 450]
+    },
+    {
+      "rect": [950, 800, 400, 300]
+    },
+    {
+      "geometry": "100,1300 800x600"
+    },
+    [950, 1300, 400, 300]
+  ]
+}
+```
+
 #### 3. How to Contribute Adapters
 
 Currently, the repository only ships an adapter script for the niri window manager: `mark-shot-window-detection-niri`.
