@@ -1,6 +1,7 @@
 #include "scroll/scroll_session_window.h"
 
 #include "annotation_launch.h"
+#include "clipboard_image.h"
 #include "debug_log.h"
 #include "screen_capture.h"
 #include "ui/i18n.h"
@@ -10,10 +11,6 @@
 #include <LayerShellQt/Window>
 #endif
 
-#include <QApplication>
-#include <QBuffer>
-#include <QByteArray>
-#include <QClipboard>
 #include <QCloseEvent>
 #include <QDateTime>
 #include <QDir>
@@ -28,8 +25,6 @@
 #include <QPainterPath>
 #include <QPaintEvent>
 #include <QPixmap>
-#include <QProcess>
-#include <QProcessEnvironment>
 #include <QPushButton>
 #include <QRegion>
 #include <QResizeEvent>
@@ -39,7 +34,6 @@
 #include <QShowEvent>
 #include <QSignalBlocker>
 #include <QStandardPaths>
-#include <QTemporaryFile>
 #include <QSlider>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -891,49 +885,7 @@ void ScrollSessionWindow::copyResult()
         return;
     }
 
-    // Qt's own clipboard owner is destroyed when this window closes, which on
-    // Wayland drops the clipboard contents. Hand the image to a detached
-    // wl-copy (xclip on X11) so it survives independently. Mirrors
-    // ShotWindow::copySelection.
-    if (QClipboard *clipboard = QApplication::clipboard()) {
-        clipboard->setImage(result);
-    }
-
-    QByteArray png;
-    QBuffer buffer(&png);
-    buffer.open(QIODevice::WriteOnly);
-    result.save(&buffer, "PNG");
-    buffer.close();
-
-    const bool isWayland = QProcessEnvironment::systemEnvironment()
-                               .value(QStringLiteral("XDG_SESSION_TYPE"))
-                               .toLower()
-        == QStringLiteral("wayland");
-
-    QTemporaryFile tempFile(QDir::tempPath() + QStringLiteral("/mark-shot-clipboard-XXXXXX.png"));
-    tempFile.setAutoRemove(false);
-    if (tempFile.open()) {
-        tempFile.write(png);
-        const QString tempPath = tempFile.fileName();
-        tempFile.close();
-
-        if (isWayland) {
-            QProcess::startDetached(
-                QStringLiteral("sh"),
-                {QStringLiteral("-c"),
-                 QStringLiteral("wl-copy --foreground --type image/png < \"$1\"; rm -f \"$1\""),
-                 QStringLiteral("mark-shot-clipboard"),
-                 tempPath});
-        } else {
-            QProcess::startDetached(
-                QStringLiteral("sh"),
-                {QStringLiteral("-c"),
-                 QStringLiteral("xclip -selection clipboard -t image/png < \"$1\"; rm -f \"$1\""),
-                 QStringLiteral("mark-shot-clipboard"),
-                 tempPath});
-        }
-    }
-
+    markshot::copyImageToClipboard(result);
     close();
 }
 
