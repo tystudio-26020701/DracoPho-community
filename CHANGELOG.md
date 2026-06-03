@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.16 - 2026-06-04
+
+### Features & Enhancements
+
+- **Startup Overlay Tools**: Added a Color Picker (hotkey `C`, supports loupe resizing via scroll wheel and copying HEX/RGB/HSL/HSV/Qt formats) and a Ruler (hotkey `R`, measures coordinates, area, diagonal, and size) available before selecting a capture region.
+- **Multi-Screen Capture Sessions**: Reconfigured capture logic to fully support simultaneous screen capture and multi-window linkage across multiple displays.
+- **Configurable Default Tools & Color**: Supported defining initial annotation tools (`defaultTool`, `fullscreenDefaultTool`) and `defaultColor` in the application configuration, overridable via CLI flags.
+- **Enhanced Niri Window Detection**: Allowed configuring `env` (or `environment`) blocks in the window detection config to pass variables like offsets (`MARK_SHOT_NIRI_OFFSET_*`) and panel edges to the detection script, resolving alignment bounds and filtering tiny windows.
+
+### Release Artifacts
+
+- `mark-shot-v0.1.16-linux-x86_64.tar.gz`
+- `mark-shot-v0.1.16-linux-arm64.tar.gz`
+- `mark-shot_0.1.16_amd64.deb`
+- `mark-shot_0.1.16_arm64.deb`
+- `mark-shot-v0.1.16-linux-x86_64-layershell.AppImage`
+- `mark-shot-v0.1.16-linux-x86_64-nolayershell.AppImage`
+
 ## 0.1.15 - 2026-06-03
 
 ### Features & Enhancements
