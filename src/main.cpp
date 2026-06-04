@@ -7,6 +7,7 @@
 #include <QByteArray>
 #include <QColor>
 #include <QCommandLineParser>
+#include <QCoreApplication>
 #include <QCursor>
 #include <QFile>
 #include <QFileInfo>
@@ -447,6 +448,11 @@ ShotWindow *showCaptureWindow(QScreen *screen,
 
 int main(int argc, char *argv[])
 {
+    // Capture geometry must follow compositor output coordinates. Do not let
+    // QT_FONT_DPI rewrite QScreen metrics before the overlay is created.
+    QCoreApplication::setAttribute(Qt::AA_Use96Dpi, true);
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
     QGuiApplication::setDesktopFileName(QStringLiteral("mark-shot"));
     disableQtPortalServicesForHostApp();
 
