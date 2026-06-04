@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.18 - 2026-06-04
+
+### Features & Enhancements
+
+- **Configurable Shortcuts**: Added full support for customizing tool hotkeys, global action hotkeys, and startup tool hotkeys through `shortcuts` or `hotkeys` configurations, allowing extensive configuration aliases (e.g. `annotation.shortcuts`).
+- **Pinned Window Border**: Added border settings (`borderEnabled`, `borderColor`, `borderWidth`) for pinned sticker windows, customizable via booleans, nested config objects, or direct properties.
+- **Color Picker User Experience**: Tweaked the color picker copy behavior to add a short UI exit delay (180ms) for smoother clipboard transition.
+
+### Bug Fixes
+
+- **OCR Dependency Diagnostics**: Improved OCR error detection to recognize missing Python dependencies (e.g. `rapidocr` or `tesseract` import errors) in stdout/stderr and display friendly missing-backend notifications.
+
+### Release Artifacts
+
+- `mark-shot-v0.1.18-linux-x86_64.tar.gz`
+- `mark-shot-v0.1.18-linux-arm64.tar.gz`
+- `mark-shot_0.1.18_amd64.deb`
+- `mark-shot_0.1.18_arm64.deb`
+- `mark-shot_0.1.18_fedora_x86_64.rpm`
+- `mark-shot_0.1.18_fedora_aarch64.rpm`
+- `mark-shot-v0.1.18-linux-x86_64-layershell.AppImage`
+- `mark-shot-v0.1.18-linux-x86_64-nolayershell.AppImage`
+
 ## 0.1.17 - 2026-06-04
 
 ### Features & Enhancements
