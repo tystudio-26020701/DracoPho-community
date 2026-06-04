@@ -478,6 +478,14 @@ cmake --install build --prefix "$HOME/.local"
 
 ---
 
+## 反馈与交流
+
+扫描下方二维码可加入使用反馈群：
+
+![反馈群](.doc/feedback-group.png)
+
+---
+
 ## 许可证说明
 
 本项目基于 **MIT 许可证** 开源，详情请参阅 [LICENSE](LICENSE) 文件。
