@@ -123,7 +123,6 @@ private:
     bool m_paused = false;
     bool m_layerShell = false;
     bool m_panelOnlyWindow = false;
-    bool m_panellessWindow = false;
     QVector<std::uint8_t> m_lastSignature;
     QString m_statusText;
     int m_lastAppend = 0;       // pixels added by the most recent frame

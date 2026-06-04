@@ -2587,6 +2587,10 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
     button->setFocusPolicy(Qt::NoFocus);
     button->setToolTip(QStringLiteral("%1 (%2)").arg(markshot::i18n::translate(markshot::ui::actionName(action)), shortcutText));
     button->setProperty("action", markshot::ui::actionName(action));
+    if (action == Action::ScrollCapture && isGnomeWaylandSession()) {
+        button->setEnabled(false);
+        button->setToolTip(MS_TR("Scroll capture is not supported on GNOME Wayland."));
+    }
     if (!parentToolbar && action == Action::ToolMove) {
         button->installEventFilter(this);
     }
@@ -7514,16 +7518,17 @@ void ShotWindow::startScrollCapture()
         return;
     }
 
-    const QString outputName = m_outputName;
-    QScreen *targetScreen = screen();
-    QPointer<ShotWindow> self(this);
-
     if (isGnomeWaylandSession()) {
         QMessageBox::information(
             this,
             MS_TR("Scroll Capture"),
-            MS_TR("Scroll with the mouse wheel or touchpad.\nPress Enter to finish, Esc to cancel.\nDo not click the page before finishing."));
+            MS_TR("Scroll capture is not supported on GNOME Wayland."));
+        return;
     }
+
+    const QString outputName = m_outputName;
+    QScreen *targetScreen = screen();
+    QPointer<ShotWindow> self(this);
 
     // On X11, QScreen::grabWindow captures visible top-level windows. Hide the
     // selection UI and give the compositor one repaint before seeding the scroll
