@@ -2,7 +2,12 @@
 
 [English README](README.md)
 
-<video src="https://github.com/user-attachments/assets/c2298867-06b4-404d-87bc-62ab8d81088b" width="100%" controls></video>
+<details>
+<summary>演示视频</summary>
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/c2298867-06b4-404d-87bc-62ab8d81088b" width="100%" controls></video>
+</p>
+</details>
 
 `mark-shot` 是一款基于 Qt 6 开发的高性能截图标注工具。项目最初针对 `niri` 等 Wayland 窗口管理器设计，也支持在 X11/GNOME 桌面环境中完成常规截图与标注工作流。
 
@@ -192,25 +197,30 @@ Mark Shot 会从 `~/.config/mark-shot/config.json` 读取应用配置。贴图�
 }
 ```
 
-`annotation.defaultTool` 用于指定普通选区完成后默认选中的工具。`annotation.fullscreenDefaultTool` 用于指定全屏标注模式的默认工具，包括 `--fullscreen` 与图片文件标注模式。支持值为 `move`、`select`、`pen`、`line`、`highlighter`、`rectangle`、`ellipse`、`arrow`、`text`、`number`、`mosaic`、`laser`。运行参数 `--default-tool <tool>` 会覆盖普通模式默认工具，并出于兼容性在未设置 `--fullscreen-default-tool <tool>` 时同时作为全屏默认工具。
+| 配置项键名 | 数据类型 | 默认值 | 功能描述 |
+| :--- | :---: | :---: | :--- |
+| `env` | 对象 | `{}` | 在创建 `QApplication` 之前应用到进程的环境变量（例如设置 `"QT_FONT_DPI": 96` 来规避高 DPI 缩放带来的截图边界偏移）。别名：`environment`。 |
+| `annotation.defaultTool` | 字符串 | `"move"` | 选区完成后默认激活的标注工具。支持的值包括：`move`、`select`、`pen`、`line`、`highlighter`、`rectangle`、`ellipse`、`arrow`、`text`、`number`、`mosaic`、`laser`。命令行参数 `--default-tool` 会覆盖此项。 |
+| `annotation.fullscreenDefaultTool` | 字符串 | `"laser"` | 全屏标注模式下默认激活的工具。命令行参数 `--fullscreen-default-tool` 会覆盖此项。若在全屏模式下配置为 `move`，系统会自动降级为使用 `select`。 |
+| `annotation.defaultColor` | 字符串 | `"#FF4D4D"` | 初始标注颜色。支持不透明的十六进制格式 `#RRGGBB` 或包含透明度的 `#RRGGBBAA`。命令行参数 `--default-color` 会覆盖此项。 |
 
-全屏标注模式没有独立截图选区可移动。如果把全屏默认工具配置为 `move`，Mark Shot 会改用 `select` 进入全屏模式。
+| `shortcuts` | 对象 | - | 自定义快捷键配置。别名：`hotkeys`（或在 `annotation.shortcuts` / `annotation.hotkeys` 下）。详细子节点见折叠说明。 |
+| `pinnedWindow.autoOcr` | 布尔值 | `false` | 控制贴图窗口创建后是否立即在后台自动启动 OCR 文本识别。如果禁用，则仅在右键菜单中触发复制文字或翻译时按需识别。别名：`pinned`、`pin`。 |
+| `pinnedWindow.border` | 布尔值/对象 | `false` | 贴图窗口外边框的配置。可以为布尔值，或者包含 `enabled` (布尔值)、`color` (十六进制/名称/RGBA对象) 和 `width` (浮点数，`1.0` - `12.0`) 的配置对象。也支持 `borderEnabled`、`borderColor`、`borderWidth` 平铺配置。 |
+| `ocr.enabled` | 布尔值 | `true` | 控制 OCR 功能是否全局可用。本身不控制贴图后台 OCR 的自动触发。 |
+| `translation.autoAfterOcr` | 布尔值 | `false` | 控制贴图窗口 OCR 成功后是否自动启动翻译并缓存翻译结果。开启后，用户在右键菜单选择翻译时会瞬间渲染已缓存的翻译，无需临时发起网络请求。别名：`translation.auto` / `autoAfterOCR` 等。 |
+| `windowDetection.env` | 对象 | `{}` | 传给窗口边界检测脚本的环境变量。别名：`environment`。<br>• **Niri 适配脚本**：支持 `MARK_SHOT_NIRI_PANEL_EDGE`（`top`/`bottom`/`left`/`right`/`none`）以及像素偏移 `MARK_SHOT_NIRI_OFFSET_X/Y/WIDTH/HEIGHT`。<br>• **Hyprland 适配脚本**：支持 `MARK_SHOT_HYPRLAND_INCLUDE_INACTIVE`（`1`/`0`）以及像素偏移 `MARK_SHOT_HYPRLAND_OFFSET_X/Y/WIDTH/HEIGHT`。 |
 
-`annotation.defaultColor` 用于指定初始标注颜色。使用 `#RRGGBB` 可设置不透明颜色，使用 `#RRGGBBAA` 可包含透明度。运行参数 `--default-color <color>` 会覆盖配置文件中的值。
+<details>
+<summary>快捷键配置项子节点说明</summary>
 
-`shortcuts`（别名：`hotkeys`，亦可在 `annotation.shortcuts` 或 `annotation.hotkeys` 下配置）用于配置工具快捷键、全局动作快捷键和启动界面辅助工具快捷键。它支持以下子节点：
-- `tools`（别名：`tool`、`toolShortcuts`）：配置工具快捷键。支持的工具名称与 `annotation.defaultTool` 一致（`move`、`select`、`pen`、`line`、`highlighter`、`rectangle`、`ellipse`、`arrow`、`text`、`number`、`mosaic`、`laser`）。
-- `actions`（别名：`action`、`actionShortcuts`）：配置全局动作快捷键。支持的动作包括 `copy`、`save`、`pin`、`undo`、`redo`、`cancel`（或 `escape`、`close`）、`openWith`（或 `open`）、`extensions`（或 `extension`）、`scrollCapture`（或 `scroll`）、`ocrCopy`（或 `ocr`）、`clear`、`toggleCaptureScope`（或 `scope`、`fullscreen`）、`toggleToolbarLayout`（或 `layout`）。
-- `startup`（别名：`startupTools`、`selection`）：配置启动界面辅助工具快捷键。支持的键包含 `colorPicker`（别名：`color`、`pickcolor`）和 `ruler`（别名：`measure`）。
-快捷键值使用 Qt 按键序列文本，例如 `Ctrl+C`、`Ctrl+Shift+Z` 或 `Alt+R`。此外，快捷键也可以直接在 `shortcuts` 顶层下进行配置。
+`shortcuts` 节点支持以下子项配置：
+- **`tools`**（别名：`tool`、`toolShortcuts`）：工具切换快捷键，对应 `defaultTool` 支持的各种工具。
+- **`actions`**（别名：`action`、`actionShortcuts`）：全局动作快捷键，支持 `copy`、`save`、`pin`、`undo`、`redo`、`cancel`、`openWith`、`extensions`、`scrollCapture`、`ocrCopy`、`clear`、`toggleCaptureScope`、`toggleToolbarLayout`。
+- **`startup`**（别名：`startupTools`、`selection`）：选区前辅助工具的快捷键，支持 `colorPicker`（取色器）与 `ruler`（测量尺）。
 
-`pinnedWindow`（别名：`pinned`、`pin`）用于配置贴图窗口属性。`pinnedWindow.border` 用于控制贴图窗口是否绘制外边框。它可以是一个布尔值，也可以是一个包含 `enabled`、`color`（支持颜色名称、`#RRGGBB`、`0xRRGGBBAA` 等十六进制字符串或诸如 `{"r": 255, "g": 0, "b": 0, "a": 255}` 的 RGBA 对象）与 `width`（边框宽度，限制在 `1.0` 到 `12.0` 之间）的对象。或者，你也可以直接在贴图窗口节点下配置 `pinnedWindow.borderEnabled`、`pinnedWindow.borderColor` 和 `pinnedWindow.borderWidth`。
-
-顶层 `env`（别名：`environment`）会在创建 `QApplication` 前应用到 Mark Shot 自身进程。它适合设置 Qt 启动期环境变量，例如 `"QT_FONT_DPI": 96`，用于避免字体 DPI 覆盖影响截图与选区几何。
-
-`windowDetection.env`（别名：`environment`）会作为环境变量传给检测脚本。
-- **Niri 适配脚本** (`mark-shot-window-detection-niri`)：支持 `MARK_SHOT_NIRI_PANEL_EDGE`（`top`、`bottom`、`left`、`right` 或 `none`），也支持通过 `MARK_SHOT_NIRI_OFFSET_X`、`MARK_SHOT_NIRI_OFFSET_Y`、`MARK_SHOT_NIRI_OFFSET_WIDTH`、`MARK_SHOT_NIRI_OFFSET_HEIGHT` 做像素级调整。
-- **Hyprland 适配脚本** (`mark-shot-window-detection-hyprland`)：支持 `MARK_SHOT_HYPRLAND_INCLUDE_INACTIVE`（值为 `1` 时检测非活动工作区的窗口，默认 `0` 仅检测当前工作区），也支持通过 `MARK_SHOT_HYPRLAND_OFFSET_X`、`MARK_SHOT_HYPRLAND_OFFSET_Y`、`MARK_SHOT_HYPRLAND_OFFSET_WIDTH`、`MARK_SHOT_HYPRLAND_OFFSET_HEIGHT` 进行像素微调以精准贴合窗口边框。
+*快捷键格式采用 Qt 按键序列文本，例如 `Ctrl+C`、`Ctrl+Shift+Z` 或 `Alt+R`。也可以直接定义在 `shortcuts` 顶层。*
+</details>
 
 ### 截图前窗口检测与脚本贡献指南
 
@@ -472,6 +482,15 @@ cmake --install build --prefix "$HOME/.local"
 
 ## 发版说明
 
+### 0.1.19
+
+- **GNOME Wayland 滚动截图支持**：引入自带的 `mark-shot-scroll-helper@snemc.org` GNOME Shell 扩展，在启用该扩展的情况下，支持在 GNOME Wayland 环境下完成滚动区域截图和交互预览。
+- **贴图后台 OCR 与翻译配置**：新增 `pinnedWindow.autoOcr` 配置项（默认 `false`），贴图创建后默认不执行后台 OCR，仅在右键菜单中触发复制/翻译时按需识别。新增 `translation.autoAfterOcr` 配置项（默认 `false`），在后台 OCR 成功后自动执行翻译。
+- **右键复制文本优化**：在贴图窗口右键选择“复制图片文字”时，若当前无识别文本，程序将在后台自动开始 OCR，并在识别完毕后复制到剪贴板。
+
+<details>
+<summary>历史发版说明 (点击展开)</summary>
+
 ### 0.1.18
 
 - **可配置快捷键**：全面支持在配置文件中使用 `shortcuts` 或 `hotkeys`（包括别名配置如 `annotation.shortcuts` 等）来自定义工具栏工具、全局动作和启动辅助工具的快捷键。
@@ -522,6 +541,7 @@ cmake --install build --prefix "$HOME/.local"
 - 改进对旧版 PipeWire SPA 头文件的兼容性。
 
 滚动截图不保证在 GNOME 或 KDE 中可用。该能力依赖 portal 捕获行为、窗口管理器时序、窗口几何反馈和滚动事件处理。GNOME Shell 与 KWin 的相关行为差异较大，稳定适配成本较高。
+</details>
 
 ---
 
