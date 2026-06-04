@@ -61,6 +61,8 @@ const QHash<QString, QString> &chineseTable()
         {QStringLiteral("Save Pinned Image"), QStringLiteral("保存钉住的图片")},
         {QStringLiteral("Save Screenshot"), QStringLiteral("保存截图")},
         {QStringLiteral("PNG Images (*.png)"), QStringLiteral("PNG 图片 (*.png)")},
+        {QStringLiteral("Saved to %1"), QStringLiteral("已保存到 %1")},
+        {QStringLiteral("Save failed"), QStringLiteral("保存失败")},
 
         // Toolbar action names (also used as tooltips).
         {QStringLiteral("Move"), QStringLiteral("移动")},
