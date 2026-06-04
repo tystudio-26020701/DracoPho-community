@@ -472,6 +472,13 @@ This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-translate`
 
 ## Release Notes
 
+### 0.1.18
+
+- **Configurable Shortcuts**: Added full support for customizing tool hotkeys, global action hotkeys, and startup tool hotkeys through `shortcuts` or `hotkeys` configurations, allowing extensive configuration aliases (e.g. `annotation.shortcuts`).
+- **Pinned Window Border**: Added border settings (`borderEnabled`, `borderColor`, `borderWidth`) for pinned sticker windows, customizable via booleans, nested config objects, or direct properties.
+- **OCR Dependency Diagnostics**: Improved OCR error detection to recognize missing Python dependencies in stdout/stderr and display friendly missing-backend notifications.
+- **Color Picker User Experience**: Tweaked the color picker copy behavior to add a short UI exit delay (180ms) for smoother clipboard transition.
+
 ### 0.1.17
 
 - **Quick Save Shortcut**: Mapped `Ctrl+S` to perform a direct quick save to the default directory (usually `~/Pictures`) without opening the file dialog, sending a desktop notification via D-Bus on completion. Changed the toolbar save button to "Save As".
