@@ -1,5 +1,6 @@
 #include "screen_capture.h"
 #include "shot_window.h"
+#include "debug_log.h"
 #include "ui/i18n.h"
 #include "window_detection.h"
 
@@ -8,6 +9,7 @@
 #include <QColor>
 #include <QCommandLineParser>
 #include <QCursor>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -25,6 +27,7 @@
 #include <QVector>
 
 #include <algorithm>
+#include <optional>
 
 namespace {
 
@@ -49,6 +52,73 @@ QJsonObject objectValue(const QJsonObject &object, const QString &key)
 {
     const QJsonValue value = object.value(key);
     return value.isObject() ? value.toObject() : QJsonObject();
+}
+
+QString preApplicationConfigPath()
+{
+    const QByteArray xdgConfigHome = qgetenv("XDG_CONFIG_HOME");
+    if (!xdgConfigHome.isEmpty()) {
+        return QDir(QString::fromLocal8Bit(xdgConfigHome))
+            .filePath(QStringLiteral("mark-shot/config.json"));
+    }
+
+    const QByteArray home = qgetenv("HOME");
+    if (!home.isEmpty()) {
+        return QDir(QString::fromLocal8Bit(home)).filePath(QStringLiteral(".config/mark-shot/config.json"));
+    }
+    return {};
+}
+
+std::optional<QString> environmentStringValue(const QJsonValue &value)
+{
+    if (value.isString()) {
+        return value.toString();
+    }
+    if (value.isDouble()) {
+        return QString::number(value.toDouble(), 'g', 15);
+    }
+    if (value.isBool()) {
+        return value.toBool() ? QStringLiteral("1") : QStringLiteral("0");
+    }
+    return std::nullopt;
+}
+
+void applyConfiguredEnvironment()
+{
+    const QString configPath = preApplicationConfigPath();
+    if (configPath.isEmpty()) {
+        return;
+    }
+
+    QFile file(configPath);
+    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        return;
+    }
+
+    QJsonObject environment = objectValue(document.object(), QStringLiteral("env"));
+    const QJsonObject namedEnvironment = objectValue(document.object(), QStringLiteral("environment"));
+    for (auto it = namedEnvironment.constBegin(); it != namedEnvironment.constEnd(); ++it) {
+        environment.insert(it.key(), it.value());
+    }
+
+    for (auto it = environment.constBegin(); it != environment.constEnd(); ++it) {
+        const QString key = it.key().trimmed();
+        if (key.isEmpty()) {
+            continue;
+        }
+        if (const std::optional<QString> value = environmentStringValue(it.value())) {
+            const QByteArray keyBytes = key.toUtf8();
+            const QByteArray valueBytes = value->toUtf8();
+            qputenv(keyBytes.constData(), valueBytes);
+            markshot::debugLog("config", "env override %s", keyBytes.constData());
+        }
+    }
 }
 
 QString stringValue(const QJsonObject &object, const QStringList &keys)
@@ -447,6 +517,8 @@ ShotWindow *showCaptureWindow(QScreen *screen,
 
 int main(int argc, char *argv[])
 {
+    applyConfiguredEnvironment();
+
     QGuiApplication::setDesktopFileName(QStringLiteral("mark-shot"));
     disableQtPortalServicesForHostApp();
 
