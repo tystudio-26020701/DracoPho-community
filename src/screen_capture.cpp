@@ -378,15 +378,20 @@ CaptureResult cropGrimFrameToRequest(CaptureResult capture, QRect frameGeometry,
     }
 
     capture.image = cropped.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    const QSize croppedSize = capture.image.size();
     capture.sourceGeometry = overlap;
+    capture.image = markshot::capture::normalizeCropToLogicalSize(std::move(capture.image),
+                                                                  capture.sourceGeometry,
+                                                                  requested);
     markshot::debugLog("capture",
                        "grim-local-crop frame=%dx%d frame_geom=%d,%d %dx%d "
-                       "requested=%d,%d %dx%d overlap=%d,%d %dx%d result=%dx%d",
+                       "requested=%d,%d %dx%d overlap=%d,%d %dx%d cropped=%dx%d normalized=%dx%d",
                        frameSize.width(), frameSize.height(),
                        frameGeometry.x(), frameGeometry.y(),
                        frameGeometry.width(), frameGeometry.height(),
                        requested.x(), requested.y(), requested.width(), requested.height(),
                        overlap.x(), overlap.y(), overlap.width(), overlap.height(),
+                       croppedSize.width(), croppedSize.height(),
                        capture.image.width(), capture.image.height());
     return capture;
 }
@@ -645,14 +650,17 @@ CaptureResult captureWithPortalScreenshot(const CaptureRequest &request)
         if (cropRect != QRect(QPoint(0, 0), image.size())) {
             image = image.copy(cropRect);
         }
+        const QSize croppedSize = image.size();
+        image = markshot::capture::normalizeCropToLogicalSize(std::move(image), coverage, overlap);
         sourceGeometry = overlap;
         markshot::debugLog("capture",
                            "portal-screenshot raw=%dx%d coverage=%d,%d %dx%d requested=%d,%d %dx%d "
-                           "crop=%d,%d %dx%d display_logical=%dx%d result=%dx%d",
+                           "crop=%d,%d %dx%d cropped=%dx%d display_logical=%dx%d normalized=%dx%d",
                            rawSize.width(), rawSize.height(),
                            coverage.x(), coverage.y(), coverage.width(), coverage.height(),
                            requested.x(), requested.y(), requested.width(), requested.height(),
                            cropRect.x(), cropRect.y(), cropRect.width(), cropRect.height(),
+                           croppedSize.width(), croppedSize.height(),
                            overlap.width(), overlap.height(),
                            image.width(), image.height());
     }
