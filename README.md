@@ -478,6 +478,10 @@ Scrolling screenshot capture is not guaranteed on GNOME or KDE. The feature depe
 
 ---
 
+## Feedback & Communication
+
+---
+
 ## License
 
 This project is licensed under the **MIT License**. For details, please refer to the [LICENSE](LICENSE) file.
