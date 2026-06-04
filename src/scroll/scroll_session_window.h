@@ -39,6 +39,8 @@ public:
                          QScreen *screen = nullptr,
                          QWidget *parent = nullptr);
 
+    bool layerShellActive() const;
+
     // Configures this widget as a fullscreen layer-shell overlay on the given
     // screen. Must be called before show(). Returns false when layer-shell is
     // unavailable, in which case the caller should fall back to a plain window.
