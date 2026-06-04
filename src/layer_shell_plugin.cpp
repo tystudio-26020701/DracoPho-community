@@ -72,11 +72,14 @@ public:
         } else if (config.wantsActiveScreenWhenNoScreen) {
             layerWindow->setWantsToBeOnActiveScreen(true);
         }
-        layerWindow->setDesiredSize({});
+        const QSize desiredSize = widget->size();
+        layerWindow->setDesiredSize(desiredSize);
         markshot::debugLog("layershell",
-                           "configured overlay scope=%s screen=%s",
+                           "configured overlay scope=%s screen=%s widget=%dx%d desired=%dx%d",
                            config.scope.toUtf8().constData(),
-                           screen ? screen->name().toUtf8().constData() : "(none)");
+                           screen ? screen->name().toUtf8().constData() : "(none)",
+                           widget->width(), widget->height(),
+                           desiredSize.width(), desiredSize.height());
         return true;
     }
 

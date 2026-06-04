@@ -2341,10 +2341,15 @@ ShotWindow::ShotWindow(QImage frozenFrame,
 
 bool ShotWindow::configureLayerShell(QScreen *screen)
 {
+    const QSize desiredSize = m_sourceGeometry.isValid() && !m_sourceGeometry.isEmpty()
+        ? m_sourceGeometry.size()
+        : m_frozenFrame.size();
+    if (!desiredSize.isEmpty()) {
+        resize(desiredSize);
+    }
+
     if (screen) {
         setScreen(screen);
-    } else {
-        resize(m_frozenFrame.size());
     }
 
     return markshot::layershell::configureOverlay(
