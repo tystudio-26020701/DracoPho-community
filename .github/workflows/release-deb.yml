@@ -86,6 +86,7 @@ jobs:
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_INSTALL_LIBDIR=lib \
             -DMARK_SHOT_WITH_LAYER_SHELL=ON \
             -DMARK_SHOT_REQUIRE_LAYER_SHELL=ON
 
