@@ -15,6 +15,7 @@
 #include <QDBusReply>
 #include <QDBusUnixFileDescriptor>
 #include <QDBusVariant>
+#include <QDateTime>
 #include <QEventLoop>
 #include <QFile>
 #include <QGuiApplication>
@@ -1151,17 +1152,34 @@ public:
 
         QMutexLocker locker(&m_frameMutex);
         bool waited = false;
-        if (m_latestFrame.isNull()) {
+        const qint64 minimumFrameTimeMs = request.minimumFrameTimeMs;
+        auto hasUsableFrame = [&] {
+            return !m_latestFrame.isNull()
+                && (minimumFrameTimeMs <= 0 || m_latestFrameTimeMs >= minimumFrameTimeMs);
+        };
+        if (!hasUsableFrame()) {
             waited = true;
-            m_frameReady.wait(&m_frameMutex, 2500);
+            const qint64 deadlineMs = QDateTime::currentMSecsSinceEpoch() + 2500;
+            while (!hasUsableFrame()) {
+                const qint64 remainingMs = deadlineMs - QDateTime::currentMSecsSinceEpoch();
+                if (remainingMs <= 0) {
+                    break;
+                }
+                const unsigned long waitMs =
+                    static_cast<unsigned long>(std::min<qint64>(remainingMs, 250));
+                if (!m_frameReady.wait(&m_frameMutex, waitMs)) {
+                    continue;
+                }
+            }
         }
-        if (m_latestFrame.isNull()) {
+        if (!hasUsableFrame()) {
             const QString error = m_lastError.isEmpty()
-                ? QStringLiteral("portal screencast did not produce a frame")
-                : QStringLiteral("portal screencast did not produce a frame: %1").arg(m_lastError);
+                ? QStringLiteral("portal screencast did not produce a usable frame")
+                : QStringLiteral("portal screencast did not produce a usable frame: %1").arg(m_lastError);
             markshot::debugLog("screencast",
-                               "no-frame first_start=%d waited=%d last_error=%s",
+                               "no-frame first_start=%d waited=%d latest_time=%lld minimum_time=%lld last_error=%s",
                                firstStart ? 1 : 0, waited ? 1 : 0,
+                               m_latestFrameTimeMs, minimumFrameTimeMs,
                                m_lastError.isEmpty() ? "(none)"
                                                      : m_lastError.toUtf8().constData());
             return {{}, error, {}, request.sourceGeometry};
@@ -1169,6 +1187,7 @@ public:
 
         const QImage frame = m_latestFrame.copy();
         const QRect streamGeometry = m_streamGeometry;
+        const qint64 frameTimeMs = m_latestFrameTimeMs;
         locker.unlock();
 
         const QRect requested = request.sourceGeometry;
@@ -1184,14 +1203,15 @@ public:
         }
         markshot::debugLog("screencast",
                            "frame raw=%dx%d stream_geom=%d,%d %dx%d requested=%d,%d %dx%d "
-                           "want_crop=%d cropped=%dx%d normalized=%dx%d",
+                           "want_crop=%d cropped=%dx%d normalized=%dx%d frame_time=%lld minimum_time=%lld",
                            frame.width(), frame.height(),
                            streamGeometry.x(), streamGeometry.y(),
                            streamGeometry.width(), streamGeometry.height(),
                            requested.x(), requested.y(), requested.width(), requested.height(),
                            wantCrop ? 1 : 0,
                            croppedSize.width(), croppedSize.height(),
-                           image.width(), image.height());
+                           image.width(), image.height(),
+                           frameTimeMs, minimumFrameTimeMs);
         if (image.isNull()) {
             markshot::debugLog("screencast",
                                "crop-miss frame=%dx%d stream_geom=%d,%d %dx%d requested=%d,%d %dx%d",
@@ -1271,6 +1291,7 @@ public:
         m_frameCount = 0;
         QMutexLocker locker(&m_frameMutex);
         m_latestFrame = {};
+        m_latestFrameTimeMs = 0;
         m_streamGeometry = {};
     }
 
@@ -1886,8 +1907,10 @@ private:
         QString imageError;
         QImage image = self->imageFromBuffer(buffer, &imageError);
         if (!image.isNull()) {
+            const qint64 frameTimeMs = QDateTime::currentMSecsSinceEpoch();
             QMutexLocker locker(&self->m_frameMutex);
             self->m_latestFrame = std::move(image);
+            self->m_latestFrameTimeMs = frameTimeMs;
             self->m_streamGeometry = streamGeometryFromProperties(self->m_streamProperties, self->m_latestFrame.size());
             self->m_frameReady.wakeAll();
             self->m_frameCount += 1;
@@ -2020,6 +2043,7 @@ private:
     QMutex m_frameMutex;
     QWaitCondition m_frameReady;
     QImage m_latestFrame;
+    qint64 m_latestFrameTimeMs = 0;
     QRect m_streamGeometry;
     pw_thread_loop *m_loop = nullptr;
     pw_context *m_context = nullptr;

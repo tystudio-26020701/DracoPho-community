@@ -696,16 +696,24 @@ void ScrollSessionWindow::captureTick()
         request.allowInteractivePortal = false;
         request.allowPortalScreenshotFallback = false;
 
-        const bool hidePanelForCapture =
-            m_panelOnlyWindow && isVisible() && geometry().intersects(m_geometry.normalized());
-        if (hidePanelForCapture) {
-            hide();
+        const bool makePanelTransparentForCapture = m_panelOnlyWindow && isVisible();
+        if (makePanelTransparentForCapture) {
+            m_panelTransparentForCapture = true;
+            if (m_controlBar) {
+                m_controlBar->hide();
+            }
+            repaint();
             QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            request.minimumFrameTimeMs = QDateTime::currentMSecsSinceEpoch() + 1;
         }
         const CaptureResult result = captureScreenFrame(request);
-        if (hidePanelForCapture) {
-            show();
-            raise();
+        if (makePanelTransparentForCapture) {
+            m_panelTransparentForCapture = false;
+            if (m_controlBar) {
+                m_controlBar->show();
+                layoutOverlay();
+            }
+            repaint();
             QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
         }
         if (result.image.isNull()) {
@@ -1133,6 +1141,10 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+    if (m_panelTransparentForCapture) {
+        return;
+    }
 
     // 1. Capture border, drawn just outside the captured region so grim
     //    never records it.
