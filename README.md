@@ -135,6 +135,9 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json`. Pin
 
 ```json
 {
+  "env": {
+    "QT_FONT_DPI": 96
+  },
   "annotation": {
     "defaultTool": "move",
     "fullscreenDefaultTool": "laser",
@@ -174,6 +177,8 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json`. Pin
 Fullscreen annotation has no separate capture selection to move. If its default tool is configured as `move`, Mark Shot starts fullscreen mode with `select` instead.
 
 `annotation.defaultColor` sets the initial annotation color. Use `#RRGGBB` for opaque colors or `#RRGGBBAA` to include alpha. The runtime option `--default-color <color>` overrides this config value.
+
+Top-level `env` (alias: `environment`) is applied to the Mark Shot process before `QApplication` is created. This is useful for Qt startup variables such as `QT_FONT_DPI`; for example, set `"QT_FONT_DPI": 96` to prevent font-DPI overrides from changing capture and selection geometry.
 
 `windowDetection.env` (alias: `environment`) is passed to the detection script as environment variables.
 - **Niri Script** (`mark-shot-window-detection-niri`): Supports `MARK_SHOT_NIRI_PANEL_EDGE` (`top`, `bottom`, `left`, `right`, or `none`) and pixel adjustments through `MARK_SHOT_NIRI_OFFSET_X/Y/WIDTH/HEIGHT`.
