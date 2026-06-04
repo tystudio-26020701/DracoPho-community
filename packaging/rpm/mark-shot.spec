@@ -61,6 +61,7 @@ sed -i '1s|^#!/usr/bin/env python3$|#!/usr/bin/python3|' \
 %{_bindir}/mark-shot-translate
 %{_bindir}/mark-shot-window-detection-niri
 %{_bindir}/mark-shot-window-detection-hyprland
+%{_libdir}/mark-shot/
 %{_datadir}/applications/mark-shot.desktop
 %{_datadir}/applications/mark-shot-edit.desktop
 %{_datadir}/icons/hicolor/scalable/apps/mark-shot.svg

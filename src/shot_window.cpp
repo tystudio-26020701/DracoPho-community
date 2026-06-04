@@ -1,6 +1,8 @@
 #include "shot_window.h"
 
+#include "capture_geometry.h"
 #include "clipboard_image.h"
+#include "layer_shell_runtime.h"
 #include "screen_capture.h"
 #include "scroll/scroll_session_window.h"
 #include "scroll/stitcher.h"
@@ -8,10 +10,6 @@
 #include "ui/i18n.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
-
-#ifdef HAVE_LAYER_SHELL
-#include <LayerShellQt/Window>
-#endif
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -191,31 +189,15 @@ QRectF normalizedRect(QPointF a, QPointF b)
     return QRectF(a, b).normalized();
 }
 
+bool isWaylandPlatform()
+{
+    return QGuiApplication::platformName().compare(QStringLiteral("wayland"),
+                                                   Qt::CaseInsensitive) == 0;
+}
+
 QRect windowGeometryToImageRect(QRect windowGeometry, QRect sourceGeometry, QSize imageSize)
 {
-    if (windowGeometry.isEmpty() || imageSize.isEmpty()) {
-        return {};
-    }
-
-    windowGeometry = windowGeometry.normalized();
-    const QRect imageBounds(QPoint(0, 0), imageSize);
-    if (!sourceGeometry.isValid() || sourceGeometry.isEmpty()) {
-        return windowGeometry.intersected(imageBounds);
-    }
-
-    sourceGeometry = sourceGeometry.normalized();
-    const QRect clipped = windowGeometry.intersected(sourceGeometry);
-    if (clipped.isEmpty()) {
-        return {};
-    }
-
-    const qreal scaleX = static_cast<qreal>(imageSize.width()) / std::max(1, sourceGeometry.width());
-    const qreal scaleY = static_cast<qreal>(imageSize.height()) / std::max(1, sourceGeometry.height());
-    const QRectF imageRect((clipped.left() - sourceGeometry.left()) * scaleX,
-                           (clipped.top() - sourceGeometry.top()) * scaleY,
-                           clipped.width() * scaleX,
-                           clipped.height() * scaleY);
-    return imageRect.toAlignedRect().intersected(imageBounds);
+    return markshot::capture::imageRectFromGeometry(windowGeometry, sourceGeometry, imageSize);
 }
 
 // Builds a smoothed stroke path from raw sample points. Each sample point is
@@ -2359,56 +2341,19 @@ ShotWindow::ShotWindow(QImage frozenFrame,
 
 bool ShotWindow::configureLayerShell(QScreen *screen)
 {
-#ifndef HAVE_LAYER_SHELL
-    Q_UNUSED(screen);
-    return false;
-#else
     if (screen) {
         setScreen(screen);
     } else {
         resize(m_frozenFrame.size());
     }
 
-    setAttribute(Qt::WA_NativeWindow);
-    winId();
-
-    QWindow *nativeWindow = windowHandle();
-    if (!nativeWindow) {
-        return false;
-    }
-
-    if (screen) {
-        nativeWindow->setScreen(screen);
-    }
-
-    LayerShellQt::Window *layerWindow = LayerShellQt::Window::get(nativeWindow);
-    if (!layerWindow) {
-        return false;
-    }
-
-    LayerShellQt::Window::Anchors anchors = LayerShellQt::Window::AnchorTop;
-    anchors |= LayerShellQt::Window::AnchorBottom;
-    anchors |= LayerShellQt::Window::AnchorLeft;
-    anchors |= LayerShellQt::Window::AnchorRight;
-
-    layerWindow->setScope(QStringLiteral("mark-shot"));
-    layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
-    layerWindow->setAnchors(anchors);
-    layerWindow->setMargins({});
-    layerWindow->setExclusiveZone(-1);
-    layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityExclusive);
-    layerWindow->setActivateOnShow(true);
-    layerWindow->setCloseOnDismissed(true);
-    if (screen) {
-        layerWindow->setScreen(screen);
-        layerWindow->setDesiredSize({});
-    } else {
-        layerWindow->setWantsToBeOnActiveScreen(true);
-        layerWindow->setDesiredSize({});
-    }
-
-    return true;
-#endif
+    return markshot::layershell::configureOverlay(
+        this,
+        screen,
+        {QStringLiteral("mark-shot"),
+         markshot::layershell::KeyboardInteractivity::Exclusive,
+         true,
+         true});
 }
 
 void ShotWindow::startFullscreenAnnotation()
@@ -5274,22 +5219,12 @@ QRect ShotWindow::selectionGlobalRect() const
             return {};
         }
 
-        const QRect sourceGeometry = m_sourceGeometry.normalized();
-        // Wayland captures can be in output pixels while compositor geometry is
-        // logical. Map the image-space selection back before passing it to grim.
-        const qreal scaleX = static_cast<qreal>(sourceGeometry.width()) / imageSize.width();
-        const qreal scaleY = static_cast<qreal>(sourceGeometry.height()) / imageSize.height();
-        const int left = sourceGeometry.left() + qRound(selection.left() * scaleX);
-        const int top = sourceGeometry.top() + qRound(selection.top() * scaleY);
-        const int right =
-            sourceGeometry.left() + qRound((selection.left() + selection.width()) * scaleX);
-        const int bottom =
-            sourceGeometry.top() + qRound((selection.top() + selection.height()) * scaleY);
-        selectionRect = QRect(left,
-                              top,
-                              std::max(1, right - left),
-                              std::max(1, bottom - top))
-                            .intersected(sourceGeometry);
+        // Wayland captures can be in output pixels while backend geometry is
+        // logical. Map the image-space selection back before follow-up captures
+        // and extension geometry placeholders use it.
+        selectionRect = markshot::capture::geometryFromImageRect(selectionRect,
+                                                                 m_sourceGeometry,
+                                                                 imageSize);
         if (selectionRect.isEmpty()) {
             return {};
         }
@@ -7514,6 +7449,18 @@ void ShotWindow::startScrollCapture()
     QTimer::singleShot(120, qApp, [self, geometry, outputName, targetScreen] {
         auto *window =
             new markshot::scroll::ScrollSessionWindow(geometry, outputName, targetScreen);
+        if (isWaylandPlatform() && !window->layerShellActive()) {
+            window->deleteLater();
+            if (self) {
+                self->show();
+                self->raise();
+                self->activateWindow();
+                self->updateToolbarGeometry();
+                self->updateActionToolbarGeometry();
+                self->showToast(MS_TR("Scrolling capture requires layer-shell on Wayland"));
+            }
+            return;
+        }
         window->show();
         window->raise();
         window->activateWindow();

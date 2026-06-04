@@ -1,5 +1,6 @@
 #include "screen_capture.h"
 
+#include "capture_geometry.h"
 #include "debug_log.h"
 
 #include <QDBusError>
@@ -34,11 +35,13 @@
 #include <QUuid>
 #include <QVariantMap>
 #include <QWaitCondition>
+#include <QWidget>
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <memory>
+#include <utility>
 
 #include <fcntl.h>
 #include <poll.h>
@@ -182,6 +185,8 @@ bool isKdePlasma()
     return desktop.contains(QStringLiteral("kde")) || desktop.contains(QStringLiteral("plasma"));
 }
 
+QRect virtualScreensGeometry();
+
 QImage normalizeCaptureImage(QImage image)
 {
     if (!image.isNull()) {
@@ -247,14 +252,52 @@ CaptureResult captureWithQScreen(const CaptureRequest &request)
     return {image, {}, {}, request.sourceGeometry};
 }
 
-QString grimGeometry(QRect geometry)
+QRect screenGeometryForOutputName(const QString &outputName)
 {
-    geometry = geometry.normalized();
-    return QStringLiteral("%1,%2 %3x%4")
-        .arg(geometry.x())
-        .arg(geometry.y())
-        .arg(geometry.width())
-        .arg(geometry.height());
+    if (outputName.isEmpty()) {
+        return {};
+    }
+
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    for (QScreen *screen : screens) {
+        if (screen && screen->name() == outputName) {
+            return screen->geometry();
+        }
+    }
+    return {};
+}
+
+QRect screenGeometryForRequest(const CaptureRequest &request)
+{
+    if (!request.preferredOutputName.isEmpty()) {
+        const QRect outputGeometry = screenGeometryForOutputName(request.preferredOutputName);
+        if (!outputGeometry.isEmpty()) {
+            return outputGeometry;
+        }
+    }
+
+    if (request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {
+        if (QScreen *screen = QGuiApplication::screenAt(request.sourceGeometry.center())) {
+            return screen->geometry();
+        }
+    }
+    return {};
+}
+
+QRect fullGrimSourceGeometry(const CaptureRequest &request)
+{
+    if (request.allOutputs && request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {
+        return request.sourceGeometry.normalized();
+    }
+
+    const QRect virtualGeometry = virtualScreensGeometry();
+    if (!virtualGeometry.isEmpty()) {
+        return virtualGeometry;
+    }
+    if (request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {
+        return request.sourceGeometry.normalized();
+    }
+    return {};
 }
 
 CaptureResult runGrim(const QStringList &arguments, const QString &outputName, QRect sourceGeometry)
@@ -291,6 +334,61 @@ CaptureResult runGrim(const QStringList &arguments, const QString &outputName, Q
     }
 
     return {image.convertToFormat(QImage::Format_ARGB32_Premultiplied), {}, outputName, sourceGeometry};
+}
+
+CaptureResult cropGrimFrameToRequest(CaptureResult capture, QRect frameGeometry, const CaptureRequest &request)
+{
+    if (capture.image.isNull()) {
+        return capture;
+    }
+
+    if (frameGeometry.isValid() && !frameGeometry.isEmpty()) {
+        capture.sourceGeometry = frameGeometry.normalized();
+    }
+
+    if (!request.sourceGeometry.isValid() || request.sourceGeometry.isEmpty() || request.allOutputs) {
+        return capture;
+    }
+
+    if (capture.sourceGeometry.isEmpty()) {
+        return {{},
+                QStringLiteral("grim capture has no source geometry for local crop"),
+                capture.outputName,
+                request.sourceGeometry};
+    }
+
+    const QRect requested = request.sourceGeometry.normalized();
+    const QRect overlap = requested.intersected(capture.sourceGeometry);
+    if (overlap.isEmpty()) {
+        return {{},
+                QStringLiteral("grim capture does not cover requested geometry"),
+                capture.outputName,
+                request.sourceGeometry};
+    }
+
+    const QSize frameSize = capture.image.size();
+    QImage cropped = markshot::capture::cropFrameToRequest(capture.image,
+                                                           capture.sourceGeometry,
+                                                           requested);
+    if (cropped.isNull()) {
+        return {{},
+                QStringLiteral("grim local crop is empty"),
+                capture.outputName,
+                request.sourceGeometry};
+    }
+
+    capture.image = cropped.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    capture.sourceGeometry = overlap;
+    markshot::debugLog("capture",
+                       "grim-local-crop frame=%dx%d frame_geom=%d,%d %dx%d "
+                       "requested=%d,%d %dx%d overlap=%d,%d %dx%d result=%dx%d",
+                       frameSize.width(), frameSize.height(),
+                       frameGeometry.x(), frameGeometry.y(),
+                       frameGeometry.width(), frameGeometry.height(),
+                       requested.x(), requested.y(), requested.width(), requested.height(),
+                       overlap.x(), overlap.y(), overlap.width(), overlap.height(),
+                       capture.image.width(), capture.image.height());
+    return capture;
 }
 
 QString portalToken()
@@ -334,6 +432,18 @@ QRect virtualScreensGeometry()
         geometry = geometry.isNull() ? screen->geometry() : geometry.united(screen->geometry());
     }
     return geometry;
+}
+
+QString portalScreenshotParentWindow(QWidget *parentDummy)
+{
+    if (QGuiApplication::platformName().compare(QStringLiteral("wayland"), Qt::CaseInsensitive) == 0) {
+        return QStringLiteral("wayland:");
+    }
+
+    parentDummy->setAttribute(Qt::WA_DontShowOnScreen, true);
+    parentDummy->resize(1, 1);
+    parentDummy->show();
+    return QStringLiteral("x11:0x%1").arg(parentDummy->winId(), 0, 16);
 }
 
 void registerHostPortalApplication()
@@ -408,8 +518,6 @@ QVariantMap waitForPortalResponse(PortalResponseReceiver *receiver, QString *err
     return receiver->results;
 }
 
-QRect scaledCropRect(QRect sourceGeometry, QRect requestedGeometry, QSize imageSize);
-
 CaptureResult captureWithPortalScreenshot(const CaptureRequest &request)
 {
     registerHostPortalApplication();
@@ -441,7 +549,9 @@ CaptureResult captureWithPortalScreenshot(const CaptureRequest &request)
         options.insert(QStringLiteral("interactive"), interactive);
         options.insert(QStringLiteral("modal"), true);
 
-        QDBusPendingReply<QDBusObjectPath> pending = portal.asyncCall(QStringLiteral("Screenshot"), QString(), options);
+        QWidget parentDummy;
+        const QString parentWindow = portalScreenshotParentWindow(&parentDummy);
+        QDBusPendingReply<QDBusObjectPath> pending = portal.asyncCall(QStringLiteral("Screenshot"), parentWindow, options);
         QDBusPendingCallWatcher watcher(pending);
         QEventLoop callLoop;
         QObject::connect(&watcher, &QDBusPendingCallWatcher::finished, &callLoop, &QEventLoop::quit);
@@ -526,7 +636,7 @@ CaptureResult captureWithPortalScreenshot(const CaptureRequest &request)
         const QSize rawSize = image.size();
         QRect cropRect(QPoint(0, 0), image.size());
         if (rawSize != overlap.size()) {
-            cropRect = scaledCropRect(coverage, overlap, rawSize);
+            cropRect = markshot::capture::scaledCropRect(coverage, overlap, rawSize);
         }
         if (cropRect.isEmpty()) {
             return {{}, QStringLiteral("portal screenshot physical crop is empty"), {}, request.sourceGeometry};
@@ -727,79 +837,6 @@ QRect streamGeometryFromProperties(const QVariantMap &properties, const QSize &f
         return QRect(x, y, w, h);
     }
     return virtualScreensGeometry();
-}
-
-QImage cropFrameToRequest(const QImage &frame, QRect streamGeometry, QRect requestedGeometry)
-{
-    if (frame.isNull() || requestedGeometry.isEmpty()) {
-        return frame;
-    }
-
-    if (streamGeometry.isNull() || streamGeometry.isEmpty()) {
-        streamGeometry = QRect(QPoint(0, 0), frame.size());
-    }
-
-    const QRect requested = requestedGeometry.normalized();
-    const QRect overlap = requested.intersected(streamGeometry);
-    if (overlap.isEmpty()) {
-        return {};
-    }
-
-    const qreal scaleX = static_cast<qreal>(frame.width()) / streamGeometry.width();
-    const qreal scaleY = static_cast<qreal>(frame.height()) / streamGeometry.height();
-    const int left = qRound((overlap.left() - streamGeometry.left()) * scaleX);
-    const int top = qRound((overlap.top() - streamGeometry.top()) * scaleY);
-    const int right = qRound((overlap.right() + 1 - streamGeometry.left()) * scaleX);
-    const int bottom = qRound((overlap.bottom() + 1 - streamGeometry.top()) * scaleY);
-    const QRect crop(left, top, std::max(1, right - left), std::max(1, bottom - top));
-    const QRect boundedCrop = crop.intersected(frame.rect());
-    return boundedCrop.isEmpty() ? QImage() : frame.copy(boundedCrop);
-}
-
-QImage normalizeScreencastCropToLogicalSize(QImage image,
-                                            QRect streamGeometry,
-                                            QRect requestedGeometry)
-{
-    if (image.isNull() || requestedGeometry.isEmpty()) {
-        return image;
-    }
-
-    if (streamGeometry.isNull() || streamGeometry.isEmpty()) {
-        return image;
-    }
-
-    const QRect overlap = requestedGeometry.normalized().intersected(streamGeometry);
-    const QSize targetSize = overlap.size();
-    if (targetSize.isEmpty() || image.size() == targetSize) {
-        return image;
-    }
-
-    image = image.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-    image.setDevicePixelRatio(1.0);
-    return image;
-}
-
-QRect scaledCropRect(QRect sourceGeometry, QRect requestedGeometry, QSize imageSize)
-{
-    if (sourceGeometry.isEmpty() || requestedGeometry.isEmpty() || imageSize.isEmpty()) {
-        return {};
-    }
-
-    const QRect source = sourceGeometry.normalized();
-    const QRect requested = requestedGeometry.normalized();
-    const QRect overlap = requested.intersected(source);
-    if (overlap.isEmpty()) {
-        return {};
-    }
-
-    const qreal scaleX = static_cast<qreal>(imageSize.width()) / source.width();
-    const qreal scaleY = static_cast<qreal>(imageSize.height()) / source.height();
-    const int left = qRound((overlap.left() - source.left()) * scaleX);
-    const int top = qRound((overlap.top() - source.top()) * scaleY);
-    const int right = qRound((overlap.right() + 1 - source.left()) * scaleX);
-    const int bottom = qRound((overlap.bottom() + 1 - source.top()) * scaleY);
-    return QRect(left, top, std::max(1, right - left), std::max(1, bottom - top))
-        .intersected(QRect(QPoint(0, 0), imageSize));
 }
 
 #ifdef HAVE_PIPEWIRE
@@ -1129,13 +1166,13 @@ public:
         const QRect requested = request.sourceGeometry;
         const bool wantCrop = requested.isValid() && !requested.isEmpty();
         QImage image = wantCrop
-            ? cropFrameToRequest(frame, streamGeometry, requested)
+            ? markshot::capture::cropFrameToRequest(frame, streamGeometry, requested)
             : frame;
         const QSize croppedSize = image.size();
         if (wantCrop) {
-            image = normalizeScreencastCropToLogicalSize(std::move(image),
-                                                         streamGeometry,
-                                                         requested);
+            image = markshot::capture::normalizeCropToLogicalSize(std::move(image),
+                                                                  streamGeometry,
+                                                                  requested);
         }
         markshot::debugLog("screencast",
                            "frame raw=%dx%d stream_geom=%d,%d %dx%d requested=%d,%d %dx%d "
@@ -2023,24 +2060,55 @@ CaptureResult captureWithGrim(const CaptureRequest &request)
 {
     const QStringList baseArguments{QStringLiteral("-t"), QStringLiteral("ppm")};
 
-    if (request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {
-        QStringList arguments = baseArguments;
-        arguments << QStringLiteral("-g") << grimGeometry(request.sourceGeometry) << QStringLiteral("-");
-        CaptureResult geometryCapture = runGrim(arguments, request.allOutputs ? QString() : request.preferredOutputName, request.sourceGeometry);
-        if (!geometryCapture.image.isNull() || request.allOutputs || request.preferredOutputName.isEmpty()) {
-            return geometryCapture;
-        }
-    }
-
     if (!request.allOutputs && !request.preferredOutputName.isEmpty()) {
+        const QRect outputGeometry = screenGeometryForRequest(request);
         QStringList arguments = baseArguments;
         arguments << QStringLiteral("-o") << request.preferredOutputName << QStringLiteral("-");
-        return runGrim(arguments, request.preferredOutputName, {});
+        CaptureResult outputCapture = runGrim(arguments, request.preferredOutputName, outputGeometry);
+        if (!outputCapture.image.isNull()) {
+            if (!outputGeometry.isEmpty()) {
+                return cropGrimFrameToRequest(std::move(outputCapture), outputGeometry, request);
+            }
+            if (!request.sourceGeometry.isValid() || request.sourceGeometry.isEmpty()) {
+                return outputCapture;
+            }
+        }
+
+        const QString outputError = outputCapture.error;
+        const QRect fullGeometry = fullGrimSourceGeometry(request);
+        QStringList fullArguments = baseArguments;
+        fullArguments << QStringLiteral("-");
+        CaptureResult fullCapture = runGrim(fullArguments, {}, fullGeometry);
+        if (!fullCapture.image.isNull()) {
+            fullCapture.outputName = request.preferredOutputName;
+            return cropGrimFrameToRequest(std::move(fullCapture), fullGeometry, request);
+        }
+
+        if (!outputError.isEmpty() && !fullCapture.error.isEmpty()) {
+            return {{},
+                    QStringLiteral("%1\nFull-desktop grim fallback: %2")
+                        .arg(outputError, fullCapture.error),
+                    request.preferredOutputName,
+                    request.sourceGeometry};
+        }
+        if (!outputGeometry.isValid() || outputGeometry.isEmpty()) {
+            const QString fallbackError = fullCapture.error.isEmpty()
+                ? QStringLiteral("full-desktop grim fallback was not usable")
+                : fullCapture.error;
+            return {{},
+                    QStringLiteral("grim output capture has no Qt output geometry for local crop\nFull-desktop grim fallback: %1")
+                        .arg(fallbackError),
+                    request.preferredOutputName,
+                    request.sourceGeometry};
+        }
+        return outputCapture.image.isNull() ? fullCapture : outputCapture;
     }
 
+    const QRect frameGeometry = fullGrimSourceGeometry(request);
     QStringList arguments = baseArguments;
     arguments << QStringLiteral("-");
-    return runGrim(arguments, {}, {});
+    CaptureResult fullCapture = runGrim(arguments, {}, frameGeometry);
+    return cropGrimFrameToRequest(std::move(fullCapture), frameGeometry, request);
 }
 
 // KWin's own org.kde.KWin.ScreenShot2.CaptureArea renders the exact requested

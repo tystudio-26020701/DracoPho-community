@@ -21,19 +21,9 @@ env:
 
 jobs:
   appimage:
-    name: Build AppImage ${{ matrix.variant }}
+    name: Build AppImage
     runs-on: ubuntu-latest
     container: archlinux:base-devel
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - variant: layershell
-            with_layer_shell: ON
-            require_layer_shell: ON
-          - variant: nolayershell
-            with_layer_shell: OFF
-            require_layer_shell: OFF
 
     steps:
       - name: Resolve tag
@@ -88,49 +78,48 @@ jobs:
 
       - name: Configure
         run: |
-          cmake -S . -B build-${{ matrix.variant }} -G Ninja \
+          cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            -DMARK_SHOT_WITH_LAYER_SHELL=${{ matrix.with_layer_shell }} \
-            -DMARK_SHOT_REQUIRE_LAYER_SHELL=${{ matrix.require_layer_shell }}
+            -DMARK_SHOT_WITH_LAYER_SHELL=ON \
+            -DMARK_SHOT_REQUIRE_LAYER_SHELL=ON
 
       - name: Build
-        run: cmake --build build-${{ matrix.variant }} --parallel
+        run: cmake --build build --parallel
 
       - name: Install into AppDir
         shell: bash
         run: |
           set -euo pipefail
-          APPDIR="$PWD/AppDir-${{ matrix.variant }}"
+          APPDIR="$PWD/AppDir"
           rm -rf "$APPDIR"
-          DESTDIR="$APPDIR" cmake --install build-${{ matrix.variant }}
+          DESTDIR="$APPDIR" cmake --install build
           install -Dm644 LICENSE "$APPDIR/usr/share/licenses/mark-shot/LICENSE"
           install -Dm644 README.md "$APPDIR/usr/share/doc/mark-shot/README.md"
           install -Dm644 README.zh-CN.md "$APPDIR/usr/share/doc/mark-shot/README.zh-CN.md"
 
-      - name: Assert LayerShellQt linkage
+      - name: Assert LayerShellQt packaging
         shell: bash
         run: |
           set -euo pipefail
-          BINARY="$PWD/AppDir-${{ matrix.variant }}/usr/bin/mark-shot"
-          if [ "${{ matrix.with_layer_shell }}" = "ON" ]; then
-            ldd "$BINARY" | grep -Ei 'LayerShellQt|layershell'
-          else
-            if ldd "$BINARY" | grep -Ei 'LayerShellQt|layershell'; then
-              echo "nolayershell build unexpectedly links LayerShellQt" >&2
-              exit 1
-            fi
+          BINARY="$PWD/AppDir/usr/bin/mark-shot"
+          PLUGIN="$(find "$PWD/AppDir/usr" -path '*/mark-shot/libmark-shot-layer-shell.so' -print -quit)"
+          if ldd "$BINARY" | grep -Ei 'LayerShellQt|layershell'; then
+            echo "main binary unexpectedly links LayerShellQt directly" >&2
+            exit 1
           fi
+          test -n "$PLUGIN"
+          ldd "$PLUGIN" | grep -Ei 'LayerShellQt|layershell'
 
       - name: Build AppImage
         id: package
         shell: bash
         env:
           QMAKE: /usr/bin/qmake6
-          VERSION: ${{ steps.version.outputs.version }}-${{ matrix.variant }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          APPDIR="$PWD/AppDir-${{ matrix.variant }}"
+          APPDIR="$PWD/AppDir"
 
           ./linuxdeploy-x86_64.AppImage \
             --appdir "$APPDIR" \
@@ -150,7 +139,7 @@ jobs:
             exit 1
           fi
 
-          ASSET="mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64-${{ matrix.variant }}.AppImage"
+          ASSET="mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.AppImage"
           mv "${appimages[0]}" "$ASSET"
           sha256sum "$ASSET" > "$ASSET.sha256"
           {
@@ -162,7 +151,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: mark-shot-appimage-${{ matrix.variant }}-${{ steps.version.outputs.tag }}
+          name: mark-shot-appimage-${{ steps.version.outputs.tag }}
           path: |
             ${{ steps.package.outputs.asset }}
             ${{ steps.package.outputs.checksum }}
