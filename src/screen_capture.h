@@ -19,6 +19,7 @@ struct CaptureRequest {
     bool preferScreencast = false;
     bool allowInteractivePortal = true;
     bool allowPortalScreenshotFallback = true;
+    qint64 minimumFrameTimeMs = 0;
 };
 
 CaptureResult captureScreenFrame(const CaptureRequest &request);

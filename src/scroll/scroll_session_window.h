@@ -146,6 +146,7 @@ private:
     QRect m_axisDragStartGeometry;
     QRegion m_transientPaintMask;
     bool m_restoreMaskAfterPaint = false;
+    bool m_panelTransparentForCapture = false;
     bool m_overviewDragging = false;
     int m_overviewDragOffsetPx = 0;
 
