@@ -334,6 +334,13 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
 
 bool ScrollSessionWindow::configureLayerShell(QScreen *screen)
 {
+    const QSize desiredSize = m_geometry.isValid() && !m_geometry.isEmpty()
+        ? m_geometry.size()
+        : (screen ? screen->geometry().size() : QSize());
+    if (!desiredSize.isEmpty()) {
+        resize(desiredSize);
+    }
+
     if (screen) {
         setScreen(screen);
     }
