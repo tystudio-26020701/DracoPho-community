@@ -3,13 +3,10 @@
 #include "annotation_launch.h"
 #include "clipboard_image.h"
 #include "debug_log.h"
+#include "layer_shell_runtime.h"
 #include "screen_capture.h"
 #include "ui/i18n.h"
 #include "ui/theme.h"
-
-#ifdef HAVE_LAYER_SHELL
-#include <LayerShellQt/Window>
-#endif
 
 #include <QCloseEvent>
 #include <QDateTime>
@@ -337,53 +334,24 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
 
 bool ScrollSessionWindow::configureLayerShell(QScreen *screen)
 {
-#ifndef HAVE_LAYER_SHELL
-    Q_UNUSED(screen);
-    return false;
-#else
     if (screen) {
         setScreen(screen);
     }
 
-    setAttribute(Qt::WA_NativeWindow);
-    winId();
-
-    QWindow *nativeWindow = windowHandle();
-    if (!nativeWindow) {
-        return false;
-    }
-    if (screen) {
-        nativeWindow->setScreen(screen);
-    }
-
-    LayerShellQt::Window *layerWindow = LayerShellQt::Window::get(nativeWindow);
-    if (!layerWindow) {
-        return false;
-    }
-
-    LayerShellQt::Window::Anchors anchors = LayerShellQt::Window::AnchorTop;
-    anchors |= LayerShellQt::Window::AnchorBottom;
-    anchors |= LayerShellQt::Window::AnchorLeft;
-    anchors |= LayerShellQt::Window::AnchorRight;
-
-    layerWindow->setScope(QStringLiteral("mark-shot-scroll"));
-    layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
-    layerWindow->setAnchors(anchors);
-    layerWindow->setMargins({});
-    layerWindow->setExclusiveZone(-1);
     // Do not hold exclusive keyboard focus; the page below should keep receiving
     // keyboard and wheel input while the panel can still take focus when clicked.
-    layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
-    layerWindow->setActivateOnShow(true);
-    layerWindow->setCloseOnDismissed(false);
-    if (screen) {
-        layerWindow->setScreen(screen);
-    } else {
-        layerWindow->setWantsToBeOnActiveScreen(true);
-    }
-    layerWindow->setDesiredSize({});
-    return true;
-#endif
+    return markshot::layershell::configureOverlay(
+        this,
+        screen,
+        {QStringLiteral("mark-shot-scroll"),
+         markshot::layershell::KeyboardInteractivity::OnDemand,
+         false,
+         true});
+}
+
+bool ScrollSessionWindow::layerShellActive() const
+{
+    return m_layerShell;
 }
 
 void ScrollSessionWindow::buildControlBar()
