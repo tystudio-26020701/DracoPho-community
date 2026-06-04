@@ -682,7 +682,7 @@ void ScrollSessionWindow::resizeEvent(QResizeEvent *event)
 
 void ScrollSessionWindow::captureTick()
 {
-    if (m_paused || m_axisDragging) {
+    if (m_paused || (m_panelOnlyWindow && m_axisDragging)) {
         return;
     }
 
@@ -1390,9 +1390,10 @@ bool ScrollSessionWindow::eventFilter(QObject *watched, QEvent *event)
                 std::abs(delta.y()) < kDragThresholdPx) {
                 return false;  // below threshold, not yet dragging
             }
-            // Threshold exceeded: enter drag mode. Capture is paused while the
-            // region moves so intermediate drag frames do not disturb the
-            // stitcher's current anchor.
+            // Threshold exceeded: enter drag mode. In the GNOME xdg-window
+            // fallback, pause capture while the region moves so intermediate
+            // drag frames do not disturb the stitcher's current anchor. On
+            // layer-shell compositors, live stitching during drag is preserved.
             m_axisDragging = true;
             m_lastSignature.clear();
             m_transientPaintMask = overlayPaintRegion();
