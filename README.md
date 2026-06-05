@@ -628,6 +628,10 @@ Scrolling screenshot capture is not guaranteed on GNOME or KDE. The feature depe
 
 ---
 
+## Feedback & Issues
+
+If you encounter bugs or want to suggest new features, we recommend using GitHub CLI (`gh`) tool to submit an Issue. We provide templates and a script to automatically collect system information. For details, please refer to the [Issue Submission Guide](.doc/submit-issue-via-gh.md).
+
 ## License
 
 This project is licensed under the **MIT License**. For details, please refer to the [LICENSE](LICENSE) file.
