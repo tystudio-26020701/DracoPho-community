@@ -203,6 +203,24 @@ QString openWithPanelStyleSheet()
         "}");
 }
 
+QString ocrPanelButtonStyleSheet()
+{
+    return QStringLiteral(
+        "QPushButton#ocrPanelButton {"
+        " color: #E5E7EB;"
+        " text-align: center;"
+        " background: transparent;"
+        " border: 1px solid transparent;"
+        " border-radius: 8px;"
+        " padding: 8px 10px;"
+        " min-height: 22px;"
+        "}"
+        "QPushButton#ocrPanelButton:hover {"
+        " background: rgba(45, 212, 191, 28);"
+        " border-color: rgba(45, 212, 191, 80);"
+        "}");
+}
+
 QString propertyColorDialogPanelStyleSheet()
 {
     // The panel now hosts the lightweight ColorPicker, which paints all of
