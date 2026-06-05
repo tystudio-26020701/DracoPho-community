@@ -1,5 +1,5 @@
 ---
-name: Bug Report
+name: Bug Report (中文)
 about: 报告 mark-shot 的运行错误或异常行为。
 title: 'bug: [简要描述问题]'
 labels: ['bug']
