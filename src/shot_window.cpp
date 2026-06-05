@@ -114,6 +114,13 @@ constexpr int kMinSharpRowsPerThread = 64;
 constexpr qreal kMinStartupColorLoupeSize = 72.0;
 constexpr qreal kMaxStartupColorLoupeSize = 260.0;
 
+bool envFlagEnabled(const QProcessEnvironment &env, const QString &name)
+{
+    const QString value = env.value(name).trimmed().toLower();
+    return value == QStringLiteral("1") || value == QStringLiteral("true")
+        || value == QStringLiteral("yes") || value == QStringLiteral("on");
+}
+
 bool sendDesktopNotification(const QString &summary, const QString &body, int timeoutMs = 2500)
 {
     QDBusInterface notifications(QStringLiteral("org.freedesktop.Notifications"),
@@ -3146,6 +3153,52 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     extensionLayout->setSpacing(4);
     m_extensionPanel->hide();
 
+    m_ocrResultPanel = new QWidget(this);
+    m_ocrResultPanel->setObjectName(QStringLiteral("extensionPanel"));
+    m_ocrResultPanel->setStyleSheet(markshot::theme::openWithPanelStyleSheet());
+    auto *ocrLayout = new QVBoxLayout(m_ocrResultPanel);
+    ocrLayout->setContentsMargins(12, 12, 12, 12);
+    ocrLayout->setSpacing(10);
+    auto *ocrTitle = new QLabel(MS_TR("OCR Result"), m_ocrResultPanel);
+    ocrLayout->addWidget(ocrTitle);
+    m_ocrResultHintLabel = new QLabel(
+        MS_TR("Review or edit the recognized text before copying."),
+        m_ocrResultPanel);
+    m_ocrResultHintLabel->setWordWrap(true);
+    ocrLayout->addWidget(m_ocrResultHintLabel);
+    m_ocrResultEditor = new QTextEdit(m_ocrResultPanel);
+    m_ocrResultEditor->setAcceptRichText(false);
+    m_ocrResultEditor->setPlaceholderText(MS_TR("OCR text appears here"));
+    m_ocrResultEditor->setMinimumHeight(220);
+    ocrLayout->addWidget(m_ocrResultEditor);
+    auto *ocrActions = new QHBoxLayout();
+    ocrActions->setSpacing(8);
+    auto *ocrCopyButton = new QPushButton(MS_TR("Copy"), m_ocrResultPanel);
+    m_ocrTranslateButton = new QPushButton(MS_TR("Translate"), m_ocrResultPanel);
+    auto *ocrCloseButton = new QPushButton(MS_TR("Close"), m_ocrResultPanel);
+    for (QPushButton *button : {ocrCopyButton, m_ocrTranslateButton, ocrCloseButton}) {
+        button->setObjectName(QStringLiteral("ocrPanelButton"));
+        button->setStyleSheet(markshot::theme::ocrPanelButtonStyleSheet());
+    }
+    connect(ocrCopyButton, &QPushButton::clicked, this, [this] {
+        if (!m_ocrResultEditor) {
+            return;
+        }
+        markshot::copyTextToClipboard(m_ocrResultEditor->toPlainText());
+        showToast(MS_TR("OCR text copied"));
+    });
+    connect(m_ocrTranslateButton, &QPushButton::clicked, this,
+            &ShotWindow::startOcrResultTranslation);
+    connect(ocrCloseButton, &QPushButton::clicked, this,
+            [this] { hideOcrResultPanel(); });
+    ocrActions->addWidget(ocrCopyButton);
+    ocrActions->addWidget(m_ocrTranslateButton);
+    ocrActions->addWidget(ocrCloseButton);
+    ocrLayout->addLayout(ocrActions);
+    m_ocrResultEditor->installEventFilter(this);
+    m_ocrResultPanel->installEventFilter(this);
+    m_ocrResultPanel->hide();
+
     m_colorPalette = new QWidget(this);
     m_colorPalette->setObjectName(QStringLiteral("colorPalette"));
     m_colorPalette->setStyleSheet(markshot::theme::colorPaletteStyleSheet());
@@ -3794,6 +3847,34 @@ bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
         }
     }
 
+    if (watched == m_ocrResultPanel) {
+        if (event->type() == QEvent::MouseButtonPress) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton && mouseEvent->pos().y() <= 44) {
+                m_ocrResultPanelDragging = true;
+                m_ocrResultPanelDragStart = m_ocrResultPanel->mapTo(this, mouseEvent->pos());
+                m_ocrResultPanelBeforeDrag = m_ocrResultPanel->geometry();
+                setCursor(Qt::SizeAllCursor);
+                return true;
+            }
+        } else if (event->type() == QEvent::MouseMove && m_ocrResultPanelDragging) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            const QPoint delta =
+                m_ocrResultPanel->mapTo(this, mouseEvent->pos()) - m_ocrResultPanelDragStart;
+            m_ocrResultPanelUserPlaced = true;
+            m_ocrResultPanel->setGeometry(
+                clampedToolbarGeometry(m_ocrResultPanelBeforeDrag.translated(delta)));
+            return true;
+        } else if (event->type() == QEvent::MouseButtonRelease && m_ocrResultPanelDragging) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton) {
+                m_ocrResultPanelDragging = false;
+                updateCursor();
+                return true;
+            }
+        }
+    }
+
     if (watched == m_textEditor && event->type() == QEvent::KeyPress) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
         if (imageNavigationAvailable() && keyEvent->key() == Qt::Key_Control && !keyEvent->isAutoRepeat()) {
@@ -4416,6 +4497,7 @@ void ShotWindow::resizeEvent(QResizeEvent *)
     updateAnnotationPropertyPanelGeometry();
     updateOpenWithPanelGeometry();
     updateExtensionPanelGeometry();
+    updateOcrResultPanelGeometry();
 }
 
 void ShotWindow::mousePressEvent(QMouseEvent *event)
@@ -4504,6 +4586,12 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         && (!m_actionToolbar || !m_actionToolbar->geometry().contains(event->pos()))
         && (!m_toolbar || !m_toolbar->geometry().contains(event->pos()))) {
         m_extensionPanel->hide();
+    }
+    if (m_ocrResultPanel && m_ocrResultPanel->isVisible()
+        && !m_ocrResultPanel->geometry().contains(event->pos())
+        && (!m_actionToolbar || !m_actionToolbar->geometry().contains(event->pos()))
+        && (!m_toolbar || !m_toolbar->geometry().contains(event->pos()))) {
+        hideOcrResultPanel();
     }
     if (m_colorPalette && m_colorPalette->isVisible()
         && !m_colorPalette->geometry().contains(event->pos())) {
@@ -6615,6 +6703,7 @@ void ShotWindow::refreshViewGeometry()
     updateAnnotationPropertyPanelGeometry();
     updateOpenWithPanelGeometry();
     updateExtensionPanelGeometry();
+    updateOcrResultPanelGeometry();
 }
 
 QRect ShotWindow::clampedToolbarGeometry(QRect toolbarGeometry) const
@@ -6637,6 +6726,7 @@ void ShotWindow::updateToolbarGeometry()
         toolbarGeometry.setSize(toolbarSize);
         m_toolbar->setGeometry(clampedToolbarGeometry(toolbarGeometry));
         updateAnnotationPropertyPanelGeometry();
+        updateOcrResultPanelGeometry();
         return;
     }
     if (m_imageNavigationEnabled && m_fullscreenAnnotation) {
@@ -6644,6 +6734,7 @@ void ShotWindow::updateToolbarGeometry()
         const QRect toolbarGeometry(QPoint(qRound((width() - toolbarSize.width()) / 2.0), 12), toolbarSize);
         m_toolbar->setGeometry(clampedToolbarGeometry(toolbarGeometry));
         updateAnnotationPropertyPanelGeometry();
+        updateOcrResultPanelGeometry();
         return;
     }
 
@@ -6659,6 +6750,7 @@ void ShotWindow::updateToolbarGeometry()
     y = std::clamp(y, 8, std::max(8, height() - toolbarSize.height() - 8));
     m_toolbar->setGeometry(x, y, toolbarSize.width(), toolbarSize.height());
     updateAnnotationPropertyPanelGeometry();
+    updateOcrResultPanelGeometry();
 }
 
 void ShotWindow::updateActionToolbarGeometry()
@@ -6703,10 +6795,12 @@ void ShotWindow::updateActionToolbarGeometry()
     for (const QRect &candidate : candidates) {
         if (clearOfPanels(candidate)) {
             m_actionToolbar->setGeometry(candidate);
+            updateOcrResultPanelGeometry();
             return;
         }
     }
     m_actionToolbar->setGeometry(candidates.first());
+    updateOcrResultPanelGeometry();
 }
 
 void ShotWindow::updateAnnotationPropertyPanel()
@@ -7678,6 +7772,280 @@ void ShotWindow::updateExtensionPanelGeometry()
     x = std::clamp(x, 8, std::max(8, width() - panelSize.width() - 8));
     y = std::clamp(y, 8, std::max(8, height() - panelSize.height() - 8));
     m_extensionPanel->setGeometry(x, y, panelSize.width(), panelSize.height());
+}
+
+void ShotWindow::showOcrResultPanel(const QString &text)
+{
+    if (!m_ocrResultPanel || !m_ocrResultEditor) {
+        return;
+    }
+    if (m_openWithPanel) {
+        m_openWithPanel->hide();
+    }
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
+    }
+    if (m_ocrResultHintLabel) {
+        m_ocrResultHintLabel->setText(
+            MS_TR("Review or edit the recognized text before copying."));
+    }
+    m_ocrResultEditor->setPlainText(text);
+    if (m_ocrTranslateButton) {
+        m_ocrTranslateButton->setEnabled(true);
+        m_ocrTranslateButton->setText(MS_TR("Translate"));
+    }
+    updateOcrResultPanelGeometry();
+    m_ocrResultPanel->show();
+    m_ocrResultPanel->raise();
+    m_ocrResultEditor->setFocus(Qt::MouseFocusReason);
+}
+
+void ShotWindow::hideOcrResultPanel()
+{
+    cancelOcrResultTranslation();
+    if (m_ocrResultPanel) {
+        m_ocrResultPanel->hide();
+    }
+    m_ocrResultPanelDragging = false;
+    m_ocrResultPanelUserPlaced = false;
+}
+
+void ShotWindow::updateOcrResultPanelGeometry()
+{
+    if (!m_ocrResultPanel) {
+        return;
+    }
+
+    m_ocrResultPanel->adjustSize();
+    if (m_ocrResultPanelUserPlaced) {
+        const QSize panelSize = m_ocrResultPanel->sizeHint();
+        QRect panelGeometry = m_ocrResultPanel->geometry();
+        panelGeometry.setSize(panelSize);
+        m_ocrResultPanel->setGeometry(clampedToolbarGeometry(panelGeometry));
+        return;
+    }
+    const QSize panelSize(
+        std::min(420, std::max(320, m_ocrResultPanel->sizeHint().width())),
+        std::min(560, std::max(260, m_ocrResultPanel->sizeHint().height())));
+    const QRect toolbarRect = m_fullscreenAnnotation && m_toolbar
+        ? m_toolbar->geometry()
+        : (m_actionToolbar ? m_actionToolbar->geometry()
+                           : QRect(width() - 64, height() / 2 - 80, 56, 160));
+    int x = toolbarRect.left() - panelSize.width() - kToolbarMargin;
+    int y = toolbarRect.top();
+    if (x < 8) {
+        x = toolbarRect.right() + kToolbarMargin;
+    }
+    x = std::clamp(x, 8, std::max(8, width() - panelSize.width() - 8));
+    y = std::clamp(y, 8, std::max(8, height() - panelSize.height() - 8));
+    m_ocrResultPanel->setGeometry(x, y, panelSize.width(), panelSize.height());
+}
+
+void ShotWindow::startOcrResultTranslation()
+{
+    if (!m_ocrResultEditor || !m_ocrTranslateButton || m_ocrResultTranslationProcess) {
+        return;
+    }
+
+    const QString text = m_ocrResultEditor->toPlainText().trimmed();
+    if (text.isEmpty()) {
+        showToast(MS_TR("No text to translate"));
+        return;
+    }
+
+    QJsonArray tokens;
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int lineIndex = 0;
+    for (const QString &rawLine : lines) {
+        const QString line = rawLine.trimmed();
+        if (line.isEmpty()) {
+            ++lineIndex;
+            continue;
+        }
+
+        QJsonObject object;
+        object.insert(QStringLiteral("text"), line);
+        object.insert(QStringLiteral("box"),
+                      QJsonArray{0, static_cast<double>(lineIndex) * 24.0, 1000.0, 20.0});
+        object.insert(QStringLiteral("line"), lineIndex);
+        object.insert(QStringLiteral("index"), 0);
+        object.insert(QStringLiteral("confidence"), 1.0);
+        tokens.append(object);
+        ++lineIndex;
+    }
+
+    if (tokens.isEmpty()) {
+        showToast(MS_TR("No text to translate"));
+        return;
+    }
+
+    QJsonObject root;
+    const PinnedWindowConfig config = pinnedWindowConfig();
+    root.insert(QStringLiteral("targetLanguage"), config.translationTargetLanguage);
+    root.insert(QStringLiteral("tokens"), tokens);
+
+    QTemporaryFile inputFile(
+        QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation).isEmpty()
+                 ? QDir::tempPath()
+                 : QStandardPaths::writableLocation(QStandardPaths::TempLocation))
+            .filePath(QStringLiteral("mark-shot-ocr-result-translate-XXXXXX.json")));
+    inputFile.setAutoRemove(false);
+    if (!inputFile.open()) {
+        showToast(MS_TR("Translation failed"));
+        return;
+    }
+
+    m_ocrResultTranslationInputPath = inputFile.fileName();
+    inputFile.write(QJsonDocument(root).toJson(QJsonDocument::Compact));
+    inputFile.close();
+
+    auto *process = new QProcess(this);
+    m_ocrResultTranslationProcess = process;
+    process->setProcessEnvironment(QProcessEnvironment::systemEnvironment());
+
+    if (!config.translationCommand.isEmpty()) {
+        QString commandLine = config.translationCommand;
+        bool replaced = false;
+        replaceShellPlaceholder(&commandLine,
+                                QStringLiteral("{input}"),
+                                m_ocrResultTranslationInputPath,
+                                &replaced);
+        replaceShellPlaceholder(&commandLine,
+                                QStringLiteral("{inputPath}"),
+                                m_ocrResultTranslationInputPath,
+                                &replaced);
+        replaceShellPlaceholder(&commandLine,
+                                QStringLiteral("{targetLanguage}"),
+                                config.translationTargetLanguage,
+                                &replaced);
+        replaceShellPlaceholder(&commandLine, QStringLiteral("{config}"), appConfigPath(), &replaced);
+        if (!replaced) {
+            commandLine += QLatin1Char(' ');
+            commandLine += shellQuote(m_ocrResultTranslationInputPath);
+        }
+
+        QString shell =
+            QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"),
+                                                           QStringLiteral("/bin/sh"));
+        if (shell.isEmpty()) {
+            shell = QStringLiteral("/bin/sh");
+        }
+        process->setProgram(shell);
+        process->setArguments({QStringLiteral("-c"), commandLine});
+    } else {
+        process->setProgram(helperProgramPath(QStringLiteral("mark-shot-translate")));
+        process->setArguments({QStringLiteral("--input"),
+                               m_ocrResultTranslationInputPath,
+                               QStringLiteral("--target-language"),
+                               config.translationTargetLanguage,
+                               QStringLiteral("--config"),
+                               appConfigPath()});
+    }
+
+    if (m_ocrResultHintLabel) {
+        m_ocrResultHintLabel->setText(MS_TR("Translating edited OCR text. Keep this panel open."));
+    }
+    m_ocrTranslateButton->setEnabled(false);
+    m_ocrTranslateButton->setText(MS_TR("Translating..."));
+
+    connect(process, &QProcess::errorOccurred, this, [this, process] {
+        if (process == m_ocrResultTranslationProcess
+            && process->state() == QProcess::NotRunning) {
+            finishOcrResultTranslation(process, QByteArray());
+        }
+    });
+    connect(process,
+            QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this,
+            [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
+                const QByteArray output =
+                    exitStatus == QProcess::NormalExit && exitCode == 0
+                    ? process->readAllStandardOutput()
+                    : QByteArray();
+                finishOcrResultTranslation(process, output);
+            });
+    QTimer::singleShot(config.translationTimeoutMs, process, [process] {
+        if (process->state() != QProcess::NotRunning) {
+            process->kill();
+        }
+    });
+
+    process->start();
+}
+
+void ShotWindow::finishOcrResultTranslation(QProcess *process, const QByteArray &output)
+{
+    if (process != m_ocrResultTranslationProcess) {
+        return;
+    }
+
+    QStringList translatedLines;
+    if (!output.isEmpty()) {
+        QJsonParseError parseError;
+        const QJsonDocument document = QJsonDocument::fromJson(output, &parseError);
+        if (parseError.error == QJsonParseError::NoError && document.isObject()) {
+            const QJsonArray tokenArray =
+                document.object().value(QStringLiteral("tokens")).toArray();
+            translatedLines.reserve(tokenArray.size());
+            for (const QJsonValue &value : tokenArray) {
+                if (!value.isObject()) {
+                    continue;
+                }
+                translatedLines.append(value.toObject()
+                                           .value(QStringLiteral("text"))
+                                           .toString()
+                                           .trimmed());
+            }
+        }
+    }
+
+    const QString translatedText = translatedLines.join(QLatin1Char('\n')).trimmed();
+    if (!translatedText.isEmpty() && m_ocrResultEditor) {
+        m_ocrResultEditor->setPlainText(translatedText);
+    } else {
+        showToast(MS_TR("Translation failed"));
+    }
+
+    if (m_ocrTranslateButton) {
+        m_ocrTranslateButton->setEnabled(true);
+        m_ocrTranslateButton->setText(MS_TR("Translate"));
+    }
+    if (m_ocrResultHintLabel) {
+        m_ocrResultHintLabel->setText(
+            MS_TR("Review or edit the recognized text before copying."));
+    }
+
+    m_ocrResultTranslationProcess = nullptr;
+    if (!m_ocrResultTranslationInputPath.isEmpty()) {
+        QFile::remove(m_ocrResultTranslationInputPath);
+        m_ocrResultTranslationInputPath.clear();
+    }
+    process->deleteLater();
+}
+
+void ShotWindow::cancelOcrResultTranslation()
+{
+    if (m_ocrResultTranslationProcess) {
+        disconnect(m_ocrResultTranslationProcess, nullptr, this, nullptr);
+        if (m_ocrResultTranslationProcess->state() != QProcess::NotRunning) {
+            m_ocrResultTranslationProcess->kill();
+        }
+        m_ocrResultTranslationProcess->deleteLater();
+        m_ocrResultTranslationProcess = nullptr;
+    }
+
+    if (!m_ocrResultTranslationInputPath.isEmpty()) {
+        QFile::remove(m_ocrResultTranslationInputPath);
+        m_ocrResultTranslationInputPath.clear();
+    }
+    if (m_ocrTranslateButton) {
+        m_ocrTranslateButton->setEnabled(true);
+        m_ocrTranslateButton->setText(MS_TR("Translate"));
+    }
+    if (m_ocrResultHintLabel) {
+        m_ocrResultHintLabel->setText(
+            MS_TR("Review or edit the recognized text before copying."));
+    }
 }
 
 void ShotWindow::toggleColorPalette(QPoint position)
@@ -8663,6 +9031,12 @@ void ShotWindow::ocrCopySelection()
         result += token.text;
         prevText = token.text;
         prevRect = token.rect;
+    }
+
+    const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    if (envFlagEnabled(env, QStringLiteral("MARK_SHOT_OCR_RESULT_PANEL"))) {
+        showOcrResultPanel(result);
+        return;
     }
 
     markshot::copyTextToClipboard(result);

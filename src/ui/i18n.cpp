@@ -147,6 +147,15 @@ const QHash<QString, QString> &chineseTable()
         {QStringLiteral("OCR failed"), QStringLiteral("OCR 失败")},
         {QStringLiteral("No text recognized"), QStringLiteral("未识别到文字")},
         {QStringLiteral("OCR text copied"), QStringLiteral("已复制 OCR 文字")},
+        {QStringLiteral("OCR Result"), QStringLiteral("OCR 结果")},
+        {QStringLiteral("Review or edit the recognized text before copying."),
+         QStringLiteral("复制前可先检查或编辑识别结果。")},
+        {QStringLiteral("OCR text appears here"), QStringLiteral("OCR 文字会显示在这里")},
+        {QStringLiteral("No text to translate"), QStringLiteral("没有可翻译的文字")},
+        {QStringLiteral("Translation failed"), QStringLiteral("翻译失败")},
+        {QStringLiteral("Translating..."), QStringLiteral("翻译中...")},
+        {QStringLiteral("Translating edited OCR text. Keep this panel open."),
+         QStringLiteral("正在翻译编辑后的 OCR 文字。请保持此面板打开。")},
 
         // Scrolling capture session window.
         {QStringLiteral("Scroll capture is not supported on GNOME Wayland."),

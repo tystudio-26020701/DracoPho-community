@@ -28,6 +28,9 @@ QString panelStyleSheet();
 // Stylesheet for the "Open With" panel that lists desktop applications.
 QString openWithPanelStyleSheet();
 
+// Stylesheet overrides for OCR result panel action buttons.
+QString ocrPanelButtonStyleSheet();
+
 // Stylesheet for the inline color dialog panel docked next to the property
 // panel.
 QString propertyColorDialogPanelStyleSheet();
