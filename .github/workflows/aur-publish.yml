@@ -80,13 +80,13 @@ jobs:
           fi
           sed -i "s/^_commit=.*/_commit=${{ steps.version.outputs.commit }}/" aur-work/PKGBUILD
 
-      - name: Generate checksums and .SRCINFO
+      - name: Generate .SRCINFO
         run: |
           docker run --rm \
             -v "$PWD/aur-work:/pkg" \
             -w /pkg \
             archlinux:base-devel \
-            bash -lc 'pacman -Sy --noconfirm pacman-contrib sudo >/dev/null && useradd -m builder && chown -R builder:builder /pkg && su builder -c "cd /pkg && updpkgsums && makepkg --printsrcinfo > .SRCINFO"'
+            bash -lc 'pacman -Sy --noconfirm sudo >/dev/null && useradd -m builder && chown -R builder:builder /pkg && su builder -c "cd /pkg && makepkg --printsrcinfo > .SRCINFO"'
 
       - name: Configure SSH
         env:
