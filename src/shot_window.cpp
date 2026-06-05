@@ -780,6 +780,17 @@ QJsonObject objectValue(const QJsonObject &object, const QStringList &keys)
     return {};
 }
 
+QJsonValue valueForKeys(const QJsonObject &object, const QStringList &keys)
+{
+    for (const QString &key : keys) {
+        const QJsonValue value = object.value(key);
+        if (!value.isUndefined()) {
+            return value;
+        }
+    }
+    return {};
+}
+
 std::optional<bool> boolValue(const QJsonObject &object, const QStringList &keys)
 {
     for (const QString &key : keys) {
@@ -886,6 +897,16 @@ std::optional<qreal> realFromConfigValue(const QJsonValue &value)
         if (ok) {
             return number;
         }
+    }
+    return std::nullopt;
+}
+
+std::optional<int> pixelDistanceFromConfigValue(const QJsonValue &value,
+                                                int minimum,
+                                                int maximum)
+{
+    if (const std::optional<qreal> distance = realFromConfigValue(value)) {
+        return std::clamp(static_cast<int>(std::lround(*distance)), minimum, maximum);
     }
     return std::nullopt;
 }
@@ -1311,6 +1332,156 @@ PinnedWindowConfig pinnedWindowConfig()
     if (config.translationTargetLanguage.isEmpty()) {
         config.translationTargetLanguage = QStringLiteral("Simplified Chinese");
     }
+    return config;
+}
+
+void applyScrollFrameConfig(const QJsonValue &value, markshot::scroll::ScrollSessionUiConfig *config)
+{
+    if (!config || value.isUndefined()) {
+        return;
+    }
+
+    if (value.isBool()) {
+        config->frameEnabled = value.toBool();
+        return;
+    }
+    if (const std::optional<int> gap = pixelDistanceFromConfigValue(value, 0, 256)) {
+        config->frameEnabled = true;
+        config->frameGap = *gap;
+        return;
+    }
+    if (!value.isObject()) {
+        return;
+    }
+
+    const QJsonObject object = value.toObject();
+    if (const std::optional<bool> enabled =
+            boolValue(object,
+                      {QStringLiteral("enabled"),
+                       QStringLiteral("visible"),
+                       QStringLiteral("show"),
+                       QStringLiteral("showFrame"),
+                       QStringLiteral("showBorder")});
+        enabled.has_value()) {
+        config->frameEnabled = *enabled;
+    } else {
+        config->frameEnabled = true;
+    }
+
+    const QJsonValue gapValue =
+        valueForKeys(object,
+                     {QStringLiteral("gap"),
+                      QStringLiteral("distance"),
+                      QStringLiteral("offset"),
+                      QStringLiteral("padding"),
+                      QStringLiteral("margin"),
+                      QStringLiteral("value"),
+                      QStringLiteral("px")});
+    if (const std::optional<int> gap = pixelDistanceFromConfigValue(gapValue, 0, 256)) {
+        config->frameGap = *gap;
+    }
+}
+
+void applyScrollPreviewConfig(const QJsonValue &value, markshot::scroll::ScrollSessionUiConfig *config)
+{
+    if (!config || value.isUndefined()) {
+        return;
+    }
+    if (const std::optional<int> gap = pixelDistanceFromConfigValue(value, 0, 512)) {
+        config->previewGap = *gap;
+        return;
+    }
+    if (!value.isObject()) {
+        return;
+    }
+
+    const QJsonObject object = value.toObject();
+    const QJsonValue gapValue =
+        valueForKeys(object,
+                     {QStringLiteral("gap"),
+                      QStringLiteral("distance"),
+                      QStringLiteral("offset"),
+                      QStringLiteral("margin"),
+                      QStringLiteral("value"),
+                      QStringLiteral("px")});
+    if (const std::optional<int> gap = pixelDistanceFromConfigValue(gapValue, 0, 512)) {
+        config->previewGap = *gap;
+    }
+}
+
+markshot::scroll::ScrollSessionUiConfig scrollSessionUiConfig()
+{
+    markshot::scroll::ScrollSessionUiConfig config;
+
+    QFile file(appConfigPath());
+    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return config;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        return config;
+    }
+
+    const QJsonObject root = document.object();
+    const QJsonObject scroll =
+        objectValue(root,
+                    {QStringLiteral("scrollCapture"),
+                     QStringLiteral("scrollingCapture"),
+                     QStringLiteral("scroll")});
+    if (scroll.isEmpty()) {
+        return config;
+    }
+
+    applyScrollFrameConfig(valueForKeys(scroll,
+                                        {QStringLiteral("frame"),
+                                         QStringLiteral("captureFrame"),
+                                         QStringLiteral("border"),
+                                         QStringLiteral("outline")}),
+                           &config);
+
+    if (const std::optional<bool> frameEnabled =
+            boolValue(scroll,
+                      {QStringLiteral("frameEnabled"),
+                       QStringLiteral("borderEnabled"),
+                       QStringLiteral("showFrame"),
+                       QStringLiteral("showBorder")});
+        frameEnabled.has_value()) {
+        config.frameEnabled = *frameEnabled;
+    }
+    if (const std::optional<int> frameGap =
+            pixelDistanceFromConfigValue(valueForKeys(scroll,
+                                                      {QStringLiteral("frameGap"),
+                                                       QStringLiteral("frameDistance"),
+                                                       QStringLiteral("frameOffset"),
+                                                       QStringLiteral("borderGap"),
+                                                       QStringLiteral("borderDistance"),
+                                                       QStringLiteral("borderOffset")}),
+                                         0,
+                                         256)) {
+        config.frameGap = *frameGap;
+    }
+
+    applyScrollPreviewConfig(valueForKeys(scroll,
+                                          {QStringLiteral("preview"),
+                                           QStringLiteral("previewUi"),
+                                           QStringLiteral("previewUI"),
+                                           QStringLiteral("panel")}),
+                             &config);
+    if (const std::optional<int> previewGap =
+            pixelDistanceFromConfigValue(valueForKeys(scroll,
+                                                      {QStringLiteral("previewGap"),
+                                                       QStringLiteral("previewDistance"),
+                                                       QStringLiteral("previewOffset"),
+                                                       QStringLiteral("panelGap"),
+                                                       QStringLiteral("panelDistance"),
+                                                       QStringLiteral("panelOffset")}),
+                                         0,
+                                         512)) {
+        config.previewGap = *previewGap;
+    }
+
     return config;
 }
 
@@ -8255,6 +8426,7 @@ void ShotWindow::startScrollCapture()
     }
 
     const QString outputName = m_outputName;
+    const markshot::scroll::ScrollSessionUiConfig uiConfig = scrollSessionUiConfig();
     QScreen *targetScreen = screen();
     QPointer<ShotWindow> self(this);
 
@@ -8263,9 +8435,9 @@ void ShotWindow::startScrollCapture()
     // stitcher, otherwise the first frame can contain our own toolbar/overlay.
     hide();
     QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-    QTimer::singleShot(120, qApp, [self, geometry, outputName, targetScreen] {
+    QTimer::singleShot(120, qApp, [self, geometry, outputName, targetScreen, uiConfig] {
         auto *window =
-            new markshot::scroll::ScrollSessionWindow(geometry, outputName, targetScreen);
+            new markshot::scroll::ScrollSessionWindow(geometry, outputName, targetScreen, uiConfig);
         window->show();
         window->raise();
         window->activateWindow();
