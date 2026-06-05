@@ -1,5 +1,5 @@
 ---
-name: Feature Request
+name: Feature Request (中文)
 about: 为 mark-shot 提出新功能或改进建议。
 title: 'feat: [功能名称]'
 labels: ['enhancement']
