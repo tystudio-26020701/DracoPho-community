@@ -220,6 +220,29 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json`. Pin
 | `translation.autoAfterOcr` | Boolean | `false` | Controls whether translation starts automatically after a successful pinned-window OCR result. If enabled, choosing Translate later displays the cached translation instantly. |
 | `windowDetection.env` | Object | `{}` | Environment variables passed to the window boundary detection script. Alias: `environment`. <br>• **Niri Script**: Supports `MARK_SHOT_NIRI_PANEL_EDGE` (`top`/`bottom`/`left`/`right`/`none`) and pixel offsets `MARK_SHOT_NIRI_OFFSET_X/Y/WIDTH/HEIGHT`.<br>• **Hyprland Script**: Supports `MARK_SHOT_HYPRLAND_INCLUDE_INACTIVE` (`1`/`0`) and pixel offsets `MARK_SHOT_HYPRLAND_OFFSET_X/Y/WIDTH/HEIGHT`. |
 
+### OCR Result Panel Toggle
+
+The main selection OCR flow still copies recognized text to the clipboard by default.
+
+If you prefer an editable OCR side panel instead, add it to `~/.config/mark-shot/config.json`:
+
+```json
+{
+  "env": {
+    "QT_FONT_DPI": 96,
+    "MARK_SHOT_OCR_RESULT_PANEL": 1
+  }
+}
+```
+
+You can also set it in the shell before launch:
+
+```bash
+MARK_SHOT_OCR_RESULT_PANEL=1 mark-shot
+```
+
+Accepted truthy values are `1`, `true`, `yes`, and `on`. When enabled, main-window OCR opens a side panel with edit, copy, translate, and drag-to-move behavior instead of copying immediately.
+
 <details>
 <summary>Keyboard Shortcut Config Details</summary>
 
