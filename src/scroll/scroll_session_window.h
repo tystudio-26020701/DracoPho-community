@@ -90,6 +90,14 @@ private:
     void handleScrollIdleTimeout();
     void resumeAutoPausedCapture();
     bool shouldHidePreviewWhileCapturing() const;
+    bool floatingDragHandleActive() const;
+    QRect floatingDragHandleLocalRect() const;
+    QRect floatingDragHandleGlobalRect() const;
+    void layoutFloatingDragHandle();
+    void drawFloatingDragHandle(QPainter &painter) const;
+    void armAxisDrag(const QPoint &globalPos);
+    bool updateAxisDrag(const QPoint &globalPos);
+    bool finishAxisDrag();
     QImage currentResult() const;
     QRect captureBoundsGlobal() const;
     QRect floatingPanelGlobalRect() const;
@@ -171,9 +179,9 @@ private:
     int m_captureLen = 0;       // current screen selection extent along the scroll axis
     int m_debugFrameDumpCount = 0;
 
-    // Axis button drag-to-translate state. Dragging the axis button moves the
-    // entire capture region along the current scroll axis, allowing the user to
-    // reach content beyond the normal scroll range.
+    // Axis/floating button drag-to-translate state. Dragging the handle moves
+    // the entire capture region along the current scroll axis, allowing the user
+    // to reach content beyond the normal scroll range.
     bool m_axisDragging = false;
     bool m_axisDragArmed = false;   // press recorded, waiting for threshold
     QPoint m_axisDragStartGlobal;
@@ -195,6 +203,7 @@ private:
 
     QWidget *m_controlBar = nullptr;
     QPushButton *m_axisButton = nullptr;
+    QPushButton *m_floatingAxisButton = nullptr;
     QPushButton *m_pauseButton = nullptr;
     QPushButton *m_annotateButton = nullptr;
     QPushButton *m_saveButton = nullptr;

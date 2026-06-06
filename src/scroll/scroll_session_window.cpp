@@ -62,8 +62,11 @@ constexpr int kCaptureFrameWidth = 3; // thickness of the outer capture frame
 constexpr int kPanelWidth = 340;      // preview panel width
 constexpr int kPanelPadding = 12;
 constexpr int kControlBarHeight = 54;   // single row of icon actions
+constexpr int kControlButtonWidth = 40;
+constexpr int kControlButtonHeight = 36;
 constexpr int kStatusHeight = 22;
 constexpr int kPanelMargin = 4;
+constexpr int kFloatingDragHandleGap = 6;
 constexpr int kGnomePreviewIntervalMs = 140;
 constexpr int kScrollIdlePauseMs = 1000;
 
@@ -296,6 +299,50 @@ PreviewPanelPlacement choosePreviewPanelPlacement(const QRect &anchor,
     return {*best, false};
 }
 
+QSize controlButtonSize()
+{
+    return QSize(kControlButtonWidth, kControlButtonHeight);
+}
+
+QRect chooseFloatingDragHandleRect(const QRect &anchor, const QRect &bounds)
+{
+    const QSize handleSize = controlButtonSize();
+    if (bounds.isEmpty() || anchor.isEmpty() || handleSize.isEmpty()) {
+        return {};
+    }
+
+    const int minLeft = bounds.left() + kPanelMargin;
+    const int maxLeft = std::max(minLeft, bounds.right() - handleSize.width() - kPanelMargin + 1);
+    const int minTop = bounds.top() + kPanelMargin;
+    const int maxTop = std::max(minTop, bounds.bottom() - handleSize.height() - kPanelMargin + 1);
+
+    const int left = std::clamp(anchor.left(), minLeft, maxLeft);
+    const int bottomTop = anchor.bottom() + 1 + kFloatingDragHandleGap;
+    const int topTop = anchor.top() - kFloatingDragHandleGap - handleSize.height();
+    if (bottomTop <= maxTop) {
+        return QRect(QPoint(left, bottomTop), handleSize);
+    }
+    if (topTop >= minTop) {
+        return QRect(QPoint(left, topTop), handleSize);
+    }
+
+    const int sideLeft = anchor.left() - kFloatingDragHandleGap - handleSize.width();
+    if (sideLeft >= minLeft) {
+        const int bottomAlignedTop = anchor.bottom() - handleSize.height() + 1;
+        const int topAlignedTop = anchor.top();
+        if (bottomAlignedTop >= minTop && bottomAlignedTop <= maxTop) {
+            return QRect(QPoint(sideLeft, bottomAlignedTop), handleSize);
+        }
+        if (topAlignedTop >= minTop && topAlignedTop <= maxTop) {
+            return QRect(QPoint(sideLeft, topAlignedTop), handleSize);
+        }
+        return QRect(QPoint(sideLeft, std::clamp(topAlignedTop, minTop, maxTop)), handleSize);
+    }
+
+    const int cornerTop = bottomTop > maxTop ? anchor.top() : anchor.bottom() - handleSize.height() + 1;
+    return QRect(QPoint(left, std::clamp(cornerTop, minTop, maxTop)), handleSize);
+}
+
 QIcon makeControlIcon(ControlIcon icon)
 {
     constexpr int size = 32;
@@ -389,6 +436,30 @@ void configureIconButton(QPushButton *button, const QIcon &icon, const QString &
     button->setIconSize(QSize(21, 21));
     button->setToolTip(label);
     button->setAccessibleName(label);
+}
+
+void applyControlButtonChrome(QPushButton *button)
+{
+    button->setFixedSize(controlButtonSize());
+    button->setFocusPolicy(Qt::NoFocus);
+    button->setCursor(Qt::PointingHandCursor);
+    button->setStyleSheet(QStringLiteral(
+        "QPushButton {"
+        " color: #E5E7EB; background: rgba(255,255,255,16);"
+        " border: 1px solid rgba(255,255,255,24); border-radius: 10px;"
+        " padding: 0; min-width: 40px; max-width: 40px;"
+        " min-height: 36px; max-height: 36px; }"
+        "QPushButton:hover { background: rgba(45,212,191,30);"
+        " border-color: rgba(45,212,191,90); }"
+        "QPushButton[role=\"primary\"] { background: rgba(45,212,191,92);"
+        " border-color: rgba(94,234,212,150); }"
+        "QPushButton[role=\"primary\"]:hover { background: rgba(45,212,191,126);"
+        " border-color: rgba(153,246,228,190); }"
+        "QPushButton[role=\"danger\"]:hover { background: rgba(248,113,113,42);"
+        " border-color: rgba(248,113,113,105); }"
+        "QPushButton:focus { border-color: rgba(94,234,212,180); }"
+        "QPushButton:disabled { color: rgba(229,231,235,90);"
+        " background: rgba(255,255,255,8); border-color: rgba(255,255,255,14); }"));
 }
 
 }  // namespace
@@ -509,32 +580,23 @@ void ScrollSessionWindow::buildControlBar()
         auto *button = new QPushButton(m_controlBar);
         button->setProperty("role", role.isEmpty() ? QStringLiteral("secondary") : role);
         configureIconButton(button, icon, label);
-        button->setFixedSize(QSize(40, 36));
-        button->setFocusPolicy(Qt::NoFocus);
-        button->setCursor(Qt::PointingHandCursor);
-        button->setStyleSheet(QStringLiteral(
-            "QPushButton {"
-            " color: #E5E7EB; background: rgba(255,255,255,16);"
-            " border: 1px solid rgba(255,255,255,24); border-radius: 10px;"
-            " padding: 0; min-width: 40px; max-width: 40px;"
-            " min-height: 36px; max-height: 36px; }"
-            "QPushButton:hover { background: rgba(45,212,191,30);"
-            " border-color: rgba(45,212,191,90); }"
-            "QPushButton[role=\"primary\"] { background: rgba(45,212,191,92);"
-            " border-color: rgba(94,234,212,150); }"
-            "QPushButton[role=\"primary\"]:hover { background: rgba(45,212,191,126);"
-            " border-color: rgba(153,246,228,190); }"
-            "QPushButton[role=\"danger\"]:hover { background: rgba(248,113,113,42);"
-            " border-color: rgba(248,113,113,105); }"
-            "QPushButton:focus { border-color: rgba(94,234,212,180); }"
-            "QPushButton:disabled { color: rgba(229,231,235,90);"
-            " background: rgba(255,255,255,8); border-color: rgba(255,255,255,14); }"));
+        applyControlButtonChrome(button);
         row->addWidget(button, 0, Qt::AlignCenter);
         return button;
     };
 
     m_axisButton = makeButton(makeControlIcon(ControlIcon::AxisVertical), MS_TR("Dir: Vertical"));
     m_axisButton->installEventFilter(this);
+
+    m_floatingAxisButton = new QPushButton(this);
+    m_floatingAxisButton->setProperty("role", QStringLiteral("secondary"));
+    configureIconButton(m_floatingAxisButton,
+                        makeControlIcon(ControlIcon::AxisVertical),
+                        MS_TR("Dir: Vertical"));
+    applyControlButtonChrome(m_floatingAxisButton);
+    m_floatingAxisButton->installEventFilter(this);
+    m_floatingAxisButton->hide();
+
     row->addSpacing(4);
     m_pauseButton = makeButton(makeControlIcon(ControlIcon::Pause), MS_TR("Pause"));
     m_annotateButton = makeButton(makeControlIcon(ControlIcon::Annotate), MS_TR("Annotate"));
@@ -543,6 +605,7 @@ void ScrollSessionWindow::buildControlBar()
     m_cancelButton = makeButton(makeControlIcon(ControlIcon::Cancel), MS_TR("Cancel"), QStringLiteral("danger"));
 
     connect(m_axisButton, &QPushButton::clicked, this, [this] { toggleAxis(); });
+    connect(m_floatingAxisButton, &QPushButton::clicked, this, [this] { toggleAxis(); });
     connect(m_pauseButton, &QPushButton::clicked, this, [this] { togglePause(); });
     connect(m_annotateButton, &QPushButton::clicked, this, [this] { annotateResult(); });
     connect(m_saveButton, &QPushButton::clicked, this, [this] { saveResult(); });
@@ -607,6 +670,33 @@ bool ScrollSessionWindow::previewPanelFitsAvailableSpace() const
         .fitsWithoutOverlap;
 }
 
+bool ScrollSessionWindow::floatingDragHandleActive() const
+{
+    if (m_previewPanelVisible || previewPanelFitsAvailableSpace()) {
+        return false;
+    }
+
+    if (m_panelOnlyWindow || m_gnomeShellPreview) {
+        return !floatingDragHandleGlobalRect().isEmpty();
+    }
+    return !floatingDragHandleLocalRect().isEmpty();
+}
+
+QRect ScrollSessionWindow::floatingDragHandleLocalRect() const
+{
+    if (m_panelOnlyWindow) {
+        return QRect(QPoint(0, 0), controlButtonSize()).intersected(rect());
+    }
+
+    const QRect bounds(QPoint(0, 0), size());
+    return chooseFloatingDragHandleRect(previewAnchorLocalRect(), bounds);
+}
+
+QRect ScrollSessionWindow::floatingDragHandleGlobalRect() const
+{
+    return chooseFloatingDragHandleRect(previewAnchorGlobalRect(), captureBoundsGlobal());
+}
+
 QRect ScrollSessionWindow::captureBoundsGlobal() const
 {
     QScreen *targetScreen = screen();
@@ -638,9 +728,14 @@ void ScrollSessionWindow::updatePanelWindowGeometry()
     }
     const QRect bounds = captureBoundsGlobal();
     const QPoint hiddenPoint = bounds.isEmpty() ? QPoint(0, 0) : bounds.bottomRight();
-    const QRect panel = m_previewPanelVisible
-        ? floatingPanelGlobalRect()
-        : QRect(hiddenPoint, QSize(1, 1));
+    QRect panel = QRect(hiddenPoint, QSize(1, 1));
+    if (m_gnomeShellPreview && floatingDragHandleActive()) {
+        panel = floatingDragHandleGlobalRect();
+    } else if (m_previewPanelVisible) {
+        panel = floatingPanelGlobalRect();
+    } else if (floatingDragHandleActive()) {
+        panel = floatingDragHandleGlobalRect();
+    }
     if (geometry() != panel) {
         setGeometry(panel);
     }
@@ -654,15 +749,12 @@ QRegion ScrollSessionWindow::overlayPaintRegion() const
         return {};
     }
     if (m_panelOnlyWindow) {
-        return m_previewPanelVisible ? QRegion(bounds) : QRegion();
-    }
-    if (!m_previewPanelVisible) {
-        return {};
+        return (m_previewPanelVisible || floatingDragHandleActive()) ? QRegion(bounds) : QRegion();
     }
 
     constexpr int kAntialiasPad = 2;
     QRegion painted;
-    if (m_uiConfig.frameEnabled) {
+    if (m_uiConfig.frameEnabled && (m_previewPanelVisible || floatingDragHandleActive())) {
         const QRect region = regionLocalRect();
         painted += QRegion(captureFrameOuterRect(region, m_uiConfig.frameGap)
                                .adjusted(-kAntialiasPad,
@@ -680,6 +772,12 @@ QRegion ScrollSessionWindow::overlayPaintRegion() const
                                                        -kAntialiasPad,
                                                        kAntialiasPad,
                                                        kAntialiasPad));
+    }
+    if (floatingDragHandleActive()) {
+        painted += QRegion(floatingDragHandleLocalRect().adjusted(-kAntialiasPad,
+                                                                  -kAntialiasPad,
+                                                                  kAntialiasPad,
+                                                                  kAntialiasPad));
     }
     return painted.intersected(QRegion(bounds));
 }
@@ -711,12 +809,140 @@ void ScrollSessionWindow::setRegionGeometry(QRect geometry)
     updateGnomeShellPreview(true);
 }
 
+void ScrollSessionWindow::layoutFloatingDragHandle()
+{
+    if (!m_floatingAxisButton) {
+        return;
+    }
+
+    m_floatingAxisButton->hide();
+}
+
+void ScrollSessionWindow::drawFloatingDragHandle(QPainter &painter) const
+{
+    if (!floatingDragHandleActive() || m_panelTransparentForCapture) {
+        return;
+    }
+
+    const QRect handle = floatingDragHandleLocalRect();
+    if (handle.isEmpty()) {
+        return;
+    }
+
+    QPainterPath path;
+    path.addRoundedRect(handle, 10, 10);
+    painter.fillPath(path, QColor(15, 17, 23, 242));
+    painter.setPen(QPen(QColor(94, 234, 212, 150), 1));
+    painter.drawPath(path);
+
+    const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
+    const QIcon icon = makeControlIcon(horizontal ? ControlIcon::AxisHorizontal
+                                                  : ControlIcon::AxisVertical);
+    icon.paint(&painter, handle.adjusted(9, 7, -9, -7), Qt::AlignCenter);
+}
+
+void ScrollSessionWindow::armAxisDrag(const QPoint &globalPos)
+{
+    m_axisDragArmed = true;
+    m_axisDragging = false;
+    m_axisDragStartGlobal = globalPos;
+    m_axisDragStartGeometry = m_geometry.normalized();
+}
+
+bool ScrollSessionWindow::updateAxisDrag(const QPoint &globalPos)
+{
+    if (!m_axisDragArmed) {
+        return false;
+    }
+
+    constexpr int kDragThresholdPx = 5;
+    const QPoint delta = globalPos - m_axisDragStartGlobal;
+
+    if (!m_axisDragging) {
+        if (std::abs(delta.x()) < kDragThresholdPx && std::abs(delta.y()) < kDragThresholdPx) {
+            return false;
+        }
+        // Threshold exceeded: enter drag mode. In the GNOME xdg-window
+        // fallback, pause capture while the region moves so intermediate
+        // drag frames do not disturb the stitcher's current anchor. On
+        // layer-shell compositors, live stitching during drag is preserved.
+        if (m_autoPausedForPreview) {
+            resumeAutoPausedCapture();
+        }
+        m_axisDragging = true;
+        m_lastSignature.clear();
+        m_transientPaintMask = overlayPaintRegion();
+        m_restoreMaskAfterPaint = false;
+        m_statusText = MS_TR("Dragging region");
+        refreshControlLabels();
+        setCursor(Qt::ClosedHandCursor);
+    }
+
+    const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
+    QPoint constrainedDelta = delta;
+    if (horizontal) {
+        constrainedDelta.setY(0);
+    } else {
+        constrainedDelta.setX(0);
+    }
+
+    QRect next = m_axisDragStartGeometry.translated(constrainedDelta);
+    const QRect bounds = captureBoundsGlobal();
+    if (next.left() < bounds.left()) {
+        next.translate(bounds.left() - next.left(), 0);
+    }
+    if (next.top() < bounds.top()) {
+        next.translate(0, bounds.top() - next.top());
+    }
+    if (next.right() > bounds.right()) {
+        next.translate(bounds.right() - next.right(), 0);
+    }
+    if (next.bottom() > bounds.bottom()) {
+        next.translate(0, bounds.bottom() - next.bottom());
+    }
+
+    setRegionGeometry(next);
+    m_statusText = MS_TR("Dragging region");
+    return true;
+}
+
+bool ScrollSessionWindow::finishAxisDrag()
+{
+    if (!m_axisDragArmed) {
+        return false;
+    }
+
+    const bool wasDragging = m_axisDragging;
+    m_axisDragArmed = false;
+    m_axisDragging = false;
+    unsetCursor();
+
+    if (!wasDragging) {
+        return false;
+    }
+
+    m_lastSignature.clear();
+    m_statusText = MS_TR("Region adjusted");
+    refreshControlLabels();
+    updatePanelWindowGeometry();
+    m_transientPaintMask += overlayPaintRegion();
+    m_restoreMaskAfterPaint = !m_transientPaintMask.isEmpty();
+    updateInputMask();
+    if (!m_transientPaintMask.isEmpty()) {
+        update(m_transientPaintMask);
+    } else {
+        update();
+    }
+    return true;
+}
+
 void ScrollSessionWindow::layoutOverlay()
 {
     if (m_gnomeShellPreview) {
         if (m_controlBar) {
             m_controlBar->hide();
         }
+        layoutFloatingDragHandle();
         return;
     }
 
@@ -724,6 +950,7 @@ void ScrollSessionWindow::layoutOverlay()
         if (m_controlBar) {
             m_controlBar->hide();
         }
+        layoutFloatingDragHandle();
         return;
     }
 
@@ -731,27 +958,25 @@ void ScrollSessionWindow::layoutOverlay()
     if (m_controlBar && !m_controlBar->isVisible() && !m_panelTransparentForCapture) {
         m_controlBar->show();
     }
+    if (m_axisButton) {
+        m_axisButton->setVisible(!floatingDragHandleActive());
+    }
     const int barWidth = panel.width() - kPanelPadding * 2;
     const int barTop = panel.bottom() - kPanelPadding - kControlBarHeight;
     m_controlBar->setGeometry(panel.left() + kPanelPadding,
                               barTop,
                               barWidth,
                               kControlBarHeight);
+    layoutFloatingDragHandle();
 }
 
 void ScrollSessionWindow::updateInputMask()
 {
     if (m_gnomeShellPreview) {
-        const QRegion emptyMask;
-        setMask(emptyMask);
-        if (QWindow *nativeWindow = windowHandle()) {
-            nativeWindow->setMask(emptyMask);
+        QRegion mask;
+        if (floatingDragHandleActive()) {
+            mask += QRegion(floatingDragHandleLocalRect());
         }
-        return;
-    }
-
-    if (m_panelOnlyWindow) {
-        const QRegion mask = m_previewPanelVisible ? QRegion(rect()) : QRegion();
         setMask(mask);
         if (QWindow *nativeWindow = windowHandle()) {
             nativeWindow->setMask(mask);
@@ -759,15 +984,29 @@ void ScrollSessionWindow::updateInputMask()
         return;
     }
 
-    // Only the preview panel should catch input; the captured region
-    // interior and the rest of the overlay stay click-through so the user
-    // can keep scrolling the page underneath. The axis button drag-to-
+    if (m_panelOnlyWindow) {
+        const QRegion mask = (m_previewPanelVisible || floatingDragHandleActive())
+            ? QRegion(rect())
+            : QRegion();
+        setMask(mask);
+        if (QWindow *nativeWindow = windowHandle()) {
+            nativeWindow->setMask(mask);
+        }
+        return;
+    }
+
+    // Only the preview panel and floating drag handle should catch input; the
+    // captured region interior and the rest of the overlay stay click-through
+    // so the user can keep scrolling the page underneath. The handle drag-to-
     // translate is handled via an event filter on the button itself. During
     // a drag, old paint locations stay in the mask until one cleanup paint
     // has been submitted.
     QRegion mask;
     if (m_previewPanelVisible) {
         mask += QRegion(previewPanelRect());
+    }
+    if (floatingDragHandleActive()) {
+        mask += QRegion(floatingDragHandleLocalRect());
     }
     mask += m_transientPaintMask;
     setMask(mask);
@@ -989,8 +1228,11 @@ void ScrollSessionWindow::togglePause()
 
 void ScrollSessionWindow::toggleAxis()
 {
-    // The axis locks after the first frame; this is a no-op then (the button is
-    // also disabled), so only the pre-capture toggle has any effect.
+    if (m_stitcher.axisLocked()) {
+        return;
+    }
+
+    // Direction only switches before the capture has committed an orientation.
     const ScrollAxis next = m_stitcher.axis() == ScrollAxis::Horizontal
         ? ScrollAxis::Vertical
         : ScrollAxis::Horizontal;
@@ -1009,7 +1251,12 @@ void ScrollSessionWindow::setPreviewPanelVisible(bool visible)
     }
 
     const QRegion oldPaint = overlayPaintRegion();
+    const bool hidingPreview = m_previewPanelVisible && !visible;
     m_previewPanelVisible = visible;
+    if (hidingPreview && !m_panelOnlyWindow && !oldPaint.isEmpty()) {
+        m_transientPaintMask += oldPaint;
+        m_restoreMaskAfterPaint = true;
+    }
     if (m_panelOnlyWindow) {
         updatePanelWindowGeometry();
     }
@@ -1042,7 +1289,7 @@ void ScrollSessionWindow::syncPreviewWindowVisibility()
         return;
     }
 
-    if (m_previewPanelVisible) {
+    if (m_previewPanelVisible || floatingDragHandleActive()) {
         if (!isVisible()) {
             logScrollDebug("preview-window-show paused=%d auto_paused=%d",
                            m_paused ? 1 : 0,
@@ -1103,6 +1350,7 @@ void ScrollSessionWindow::resumeAutoPausedCapture()
     m_autoPausedForPreview = false;
     m_lastSignature.clear();
     m_statusText = MS_TR("Capturing");
+    cancelScrollIdlePause();
     updatePreviewPanelVisibility();
     refreshControlLabels();
     updateGnomeShellPreview(true);
@@ -1453,14 +1701,24 @@ void ScrollSessionWindow::refreshControlLabels()
                             makeControlIcon(m_paused ? ControlIcon::Resume : ControlIcon::Pause),
                             pauseLabel);
     }
+    const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
+    const QIcon axisIcon = makeControlIcon(horizontal ? ControlIcon::AxisHorizontal
+                                                     : ControlIcon::AxisVertical);
+    const QString axisLabel = horizontal ? MS_TR("Dir: Horizontal") : MS_TR("Dir: Vertical");
+    const QString dragLabel = horizontal ? MS_TR("Drag region horizontally")
+                                         : MS_TR("Drag region vertically");
+    const bool largeRangeMode = !previewPanelFitsAvailableSpace();
     if (m_axisButton) {
-        const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
         configureIconButton(m_axisButton,
-                            makeControlIcon(horizontal ? ControlIcon::AxisHorizontal : ControlIcon::AxisVertical),
-                            horizontal ? MS_TR("Dir: Horizontal") : MS_TR("Dir: Vertical"));
-        // Direction stays switchable until the first directional stitch lands;
-        // capturing the idle seed frame alone does not commit an orientation.
-        m_axisButton->setEnabled(!m_stitcher.axisLocked());
+                            axisIcon,
+                            m_stitcher.axisLocked() ? dragLabel : axisLabel);
+        m_axisButton->setEnabled(!largeRangeMode);
+    }
+    if (m_floatingAxisButton) {
+        configureIconButton(m_floatingAxisButton,
+                            axisIcon,
+                            m_stitcher.axisLocked() ? dragLabel : axisLabel);
+        m_floatingAxisButton->setEnabled(true);
     }
 }
 
@@ -1543,6 +1801,7 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
     if (m_gnomeShellPreview) {
+        drawFloatingDragHandle(painter);
         return;
     }
 
@@ -1550,7 +1809,8 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
         return;
     }
 
-    if (m_previewPanelVisible && m_uiConfig.frameEnabled && !m_panelOnlyWindow) {
+    if ((m_previewPanelVisible || floatingDragHandleActive()) && m_uiConfig.frameEnabled
+        && !m_panelOnlyWindow) {
         const QRect region = regionLocalRect();
         QPainterPath framePath;
         framePath.setFillRule(Qt::OddEvenFill);
@@ -1591,6 +1851,8 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
         drawPreviewContent(painter, imageArea);
     }
 
+    drawFloatingDragHandle(painter);
+
     if (m_restoreMaskAfterPaint && !m_axisDragging) {
         m_restoreMaskAfterPaint = false;
         QTimer::singleShot(0, this, [this] {
@@ -1620,6 +1882,12 @@ void ScrollSessionWindow::keyPressEvent(QKeyEvent *event)
 
 void ScrollSessionWindow::mousePressEvent(QMouseEvent *event)
 {
+    if (event->button() == Qt::LeftButton && floatingDragHandleActive()
+        && floatingDragHandleLocalRect().contains(event->position().toPoint())) {
+        armAxisDrag(event->globalPosition().toPoint());
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && beginOverviewDrag(event->pos())) {
         event->accept();
         return;
@@ -1629,6 +1897,11 @@ void ScrollSessionWindow::mousePressEvent(QMouseEvent *event)
 
 void ScrollSessionWindow::mouseMoveEvent(QMouseEvent *event)
 {
+    if (m_axisDragArmed && (event->buttons() & Qt::LeftButton)) {
+        updateAxisDrag(event->globalPosition().toPoint());
+        event->accept();
+        return;
+    }
     if (m_overviewDragging) {
         updateOverviewDrag(event->pos());
         event->accept();
@@ -1639,6 +1912,14 @@ void ScrollSessionWindow::mouseMoveEvent(QMouseEvent *event)
 
 void ScrollSessionWindow::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (event->button() == Qt::LeftButton && m_axisDragArmed) {
+        const bool wasDragging = finishAxisDrag();
+        if (!wasDragging) {
+            toggleAxis();
+        }
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && m_overviewDragging) {
         updateOverviewDrag(event->pos());
         m_overviewDragging = false;
@@ -1687,18 +1968,24 @@ void ScrollSessionWindow::wheelEvent(QWheelEvent *event)
 
 bool ScrollSessionWindow::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched != m_axisButton) {
+    if (watched != m_axisButton && watched != m_floatingAxisButton) {
         return QWidget::eventFilter(watched, event);
+    }
+
+    const bool mouseEvent = event->type() == QEvent::MouseButtonPress
+        || event->type() == QEvent::MouseMove
+        || event->type() == QEvent::MouseButtonRelease;
+    if (watched == m_axisButton && m_axisButton && !m_axisButton->isEnabled() && mouseEvent) {
+        m_axisDragArmed = false;
+        m_axisDragging = false;
+        return true;
     }
 
     switch (event->type()) {
     case QEvent::MouseButtonPress: {
         auto *me = static_cast<QMouseEvent *>(event);
         if (me->button() == Qt::LeftButton) {
-            m_axisDragArmed = true;
-            m_axisDragging = false;
-            m_axisDragStartGlobal = me->globalPosition().toPoint();
-            m_axisDragStartGeometry = m_geometry.normalized();
+            armAxisDrag(me->globalPosition().toPoint());
         }
         // Let the button see the press so it can still emit clicked on release.
         return false;
@@ -1710,55 +1997,9 @@ bool ScrollSessionWindow::eventFilter(QObject *watched, QEvent *event)
             return false;
         }
 
-        constexpr int kDragThresholdPx = 5;
-        const QPoint globalPos = me->globalPosition().toPoint();
-        const QPoint delta = globalPos - m_axisDragStartGlobal;
-
-        if (!m_axisDragging) {
-            if (std::abs(delta.x()) < kDragThresholdPx &&
-                std::abs(delta.y()) < kDragThresholdPx) {
-                return false;  // below threshold, not yet dragging
-            }
-            // Threshold exceeded: enter drag mode. In the GNOME xdg-window
-            // fallback, pause capture while the region moves so intermediate
-            // drag frames do not disturb the stitcher's current anchor. On
-            // layer-shell compositors, live stitching during drag is preserved.
-            m_axisDragging = true;
-            m_lastSignature.clear();
-            m_transientPaintMask = overlayPaintRegion();
-            m_restoreMaskAfterPaint = false;
-            m_statusText = MS_TR("Dragging region");
-            refreshControlLabels();
-            setCursor(Qt::ClosedHandCursor);
+        if (!updateAxisDrag(me->globalPosition().toPoint())) {
+            return false;
         }
-
-        // Constrain movement to the current scroll axis only.
-        const bool horizontal = m_stitcher.axis() == ScrollAxis::Horizontal;
-        QPoint constrainedDelta = delta;
-        if (horizontal) {
-            constrainedDelta.setY(0);
-        } else {
-            constrainedDelta.setX(0);
-        }
-
-        QRect next = m_axisDragStartGeometry.translated(constrainedDelta);
-        // Clamp to screen bounds.
-        const QRect bounds = captureBoundsGlobal();
-        if (next.left() < bounds.left()) {
-            next.translate(bounds.left() - next.left(), 0);
-        }
-        if (next.top() < bounds.top()) {
-            next.translate(0, bounds.top() - next.top());
-        }
-        if (next.right() > bounds.right()) {
-            next.translate(bounds.right() - next.right(), 0);
-        }
-        if (next.bottom() > bounds.bottom()) {
-            next.translate(0, bounds.bottom() - next.bottom());
-        }
-
-        setRegionGeometry(next);
-        m_statusText = MS_TR("Dragging region");
         return true;  // consume the move so the button doesn't highlight
     }
 
@@ -1768,33 +2009,11 @@ bool ScrollSessionWindow::eventFilter(QObject *watched, QEvent *event)
             return false;
         }
 
-        const bool wasDragging = m_axisDragging;
-        m_axisDragArmed = false;
-        m_axisDragging = false;
-        unsetCursor();
-
-        if (!wasDragging) {
+        if (!finishAxisDrag()) {
             // Treat as a plain click: let the button fire its clicked signal.
             return false;
         }
 
-        // Drag just finished: clear the frame signature so the next capture
-        // tick is accepted as a fresh frame at the adjusted region.
-        m_lastSignature.clear();
-        m_statusText = MS_TR("Region adjusted");
-        refreshControlLabels();
-        updatePanelWindowGeometry();
-        m_transientPaintMask += overlayPaintRegion();
-        m_restoreMaskAfterPaint = !m_transientPaintMask.isEmpty();
-        // Keep the temporary paint mask active for one cleanup repaint. If it
-        // is dropped immediately, coalesced mouse-move damage can leave old
-        // frame or panel pixels on the compositor surface.
-        updateInputMask();
-        if (!m_transientPaintMask.isEmpty()) {
-            update(m_transientPaintMask);
-        } else {
-            update();
-        }
         // Consume the release so the button does NOT emit clicked (which
         // would toggle the axis).
         return true;
