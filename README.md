@@ -42,6 +42,9 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 ### Scrolling Screenshot Capture
 - Captures a long scrolling region by combining PipeWire screencast frames with an interactive scrolling overlay and stitcher.
 - Designed primarily for `niri` and similar Wayland environments where output geometry and capture timing can be controlled predictably.
+- **Floating Drag Handle for Large Regions**: When the selected capture region is too large to fit the preview panel on the screen, the preview panel is hidden, and a **floating drag handle** (a small floating button with direction arrows) is shown near the selection edge instead.
+  - **Drag to reposition selection**: Press and drag the floating handle to slide the capture region along the active scroll axis. This allows adjusting the target area and reaching off-screen content.
+  - **Click to toggle axis**: Click the handle directly before capture starts to switch between vertical and horizontal scroll directions.
 - **GNOME Wayland**: scrolling capture requires the bundled `mark-shot-scroll-helper@snemc.org` GNOME Shell extension. GNOME does not expose the capture and preview hooks Mark Shot needs to normal desktop applications, so the extension provides a private D-Bus helper for area screenshots and the scroll preview panel.
 - **Compatibility notice**: scrolling capture on KDE, X11, and other non-`niri` environments is a test feature and is not complete yet. Portal backends, shell policies, window geometry behavior, frame timing, and scroll event handling differ substantially across these desktop stacks.
 - If scrolling capture fails, use normal screenshots or configure an external long-screenshot command through Mark Shot extension commands.
