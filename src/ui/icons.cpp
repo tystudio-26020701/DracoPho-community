@@ -568,6 +568,21 @@ QIcon makePropertyIcon(PropertyIcon icon, QColor ink)
         p.drawRoundedRect(QRectF(15.0, 15.0, 9.0, 9.0), 2.5, 2.5);
         break;
     }
+    case PropertyIcon::MagnifierScale: {
+        p.setPen(makePen(iconInk, 1.7));
+        p.drawEllipse(QRectF(7.0, 7.0, 12.5, 12.5));
+        p.drawLine(QPointF(17.0, 17.0), QPointF(24.0, 24.0));
+        p.setPen(makePen(iconSoft, 1.2));
+        p.drawLine(QPointF(10.5, 13.2), QPointF(16.0, 13.2));
+        p.drawLine(QPointF(13.25, 10.5), QPointF(13.25, 16.0));
+        QFont scaleFont = p.font();
+        scaleFont.setPointSizeF(8.0);
+        scaleFont.setBold(true);
+        p.setFont(scaleFont);
+        p.setPen(makePen(iconInk, 1.0));
+        p.drawText(QRectF(18.0, 6.5, 7.5, 9.5), Qt::AlignCenter, QStringLiteral("x"));
+        break;
+    }
     case PropertyIcon::Font: {
         p.setPen(makePen(iconInk, 1.7));
         p.drawLine(QPointF(8.0, 8.5), QPointF(24.0, 8.5));
