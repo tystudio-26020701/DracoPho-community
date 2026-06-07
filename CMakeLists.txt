@@ -69,6 +69,8 @@ qt_add_executable(mark-shot
     src/clipboard_image.h
     src/debug_log.cpp
     src/debug_log.h
+    src/config_value.cpp
+    src/config_value.h
     src/capture_geometry.cpp
     src/capture_geometry.h
     src/layer_shell_plugin_interface.h
@@ -82,14 +84,54 @@ qt_add_executable(mark-shot
     src/windows_tray_controller.h
     src/screen_capture.cpp
     src/screen_capture.h
+    src/screen_capture_api.cpp
+    src/screen_capture_core_helpers.cpp
+    src/screen_capture_dbus_portal.cpp
+    src/screen_capture_dbus_wayland.cpp
+    src/screen_capture_internal.h
+    src/screen_capture_pipewire.cpp
+    src/screen_capture_pipewire_libportal.cpp
+    src/screen_capture_pipewire_libportal.h
+    src/screen_capture_platform_api.cpp
+    src/screen_capture_x11.cpp
+    src/shell_command.cpp
+    src/shell_command.h
+    src/ocr_result.cpp
+    src/ocr_result.h
+    src/shortcut_config.cpp
+    src/shortcut_config.h
     src/shot_window.cpp
     src/shot_window.h
+    src/shot_window_config.cpp
+    src/shot_window_internal.cpp
+    src/shot_window_internal.h
+    src/shot_window_module.h
+    src/shot_window_ocr_result_window.cpp
+    src/shot_window_actions.cpp
+    src/shot_window_annotation_editing.cpp
+    src/shot_window_annotation_painting.cpp
+    src/shot_window_canvas.cpp
+    src/shot_window_hit_testing.cpp
+    src/shot_window_input.cpp
+    src/shot_window_layout.cpp
+    src/shot_window_modes.cpp
+    src/shot_window_property_panels.cpp
+    src/shot_window_setup.cpp
+    src/shot_window_pinned_window.cpp
     src/annotation_launch.cpp
     src/annotation_launch.h
     src/scroll/stitcher.cpp
     src/scroll/stitcher.h
+    src/scroll/stitcher_internal.cpp
+    src/scroll/stitcher_internal.h
+    src/scroll/stitcher_algorithm.cpp
     src/scroll/scroll_session_window.cpp
+    src/scroll/scroll_session_window_capture.cpp
+    src/scroll/scroll_session_window_events.cpp
     src/scroll/scroll_session_window.h
+    src/scroll/scroll_session_window_internal.h
+    src/scroll/scroll_session_window_lifecycle.cpp
+    src/scroll/scroll_session_window_preview.cpp
     src/ui/color_picker.cpp
     src/ui/color_picker.h
     src/ui/icons.cpp
@@ -193,6 +235,53 @@ if(BUILD_TESTING)
             Qt6::Test
     )
     add_test(NAME capture-geometry COMMAND mark-shot-capture-geometry-test)
+
+    qt_add_executable(mark-shot-config-value-test
+        tests/config_value_test.cpp
+        src/config_value.cpp
+        src/config_value.h
+    )
+    target_include_directories(mark-shot-config-value-test PRIVATE src)
+    target_link_libraries(mark-shot-config-value-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME config-value COMMAND mark-shot-config-value-test)
+
+    qt_add_executable(mark-shot-ocr-result-test
+        tests/ocr_result_test.cpp
+        src/ocr_result.cpp
+        src/ocr_result.h
+    )
+    target_include_directories(mark-shot-ocr-result-test PRIVATE src)
+    target_link_libraries(mark-shot-ocr-result-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME ocr-result COMMAND mark-shot-ocr-result-test)
+
+    qt_add_executable(mark-shot-stitcher-test
+        tests/stitcher_test.cpp
+        src/debug_log.cpp
+        src/debug_log.h
+        src/scroll/stitcher.cpp
+        src/scroll/stitcher.h
+        src/scroll/stitcher_internal.cpp
+        src/scroll/stitcher_internal.h
+        src/scroll/stitcher_algorithm.cpp
+    )
+    target_include_directories(mark-shot-stitcher-test PRIVATE src)
+    target_link_libraries(mark-shot-stitcher-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME stitcher COMMAND mark-shot-stitcher-test)
 endif()
 
 install(TARGETS mark-shot RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

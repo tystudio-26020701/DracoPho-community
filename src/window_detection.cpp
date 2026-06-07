@@ -1,6 +1,8 @@
 #include "window_detection.h"
 
+#include "config_value.h"
 #include "debug_log.h"
+#include "shell_command.h"
 #include "ui/theme.h"
 
 #include <QDir>
@@ -252,80 +254,10 @@ QString expandUserPath(const QString &path)
     return path;
 }
 
-QString commandShellProgram()
-{
-#if defined(Q_OS_WIN)
-    const QString comspec = QProcessEnvironment::systemEnvironment().value(QStringLiteral("COMSPEC"));
-    return comspec.isEmpty() ? QStringLiteral("cmd.exe") : comspec;
-#else
-    QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"),
-                                                                   QStringLiteral("/bin/sh"));
-    return shell.isEmpty() ? QStringLiteral("/bin/sh") : shell;
-#endif
-}
-
-QStringList commandShellArguments(const QString &commandLine)
-{
-#if defined(Q_OS_WIN)
-    return {QStringLiteral("/D"), QStringLiteral("/V:OFF"), QStringLiteral("/S"), QStringLiteral("/C"), commandLine};
-#else
-    return {QStringLiteral("-c"), commandLine};
-#endif
-}
-
-QJsonObject objectValue(const QJsonObject &object, const QString &key)
-{
-    const QJsonValue value = object.value(key);
-    return value.isObject() ? value.toObject() : QJsonObject();
-}
-
-std::optional<int> intValue(const QJsonValue &value)
-{
-    if (value.isDouble()) {
-        return value.toInt();
-    }
-    if (value.isString()) {
-        bool ok = false;
-        const int number = value.toString().trimmed().toInt(&ok);
-        if (ok) {
-            return number;
-        }
-    }
-    return std::nullopt;
-}
-
-std::optional<bool> boolValue(const QJsonValue &value)
-{
-    if (value.isBool()) {
-        return value.toBool();
-    }
-    if (value.isDouble()) {
-        return !qFuzzyIsNull(value.toDouble());
-    }
-    if (value.isString()) {
-        QString text = value.toString().trimmed().toLower();
-        if (text == QStringLiteral("1")
-            || text == QStringLiteral("true")
-            || text == QStringLiteral("yes")
-            || text == QStringLiteral("on")
-            || text == QStringLiteral("enabled")) {
-            return true;
-        }
-        if (text == QStringLiteral("0")
-            || text == QStringLiteral("false")
-            || text == QStringLiteral("no")
-            || text == QStringLiteral("off")
-            || text == QStringLiteral("disabled")) {
-            return false;
-        }
-    }
-    return std::nullopt;
-}
-
 std::optional<int> namedIntValue(const QJsonObject &object, const QStringList &keys)
 {
     for (const QString &key : keys) {
-        const std::optional<int> value = intValue(object.value(key));
+        const std::optional<int> value = config::intValue(object.value(key));
         if (value.has_value()) {
             return value;
         }
@@ -333,24 +265,10 @@ std::optional<int> namedIntValue(const QJsonObject &object, const QStringList &k
     return std::nullopt;
 }
 
-std::optional<QString> environmentStringValue(const QJsonValue &value)
-{
-    if (value.isString()) {
-        return value.toString();
-    }
-    if (value.isDouble()) {
-        return QString::number(value.toDouble(), 'g', 15);
-    }
-    if (value.isBool()) {
-        return value.toBool() ? QStringLiteral("1") : QStringLiteral("0");
-    }
-    return std::nullopt;
-}
-
 QMap<QString, QString> environmentOverrides(const QJsonObject &windowDetection)
 {
-    QJsonObject environment = objectValue(windowDetection, QStringLiteral("env"));
-    const QJsonObject namedEnvironment = objectValue(windowDetection, QStringLiteral("environment"));
+    QJsonObject environment = config::objectValue(windowDetection, QStringLiteral("env"));
+    const QJsonObject namedEnvironment = config::objectValue(windowDetection, QStringLiteral("environment"));
     for (auto it = namedEnvironment.constBegin(); it != namedEnvironment.constEnd(); ++it) {
         environment.insert(it.key(), it.value());
     }
@@ -361,7 +279,7 @@ QMap<QString, QString> environmentOverrides(const QJsonObject &windowDetection)
         if (key.isEmpty()) {
             continue;
         }
-        if (const std::optional<QString> value = environmentStringValue(it.value())) {
+        if (const std::optional<QString> value = config::environmentStringValue(it.value())) {
             overrides.insert(key, *value);
         }
     }
@@ -374,10 +292,10 @@ std::optional<QRect> rectFromArray(const QJsonArray &array)
         return std::nullopt;
     }
 
-    const std::optional<int> x = intValue(array.at(0));
-    const std::optional<int> y = intValue(array.at(1));
-    const std::optional<int> width = intValue(array.at(2));
-    const std::optional<int> height = intValue(array.at(3));
+    const std::optional<int> x = config::intValue(array.at(0));
+    const std::optional<int> y = config::intValue(array.at(1));
+    const std::optional<int> width = config::intValue(array.at(2));
+    const std::optional<int> height = config::intValue(array.at(3));
     if (!x.has_value() || !y.has_value() || !width.has_value() || !height.has_value()) {
         return std::nullopt;
     }
@@ -535,14 +453,14 @@ std::optional<QJsonObject> readAppConfigRoot()
 std::optional<bool> configuredWindowDetectionEnabled(const QJsonObject &root)
 {
     const QJsonValue value = root.value(QStringLiteral("windowDetection"));
-    if (const std::optional<bool> enabled = boolValue(value)) {
+    if (const std::optional<bool> enabled = config::boolValue(value)) {
         return enabled;
     }
     if (!value.isObject()) {
         return std::nullopt;
     }
 
-    return boolValue(value.toObject().value(QStringLiteral("enabled")));
+    return config::boolValue(value.toObject().value(QStringLiteral("enabled")));
 }
 
 std::optional<WindowDetectionConfig> readWindowDetectionConfig()
@@ -556,7 +474,7 @@ std::optional<WindowDetectionConfig> readWindowDetectionConfig()
         return std::nullopt;
     }
 
-    const QJsonObject windowDetection = objectValue(*root, QStringLiteral("windowDetection"));
+    const QJsonObject windowDetection = config::objectValue(*root, QStringLiteral("windowDetection"));
     WindowDetectionConfig config;
     config.command = windowDetection.value(QStringLiteral("command")).toString().trimmed();
     config.workingDirectory = windowDetection.value(QStringLiteral("workingDirectory")).toString().trimmed();
@@ -564,7 +482,7 @@ std::optional<WindowDetectionConfig> readWindowDetectionConfig()
     if (config.workingDirectory.isEmpty()) {
         config.workingDirectory = windowDetection.value(QStringLiteral("cwd")).toString().trimmed();
     }
-    if (const std::optional<int> timeoutMs = intValue(windowDetection.value(QStringLiteral("timeoutMs")))) {
+    if (const std::optional<int> timeoutMs = config::intValue(windowDetection.value(QStringLiteral("timeoutMs")))) {
         config.timeoutMs = std::clamp(*timeoutMs, kMinWindowDetectionTimeoutMs, kMaxWindowDetectionTimeoutMs);
     }
 

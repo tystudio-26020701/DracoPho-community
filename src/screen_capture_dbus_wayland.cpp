@@ -1,0 +1,296 @@
+#include "screen_capture_internal.h"
+
+CaptureResult captureWithGrim(const CaptureRequest &request)
+{
+    const QStringList baseArguments{QStringLiteral("-t"), QStringLiteral("ppm")};
+
+    if (!request.allOutputs && !request.preferredOutputName.isEmpty()) {
+        const QRect outputGeometry = screenGeometryForRequest(request);
+        QStringList arguments = baseArguments;
+        arguments << QStringLiteral("-o") << request.preferredOutputName << QStringLiteral("-");
+        CaptureResult outputCapture = runGrim(arguments, request.preferredOutputName, outputGeometry);
+        if (!outputCapture.image.isNull()) {
+            if (!outputGeometry.isEmpty()) {
+                return cropGrimFrameToRequest(std::move(outputCapture), outputGeometry, request);
+            }
+            if (!request.sourceGeometry.isValid() || request.sourceGeometry.isEmpty()) {
+                return outputCapture;
+            }
+        }
+
+        const QString outputError = outputCapture.error;
+        const QRect fullGeometry = fullGrimSourceGeometry(request);
+        QStringList fullArguments = baseArguments;
+        fullArguments << QStringLiteral("-");
+        CaptureResult fullCapture = runGrim(fullArguments, {}, fullGeometry);
+        if (!fullCapture.image.isNull()) {
+            fullCapture.outputName = request.preferredOutputName;
+            return cropGrimFrameToRequest(std::move(fullCapture), fullGeometry, request);
+        }
+
+        if (!outputError.isEmpty() && !fullCapture.error.isEmpty()) {
+            return {{},
+                    QStringLiteral("%1\nFull-desktop grim fallback: %2")
+                        .arg(outputError, fullCapture.error),
+                    request.preferredOutputName,
+                    request.sourceGeometry};
+        }
+        if (!outputGeometry.isValid() || outputGeometry.isEmpty()) {
+            const QString fallbackError = fullCapture.error.isEmpty()
+                ? QStringLiteral("full-desktop grim fallback was not usable")
+                : fullCapture.error;
+            return {{},
+                    QStringLiteral("grim output capture has no Qt output geometry for local crop\nFull-desktop grim fallback: %1")
+                        .arg(fallbackError),
+                    request.preferredOutputName,
+                    request.sourceGeometry};
+        }
+        return outputCapture.image.isNull() ? fullCapture : outputCapture;
+    }
+
+    const QRect frameGeometry = fullGrimSourceGeometry(request);
+    QStringList arguments = baseArguments;
+    arguments << QStringLiteral("-");
+    CaptureResult fullCapture = runGrim(arguments, {}, frameGeometry);
+    return cropGrimFrameToRequest(std::move(fullCapture), frameGeometry, request);
+}
+
+#ifdef MARK_SHOT_WITH_DBUS
+
+// KWin's own org.kde.KWin.ScreenShot2.CaptureArea renders the exact requested
+// rectangle server-side and streams the raw pixels back over a pipe fd. Unlike
+// the xdg-desktop-portal ScreenCast path it needs no source-selection dialog,
+// keeps no session, and returns a frame whose size already matches the request
+// (so there is no virtual-geometry scaling to get wrong). It requires the
+// caller's .desktop file to list org.kde.KWin.ScreenShot2 in
+// X-KDE-DBUS-Restricted-Interfaces; without that KWin replies NoAuthorized and
+// this returns a null image so the caller can fall back to the portal path.
+CaptureResult captureWithKWinScreenShot(const CaptureRequest &request)
+{
+    const QRect geometry = request.sourceGeometry.normalized();
+    if (geometry.isEmpty()) {
+        return {{}, QStringLiteral("KWin ScreenShot2 requires a non-empty geometry"), {}, request.sourceGeometry};
+    }
+
+    QDBusInterface kwin(QStringLiteral("org.kde.KWin.ScreenShot2"),
+                        QStringLiteral("/org/kde/KWin/ScreenShot2"),
+                        QStringLiteral("org.kde.KWin.ScreenShot2"),
+                        QDBusConnection::sessionBus());
+    if (!kwin.isValid()) {
+        return {{}, QStringLiteral("org.kde.KWin.ScreenShot2 interface is not available"), {}, request.sourceGeometry};
+    }
+
+    int fds[2];
+    if (::pipe2(fds, O_CLOEXEC) != 0) {
+        return {{}, QStringLiteral("failed to create pipe for KWin ScreenShot2"), {}, request.sourceGeometry};
+    }
+
+    QVariantMap options;
+    options.insert(QStringLiteral("include-cursor"), false);
+    // native-resolution keeps device pixels on HiDPI instead of downscaling to
+    // logical size, so the stitched result stays sharp.
+    options.insert(QStringLiteral("native-resolution"), true);
+
+    // KWin sends the D-Bus reply with the buffer metadata first, then writes the
+    // pixels to the pipe, so this synchronous call does not deadlock even when
+    // the image is larger than the pipe buffer.
+    QDBusReply<QVariantMap> reply =
+        kwin.call(QStringLiteral("CaptureArea"),
+                  geometry.x(), geometry.y(),
+                  static_cast<uint>(geometry.width()), static_cast<uint>(geometry.height()),
+                  options,
+                  QVariant::fromValue(QDBusUnixFileDescriptor(fds[1])));
+    ::close(fds[1]);
+
+    if (!reply.isValid()) {
+        ::close(fds[0]);
+        markshot::debugLog("kwin", "capture-area-error geom=%d,%d %dx%d name=%s msg=%s",
+                           geometry.x(), geometry.y(), geometry.width(), geometry.height(),
+                           reply.error().name().toUtf8().constData(),
+                           reply.error().message().toUtf8().constData());
+        return {{},
+                QStringLiteral("KWin ScreenShot2 CaptureArea failed: %1: %2")
+                    .arg(reply.error().name(), reply.error().message()),
+                {},
+                request.sourceGeometry};
+    }
+
+    const QVariantMap results = reply.value();
+    const int width = results.value(QStringLiteral("width")).toInt();
+    const int height = results.value(QStringLiteral("height")).toInt();
+    const int stride = results.value(QStringLiteral("stride")).toInt();
+    const uint format = results.value(QStringLiteral("format")).toUInt();
+    if (width <= 0 || height <= 0 || stride < width * 4) {
+        ::close(fds[0]);
+        return {{},
+                QStringLiteral("KWin ScreenShot2 returned invalid buffer metadata (%1x%2 stride=%3)")
+                    .arg(width).arg(height).arg(stride),
+                {},
+                request.sourceGeometry};
+    }
+
+    const qulonglong total = static_cast<qulonglong>(stride) * static_cast<qulonglong>(height);
+    QByteArray buffer(static_cast<int>(total), Qt::Uninitialized);
+    qulonglong received = 0;
+    while (received < total) {
+        struct pollfd pfd { fds[0], POLLIN, 0 };
+        const int polled = ::poll(&pfd, 1, 2000);
+        if (polled <= 0) {
+            break;  // timeout or poll error
+        }
+        const ssize_t bytes = ::read(fds[0], buffer.data() + received, total - received);
+        if (bytes <= 0) {
+            break;  // EOF or read error
+        }
+        received += static_cast<qulonglong>(bytes);
+    }
+    ::close(fds[0]);
+
+    if (received < total) {
+        markshot::debugLog("kwin", "short-read got=%llu want=%llu %dx%d stride=%d",
+                           received, total, width, height, stride);
+        return {{},
+                QStringLiteral("KWin ScreenShot2 delivered a truncated frame (%1/%2 bytes)")
+                    .arg(received).arg(total),
+                {},
+                request.sourceGeometry};
+    }
+
+    const QImage::Format imageFormat =
+        format != 0 ? static_cast<QImage::Format>(format) : QImage::Format_ARGB32_Premultiplied;
+    const QImage view(reinterpret_cast<const uchar *>(buffer.constData()),
+                      width, height, stride, imageFormat);
+    if (view.isNull()) {
+        return {{}, QStringLiteral("KWin ScreenShot2 frame could not be wrapped as an image"), {}, request.sourceGeometry};
+    }
+
+    markshot::debugLog("kwin", "capture-area-ok geom=%d,%d %dx%d -> frame=%dx%d stride=%d format=%u",
+                       geometry.x(), geometry.y(), geometry.width(), geometry.height(),
+                       width, height, stride, format);
+    // Detach from the soon-to-be-freed buffer and normalize the format.
+    return {view.copy().convertToFormat(QImage::Format_ARGB32_Premultiplied),
+            {},
+            request.allOutputs ? QString() : request.preferredOutputName,
+            request.sourceGeometry};
+}
+
+CaptureResult captureWaylandFrame(const CaptureRequest &request)
+{
+    const bool grimPreferred = prefersGrim();
+    markshot::debugLog("capture",
+                       "wayland-frame geom=%d,%d %dx%d output=%s all_outputs=%d "
+                       "prefer_screencast=%d allow_interactive=%d allow_screenshot_fallback=%d "
+                       "prefers_grim=%d desktop=%s",
+                       request.sourceGeometry.x(), request.sourceGeometry.y(),
+                       request.sourceGeometry.width(), request.sourceGeometry.height(),
+                       request.preferredOutputName.toUtf8().constData(),
+                       request.allOutputs ? 1 : 0, request.preferScreencast ? 1 : 0,
+                       request.allowInteractivePortal ? 1 : 0,
+                       request.allowPortalScreenshotFallback ? 1 : 0, grimPreferred ? 1 : 0,
+                       desktopEnvironmentText().toUtf8().constData());
+
+    if (isGnomeWaylandSession() && hasGnomeScrollHelper() && request.sourceGeometry.isValid()
+        && !request.sourceGeometry.isEmpty() && !request.allOutputs) {
+        markshot::debugLog("capture", "route=gnome-scroll-helper");
+        CaptureResult gnomeCapture = captureWithGnomeScrollHelper(request);
+        if (!gnomeCapture.image.isNull()) {
+            markshot::debugLog("capture", "gnome-scroll-helper-ok frame=%dx%d",
+                               gnomeCapture.image.width(), gnomeCapture.image.height());
+            return gnomeCapture;
+        }
+        markshot::debugLog("capture", "gnome-scroll-helper-failed (falling back) error=%s",
+                           gnomeCapture.error.toUtf8().constData());
+    }
+
+    // On KDE, ScreenShot2.CaptureArea can capture the exact requested region
+    // without an interactive portal dialog. Prefer it for both the initial
+    // single-output screenshot and live scrolling frames; failures fall back to
+    // the existing portal/grim routes.
+    if (isKdePlasma() && request.sourceGeometry.isValid()
+        && !request.sourceGeometry.isEmpty() && !request.allOutputs) {
+        markshot::debugLog("capture", "route=kwin-screenshot (KDE Plasma)");
+        CaptureResult kwinCapture = captureWithKWinScreenShot(request);
+        if (!kwinCapture.image.isNull()) {
+            markshot::debugLog("capture", "kwin-screenshot-ok frame=%dx%d",
+                               kwinCapture.image.width(), kwinCapture.image.height());
+            return kwinCapture;
+        }
+        markshot::debugLog("capture", "kwin-screenshot-failed (falling back) error=%s",
+                           kwinCapture.error.toUtf8().constData());
+    }
+
+    if (request.preferScreencast && !grimPreferred) {
+        markshot::debugLog("capture", "route=screencast (preferScreencast && !prefersGrim)");
+        CaptureResult screencastCapture = captureWithPortalScreencast(request);
+        if (!screencastCapture.image.isNull()) {
+            markshot::debugLog("capture", "screencast-ok frame=%dx%d",
+                               screencastCapture.image.width(), screencastCapture.image.height());
+            return screencastCapture;
+        }
+        markshot::debugLog("capture", "screencast-failed error=%s",
+                           screencastCapture.error.toUtf8().constData());
+        stopPortalScreencast();
+
+        CaptureResult portalCapture;
+        if (request.allowPortalScreenshotFallback) {
+            markshot::debugLog("capture", "fallback=portal-screenshot");
+            portalCapture = captureWithPortalScreenshot(request);
+            if (!portalCapture.image.isNull()) {
+                markshot::debugLog("capture", "portal-screenshot-ok frame=%dx%d",
+                                   portalCapture.image.width(), portalCapture.image.height());
+                return portalCapture;
+            }
+            markshot::debugLog("capture", "portal-screenshot-failed error=%s",
+                               portalCapture.error.toUtf8().constData());
+        } else {
+            markshot::debugLog("capture", "portal-screenshot-fallback disabled");
+        }
+
+        markshot::debugLog("capture", "fallback=grim");
+        CaptureResult grimCapture = captureWithGrim(request);
+        if (!grimCapture.image.isNull()) {
+            markshot::debugLog("capture", "grim-ok frame=%dx%d",
+                               grimCapture.image.width(), grimCapture.image.height());
+            return grimCapture;
+        }
+        markshot::debugLog("capture", "grim-failed error=%s all-routes-exhausted",
+                           grimCapture.error.toUtf8().constData());
+        return {{},
+                QStringLiteral("%1\nPortal screenshot fallback: %2\nGrim fallback: %3")
+                    .arg(screencastCapture.error,
+                         request.allowPortalScreenshotFallback
+                             ? portalCapture.error
+                             : QStringLiteral("disabled for live scrolling capture"),
+                         grimCapture.error),
+                {},
+                request.sourceGeometry};
+    }
+
+    if (prefersGrim()) {
+        CaptureResult grimCapture = captureWithGrim(request);
+        if (!grimCapture.image.isNull()) {
+            return grimCapture;
+        }
+
+        CaptureResult portalCapture = captureWithPortalScreenshot(request);
+        if (!portalCapture.image.isNull()) {
+            return portalCapture;
+        }
+
+        return {{}, QStringLiteral("%1\nPortal fallback: %2").arg(grimCapture.error, portalCapture.error), {}, request.sourceGeometry};
+    }
+
+    CaptureResult portalCapture = captureWithPortalScreenshot(request);
+    if (!portalCapture.image.isNull()) {
+        return portalCapture;
+    }
+
+    CaptureResult grimCapture = captureWithGrim(request);
+    if (!grimCapture.image.isNull()) {
+        return grimCapture;
+    }
+
+    return {{}, QStringLiteral("%1\nGrim fallback: %2").arg(portalCapture.error, grimCapture.error), {}, request.sourceGeometry};
+}
+
+#endif  // MARK_SHOT_WITH_DBUS

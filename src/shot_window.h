@@ -205,6 +205,14 @@ private:
         qint64 expiresAt = 0;
     };
 
+    void initializeToolbar();
+    void initializeImageScrollBars();
+    void initializeActionToolbar();
+    void initializeShortcuts();
+    void initializeTransientPanels();
+    void initializeTextEditor();
+    void initializeLaserTimer();
+    void initializeWindowDetection(QVector<QRect> windowGeometries, bool enabled);
     QPushButton *addToolbarButton(Action action, const QString &shortcutText, QWidget *parentToolbar = nullptr);
     QVector<DesktopApp> imageDesktopApps() const;
     QVector<ExtensionCommand> extensionCommands(QString *errorMessage = nullptr) const;
@@ -317,6 +325,8 @@ private:
     void toggleColorPalette(QPoint position);
     void toggleOpenWithPanel();
     void toggleExtensionPanel();
+    void hideAnnotationPropertyPanels();
+    void hideTransientPanels();
     void updateCursor();
     void clearWheelPreview();
     void updateColorPaletteGeometry(QPoint anchor);

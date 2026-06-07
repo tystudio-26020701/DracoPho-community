@@ -52,6 +52,19 @@ QScreen *screenByName(const QString &name)
     return nullptr;
 }
 
+}  // namespace
+
+QScreen *focusedScreen()
+{
+    if (QScreen *screen = screenByName(niriFocusedOutputName())) {
+        return screen;
+    }
+    if (QScreen *screen = QGuiApplication::screenAt(QCursor::pos())) {
+        return screen;
+    }
+    return QGuiApplication::primaryScreen();
+}
+
 QRect centeredImageWindowGeometry(const QSize &imageSize, QScreen *screen)
 {
     if (imageSize.isEmpty()) {
@@ -71,19 +84,6 @@ QRect centeredImageWindowGeometry(const QSize &imageSize, QScreen *screen)
     const QPoint topLeft(availableGeometry.center().x() - targetSize.width() / 2,
                          availableGeometry.center().y() - targetSize.height() / 2);
     return QRect(topLeft, targetSize);
-}
-
-}  // namespace
-
-QScreen *focusedScreen()
-{
-    if (QScreen *screen = screenByName(niriFocusedOutputName())) {
-        return screen;
-    }
-    if (QScreen *screen = QGuiApplication::screenAt(QCursor::pos())) {
-        return screen;
-    }
-    return QGuiApplication::primaryScreen();
 }
 
 ShotWindow *openImageForAnnotation(const QImage &image, const QString &name)

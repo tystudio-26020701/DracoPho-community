@@ -1,3 +1,5 @@
+#include "annotation_launch.h"
+#include "config_value.h"
 #include "screen_capture.h"
 #include "shot_window.h"
 #include "debug_log.h"
@@ -11,7 +13,6 @@
 #include <QByteArray>
 #include <QColor>
 #include <QCommandLineParser>
-#include <QCursor>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -24,7 +25,6 @@
 #include <QJsonValue>
 #include <QMessageBox>
 #include <QPointer>
-#include <QProcess>
 #include <QProcessEnvironment>
 #include <QScreen>
 #include <QStringList>
@@ -48,12 +48,6 @@ QRect virtualScreensGeometry()
         geometry = geometry.isNull() ? screen->geometry() : geometry.united(screen->geometry());
     }
     return geometry;
-}
-
-QJsonObject objectValue(const QJsonObject &object, const QString &key)
-{
-    const QJsonValue value = object.value(key);
-    return value.isObject() ? value.toObject() : QJsonObject();
 }
 
 QStringList preApplicationConfigPathCandidates()
@@ -103,20 +97,6 @@ QString preApplicationConfigPath()
     return candidates.isEmpty() ? QString() : candidates.first();
 }
 
-std::optional<QString> environmentStringValue(const QJsonValue &value)
-{
-    if (value.isString()) {
-        return value.toString();
-    }
-    if (value.isDouble()) {
-        return QString::number(value.toDouble(), 'g', 15);
-    }
-    if (value.isBool()) {
-        return value.toBool() ? QStringLiteral("1") : QStringLiteral("0");
-    }
-    return std::nullopt;
-}
-
 void applyConfiguredEnvironment()
 {
     const QString configPath = preApplicationConfigPath();
@@ -135,8 +115,8 @@ void applyConfiguredEnvironment()
         return;
     }
 
-    QJsonObject environment = objectValue(document.object(), QStringLiteral("env"));
-    const QJsonObject namedEnvironment = objectValue(document.object(), QStringLiteral("environment"));
+    QJsonObject environment = markshot::config::objectValue(document.object(), QStringLiteral("env"));
+    const QJsonObject namedEnvironment = markshot::config::objectValue(document.object(), QStringLiteral("environment"));
     for (auto it = namedEnvironment.constBegin(); it != namedEnvironment.constEnd(); ++it) {
         environment.insert(it.key(), it.value());
     }
@@ -146,7 +126,7 @@ void applyConfiguredEnvironment()
         if (key.isEmpty()) {
             continue;
         }
-        if (const std::optional<QString> value = environmentStringValue(it.value())) {
+        if (const std::optional<QString> value = markshot::config::environmentStringValue(it.value())) {
             const QByteArray keyBytes = key.toUtf8();
             const QByteArray valueBytes = value->toUtf8();
             qputenv(keyBytes.constData(), valueBytes);
@@ -200,24 +180,9 @@ bool isHexDigits(const QString &text)
     return !text.isEmpty();
 }
 
-std::optional<int> intValue(const QJsonValue &value)
-{
-    if (value.isDouble()) {
-        return std::clamp(value.toInt(), 0, 255);
-    }
-    if (value.isString()) {
-        bool ok = false;
-        const int number = value.toString().trimmed().toInt(&ok);
-        if (ok) {
-            return std::clamp(number, 0, 255);
-        }
-    }
-    return std::nullopt;
-}
-
 std::optional<int> channelValue(const QJsonObject &object, const QStringList &keys)
 {
-    return intValue(jsonValue(object, keys));
+    return markshot::config::clampedIntValue(jsonValue(object, keys), 0, 255);
 }
 
 std::optional<QColor> colorFromString(QString value);
@@ -322,9 +287,9 @@ DefaultTools configuredDefaultTools(QString *warning)
     }
 
     const QJsonObject root = document.object();
-    const QJsonObject annotation = objectValue(root, QStringLiteral("annotation"));
-    const QJsonObject defaultTools = objectValue(annotation, QStringLiteral("defaultTools"));
-    const QJsonObject rootDefaultTools = objectValue(root, QStringLiteral("defaultTools"));
+    const QJsonObject annotation = markshot::config::objectValue(root, QStringLiteral("annotation"));
+    const QJsonObject defaultTools = markshot::config::objectValue(annotation, QStringLiteral("defaultTools"));
+    const QJsonObject rootDefaultTools = markshot::config::objectValue(root, QStringLiteral("defaultTools"));
     QStringList warnings;
     bool hasToolWarnings = false;
 
@@ -418,55 +383,6 @@ DefaultTools configuredDefaultTools(QString *warning)
     return tools;
 }
 
-QString niriFocusedOutputName()
-{
-#if defined(Q_OS_WIN)
-    return {};
-#else
-    QProcess niri;
-    niri.setProgram(QStringLiteral("niri"));
-    niri.setArguments({QStringLiteral("msg"), QStringLiteral("-j"), QStringLiteral("focused-output")});
-    niri.start(QIODevice::ReadOnly);
-    if (!niri.waitForStarted(1000) || !niri.waitForFinished(1000)) {
-        return {};
-    }
-    if (niri.exitStatus() != QProcess::NormalExit || niri.exitCode() != 0) {
-        return {};
-    }
-
-    const QJsonDocument document = QJsonDocument::fromJson(niri.readAllStandardOutput());
-    if (!document.isObject()) {
-        return {};
-    }
-    return document.object().value(QStringLiteral("name")).toString();
-#endif
-}
-
-QScreen *screenByName(const QString &name)
-{
-    if (name.isEmpty()) {
-        return nullptr;
-    }
-    const QList<QScreen *> screens = QGuiApplication::screens();
-    for (QScreen *screen : screens) {
-        if (screen && screen->name() == name) {
-            return screen;
-        }
-    }
-    return nullptr;
-}
-
-QScreen *focusedScreen()
-{
-    if (QScreen *screen = screenByName(niriFocusedOutputName())) {
-        return screen;
-    }
-    if (QScreen *screen = QGuiApplication::screenAt(QCursor::pos())) {
-        return screen;
-    }
-    return QGuiApplication::primaryScreen();
-}
-
 void disableQtPortalServicesForHostApp()
 {
 #if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN)
@@ -483,27 +399,6 @@ void disableQtPortalServicesForHostApp()
     // screenshot portal calls.
     qputenv("QT_NO_XDG_DESKTOP_PORTAL", QByteArrayLiteral("1"));
 #endif
-}
-
-QRect centeredImageWindowGeometry(const QSize &imageSize, QScreen *screen)
-{
-    if (imageSize.isEmpty()) {
-        return {};
-    }
-
-    const QRect availableGeometry = screen
-        ? screen->availableGeometry()
-        : QRect(QPoint(0, 0), imageSize);
-    QSize targetSize = imageSize;
-    const QSize maxSize(qMax(320, qRound(availableGeometry.width() * 0.9)),
-                        qMax(240, qRound(availableGeometry.height() * 0.9)));
-    if (targetSize.width() > maxSize.width() || targetSize.height() > maxSize.height()) {
-        targetSize.scale(maxSize, Qt::KeepAspectRatio);
-    }
-
-    const QPoint topLeft(availableGeometry.center().x() - targetSize.width() / 2,
-                         availableGeometry.center().y() - targetSize.height() / 2);
-    return QRect(topLeft, targetSize);
 }
 
 ShotWindow *showCaptureWindow(QScreen *screen,
@@ -571,7 +466,7 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
                                                  QString *error)
 {
     QVector<QPointer<ShotWindow>> windows;
-    QScreen *screen = focusedScreen();
+    QScreen *screen = markshot::focusedScreen();
     const QList<QScreen *> screens = QGuiApplication::screens();
     if (!allOutputs && !fullscreenAnnotation && screens.size() > 1) {
         for (QScreen *candidate : screens) {
@@ -767,12 +662,12 @@ int main(int argc, char *argv[])
         ShotWindow *window = new ShotWindow(image, imageFile.fileName());
         window->setDefaultTools(defaultTools.normal, defaultTools.fullscreen);
         window->setDefaultColor(defaultTools.color);
-        QScreen *screen = focusedScreen();
+        QScreen *screen = markshot::focusedScreen();
         if (screen) {
             window->setScreen(screen);
         }
         window->setWindowFlags(Qt::Window);
-        const QRect windowGeometry = centeredImageWindowGeometry(image.size(), screen);
+        const QRect windowGeometry = markshot::centeredImageWindowGeometry(image.size(), screen);
         if (windowGeometry.isValid() && !windowGeometry.isEmpty()) {
             window->setGeometry(windowGeometry);
         }
