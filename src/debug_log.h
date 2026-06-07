@@ -6,8 +6,8 @@ namespace markshot {
 
 // True when the DEBUG environment variable is set to a truthy value. The result
 // is computed once and cached. When enabled, debugLog writes detailed
-// diagnostics to stderr and to /tmp/mark-shot-scroll.log so a scrolling capture
-// session can be replayed after the fact.
+// diagnostics to stderr and to mark-shot-scroll.log in the system temporary
+// directory so a scrolling capture session can be replayed after the fact.
 bool debugEnabled();
 
 // printf-style diagnostic logging, gated by debugEnabled(). The category is a

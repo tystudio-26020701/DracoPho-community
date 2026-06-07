@@ -14,23 +14,40 @@ option(MARK_SHOT_REQUIRE_LAYER_SHELL "Fail configuration when the optional Layer
 option(MARK_SHOT_WITH_LIBPORTAL "Enable libportal screencast negotiation when available" OFF)
 option(MARK_SHOT_REQUIRE_LIBPORTAL "Fail configuration when libportal support is requested but unavailable" OFF)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets DBus Concurrent)
-if(MARK_SHOT_WITH_LAYER_SHELL)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(MARK_SHOT_LINUX TRUE)
+else()
+    set(MARK_SHOT_LINUX FALSE)
+endif()
+
+set(MARK_SHOT_QT_COMPONENTS Core Gui Widgets Concurrent)
+if(MARK_SHOT_LINUX)
+    list(APPEND MARK_SHOT_QT_COMPONENTS DBus)
+endif()
+find_package(Qt6 REQUIRED COMPONENTS ${MARK_SHOT_QT_COMPONENTS})
+
+if(MARK_SHOT_WITH_LAYER_SHELL AND MARK_SHOT_LINUX)
     find_package(LayerShellQt QUIET)
     if(MARK_SHOT_REQUIRE_LAYER_SHELL AND NOT LayerShellQt_FOUND)
         message(FATAL_ERROR "The optional LayerShellQt plugin was required but LayerShellQt was not found")
     endif()
+elseif(MARK_SHOT_REQUIRE_LAYER_SHELL)
+    message(FATAL_ERROR "The optional LayerShellQt plugin is only supported on Linux")
 endif()
-find_package(X11 COMPONENTS xcb QUIET)
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(PipeWire QUIET IMPORTED_TARGET libpipewire-0.3)
-    if(MARK_SHOT_WITH_LIBPORTAL)
-        pkg_check_modules(LibPortal QUIET IMPORTED_TARGET libportal)
-        if(MARK_SHOT_REQUIRE_LIBPORTAL AND NOT LibPortal_FOUND)
-            message(FATAL_ERROR "libportal support was required but libportal was not found")
+if(MARK_SHOT_LINUX)
+    find_package(X11 COMPONENTS xcb QUIET)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(PipeWire QUIET IMPORTED_TARGET libpipewire-0.3)
+        if(MARK_SHOT_WITH_LIBPORTAL)
+            pkg_check_modules(LibPortal QUIET IMPORTED_TARGET libportal)
+            if(MARK_SHOT_REQUIRE_LIBPORTAL AND NOT LibPortal_FOUND)
+                message(FATAL_ERROR "libportal support was required but libportal was not found")
+            endif()
         endif()
     endif()
+elseif(MARK_SHOT_REQUIRE_LIBPORTAL)
+    message(FATAL_ERROR "libportal support is only supported on Linux")
 endif()
 
 if(COMMAND qt_standard_project_setup)
@@ -76,22 +93,29 @@ qt_add_executable(mark-shot
 
 target_include_directories(mark-shot PRIVATE src)
 target_compile_definitions(mark-shot PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(WIN32)
+    set_target_properties(mark-shot PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
 
 target_link_libraries(mark-shot
     PRIVATE
         Qt6::Core
         Qt6::Concurrent
-        Qt6::DBus
         Qt6::Gui
         Qt6::Widgets
 )
 
-if(X11_xcb_FOUND)
+if(MARK_SHOT_LINUX)
+    target_link_libraries(mark-shot PRIVATE Qt6::DBus)
+    target_compile_definitions(mark-shot PRIVATE MARK_SHOT_WITH_DBUS)
+endif()
+
+if(MARK_SHOT_LINUX AND X11_xcb_FOUND)
     target_link_libraries(mark-shot PRIVATE X11::xcb)
     target_compile_definitions(mark-shot PRIVATE HAVE_XCB)
 endif()
 
-if(MARK_SHOT_WITH_LAYER_SHELL AND LayerShellQt_FOUND)
+if(MARK_SHOT_WITH_LAYER_SHELL AND MARK_SHOT_LINUX AND LayerShellQt_FOUND)
     qt_add_plugin(mark-shot-layer-shell MODULE
         src/debug_log.cpp
         src/debug_log.h
@@ -110,13 +134,15 @@ if(MARK_SHOT_WITH_LAYER_SHELL AND LayerShellQt_FOUND)
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
     )
     message(STATUS "mark-shot: LayerShellQt found, optional layer-shell plugin enabled")
-elseif(MARK_SHOT_WITH_LAYER_SHELL)
+elseif(MARK_SHOT_WITH_LAYER_SHELL AND MARK_SHOT_LINUX)
     message(STATUS "mark-shot: LayerShellQt not found, building without optional layer-shell plugin")
+elseif(MARK_SHOT_WITH_LAYER_SHELL)
+    message(STATUS "mark-shot: LayerShellQt is Linux-only, building without optional layer-shell plugin")
 else()
     message(STATUS "mark-shot: optional layer-shell plugin disabled")
 endif()
 
-if(PipeWire_FOUND)
+if(MARK_SHOT_LINUX AND PipeWire_FOUND)
     target_link_libraries(mark-shot PRIVATE PkgConfig::PipeWire)
     target_compile_definitions(mark-shot PRIVATE HAVE_PIPEWIRE)
     message(STATUS "mark-shot: PipeWire ${PipeWire_VERSION} found, portal screencast capture enabled")
@@ -130,7 +156,11 @@ if(PipeWire_FOUND)
         message(STATUS "mark-shot: libportal support disabled, using direct D-Bus portal screencast negotiation")
     endif()
 else()
-    message(STATUS "mark-shot: PipeWire not found, Wayland scrolling capture falls back to screenshot portal/grim")
+    if(MARK_SHOT_LINUX)
+        message(STATUS "mark-shot: PipeWire not found, Wayland scrolling capture falls back to screenshot portal/grim")
+    else()
+        message(STATUS "mark-shot: Linux screenshot backends disabled on ${CMAKE_SYSTEM_NAME}; using Qt screen capture")
+    endif()
 endif()
 
 include(CTest)
@@ -159,27 +189,29 @@ if(TARGET mark-shot-layer-shell)
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
-install(PROGRAMS
-    scripts/mark-shot-ocr
-    scripts/mark-shot-translate
-    scripts/mark-shot-window-detection-niri
-    scripts/mark-shot-window-detection-hyprland
-    DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-install(FILES
-    data/mark-shot.desktop
-    data/mark-shot-edit.desktop
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
-)
-install(FILES
-    data/icons/hicolor/scalable/apps/mark-shot.svg
-    data/icons/hicolor/scalable/apps/mark-shot-edit.svg
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
-)
-install(DIRECTORY
-    packaging/gnome-extension/mark-shot-scroll-helper@snemc.org/
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/gnome-shell/extensions/mark-shot-scroll-helper@snemc.org
-    FILES_MATCHING
-        PATTERN "metadata.json"
-        PATTERN "extension.js"
-)
+if(MARK_SHOT_LINUX)
+    install(PROGRAMS
+        scripts/mark-shot-ocr
+        scripts/mark-shot-translate
+        scripts/mark-shot-window-detection-niri
+        scripts/mark-shot-window-detection-hyprland
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    install(FILES
+        data/mark-shot.desktop
+        data/mark-shot-edit.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+    )
+    install(FILES
+        data/icons/hicolor/scalable/apps/mark-shot.svg
+        data/icons/hicolor/scalable/apps/mark-shot-edit.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+    )
+    install(DIRECTORY
+        packaging/gnome-extension/mark-shot-scroll-helper@snemc.org/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/gnome-shell/extensions/mark-shot-scroll-helper@snemc.org
+        FILES_MATCHING
+            PATTERN "metadata.json"
+            PATTERN "extension.js"
+    )
+endif()

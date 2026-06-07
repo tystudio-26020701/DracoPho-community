@@ -22,9 +22,11 @@
 #include <QCoreApplication>
 #include <QCursor>
 #include <QDateTime>
+#ifdef MARK_SHOT_WITH_DBUS
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusMessage>
+#endif
 #include <QDir>
 #include <QDirIterator>
 #include <QEvent>
@@ -195,6 +197,7 @@ std::optional<bool> envFlagValue(const QProcessEnvironment &env, const QStringLi
 
 bool sendDesktopNotification(const QString &summary, const QString &body, int timeoutMs = 2500)
 {
+#ifdef MARK_SHOT_WITH_DBUS
     QDBusInterface notifications(QStringLiteral("org.freedesktop.Notifications"),
                                  QStringLiteral("/org/freedesktop/Notifications"),
                                  QStringLiteral("org.freedesktop.Notifications"),
@@ -213,6 +216,12 @@ bool sendDesktopNotification(const QString &summary, const QString &body, int ti
                                             QVariantMap(),
                                             timeoutMs);
     return reply.type() != QDBusMessage::ErrorMessage;
+#else
+    Q_UNUSED(summary);
+    Q_UNUSED(body);
+    Q_UNUSED(timeoutMs);
+    return false;
+#endif
 }
 
 
@@ -609,6 +618,9 @@ bool desktopEntrySupportsImage(const QStringList &lines)
 
 QStringList desktopSearchDirs()
 {
+#if defined(Q_OS_WIN)
+    return {};
+#else
     QStringList dataDirs;
     dataDirs << QDir::home().filePath(QStringLiteral(".local/share"));
 
@@ -624,6 +636,7 @@ QStringList desktopSearchDirs()
     }
     appDirs.removeDuplicates();
     return appDirs;
+#endif
 }
 
 QString markShotPicturesDir()
@@ -702,11 +715,51 @@ QString expandUserPath(const QString &path)
 
 QString shellQuote(QString value)
 {
+#if defined(Q_OS_WIN)
+    if (value.isEmpty()) {
+        return QStringLiteral("\"\"");
+    }
+    value.replace(QStringLiteral("^"), QStringLiteral("^^"));
+    value.replace(QStringLiteral("%"), QStringLiteral("^%"));
+    value.replace(QStringLiteral("\""), QStringLiteral("^\""));
+    return QStringLiteral("\"") + value + QStringLiteral("\"");
+#else
     if (value.isEmpty()) {
         return QStringLiteral("''");
     }
     value.replace(QStringLiteral("'"), QStringLiteral("'\"'\"'"));
     return QStringLiteral("'") + value + QStringLiteral("'");
+#endif
+}
+
+QString commandShellProgram()
+{
+#if defined(Q_OS_WIN)
+    const QString comspec = QProcessEnvironment::systemEnvironment().value(QStringLiteral("COMSPEC"));
+    return comspec.isEmpty() ? QStringLiteral("cmd.exe") : comspec;
+#else
+    QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"),
+                                                                   QStringLiteral("/bin/sh"));
+    return shell.isEmpty() ? QStringLiteral("/bin/sh") : shell;
+#endif
+}
+
+QStringList commandShellArguments(const QString &commandLine)
+{
+#if defined(Q_OS_WIN)
+    return {QStringLiteral("/D"), QStringLiteral("/V:OFF"), QStringLiteral("/S"), QStringLiteral("/C"), commandLine};
+#else
+    return {QStringLiteral("-c"), commandLine};
+#endif
+}
+
+void setShellCommand(QProcess *process, const QString &commandLine)
+{
+    if (!process) {
+        return;
+    }
+    process->setProgram(commandShellProgram());
+    process->setArguments(commandShellArguments(commandLine));
 }
 
 bool extensionCommandUsesImagePlaceholder(const QString &command)
@@ -817,6 +870,31 @@ QString helperProgramPath(const QString &programName)
     const QString appDir = QCoreApplication::applicationDirPath();
     const QString configDir = markShotConfigDir();
     const QString dataDir = markShotDataDir();
+#if defined(Q_OS_WIN)
+    QStringList programNames{programName};
+    if (QFileInfo(programName).suffix().isEmpty()) {
+        programNames.prepend(programName + QStringLiteral(".bat"));
+        programNames.prepend(programName + QStringLiteral(".cmd"));
+        programNames.prepend(programName + QStringLiteral(".exe"));
+    }
+
+    QStringList candidates;
+    const QStringList candidateDirs = {
+        appDir,
+        QDir(appDir).filePath(QStringLiteral("scripts")),
+        QDir(appDir).filePath(QStringLiteral("../scripts")),
+        QDir::current().filePath(QStringLiteral("scripts")),
+        configDir,
+        QDir(configDir).filePath(QStringLiteral("scripts")),
+        dataDir,
+        QDir(dataDir).filePath(QStringLiteral("scripts")),
+    };
+    for (const QString &dir : candidateDirs) {
+        for (const QString &name : programNames) {
+            candidates.append(QDir(dir).filePath(name));
+        }
+    }
+#else
     const QStringList candidates = {
         QDir(appDir).filePath(programName),
         QDir(appDir).filePath(QStringLiteral("../scripts/%1").arg(programName)),
@@ -831,6 +909,7 @@ QString helperProgramPath(const QString &programName)
         QStringLiteral("/usr/local/bin/%1").arg(programName),
         QStringLiteral("/usr/bin/%1").arg(programName),
     };
+#endif
 
     for (const QString &candidate : candidates) {
         QFileInfo fileInfo(expandUserPath(QDir::cleanPath(candidate)));
@@ -2040,13 +2119,7 @@ private:
                 commandLine += shellQuote(m_translationInputPath);
             }
 
-            QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"),
-                                                                           QStringLiteral("/bin/sh"));
-            if (shell.isEmpty()) {
-                shell = QStringLiteral("/bin/sh");
-            }
-            process->setProgram(shell);
-            process->setArguments({QStringLiteral("-c"), commandLine});
+            setShellCommand(process, commandLine);
         } else {
             process->setProgram(helperProgramPath(QStringLiteral("mark-shot-translate")));
             process->setArguments({QStringLiteral("--input"),
@@ -2532,12 +2605,7 @@ private:
                 commandLine += shellQuote(m_ocrTempPath);
             }
 
-            QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"), QStringLiteral("/bin/sh"));
-            if (shell.isEmpty()) {
-                shell = QStringLiteral("/bin/sh");
-            }
-            process->setProgram(shell);
-            process->setArguments({QStringLiteral("-c"), commandLine});
+            setShellCommand(process, commandLine);
         } else {
             process->setProgram(defaultOcrHelperProgram());
             process->setArguments({QStringLiteral("--format"),
@@ -2778,12 +2846,7 @@ private:
                 commandLine += shellQuote(m_translationInputPath);
             }
 
-            QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"), QStringLiteral("/bin/sh"));
-            if (shell.isEmpty()) {
-                shell = QStringLiteral("/bin/sh");
-            }
-            process->setProgram(shell);
-            process->setArguments({QStringLiteral("-c"), commandLine});
+            setShellCommand(process, commandLine);
         } else {
             process->setProgram(defaultTranslationHelperProgram());
             process->setArguments({QStringLiteral("--input"),
@@ -10077,10 +10140,6 @@ void ShotWindow::runExtensionCommand(const ExtensionCommand &command)
         return;
     }
 
-    QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"), QStringLiteral("/bin/sh"));
-    if (shell.isEmpty()) {
-        shell = QStringLiteral("/bin/sh");
-    }
     const QString workingDirectory = command.workingDirectory.isEmpty()
         ? QString()
         : expandUserPath(command.workingDirectory);
@@ -10090,7 +10149,9 @@ void ShotWindow::runExtensionCommand(const ExtensionCommand &command)
         QApplication::processEvents();
     }
 
-    const bool started = QProcess::startDetached(shell, {QStringLiteral("-c"), commandLine}, workingDirectory);
+    const bool started = QProcess::startDetached(commandShellProgram(),
+                                                 commandShellArguments(commandLine),
+                                                 workingDirectory);
     if (started && command.closeOnStart) {
         close();
         return;
@@ -10195,12 +10256,7 @@ void ShotWindow::ocrCopySelection()
             commandLine += QLatin1Char(' ');
             commandLine += shellQuote(tempPath);
         }
-        QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"), QStringLiteral("/bin/sh"));
-        if (shell.isEmpty()) {
-            shell = QStringLiteral("/bin/sh");
-        }
-        process.setProgram(shell);
-        process.setArguments({QStringLiteral("-c"), commandLine});
+        setShellCommand(&process, commandLine);
     } else {
         process.setProgram(helperProgramPath(QStringLiteral("mark-shot-ocr")));
         process.setArguments({QStringLiteral("--format"),

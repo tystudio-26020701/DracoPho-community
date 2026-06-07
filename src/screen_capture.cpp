@@ -3,6 +3,7 @@
 #include "capture_geometry.h"
 #include "debug_log.h"
 
+#ifdef MARK_SHOT_WITH_DBUS
 #include <QDBusError>
 #include <QDBusConnection>
 #include <QDBusArgument>
@@ -15,6 +16,7 @@
 #include <QDBusReply>
 #include <QDBusUnixFileDescriptor>
 #include <QDBusVariant>
+#endif
 #include <QDateTime>
 #include <QDir>
 #include <QEventLoop>
@@ -23,6 +25,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QObject>
+#include <QPainter>
 #include <QPoint>
 #include <QPixmap>
 #include <QProcess>
@@ -45,11 +48,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <utility>
 
+#ifdef MARK_SHOT_WITH_DBUS
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
+#endif
 
 #ifdef HAVE_XCB
 #include <xcb/xcb.h>
@@ -95,6 +101,8 @@ constexpr int MARKSHOT_SPA_PARAM_BUFFERS_DATA_TYPE = 6;
 #endif
 #endif
 
+#ifdef MARK_SHOT_WITH_DBUS
+
 struct PortalStream {
     uint nodeId = 0;
     QVariantMap properties;
@@ -125,7 +133,11 @@ bool isGnomeWaylandSession();
 bool hasGnomeScrollHelper();
 CaptureResult captureWithGnomeScrollHelper(const CaptureRequest &request);
 
+#endif
+
 namespace {
+
+#ifdef MARK_SHOT_WITH_DBUS
 
 constexpr uint kPortalSourceMonitor = 1u;
 constexpr uint kPortalCursorHidden = 1u;
@@ -153,6 +165,8 @@ public slots:
 signals:
     void finished();
 };
+
+#endif
 
 bool isWaylandSession()
 {
@@ -203,8 +217,73 @@ QImage normalizeCaptureImage(QImage image)
     return image;
 }
 
+CaptureResult captureAllScreensWithQScreen(const CaptureRequest &request)
+{
+    QRect frameGeometry = request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()
+        ? request.sourceGeometry.normalized()
+        : virtualScreensGeometry();
+    if (frameGeometry.isEmpty()) {
+        return {{}, QStringLiteral("no virtual screen geometry available for capture"), {}, {}};
+    }
+
+    QImage combined(frameGeometry.size(), QImage::Format_ARGB32_Premultiplied);
+    combined.fill(Qt::transparent);
+
+    QPainter painter(&combined);
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+
+    int capturedScreens = 0;
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    for (QScreen *screen : screens) {
+        if (!screen) {
+            continue;
+        }
+
+        const QRect screenGeometry = screen->geometry();
+        const QRect overlap = screenGeometry.intersected(frameGeometry);
+        if (overlap.isEmpty()) {
+            continue;
+        }
+
+        const QPixmap pixmap = screen->grabWindow(0);
+        if (pixmap.isNull()) {
+            markshot::debugLog("capture",
+                               "qscreen-all screen=%s returned null pixmap",
+                               screen->name().toUtf8().constData());
+            continue;
+        }
+
+        const QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied);
+        const QRect sourceRect = markshot::capture::scaledCropRect(screenGeometry, overlap, image.size());
+        if (sourceRect.isEmpty()) {
+            continue;
+        }
+
+        const QRect destinationRect(overlap.topLeft() - frameGeometry.topLeft(), overlap.size());
+        painter.drawImage(destinationRect, image, sourceRect);
+        ++capturedScreens;
+    }
+    painter.end();
+
+    if (capturedScreens == 0) {
+        return {{}, QStringLiteral("QScreen::grabWindow returned no usable screen pixmaps"), {}, frameGeometry};
+    }
+
+    markshot::debugLog("capture",
+                       "qscreen-all screens=%d virtual_geom=%d,%d %dx%d result=%dx%d",
+                       capturedScreens,
+                       frameGeometry.x(), frameGeometry.y(),
+                       frameGeometry.width(), frameGeometry.height(),
+                       combined.width(), combined.height());
+    return {combined, {}, {}, frameGeometry};
+}
+
 CaptureResult captureWithQScreen(const CaptureRequest &request)
 {
+    if (request.allOutputs) {
+        return captureAllScreensWithQScreen(request);
+    }
+
     QScreen *screen = nullptr;
     if (request.sourceGeometry.isValid() && !request.sourceGeometry.isEmpty()) {
         screen = QGuiApplication::screenAt(request.sourceGeometry.center());
@@ -399,6 +478,8 @@ CaptureResult cropGrimFrameToRequest(CaptureResult capture, QRect frameGeometry,
                        croppedSize.width(), croppedSize.height());
     return capture;
 }
+
+#ifdef MARK_SHOT_WITH_DBUS
 
 QString portalToken()
 {
@@ -2083,6 +2164,8 @@ void stopPortalScreencast()
 
 #endif
 
+#endif  // MARK_SHOT_WITH_DBUS
+
 CaptureResult captureWithGrim(const CaptureRequest &request)
 {
     const QStringList baseArguments{QStringLiteral("-t"), QStringLiteral("ppm")};
@@ -2137,6 +2220,8 @@ CaptureResult captureWithGrim(const CaptureRequest &request)
     CaptureResult fullCapture = runGrim(arguments, {}, frameGeometry);
     return cropGrimFrameToRequest(std::move(fullCapture), frameGeometry, request);
 }
+
+#ifdef MARK_SHOT_WITH_DBUS
 
 // KWin's own org.kde.KWin.ScreenShot2.CaptureArea renders the exact requested
 // rectangle server-side and streams the raw pixels back over a pipe fd. Unlike
@@ -2374,22 +2459,32 @@ CaptureResult captureWaylandFrame(const CaptureRequest &request)
     return {{}, QStringLiteral("%1\nGrim fallback: %2").arg(portalCapture.error, grimCapture.error), {}, request.sourceGeometry};
 }
 
+#endif  // MARK_SHOT_WITH_DBUS
+
 } // namespace
 
+#ifdef MARK_SHOT_WITH_DBUS
 #include "screen_capture.moc"
+#endif
 
 CaptureResult captureScreenFrame(const CaptureRequest &request)
 {
+#ifdef MARK_SHOT_WITH_DBUS
     CaptureResult result = isWaylandSession()
         ? captureWaylandFrame(request)
         : captureWithQScreen(request);
+#else
+    CaptureResult result = captureWithQScreen(request);
+#endif
     result.image = normalizeCaptureImage(result.image);
     return result;
 }
 
 void stopActiveScreencastCapture()
 {
+#ifdef MARK_SHOT_WITH_DBUS
     stopPortalScreencast();
+#endif
 }
 
 namespace {
@@ -2737,14 +2832,19 @@ QVector<QRect> enumerateX11WindowGeometries()
 
 bool isGnomeWaylandSession()
 {
+#ifdef MARK_SHOT_WITH_DBUS
     if (!isWaylandSession()) {
         return false;
     }
     return desktopEnvironmentText().toLower().contains(QStringLiteral("gnome"));
+#else
+    return false;
+#endif
 }
 
 bool hasGnomeScrollHelper()
 {
+#ifdef MARK_SHOT_WITH_DBUS
     QDBusInterface helper(QStringLiteral("org.gnome.Shell"),
                           QStringLiteral("/org/gnome/Shell/Extensions/MarkShotScrollHelper"),
                           QStringLiteral("org.gnome.Shell.Extensions.MarkShotScrollHelper"),
@@ -2755,10 +2855,14 @@ bool hasGnomeScrollHelper()
 
     QDBusMessage reply = helper.call(QStringLiteral("Version"));
     return reply.type() != QDBusMessage::ErrorMessage && !reply.arguments().isEmpty();
+#else
+    return false;
+#endif
 }
 
 bool hasGnomeScrollPreviewHelper()
 {
+#ifdef MARK_SHOT_WITH_DBUS
     QDBusInterface helper(QStringLiteral("org.gnome.Shell"),
                           QStringLiteral("/org/gnome/Shell/Extensions/MarkShotScrollHelper"),
                           QStringLiteral("org.gnome.Shell.Extensions.MarkShotScrollHelper"),
@@ -2775,10 +2879,14 @@ bool hasGnomeScrollPreviewHelper()
     bool ok = false;
     const int version = reply.arguments().first().toString().toInt(&ok);
     return ok && version >= 3;
+#else
+    return false;
+#endif
 }
 
 CaptureResult captureWithGnomeScrollHelper(const CaptureRequest &request)
 {
+#ifdef MARK_SHOT_WITH_DBUS
     const QString tempDir = QFile::exists(QStringLiteral("/dev/shm"))
         ? QStringLiteral("/dev/shm")
         : QDir::tempPath();
@@ -2817,4 +2925,7 @@ CaptureResult captureWithGnomeScrollHelper(const CaptureRequest &request)
 
     QFile::remove(actualPath);
     return {img, {}, {}, request.sourceGeometry};
+#else
+    return {{}, QStringLiteral("GNOME scroll helper support was not enabled at build time"), {}, request.sourceGeometry};
+#endif
 }
