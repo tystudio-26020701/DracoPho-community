@@ -104,6 +104,8 @@ inline constexpr int MARKSHOT_SPA_PARAM_BUFFERS_DATA_TYPE = 6;
 
 #ifdef MARK_SHOT_WITH_DBUS
 
+// Minimal stream descriptor returned by the desktop portal screencast API.
+// Properties carry compositor-specific geometry metadata used for cropping.
 struct PortalStream {
     uint nodeId = 0;
     QVariantMap properties;
@@ -123,6 +125,8 @@ inline constexpr uint kPortalCursorEmbedded = 2u;
 inline constexpr uint kPortalCursorMetadata = 4u;
 inline constexpr unsigned long kScreencastFirstFrameSettleMs = 1500;
 
+// Small synchronous bridge for portal Response signals. Capture code starts a
+// nested event loop and exits it when this object emits finished().
 class PortalResponseReceiver : public QObject {
     Q_OBJECT
 
@@ -148,6 +152,7 @@ signals:
 
 #ifdef HAVE_XCB
 
+// Atom cache used while enumerating visible X11 windows for region hints.
 struct X11WindowAtoms {
     xcb_atom_t netClientListStacking = XCB_ATOM_NONE;
     xcb_atom_t netClientList = XCB_ATOM_NONE;
@@ -187,16 +192,22 @@ void appendUniqueWindowRect(QVector<QRect> *results, const QRect &screenRect, QR
 
 #endif
 
+// Cross-backend environment and geometry helpers.
 bool isWaylandSession();
 QString desktopEnvironmentText();
 bool prefersGrim();
 bool isKdePlasma();
 QRect virtualScreensGeometry();
 QImage normalizeCaptureImage(QImage image);
+
+// Qt/QScreen capture path used for X11, Windows, and non-portal fallbacks.
 CaptureResult captureAllScreensWithQScreen(const CaptureRequest &request);
 CaptureResult captureWithQScreen(const CaptureRequest &request);
 QRect screenGeometryForOutputName(const QString &outputName);
 QRect screenGeometryForRequest(const CaptureRequest &request);
+
+// grim captures full output frames and then crops them to CaptureRequest when a
+// compositor supports grim but not direct rectangle capture.
 QRect fullGrimSourceGeometry(const CaptureRequest &request);
 CaptureResult runGrim(const QStringList &arguments, const QString &outputName, QRect sourceGeometry);
 CaptureResult cropGrimFrameToRequest(CaptureResult capture, QRect frameGeometry, const CaptureRequest &request);
@@ -210,6 +221,9 @@ void disconnectPortalResponse(const QString &signalPath, PortalResponseReceiver 
 QString portalScreenshotParentWindow(QWidget *parentDummy);
 void registerHostPortalApplication();
 QVariantMap waitForPortalResponse(PortalResponseReceiver *receiver, QString *error);
+
+// One-shot screenshot portal path. It may be interactive and is therefore not
+// preferred for high-frequency scrolling capture.
 CaptureResult captureWithPortalScreenshot(const CaptureRequest &request);
 QVariantMap callPortalRequest(QDBusInterface *portal,
                               const QString &method,
@@ -221,6 +235,9 @@ QVariant unwrappedVariant(QVariant value);
 uint portalUintProperty(const QString &interfaceName, const QString &propertyName);
 uint preferredPortalCursorMode(uint availableModes);
 QRect streamGeometryFromProperties(const QVariantMap &properties, const QSize &frameSize);
+
+// Wayland backend cascade: compositor helpers first when available, then portal
+// screencast/screenshot or command-line fallback depending on request flags.
 CaptureResult captureWithGrim(const CaptureRequest &request);
 CaptureResult captureWithKWinScreenShot(const CaptureRequest &request);
 CaptureResult captureWaylandFrame(const CaptureRequest &request);

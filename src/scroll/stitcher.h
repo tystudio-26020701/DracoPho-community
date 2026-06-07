@@ -24,19 +24,21 @@ enum class ScrollAxis {
 };
 
 struct StitchConfig {
-    int minOverlap;
-    float acceptDiff;
-    int minAppend;
-    float approxDiff;
+    int minOverlap;   // Minimum overlapping rows/columns required to trust a match.
+    float acceptDiff; // Maximum mean absolute color difference accepted as the same content.
+    int minAppend;    // Minimum newly exposed length before mutating the full image.
+    float approxDiff; // Early-exit threshold for the adjacent-frame coarse search.
 };
 
+// Production thresholds tuned for real scrolling pages: enough overlap to avoid
+// repeating sticky chrome, but low enough latency for a live capture loop.
 StitchConfig defaultConfig();
 
 enum class StitchStatus {
-    FirstFrame,
-    Appended,
-    NoProgress,
-    NoMatch,
+    FirstFrame, // The seed frame initialized the stitcher.
+    Appended,   // New content was appended/prepended to the full image.
+    NoProgress, // The frame matched already-known content or is below minAppend.
+    NoMatch,    // No trusted overlap was found.
 };
 
 // Which edge of the long image grew on an Appended result. End is the
@@ -51,16 +53,16 @@ enum class StitchEdge {
 
 struct StitchResult {
     StitchStatus status = StitchStatus::NoMatch;
-    int added = 0;
+    int added = 0;          // Newly committed length along the scroll axis.
     StitchEdge edge = StitchEdge::None;
     int position = 0;     // current frame top/left in stitched-image coordinates
     int frameLength = 0;  // current frame extent along the scroll axis
 };
 
 struct StitchStats {
-    int frameCount = 0;
-    int totalHeight = 0;
-    int lastAppend = 0;
+    int frameCount = 0;  // Number of frames that changed the stitcher state.
+    int totalHeight = 0; // Long-image length in the vertical pipeline space.
+    int lastAppend = 0;  // Last committed delta; equals width for horizontal output.
 };
 
 class Stitcher {
@@ -87,8 +89,12 @@ public:
     bool axisLocked() const;
 
 private:
+    // Three luminance samples per row in the normalized vertical pipeline.
+    // The samples are cheap to compare and are resilient to detailed page text.
     using ColSamples = QVector<std::array<float, 3>>;
 
+    // Pixel-row fallback match used when column samples are ambiguous near the
+    // bottom edge, typically because a sticky footer was captured in both frames.
     struct EdgeLineMatch {
         int position = 0;
         float diff = kNoMatchConfidence;
@@ -96,11 +102,17 @@ private:
         int matchedRows = 0;
     };
 
+    // Builds row signatures used by all overlap searches.
     ColSamples computeCols(const QImage &frame) const;
+    // Finds the current frame offset relative to the previous captured frame.
     std::pair<int, float> findOffsetColSample(const QImage &frame) const;
+    // Scores a frame placed at an absolute position inside the full image.
     float knownOverlapDiff(const ColSamples &frameCols, int framePos, int *overlapLen = nullptr) const;
+    // Recovers from a bad adjacent-frame match by searching already-stitched content.
     std::pair<int, float> findKnownPosition(const ColSamples &frameCols, int predictedPos) const;
+    // Searches placements that reveal new content past either edge of the full image.
     std::pair<int, float> findEdgePosition(const ColSamples &frameCols, int predictedPos) const;
+    // Exact row-run fallback for edge matches with repeated bottom chrome.
     EdgeLineMatch findLineRunPosition(const QImage &frame, int predictedPos) const;
     // Appends the bottom `amount` rows of `frame` below the accumulated image
     // (forward scroll); prependSlice puts the top `amount` rows above it
