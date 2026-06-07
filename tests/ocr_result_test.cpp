@@ -2,6 +2,7 @@
 
 #include <QtTest/QtTest>
 
+/// @brief Test suite for validating OCR result parsing and token sorting.
 class OcrResultTest : public QObject
 {
     Q_OBJECT
@@ -59,6 +60,7 @@ private slots:
     }
 };
 
+/// @brief Main entry point for the OCR result test suite.
 QTEST_APPLESS_MAIN(OcrResultTest)
 
 #include "ocr_result_test.moc"

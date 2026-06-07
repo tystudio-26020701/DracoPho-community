@@ -34,6 +34,8 @@ QString envConfigDir(const QString &name, const QString &relativePath = QStringL
 }
 #endif
 
+/// @brief Generates a list of candidate directories where the application configuration might reside.
+/// @return A list of directory paths as a QStringList.
 QStringList appConfigDirCandidates()
 {
     QStringList candidates;
@@ -71,6 +73,8 @@ QStringList appConfigDirCandidates()
     return candidates;
 }
 
+/// @brief Determines the default application configuration directory.
+/// @return The directory path as a QString.
 QString defaultAppConfigDir()
 {
     const QStringList candidates = appConfigDirCandidates();
@@ -79,6 +83,8 @@ QString defaultAppConfigDir()
         : candidates.first();
 }
 
+/// @brief Searches candidate directories and returns the path to the first existing config file.
+/// @return The path to the existing config file as a QString, or an empty string if not found.
 QString existingAppConfigPath()
 {
     const QStringList candidates = appConfigDirCandidates();
@@ -91,6 +97,8 @@ QString existingAppConfigPath()
     return {};
 }
 
+/// @brief Generates the default configuration JSON object structure.
+/// @return The default QJsonObject configuration root.
 QJsonObject defaultAppConfigRoot()
 {
     QJsonObject root;
@@ -232,17 +240,28 @@ bool ensureAppConfigFile()
 
 namespace {
 
+/// @brief Default timeout value in milliseconds for the window detection process.
 constexpr int kDefaultWindowDetectionTimeoutMs = 1000;
+/// @brief Minimum allowed timeout value in milliseconds for window detection.
 constexpr int kMinWindowDetectionTimeoutMs = 100;
+/// @brief Maximum allowed timeout value in milliseconds for window detection.
 constexpr int kMaxWindowDetectionTimeoutMs = 10000;
 
+/// @brief Configuration settings for the external window detection process.
 struct WindowDetectionConfig {
+    /// @brief The shell command or script path used to perform window detection.
     QString command;
+    /// @brief The working directory to execute the detection script in.
     QString workingDirectory;
+    /// @brief Custom environment variables to override for the detection process.
     QMap<QString, QString> environment;
+    /// @brief Maximum time in milliseconds to wait for the detection process to finish.
     int timeoutMs = kDefaultWindowDetectionTimeoutMs;
 };
 
+/// @brief Expands tilde (~) prefixes in file paths to the user's home directory path.
+/// @param path The input path string.
+/// @return The expanded absolute path.
 QString expandUserPath(const QString &path)
 {
     if (path == QStringLiteral("~")) {
@@ -254,6 +273,10 @@ QString expandUserPath(const QString &path)
     return path;
 }
 
+/// @brief Attempts to extract an integer value from a JSON object using a list of alternative keys.
+/// @param object The JSON object.
+/// @param keys List of key names to check in order.
+/// @return The integer value if found under any key, std::nullopt otherwise.
 std::optional<int> namedIntValue(const QJsonObject &object, const QStringList &keys)
 {
     for (const QString &key : keys) {
@@ -265,6 +288,9 @@ std::optional<int> namedIntValue(const QJsonObject &object, const QStringList &k
     return std::nullopt;
 }
 
+/// @brief Parses the environment variables and overrides defined in the window detection config.
+/// @param windowDetection The window detection JSON configuration object.
+/// @return A map of environment variable keys to their string values.
 QMap<QString, QString> environmentOverrides(const QJsonObject &windowDetection)
 {
     QJsonObject environment = config::objectValue(windowDetection, QStringLiteral("env"));
@@ -286,6 +312,9 @@ QMap<QString, QString> environmentOverrides(const QJsonObject &windowDetection)
     return overrides;
 }
 
+/// @brief Converts a JSON array of 4 integers [x, y, w, h] into a bounding rectangle.
+/// @param array The JSON array containing at least 4 integer coordinates.
+/// @return A QRect if parsed successfully, std::nullopt otherwise.
 std::optional<QRect> rectFromArray(const QJsonArray &array)
 {
     if (array.size() < 4) {
@@ -302,6 +331,9 @@ std::optional<QRect> rectFromArray(const QJsonArray &array)
     return QRect(*x, *y, *width, *height);
 }
 
+/// @brief Parses a geometry string (formatted like "x,y WxH") into a bounding rectangle.
+/// @param geometry The geometry text string.
+/// @return A QRect if parsed successfully, std::nullopt otherwise.
 std::optional<QRect> rectFromGeometryText(const QString &geometry)
 {
     static const QRegularExpression pattern(
@@ -331,6 +363,9 @@ std::optional<QRect> rectFromGeometryText(const QString &geometry)
     return QRect(x, y, width, height);
 }
 
+/// @brief Attempts to extract a bounding rectangle from a JSON window object.
+/// @param object The JSON object representing a window's metadata.
+/// @return A QRect if a geometry was successfully extracted, std::nullopt otherwise.
 std::optional<QRect> rectFromWindowObject(const QJsonObject &object)
 {
     if (object.value(QStringLiteral("geometry")).isString()) {
@@ -364,6 +399,9 @@ std::optional<QRect> rectFromWindowObject(const QJsonObject &object)
     return QRect(*x, *y, *width, *height);
 }
 
+/// @brief Normalizes a rectangle and appends it to the list of geometries if valid and not a duplicate.
+/// @param rects Pointer to the destination vector of rectangles.
+/// @param rect The rectangle geometry to add.
 void appendValidRect(QVector<QRect> *rects, QRect rect)
 {
     if (!rects) {
@@ -378,6 +416,9 @@ void appendValidRect(QVector<QRect> *rects, QRect rect)
     }
 }
 
+/// @brief Parses the standard output of the window detection script.
+/// @param output The raw byte array output from the script.
+/// @return A vector of parsed window bounding rectangles.
 QVector<QRect> parseWindowDetectionOutput(const QByteArray &output)
 {
     QVector<QRect> results;
@@ -424,6 +465,8 @@ QVector<QRect> parseWindowDetectionOutput(const QByteArray &output)
     return results;
 }
 
+/// @brief Reads and parses the application configuration file root object.
+/// @return The root QJsonObject if read successfully, std::nullopt otherwise.
 std::optional<QJsonObject> readAppConfigRoot()
 {
     QFile file(appConfigPath());
@@ -450,6 +493,9 @@ std::optional<QJsonObject> readAppConfigRoot()
     return document.object();
 }
 
+/// @brief Checks if window detection is explicitly enabled or disabled in the config.
+/// @param root The root configuration JSON object.
+/// @return True/false if the setting is specified, std::nullopt otherwise.
 std::optional<bool> configuredWindowDetectionEnabled(const QJsonObject &root)
 {
     const QJsonValue value = root.value(QStringLiteral("windowDetection"));
@@ -463,6 +509,8 @@ std::optional<bool> configuredWindowDetectionEnabled(const QJsonObject &root)
     return config::boolValue(value.toObject().value(QStringLiteral("enabled")));
 }
 
+/// @brief Reads and parses the window detection configuration from the application settings.
+/// @return A WindowDetectionConfig struct if configured and enabled, std::nullopt otherwise.
 std::optional<WindowDetectionConfig> readWindowDetectionConfig()
 {
     const std::optional<QJsonObject> root = readAppConfigRoot();
@@ -492,6 +540,12 @@ std::optional<WindowDetectionConfig> readWindowDetectionConfig()
     return config;
 }
 
+/// @brief Sets up environment variables passed to the window detection script.
+/// @param captureGeometry The capture area geometry.
+/// @param outputName The display output name.
+/// @param allOutputs True if capturing all outputs.
+/// @param overrides Map of additional environment variables to override.
+/// @return The populated QProcessEnvironment.
 QProcessEnvironment scriptEnvironment(const QRect &captureGeometry,
                                       const QString &outputName,
                                       bool allOutputs,
@@ -526,6 +580,11 @@ bool windowDetectionEnabled()
     return configuredWindowDetectionEnabled(*root).value_or(true);
 }
 
+/// @brief Collects the window geometries detected by running the configured external script/command.
+/// @param captureGeometry The current screen or capture area geometry.
+/// @param outputName The name of the preferred display output.
+/// @param allOutputs Flag indicating whether capturing should target all outputs.
+/// @return A vector of detected window bounding rectangles.
 QVector<QRect> collectConfiguredWindowGeometries(const QRect &captureGeometry,
                                                  const QString &outputName,
                                                  bool allOutputs)

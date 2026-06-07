@@ -23,8 +23,11 @@ enum class ClipboardBackend {
     X11,
 };
 
+/// @brief Command and executable information for persistently owning clipboard data.
 struct ClipboardOwnerCommand {
+    /// @brief The path or filename of the executable that owns the clipboard data.
     QString executable;
+    /// @brief The command line template to execute to launch the owner process.
     QString shellCommand;
 };
 
@@ -33,8 +36,11 @@ enum class ClipboardPayload {
     Text,
 };
 
+/// @brief Size limit in bytes for copying images inline into the clipboard rather than via cache files.
 constexpr qsizetype kInlineImageClipboardLimitBytes = 4 * 1024 * 1024;
 
+/// @brief Determines whether large images should be cached in temporary files for the clipboard.
+/// @return True if large images should be cached, false otherwise.
 bool shouldCacheLargeImagesForClipboard()
 {
 #if defined(Q_OS_WIN)
@@ -44,6 +50,9 @@ bool shouldCacheLargeImagesForClipboard()
 #endif
 }
 
+/// @brief Detects the active clipboard backend based on the environment variables.
+/// @param environment The current process environment.
+/// @return The detected ClipboardBackend enum value.
 ClipboardBackend clipboardBackend(const QProcessEnvironment &environment)
 {
 #if defined(Q_OS_WIN)
@@ -61,6 +70,9 @@ ClipboardBackend clipboardBackend(const QProcessEnvironment &environment)
 #endif
 }
 
+/// @brief Finds the executable name/path for the corresponding clipboard backend.
+/// @param backend The active clipboard backend.
+/// @return The resolved executable path, or an empty string if not found.
 QString clipboardExecutable(ClipboardBackend backend)
 {
     switch (backend) {
@@ -74,6 +86,10 @@ QString clipboardExecutable(ClipboardBackend backend)
     return {};
 }
 
+/// @brief Gets the shell command template used to invoke the persistent clipboard owner.
+/// @param backend The active clipboard backend.
+/// @param payload The type of clipboard payload.
+/// @return The shell command string.
 QString clipboardShellCommand(ClipboardBackend backend, ClipboardPayload payload)
 {
     switch (backend) {
@@ -99,6 +115,9 @@ QString clipboardShellCommand(ClipboardBackend backend, ClipboardPayload payload
     return {};
 }
 
+/// @brief Resolves the command and executable needed to persistently own the clipboard content.
+/// @param payload The type of clipboard payload (e.g. ImagePng, Text).
+/// @return A ClipboardOwnerCommand struct, or std::nullopt if the current environment is unsupported.
 std::optional<ClipboardOwnerCommand> clipboardOwnerCommand(ClipboardPayload payload)
 {
     const ClipboardBackend backend = clipboardBackend(QProcessEnvironment::systemEnvironment());
@@ -110,6 +129,9 @@ std::optional<ClipboardOwnerCommand> clipboardOwnerCommand(ClipboardPayload payl
     return ClipboardOwnerCommand{executable, command};
 }
 
+/// @brief Encodes a QImage object into a PNG byte array.
+/// @param image The source image to encode.
+/// @return The encoded PNG bytes, or an empty byte array on failure.
 QByteArray encodePng(QImage image)
 {
     QByteArray png;
@@ -120,6 +142,8 @@ QByteArray encodePng(QImage image)
     return png;
 }
 
+/// @brief Locates or creates a writeable cache directory for storing clipboard assets.
+/// @return The directory path as a QString, or an empty string on failure.
 QString clipboardCacheDir()
 {
     QString baseDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
@@ -141,6 +165,9 @@ QString clipboardCacheDir()
     return {};
 }
 
+/// @brief Saves a PNG image byte array to a temporary file in the clipboard cache directory.
+/// @param png The PNG image byte data.
+/// @return A QUrl pointing to the cached PNG file, or std::nullopt on failure.
 std::optional<QUrl> savePngToClipboardCache(const QByteArray &png)
 {
     const QString cacheDir = clipboardCacheDir();
@@ -166,6 +193,11 @@ std::optional<QUrl> savePngToClipboardCache(const QByteArray &png)
     return QUrl::fromLocalFile(cachePath);
 }
 
+/// @brief Starts a detached process to own the clipboard data persistently after this process exits.
+/// @param payload The raw byte content of the clipboard data.
+/// @param suffix The file extension suffix for the temporary file (e.g., ".png" or ".txt").
+/// @param owner Struct containing the executable path and shell command to invoke.
+/// @return True if the persistent owner process was successfully started.
 bool copyToPersistentClipboardOwner(const QByteArray &payload, const QString &suffix, const ClipboardOwnerCommand &owner)
 {
 #if defined(Q_OS_WIN)
@@ -207,6 +239,10 @@ bool copyToPersistentClipboardOwner(const QByteArray &payload, const QString &su
 #endif
 }
 
+/// @brief Copies an image and its PNG byte array representation to the system clipboard and persistent owner.
+/// @param image The QImage to be set on the system clipboard.
+/// @param png The encoded PNG byte data to be saved to the persistent clipboard owner.
+/// @return True if the image was successfully copied.
 bool copyImageDataToClipboard(const QImage &image, const QByteArray &png)
 {
     bool copied = false;
@@ -222,6 +258,9 @@ bool copyImageDataToClipboard(const QImage &image, const QByteArray &png)
     return copied;
 }
 
+/// @brief Copies a URL to both the system clipboard and a persistent clipboard owner process.
+/// @param url The URL to be copied.
+/// @return True if the copy operation was successful.
 bool copyUrlToClipboard(const QUrl &url)
 {
     const QString urlText = url.toString(QUrl::FullyEncoded);

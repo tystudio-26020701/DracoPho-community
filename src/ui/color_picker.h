@@ -12,6 +12,7 @@ namespace markshot::ui {
 // Saturation x Value picker. Renders a 2D field for the active hue and
 // emits the chosen S/V coordinates.
 class SVField : public QWidget {
+    /// @brief Qt meta-object macro for SVField.
     Q_OBJECT
 public:
     explicit SVField(QWidget *parent = nullptr);
@@ -40,6 +41,7 @@ private:
 
 // Horizontal hue gradient with a draggable knob.
 class HueSlider : public QWidget {
+    /// @brief Qt meta-object macro for HueSlider.
     Q_OBJECT
 public:
     explicit HueSlider(QWidget *parent = nullptr);
@@ -64,6 +66,7 @@ private:
 // Horizontal alpha track. The base color is opaque on the right and fully
 // transparent on the left, with a checkerboard backdrop showing through.
 class AlphaSlider : public QWidget {
+    /// @brief Qt meta-object macro for AlphaSlider.
     Q_OBJECT
 public:
     explicit AlphaSlider(QWidget *parent = nullptr);
@@ -90,6 +93,7 @@ private:
 // Square preview swatch with a checkerboard backdrop so partial alpha is
 // visually obvious.
 class ColorSwatch : public QWidget {
+    /// @brief Qt meta-object macro for ColorSwatch.
     Q_OBJECT
 public:
     explicit ColorSwatch(QWidget *parent = nullptr);
@@ -105,6 +109,7 @@ private:
 // Compact HSV+alpha picker with a hex field. No buttons; the host panel is
 // expected to provide framing.
 class ColorPicker : public QWidget {
+    /// @brief Qt meta-object macro for ColorPicker.
     Q_OBJECT
 public:
     explicit ColorPicker(QWidget *parent = nullptr);

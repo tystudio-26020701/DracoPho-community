@@ -37,9 +37,14 @@
 namespace markshot {
 namespace {
 
+/// @brief Unique identifier for the capture hotkey.
 constexpr int kCaptureHotkeyId = 0x4d53;
+/// @brief Unique identifier for the fullscreen hotkey.
 constexpr int kFullscreenHotkeyId = 0x4d54;
 
+/// @brief Applies system tray configurations from a JSON object.
+/// @param object The JSON object containing tray configuration values.
+/// @param config Pointer to the configuration structure to update.
 void applyTrayConfig(const QJsonObject &object, WindowsTrayController::Config *config)
 {
     if (!config || object.isEmpty()) {
@@ -63,6 +68,9 @@ void applyTrayConfig(const QJsonObject &object, WindowsTrayController::Config *c
     }
 }
 
+/// @brief Applies hotkey-related configurations from a JSON object.
+/// @param object The JSON object containing hotkey configuration values.
+/// @param config Pointer to the configuration structure to update.
 void applyHotkeyConfig(const QJsonObject &object, WindowsTrayController::Config *config)
 {
     if (!config || object.isEmpty()) {
@@ -93,6 +101,9 @@ void applyHotkeyConfig(const QJsonObject &object, WindowsTrayController::Config 
     }
 }
 
+/// @brief Applies general Windows-specific configurations from a JSON object.
+/// @param object The JSON object containing configuration values.
+/// @param config Pointer to the configuration structure to update.
 void applyWindowsConfig(const QJsonObject &object, WindowsTrayController::Config *config)
 {
     if (!config || object.isEmpty()) {
@@ -124,11 +135,13 @@ void applyWindowsConfig(const QJsonObject &object, WindowsTrayController::Config
 
 #if defined(Q_OS_WIN)
 
+/// @brief Native Windows hotkey components derived from a Qt key sequence.
 struct NativeHotkey {
-    UINT modifiers = 0;
-    UINT virtualKey = 0;
+    UINT modifiers = 0; ///< Win32 modifier mask.
+    UINT virtualKey = 0; ///< Win32 virtual key code.
 };
 
+/// @brief Maps a Qt key code to a Win32 virtual key code.
 UINT virtualKeyForQtKey(int key)
 {
     if (key >= Qt::Key_A && key <= Qt::Key_Z) {

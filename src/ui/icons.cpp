@@ -14,22 +14,35 @@ namespace markshot::ui {
 
 namespace {
 
+/// @brief Default size for rendering icons.
 constexpr int kIconSize = 32;
 
 // All glyphs share a single ink color so the toolbar reads as one family.
 // Active-state inversion is handled by the button stylesheet (teal background +
 // dark text), so a glyph drawn in slate-200 stays legible across normal,
 // hover, and active states.
-const QColor kInk(229, 231, 235);            // slate-200
-const QColor kInkSoft(229, 231, 235, 130);   // slate-200 @ 50%
-const QColor kInkFaint(229, 231, 235, 80);   // slate-200 @ 30%
-const QColor kSaveInk(255, 255, 255);        // pure white for primary button
+    /// @brief Standard ink color (slate-200) shared by all glyphs.
+    const QColor kInk(229, 231, 235);            // slate-200
+    /// @brief Soft ink color variant (50% opacity).
+    const QColor kInkSoft(229, 231, 235, 130);   // slate-200 @ 50%
+    /// @brief Faint ink color variant (30% opacity).
+    const QColor kInkFaint(229, 231, 235, 80);   // slate-200 @ 30%
+    /// @brief Pure white ink used for the save/primary button.
+    const QColor kSaveInk(255, 255, 255);        // pure white for primary button
 
+/// @brief Helper to construct a standard QPen with rounded cap and join.
+/// @param color Pen color.
+/// @param width Pen width.
+/// @return The constructed QPen object.
 QPen makePen(QColor color, qreal width = 1.75)
 {
     return QPen(color, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
 }
 
+/// @brief Returns a copy of the color with a specified alpha value.
+/// @param color The original color.
+/// @param alpha The new alpha value (0-255).
+/// @return The updated QColor.
 QColor withAlpha(QColor color, int alpha)
 {
     color.setAlpha(alpha);

@@ -167,6 +167,10 @@ ParsedOutput parseOutput(const QByteArray &output, QSize imageSize)
     return parsed;
 }
 
+/// @brief Parses OCR JSON output to retrieve a vector of Token objects.
+/// @param output The raw JSON output.
+/// @param imageSize The size of the source image.
+/// @return A vector of parsed Token objects.
 QVector<Token> tokensFromJsonOutput(const QByteArray &output, QSize imageSize)
 {
     return parseOutput(output, imageSize).tokens;
@@ -217,6 +221,11 @@ bool shouldInsertSpace(const QString &previousText,
     return gap > threshold;
 }
 
+/// @brief Joins a range of tokens into a formatted text string, respecting lines and spacing.
+/// @param tokens The vector of Token objects.
+/// @param first The starting index in the token vector.
+/// @param last The ending index (inclusive) in the token vector.
+/// @return The joined text string for the specified range.
 QString tokenRangeText(const QVector<Token> &tokens, int first, int last)
 {
     if (tokens.isEmpty() || first < 0 || last < first || last >= tokens.size()) {
@@ -244,6 +253,9 @@ QString tokenRangeText(const QVector<Token> &tokens, int first, int last)
     return text;
 }
 
+/// @brief Converts a vector of tokens into a single text string.
+/// @param tokens The vector of Token objects.
+/// @return The joined text string.
 QString tokensText(const QVector<Token> &tokens)
 {
     return tokenRangeText(tokens, 0, tokens.size() - 1);

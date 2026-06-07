@@ -13,6 +13,8 @@ namespace {
 
 namespace cfg = markshot::config;
 
+/// @brief Returns the default keyboard shortcuts for actions.
+/// @return An ActionShortcuts map populated with default key sequences.
 ActionShortcuts defaultActionShortcuts()
 {
     ActionShortcuts shortcuts{};
@@ -26,6 +28,8 @@ ActionShortcuts defaultActionShortcuts()
     return shortcuts;
 }
 
+/// @brief Returns the default keyboard shortcuts for tools.
+/// @return A ToolShortcuts map populated with default key sequences.
 ToolShortcuts defaultToolShortcuts()
 {
     ToolShortcuts shortcuts{};
@@ -44,6 +48,9 @@ ToolShortcuts defaultToolShortcuts()
     return shortcuts;
 }
 
+/// @brief Applies tool-specific shortcuts from a JSON object to a ToolShortcuts map.
+/// @param object The JSON object containing tool shortcut mappings.
+/// @param shortcuts Pointer to the ToolShortcuts map to be updated.
 void applyToolShortcutObject(const QJsonObject &object, ToolShortcuts *shortcuts)
 {
     if (!shortcuts) {
@@ -58,6 +65,9 @@ void applyToolShortcutObject(const QJsonObject &object, ToolShortcuts *shortcuts
     }
 }
 
+/// @brief Applies action-specific shortcuts from a JSON object to an ActionShortcuts map.
+/// @param object The JSON object containing action shortcut mappings.
+/// @param shortcuts Pointer to the ActionShortcuts map to be updated.
 void applyActionShortcutObject(const QJsonObject &object, ActionShortcuts *shortcuts)
 {
     if (!shortcuts) {
@@ -72,6 +82,9 @@ void applyActionShortcutObject(const QJsonObject &object, ActionShortcuts *short
     }
 }
 
+/// @brief Applies startup-specific shortcut settings from a JSON object to a ShortcutConfig.
+/// @param object The JSON object containing startup shortcut settings.
+/// @param config Pointer to the ShortcutConfig to be updated.
 void applyStartupShortcutObject(const QJsonObject &object, ShortcutConfig *config)
 {
     if (!config) {
@@ -93,6 +106,9 @@ void applyStartupShortcutObject(const QJsonObject &object, ShortcutConfig *confi
     }
 }
 
+/// @brief Applies shortcut configuration from a JSON object to a ShortcutConfig.
+/// @param object The JSON object containing shortcut mappings.
+/// @param config Pointer to the ShortcutConfig to be updated.
 void applyShortcutObject(const QJsonObject &object, ShortcutConfig *config)
 {
     if (!config || object.isEmpty()) {

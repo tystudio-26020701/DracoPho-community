@@ -11,11 +11,19 @@
 namespace markshot::scroll::stitcher_internal {
 
 
+/// @brief Ratio of frame height to ignore at the top of the content field.
 constexpr float kColTopIgnoreRatio = 0.10f;
+/// @brief Ratio of frame height to ignore at the bottom of the content field.
 constexpr float kColBottomIgnoreRatio = 0.08f;
+/// @brief Minimum number of pixels to ignore at the top or bottom of a frame.
 constexpr int kColMinIgnorePx = 16;
+/// @brief Maximum number of sample columns to inspect per row comparison.
 constexpr int kLineMaxSampleCols = 256;
 
+/// @brief Calculates the number of ignore pixels based on height and ratio.
+/// @param height The frame height.
+/// @param ratio The ignore ratio.
+/// @return The number of pixels to ignore.
 int scaledIgnore(int height, float ratio)
 {
     if (height < 80) {
@@ -100,6 +108,12 @@ float rowMeanAbsDiff(const QImage &a, int ay, const QImage &b, int by, int start
 // Mean absolute difference of the overlapping region when cols2 (current frame)
 // is shifted down by `offset` relative to cols1 (previous frame). Low-value top
 // and bottom rows are ignored only when enough overlap remains.
+/// @brief Computes the difference metric between column vectors of two frames.
+/// @param cols1 The column pixel values of the first frame.
+/// @param cols2 The column pixel values of the second frame.
+/// @param offset The shift offset of the second frame relative to the first.
+/// @param minOverlap The minimum required overlap between the frames.
+/// @return The computed column difference score.
 float computeColDiff(const QVector<std::array<float, 3>> &cols1,
                      const QVector<std::array<float, 3>> &cols2,
                      int offset,
@@ -164,6 +178,10 @@ float computeColDiff(const QVector<std::array<float, 3>> &cols1,
 // [p, p+1, p-1, p+2, p-2, ...], clamped to [-max, +max]. Signed so reverse
 // scrolling (negative offsets) is searched too: the previous offset carries its
 // sign as the prediction centre, giving reverse momentum just like forward.
+/// @brief Generates search offsets centered on a predicted value.
+/// @param max The maximum search offset (defines search range [-max, max]).
+/// @param predict The predicted search center offset.
+/// @return A vector of integer offsets to search.
 std::vector<int> predictOffsetIter(int max, int predict)
 {
     const int m = std::max(0, max);

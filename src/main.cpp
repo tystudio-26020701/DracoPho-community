@@ -37,6 +37,8 @@
 
 namespace {
 
+/// @brief Calculates the bounding rectangle of all connected screens combined.
+/// @return A QRect representing the geometry of the virtual desktop.
 QRect virtualScreensGeometry()
 {
     QRect geometry;
@@ -50,6 +52,8 @@ QRect virtualScreensGeometry()
     return geometry;
 }
 
+/// @brief Generates a list of candidate file paths for the application configuration.
+/// @return A list of candidate file paths.
 QStringList preApplicationConfigPathCandidates()
 {
     QStringList candidates;
@@ -86,6 +90,8 @@ QStringList preApplicationConfigPathCandidates()
     return candidates;
 }
 
+/// @brief Finds the path to the application configuration file by scanning candidates.
+/// @return The path to the first existing configuration file, or a default candidate path.
 QString preApplicationConfigPath()
 {
     const QStringList candidates = preApplicationConfigPathCandidates();
@@ -97,6 +103,7 @@ QString preApplicationConfigPath()
     return candidates.isEmpty() ? QString() : candidates.first();
 }
 
+/// @brief Applies environment variables configured in the application config file.
 void applyConfiguredEnvironment()
 {
     const QString configPath = preApplicationConfigPath();
@@ -135,6 +142,10 @@ void applyConfiguredEnvironment()
     }
 }
 
+/// @brief Resolves the first non-empty string value from a list of candidate keys in a JSON object.
+/// @param object The JSON object to inspect.
+/// @param keys The list of candidate keys to look up.
+/// @return The resolved non-empty string, or an empty string if none.
 QString stringValue(const QJsonObject &object, const QStringList &keys)
 {
     for (const QString &key : keys) {
@@ -146,6 +157,9 @@ QString stringValue(const QJsonObject &object, const QStringList &keys)
     return {};
 }
 
+/// @brief Retrieves the first non-empty trimmed string from a list.
+/// @param values The list of string values.
+/// @return The first non-empty trimmed string, or an empty string if none.
 QString firstStringValue(const QStringList &values)
 {
     for (const QString &value : values) {
@@ -157,6 +171,10 @@ QString firstStringValue(const QStringList &values)
     return {};
 }
 
+/// @brief Resolves the first defined JSON value from a list of candidate keys.
+/// @param object The JSON object to inspect.
+/// @param keys The candidate keys to look up.
+/// @return The resolved JSON value, or an undefined QJsonValue if none were found.
 QJsonValue jsonValue(const QJsonObject &object, const QStringList &keys)
 {
     for (const QString &key : keys) {
@@ -168,6 +186,9 @@ QJsonValue jsonValue(const QJsonObject &object, const QStringList &keys)
     return {};
 }
 
+/// @brief Checks whether the given text consists entirely of hexadecimal digits.
+/// @param text The text to inspect.
+/// @return True if the text only contains hex digits, false otherwise.
 bool isHexDigits(const QString &text)
 {
     for (const QChar ch : text) {
@@ -180,13 +201,23 @@ bool isHexDigits(const QString &text)
     return !text.isEmpty();
 }
 
+/// @brief Extracts a color channel value from a JSON object.
+/// @param object The JSON object to inspect.
+/// @param keys The list of candidate keys representing the channel.
+/// @return An optional integer channel value clamped between 0 and 255.
 std::optional<int> channelValue(const QJsonObject &object, const QStringList &keys)
 {
     return markshot::config::clampedIntValue(jsonValue(object, keys), 0, 255);
 }
 
+/// @brief Parses a QColor from a string representation.
+/// @param value The string representing the color.
+/// @return An optional QColor if parsing is successful.
 std::optional<QColor> colorFromString(QString value);
 
+/// @brief Parses a QColor from a QJsonObject.
+/// @param object The JSON object representing a color.
+/// @return An optional QColor if parsing is successful.
 std::optional<QColor> colorFromObject(const QJsonObject &object)
 {
     const QJsonValue nestedColor =
@@ -211,6 +242,9 @@ std::optional<QColor> colorFromObject(const QJsonObject &object)
     return QColor(*red, *green, *blue, alpha.value_or(255));
 }
 
+/// @brief Parses a QColor from a string representation.
+/// @param value The string representing the color.
+/// @return An optional QColor if parsing is successful.
 std::optional<QColor> colorFromString(QString value)
 {
     QString text = value.trimmed();
@@ -251,6 +285,9 @@ std::optional<QColor> colorFromString(QString value)
     return std::nullopt;
 }
 
+/// @brief Parses a QColor from a QJsonValue.
+/// @param value The JSON value containing color information (string or object).
+/// @return An optional QColor if parsing is successful.
 std::optional<QColor> colorFromValue(const QJsonValue &value)
 {
     if (value.isString()) {
@@ -262,12 +299,19 @@ std::optional<QColor> colorFromValue(const QJsonValue &value)
     return std::nullopt;
 }
 
+/// @brief Structure to store default annotation tool and color settings.
 struct DefaultTools {
+    /// @brief Default tool for normal capture mode.
     ShotWindow::Tool normal = ShotWindow::Tool::Pen;
+    /// @brief Default tool for fullscreen capture mode.
     ShotWindow::Tool fullscreen = ShotWindow::Tool::Pen;
+    /// @brief Default annotation color.
     QColor color = markshot::theme::kDefaultAnnotationColor;
 };
 
+/// @brief Loads and returns the configured default annotation tools and colors.
+/// @param warning Output parameter to receive warning messages during configuration loading.
+/// @return The configured DefaultTools structure.
 DefaultTools configuredDefaultTools(QString *warning)
 {
     if (warning) {
@@ -383,6 +427,7 @@ DefaultTools configuredDefaultTools(QString *warning)
     return tools;
 }
 
+/// @brief Disables standard Qt portal services to allow custom host application registration.
 void disableQtPortalServicesForHostApp()
 {
 #if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN)
@@ -401,6 +446,14 @@ void disableQtPortalServicesForHostApp()
 #endif
 }
 
+/// @brief Captures a screen and displays the screenshot inside a capture window.
+/// @param screen The screen to capture.
+/// @param allOutputs Whether to capture all screen outputs as a single virtual screen.
+/// @param useRegularWindow Whether to use standard windows instead of layer shell overlays.
+/// @param fullscreenAnnotation Whether to automatically start annotation in fullscreen mode.
+/// @param defaultTools Configuration specifying the default annotation tools and color.
+/// @param error Output parameter to receive any error message that occurs.
+/// @return Pointer to the created ShotWindow instance, or nullptr on failure.
 ShotWindow *showCaptureWindow(QScreen *screen,
                               bool allOutputs,
                               bool useRegularWindow,
@@ -458,6 +511,14 @@ ShotWindow *showCaptureWindow(QScreen *screen,
     return window;
 }
 
+/// @brief Starts a capture session and shows capture windows for the relevant screens.
+/// @param app Pointer to the QApplication instance.
+/// @param allOutputs Whether to capture all screen outputs as a single virtual screen.
+/// @param useRegularWindow Whether to use standard windows instead of layer shell overlays.
+/// @param fullscreenAnnotation Whether to automatically start annotation in fullscreen mode.
+/// @param defaultTools Configuration specifying the default annotation tools and color.
+/// @param error Output parameter to receive any error message that occurs.
+/// @return A vector of pointers to the created ShotWindow instances.
 QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
                                                  bool allOutputs,
                                                  bool useRegularWindow,
@@ -533,6 +594,10 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
 
 } // namespace
 
+/// @brief Main entry point of the application.
+/// @param argc The count of command line arguments.
+/// @param argv The array of command line arguments.
+/// @return Exit code of the application.
 int main(int argc, char *argv[])
 {
     applyConfiguredEnvironment();
