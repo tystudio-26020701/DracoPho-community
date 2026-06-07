@@ -198,6 +198,8 @@ HWND hwndForWidget(QWidget *widget)
 
 } // namespace
 
+/// @brief Enumerates the geometries of all visible windows.
+/// @return A vector of QRect objects representing the geometries of the windows.
 QVector<QRect> enumerateWindowGeometries()
 {
     QVector<QRect> windows;

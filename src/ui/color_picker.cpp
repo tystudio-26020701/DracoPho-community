@@ -22,12 +22,21 @@ namespace markshot::ui {
 
 namespace {
 
+/// @brief The width of the saturation-value area.
 constexpr int kSvWidth = 184;
+/// @brief The height of the saturation-value area.
 constexpr int kSvHeight = 112;
+/// @brief The height of the slider tracks in the color picker.
 constexpr int kTrackHeight = 12;
+/// @brief The size of the color swatch in the color picker.
 constexpr int kSwatchSize = 26;
+/// @brief The radius of the handle in the color picker.
 constexpr qreal kHandleRadius = 6.0;
 
+/// @brief Draws a checkerboard pattern representing transparency.
+/// @param p The painter to draw with.
+/// @param rect The bounding rectangle for the checkerboard.
+/// @param cell The size of each cell in the checkerboard.
 void drawCheckerboard(QPainter &p, const QRectF &rect, int cell = 5)
 {
     const QColor light(70, 76, 86);
@@ -46,6 +55,11 @@ void drawCheckerboard(QPainter &p, const QRectF &rect, int cell = 5)
     }
 }
 
+/// @brief Draws a handle for the color picker slider/area.
+/// @param p The painter to draw with.
+/// @param center The center point of the handle.
+/// @param radius The radius of the handle.
+/// @param innerFill The inner fill color of the handle.
 void drawHandle(QPainter &p, QPointF center, qreal radius, const QColor &innerFill)
 {
     p.setPen(QPen(QColor(15, 17, 23, 220), 1.5));

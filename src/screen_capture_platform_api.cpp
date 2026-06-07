@@ -1,5 +1,7 @@
 #include "screen_capture_internal.h"
 
+/// @brief Enumerates the geometries of all open X11 windows.
+/// @return A vector of rectangles representing the window geometries.
 QVector<QRect> enumerateX11WindowGeometries()
 {
     QVector<QRect> results;
@@ -162,6 +164,9 @@ bool hasGnomeScrollPreviewHelper()
 #endif
 }
 
+/// @brief Captures a screen area using the GNOME Shell extension scroll helper.
+/// @param request The capture request specifying the target geometry.
+/// @return The result of the capture operation.
 CaptureResult captureWithGnomeScrollHelper(const CaptureRequest &request)
 {
 #ifdef MARK_SHOT_WITH_DBUS

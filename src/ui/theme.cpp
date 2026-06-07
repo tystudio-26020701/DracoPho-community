@@ -7,6 +7,10 @@
 namespace markshot::theme {
 namespace {
 
+/// @brief Finds the first available font family in the system from a list of candidates.
+/// @param candidates List of font family names to check.
+/// @param fallback The fallback font family name if no candidates are available.
+/// @return The first available candidate font family, or the fallback.
 QString firstAvailableFontFamily(const QStringList &candidates, const QString &fallback)
 {
     const QStringList families = QFontDatabase::families();
@@ -18,6 +22,9 @@ QString firstAvailableFontFamily(const QStringList &candidates, const QString &f
     return fallback;
 }
 
+/// @brief Formats a font family name as a quoted CSS string, escaping special characters.
+/// @param family The font family name to format.
+/// @return The formatted CSS font family string.
 QString quotedCssFontFamily(QString family)
 {
     family = family.trimmed();
@@ -29,6 +36,11 @@ QString quotedCssFontFamily(QString family)
     return QStringLiteral("'%1'").arg(family);
 }
 
+/// @brief Creates a QFont object with specified properties.
+/// @param family The font family name.
+/// @param pointSize The size of the font in points (ignored if <= 0).
+/// @param weight The font weight.
+/// @return The constructed QFont object.
 QFont makeFont(const QString &family, int pointSize, QFont::Weight weight)
 {
     QFont font(family);
@@ -41,6 +53,8 @@ QFont makeFont(const QString &family, int pointSize, QFont::Weight weight)
 
 }  // namespace
 
+/// @brief Returns the list of standard colors in the application palette.
+/// @return A vector of QColor objects.
 QVector<QColor> paletteColors()
 {
     return {

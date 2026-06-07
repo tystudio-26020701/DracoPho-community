@@ -957,11 +957,15 @@ void stopPortalScreencast()
 
 #else
 
+/// @brief Captures the screen using the portal screencast service.
+/// @param request The capture request details.
+/// @return The result of the capture operation.
 CaptureResult captureWithPortalScreencast(const CaptureRequest &request)
 {
     return {{}, QStringLiteral("PipeWire support was not enabled at build time"), {}, request.sourceGeometry};
 }
 
+/// @brief Stops the active portal screen cast session.
 void stopPortalScreencast()
 {
 }

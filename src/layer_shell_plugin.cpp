@@ -13,6 +13,8 @@
 
 namespace {
 
+/// @brief Checks whether the current desktop environment is GNOME.
+/// @return True if GNOME desktop environment is detected, false otherwise.
 bool isGnomeDesktop()
 {
     const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -26,10 +28,12 @@ bool isGnomeDesktop()
 
 }  // namespace
 
+/// @brief Plugin implementation for Wayland layer-shell integration.
 class MarkShotLayerShellPlugin final
     : public QObject
     , public markshot::layershell::PluginInterface
 {
+    /// @brief Qt meta-object declaration for this class.
     Q_OBJECT
     Q_PLUGIN_METADATA(IID MARK_SHOT_LAYER_SHELL_PLUGIN_IID)
     Q_INTERFACES(markshot::layershell::PluginInterface)

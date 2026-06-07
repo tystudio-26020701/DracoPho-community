@@ -12,6 +12,8 @@
 namespace markshot::layershell {
 namespace {
 
+/// @brief Gets the platform-specific library name of the layer shell plugin.
+/// @return The filename of the plugin.
 QString pluginFileName()
 {
 #if defined(Q_OS_WIN)
@@ -23,6 +25,9 @@ QString pluginFileName()
 #endif
 }
 
+/// @brief Adds a search directory to the list if it is not already present.
+/// @param dirs Pointer to the list of directory paths.
+/// @param path The directory path to clean and add.
 void addSearchDir(QStringList *dirs, const QString &path)
 {
     if (!dirs || path.isEmpty()) {
@@ -35,6 +40,8 @@ void addSearchDir(QStringList *dirs, const QString &path)
     }
 }
 
+/// @brief Generates a list of candidate directories to search for the plugin.
+/// @return A list of directory paths to search.
 QStringList pluginSearchDirs()
 {
     QStringList dirs;
@@ -52,11 +59,17 @@ QStringList pluginSearchDirs()
     return dirs;
 }
 
+/// @brief Dynamically loads the mark-shot layer shell plugin if not already loaded.
+/// @return Pointer to the loaded PluginInterface, or nullptr on failure.
 PluginInterface *loadPlugin()
 {
+    /// @brief Struct maintaining the state of the loaded plugin.
     struct LoaderState {
+        /// @brief Flag indicating whether a plugin loading attempt has been made.
         bool attempted = false;
+        /// @brief Unique pointer to the QPluginLoader used for loading the plugin.
         std::unique_ptr<QPluginLoader> loader;
+        /// @brief Pointer to the loaded plugin interface instance.
         PluginInterface *plugin = nullptr;
     };
 

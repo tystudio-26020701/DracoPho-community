@@ -40,6 +40,7 @@ struct ScrollSessionUiConfig {
 // The input mask keeps the preview panel interactive, so the user can keep
 // scrolling the page underneath.
 class ScrollSessionWindow final : public QWidget {
+    /// @brief Qt meta-object declaration for this class.
     Q_OBJECT
 
 public:

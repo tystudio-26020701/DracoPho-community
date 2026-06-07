@@ -1,13 +1,20 @@
 #include "shot_window_module.h"
 namespace {
 using namespace markshot::shot;
+/// @brief Pinned image window providing OCR, text selection, and translation.
 class PinnedImageWindow final : public QWidget {
 public:
+    /// @brief Bounding structure representing a single OCR token.
     struct OcrToken {
+        /// @brief Text content of the recognized token.
         QString text;
+        /// @brief Bounding rectangle of the token within the image.
         QRectF imageRect;
+        /// @brief Line index of the token.
         int line = 0;
+        /// @brief Index of the token within the line.
         int index = 0;
+        /// @brief Confidence score of the recognized token.
         qreal confidence = 0.0;
     };
     explicit PinnedImageWindow(QImage image)
@@ -169,6 +176,7 @@ protected:
     }
     void contextMenuEvent(QContextMenuEvent *event) override
     {
+        /// @brief Event filter to intercept non-left click mouse events on the menu.
         class LeftClickMenuFilter final : public QObject {
         public:
             explicit LeftClickMenuFilter(QObject *parent = nullptr) : QObject(parent) {}
@@ -874,26 +882,47 @@ private:
         }
         painter.restore();
     }
+    /// @brief Pixmap of the pinned image.
     QPixmap m_pixmap;
+    /// @brief Size of the original pinned image.
     QSize m_imageSize;
+    /// @brief Current zoom/scale factor of the pinned window.
     qreal m_scale = 1.0;
+    /// @brief Offset for dragging the window.
     QPoint m_dragOffset;
+    /// @brief Configuration settings for the pinned window.
     PinnedWindowConfig m_config;
+    /// @brief OCR tokens recognized from the image.
     QVector<OcrToken> m_ocrTokens;
+    /// @brief Translated OCR tokens.
     QVector<OcrToken> m_translatedTokens;
+    /// @brief Bounding tokens for the translation overlay.
     QVector<OcrToken> m_translationOverlayTokens;
+    /// @brief Subprocess used for OCR.
     QProcess *m_ocrProcess = nullptr;
+    /// @brief Subprocess used for text translation.
     QProcess *m_translationProcess = nullptr;
+    /// @brief Path to the temporary OCR file.
     QString m_ocrTempPath;
+    /// @brief Path to the temporary translation input file.
     QString m_translationInputPath;
+    /// @brief Anchor index of the current text selection.
     int m_selectionAnchor = -1;
+    /// @brief Focus index of the current text selection.
     int m_selectionFocus = -1;
+    /// @brief Flag indicating if the user is currently selecting text.
     bool m_selectingText = false;
+    /// @brief Flag indicating if the translation is active.
     bool m_translationActive = false;
+    /// @brief Flag indicating if translation should be performed after OCR.
     bool m_translateAfterOcr = false;
+    /// @brief Flag indicating if text should be copied to clipboard after OCR.
     bool m_copyTextAfterOcr = false;
+    /// @brief Flag indicating if the translation busy cursor is active.
     bool m_translationBusyCursor = false;
+    /// @brief Flag indicating if translation should be activated when finished.
     bool m_activateTranslationWhenFinished = true;
+    /// @brief Flag indicating if the OCR backend warning has been shown.
     bool m_ocrBackendWarningShown = false;
 };
 }  // namespace

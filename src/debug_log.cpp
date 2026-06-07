@@ -13,6 +13,8 @@ namespace markshot {
 
 namespace {
 
+/// @brief Evaluates whether debug logging is enabled based on the environment.
+/// @return True if debug logging is enabled, false otherwise.
 bool computeDebugEnabled()
 {
     const char *raw = std::getenv("DEBUG");
@@ -28,6 +30,8 @@ bool computeDebugEnabled()
     return value != "false" && value != "off" && value != "no" && !value.isEmpty();
 }
 
+/// @brief Retrieves the file path for debug logs.
+/// @return A pointer to a character array representing the log file path.
 const char *logFilePath()
 {
     // Allow redirecting the log file; default keeps the historical scroll log
@@ -50,6 +54,10 @@ bool debugEnabled()
     return enabled;
 }
 
+/// @brief Helper to write formatted debug log messages to stderr and/or the debug log file.
+/// @param category The logging category or tag.
+/// @param format The format string for the log message.
+/// @param args The variable arguments list.
 void debugLogV(const char *category, const char *format, va_list args)
 {
     if (!debugEnabled()) {

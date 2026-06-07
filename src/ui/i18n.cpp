@@ -8,8 +8,12 @@ namespace markshot::i18n {
 
 namespace {
 
+/// @brief Global language setting for the application interface.
 Language g_language = Language::English;
 
+/// @brief Parses a language enum from a raw string value.
+/// @param raw The raw language name string.
+/// @return The parsed Language enum value.
 Language languageFromString(const QString &raw)
 {
     const QString value = raw.trimmed().toLower();
@@ -20,6 +24,8 @@ Language languageFromString(const QString &raw)
     return Language::English;
 }
 
+/// @brief Automatically detects the target system language using environment variables and system locale.
+/// @return The detected Language enum value.
 Language detectLanguage()
 {
     const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -36,6 +42,8 @@ Language detectLanguage()
 
 // English source string -> Simplified Chinese. Keys must match the source text
 // passed to translate() exactly.
+/// @brief Returns the lookup table for English to Simplified Chinese translations.
+/// @return Reference to the QHash mapping English keys to Chinese values.
 const QHash<QString, QString> &chineseTable()
 {
     static const QHash<QString, QString> table = {
