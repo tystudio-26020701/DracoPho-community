@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QImage>
+#include <QRect>
+#include <QSize>
 #include <QString>
 
 class ShotWindow;
@@ -12,6 +14,8 @@ namespace markshot {
 // else the screen under the cursor, else primary). Shared by the capture
 // entrypoint and the file/scroll annotation launchers.
 QScreen *focusedScreen();
+
+QRect centeredImageWindowGeometry(const QSize &imageSize, QScreen *screen);
 
 // Opens an existing/loaded image in a fullscreen-annotation ShotWindow,
 // matching the behaviour of main.cpp's file mode. Used both by file mode and

@@ -1,5 +1,6 @@
 #include "windows_tray_controller.h"
 
+#include "config_value.h"
 #include "debug_log.h"
 #include "shot_window.h"
 #include "ui/i18n.h"
@@ -39,79 +40,25 @@ namespace {
 constexpr int kCaptureHotkeyId = 0x4d53;
 constexpr int kFullscreenHotkeyId = 0x4d54;
 
-QJsonObject objectValue(const QJsonObject &object, const QString &key)
-{
-    const QJsonValue value = object.value(key);
-    return value.isObject() ? value.toObject() : QJsonObject();
-}
-
-QJsonObject objectValue(const QJsonObject &object, const QStringList &keys)
-{
-    for (const QString &key : keys) {
-        const QJsonObject child = objectValue(object, key);
-        if (!child.isEmpty()) {
-            return child;
-        }
-    }
-    return {};
-}
-
-std::optional<bool> boolFromValue(const QJsonValue &value)
-{
-    if (value.isBool()) {
-        return value.toBool();
-    }
-    if (value.isString()) {
-        const QString text = value.toString().trimmed().toLower();
-        if (text == QStringLiteral("1") || text == QStringLiteral("true")
-            || text == QStringLiteral("yes") || text == QStringLiteral("on")) {
-            return true;
-        }
-        if (text == QStringLiteral("0") || text == QStringLiteral("false")
-            || text == QStringLiteral("no") || text == QStringLiteral("off")) {
-            return false;
-        }
-    }
-    return std::nullopt;
-}
-
-std::optional<QKeySequence> keySequenceFromValue(const QJsonValue &value)
-{
-    if (!value.isString()) {
-        return std::nullopt;
-    }
-
-    const QString text = value.toString().trimmed();
-    if (text.isEmpty()) {
-        return std::nullopt;
-    }
-
-    QKeySequence sequence(text, QKeySequence::PortableText);
-    if (sequence.isEmpty()) {
-        sequence = QKeySequence(text, QKeySequence::NativeText);
-    }
-    return sequence.isEmpty() ? std::nullopt : std::optional<QKeySequence>(sequence);
-}
-
 void applyTrayConfig(const QJsonObject &object, WindowsTrayController::Config *config)
 {
     if (!config || object.isEmpty()) {
         return;
     }
 
-    if (const std::optional<bool> enabled = boolFromValue(object.value(QStringLiteral("enabled")))) {
+    if (const std::optional<bool> enabled = config::boolValue(object.value(QStringLiteral("enabled")))) {
         config->autoStart = *enabled;
     }
-    if (const std::optional<bool> autoStart = boolFromValue(object.value(QStringLiteral("autoStart")))) {
+    if (const std::optional<bool> autoStart = config::boolValue(object.value(QStringLiteral("autoStart")))) {
         config->autoStart = *autoStart;
     }
-    if (const std::optional<bool> startInTray = boolFromValue(object.value(QStringLiteral("startInTray")))) {
+    if (const std::optional<bool> startInTray = config::boolValue(object.value(QStringLiteral("startInTray")))) {
         config->autoStart = *startInTray;
     }
-    if (const std::optional<bool> hotkeysEnabled = boolFromValue(object.value(QStringLiteral("hotkeysEnabled")))) {
+    if (const std::optional<bool> hotkeysEnabled = config::boolValue(object.value(QStringLiteral("hotkeysEnabled")))) {
         config->hotkeysEnabled = *hotkeysEnabled;
     }
-    if (const std::optional<bool> hotkeyEnabled = boolFromValue(object.value(QStringLiteral("hotkeyEnabled")))) {
+    if (const std::optional<bool> hotkeyEnabled = config::boolValue(object.value(QStringLiteral("hotkeyEnabled")))) {
         config->hotkeysEnabled = *hotkeyEnabled;
     }
 }
@@ -122,7 +69,7 @@ void applyHotkeyConfig(const QJsonObject &object, WindowsTrayController::Config 
         return;
     }
 
-    if (const std::optional<bool> enabled = boolFromValue(object.value(QStringLiteral("enabled")))) {
+    if (const std::optional<bool> enabled = config::boolValue(object.value(QStringLiteral("enabled")))) {
         config->hotkeysEnabled = *enabled;
     }
     for (const QString &key : {QStringLiteral("capture"),
@@ -130,7 +77,7 @@ void applyHotkeyConfig(const QJsonObject &object, WindowsTrayController::Config 
                                QStringLiteral("shot"),
                                QStringLiteral("captureHotkey"),
                                QStringLiteral("hotkey")}) {
-        if (const std::optional<QKeySequence> sequence = keySequenceFromValue(object.value(key))) {
+        if (const std::optional<QKeySequence> sequence = config::keySequenceValue(object.value(key))) {
             config->captureHotkey = *sequence;
             break;
         }
@@ -139,7 +86,7 @@ void applyHotkeyConfig(const QJsonObject &object, WindowsTrayController::Config 
                                QStringLiteral("fullScreen"),
                                QStringLiteral("fullscreenCapture"),
                                QStringLiteral("fullscreenHotkey")}) {
-        if (const std::optional<QKeySequence> sequence = keySequenceFromValue(object.value(key))) {
+        if (const std::optional<QKeySequence> sequence = config::keySequenceValue(object.value(key))) {
             config->fullscreenHotkey = *sequence;
             break;
         }
@@ -152,25 +99,25 @@ void applyWindowsConfig(const QJsonObject &object, WindowsTrayController::Config
         return;
     }
 
-    applyTrayConfig(objectValue(object, {QStringLiteral("tray"), QStringLiteral("systemTray")}), config);
-    applyHotkeyConfig(objectValue(object, {QStringLiteral("hotkeys"), QStringLiteral("globalHotkeys")}), config);
+    applyTrayConfig(config::firstNonEmptyObjectValue(object, {QStringLiteral("tray"), QStringLiteral("systemTray")}), config);
+    applyHotkeyConfig(config::firstNonEmptyObjectValue(object, {QStringLiteral("hotkeys"), QStringLiteral("globalHotkeys")}), config);
 
-    if (const std::optional<bool> trayEnabled = boolFromValue(object.value(QStringLiteral("trayEnabled")))) {
+    if (const std::optional<bool> trayEnabled = config::boolValue(object.value(QStringLiteral("trayEnabled")))) {
         config->autoStart = *trayEnabled;
     }
-    if (const std::optional<bool> startInTray = boolFromValue(object.value(QStringLiteral("startInTray")))) {
+    if (const std::optional<bool> startInTray = config::boolValue(object.value(QStringLiteral("startInTray")))) {
         config->autoStart = *startInTray;
     }
-    if (const std::optional<bool> hotkeysEnabled = boolFromValue(object.value(QStringLiteral("hotkeysEnabled")))) {
+    if (const std::optional<bool> hotkeysEnabled = config::boolValue(object.value(QStringLiteral("hotkeysEnabled")))) {
         config->hotkeysEnabled = *hotkeysEnabled;
     }
-    if (const std::optional<QKeySequence> hotkey = keySequenceFromValue(object.value(QStringLiteral("hotkey")))) {
+    if (const std::optional<QKeySequence> hotkey = config::keySequenceValue(object.value(QStringLiteral("hotkey")))) {
         config->captureHotkey = *hotkey;
     }
-    if (const std::optional<QKeySequence> captureHotkey = keySequenceFromValue(object.value(QStringLiteral("captureHotkey")))) {
+    if (const std::optional<QKeySequence> captureHotkey = config::keySequenceValue(object.value(QStringLiteral("captureHotkey")))) {
         config->captureHotkey = *captureHotkey;
     }
-    if (const std::optional<QKeySequence> fullscreenHotkey = keySequenceFromValue(object.value(QStringLiteral("fullscreenHotkey")))) {
+    if (const std::optional<QKeySequence> fullscreenHotkey = config::keySequenceValue(object.value(QStringLiteral("fullscreenHotkey")))) {
         config->fullscreenHotkey = *fullscreenHotkey;
     }
 }
@@ -304,9 +251,9 @@ WindowsTrayController::Config WindowsTrayController::readConfig()
     }
 
     const QJsonObject root = document.object();
-    applyTrayConfig(objectValue(root, {QStringLiteral("tray"), QStringLiteral("systemTray")}), &config);
-    applyHotkeyConfig(objectValue(root, {QStringLiteral("globalHotkeys"), QStringLiteral("windowsHotkeys")}), &config);
-    applyWindowsConfig(objectValue(root, QStringLiteral("windows")), &config);
+    applyTrayConfig(config::firstNonEmptyObjectValue(root, {QStringLiteral("tray"), QStringLiteral("systemTray")}), &config);
+    applyHotkeyConfig(config::firstNonEmptyObjectValue(root, {QStringLiteral("globalHotkeys"), QStringLiteral("windowsHotkeys")}), &config);
+    applyWindowsConfig(config::objectValue(root, QStringLiteral("windows")), &config);
     return config;
 }
 
