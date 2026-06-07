@@ -113,11 +113,44 @@ constexpr double kSharpKernelRadius = 2.5;
 constexpr int kMinSharpRowsPerThread = 64;
 constexpr qreal kMinStartupColorLoupeSize = 72.0;
 constexpr qreal kMaxStartupColorLoupeSize = 260.0;
-constexpr qreal kMagnifierScale = 2.75;
+constexpr qreal kDefaultMagnifierScale = 2.75;
+constexpr qreal kMinMagnifierScale = 1.25;
+constexpr qreal kMaxMagnifierScale = 6.0;
 constexpr qreal kMinMagnifierDiameter = 72.0;
 constexpr qreal kMaxMagnifierDiameter = 320.0;
 constexpr qreal kMagnifierDragScale = 1.05;
 constexpr qreal kMinMagnifierDragDistance = 64.0;
+
+qreal clampedMagnifierScale(qreal scale)
+{
+    return std::clamp(scale, kMinMagnifierScale, kMaxMagnifierScale);
+}
+
+int magnifierScaleSliderValue(qreal scale)
+{
+    return qRound(clampedMagnifierScale(scale) * 100.0);
+}
+
+qreal magnifierScaleFromSliderValue(int value)
+{
+    return clampedMagnifierScale(static_cast<qreal>(value) / 100.0);
+}
+
+QString magnifierScaleText(qreal scale)
+{
+    return QStringLiteral("%1x").arg(QString::number(clampedMagnifierScale(scale), 'f', 2));
+}
+
+qreal normalizedRotationDegrees(qreal degrees)
+{
+    degrees = std::fmod(degrees, 360.0);
+    if (degrees < -180.0) {
+        degrees += 360.0;
+    } else if (degrees > 180.0) {
+        degrees -= 360.0;
+    }
+    return degrees;
+}
 
 std::optional<bool> boolFromText(QString value)
 {
@@ -1525,6 +1558,22 @@ void applyScrollPreviewConfig(const QJsonValue &value, markshot::scroll::ScrollS
     }
 
     const QJsonObject object = value.toObject();
+    if (const std::optional<bool> hideDuringCapture =
+            boolValue(object,
+                      {QStringLiteral("hideDuringCapture"),
+                       QStringLiteral("hideWhileCapturing"),
+                       QStringLiteral("hidePreviewDuringCapture"),
+                       QStringLiteral("hidePreviewWhileCapturing"),
+                       QStringLiteral("hidePanelDuringCapture"),
+                       QStringLiteral("hidePanelWhileCapturing"),
+                       QStringLiteral("hideUiDuringCapture"),
+                       QStringLiteral("hideUIDuringCapture"),
+                       QStringLiteral("hideUiWhileCapturing"),
+                       QStringLiteral("hideUIWhileCapturing")});
+        hideDuringCapture.has_value()) {
+        config->hidePreviewDuringCapture = *hideDuringCapture;
+    }
+
     const QJsonValue gapValue =
         valueForKeys(object,
                      {QStringLiteral("gap"),
@@ -1609,6 +1658,21 @@ markshot::scroll::ScrollSessionUiConfig scrollSessionUiConfig()
                                          0,
                                          512)) {
         config.previewGap = *previewGap;
+    }
+    if (const std::optional<bool> hidePreviewDuringCapture =
+            boolValue(scroll,
+                      {QStringLiteral("hidePreviewDuringCapture"),
+                       QStringLiteral("hidePreviewWhileCapturing"),
+                       QStringLiteral("hidePanelDuringCapture"),
+                       QStringLiteral("hidePanelWhileCapturing"),
+                       QStringLiteral("hideUiDuringCapture"),
+                       QStringLiteral("hideUIDuringCapture"),
+                       QStringLiteral("hideUiWhileCapturing"),
+                       QStringLiteral("hideUIWhileCapturing"),
+                       QStringLiteral("alwaysHidePreview"),
+                       QStringLiteral("forceHidePreview")});
+        hidePreviewDuringCapture.has_value()) {
+        config.hidePreviewDuringCapture = *hidePreviewDuringCapture;
     }
 
     return config;
@@ -3362,6 +3426,7 @@ ShotWindow::ShotWindow(QImage frozenFrame,
                        QString outputName,
                        QRect sourceGeometry,
                        QVector<QRect> windowGeometries,
+                       bool windowDetectionEnabled,
                        QWidget *parent)
     : QWidget(parent)
     , m_frozenFrame(std::move(frozenFrame))
@@ -3700,6 +3765,35 @@ ShotWindow::ShotWindow(QImage frozenFrame,
         setSelectedAnnotationArrowStyle(static_cast<ArrowStyle>(m_propertyArrowStyleCombo->itemData(index).toInt()));
     });
     propertyLayout->addWidget(m_propertyArrowStyleCombo);
+    m_propertyHighlighterStyleCombo = new QComboBox(m_annotationPropertyPanel);
+    m_propertyHighlighterStyleCombo->setFocusPolicy(Qt::NoFocus);
+    m_propertyHighlighterStyleCombo->addItem(MS_TR("Pen"), static_cast<int>(HighlighterStyle::Freehand));
+    m_propertyHighlighterStyleCombo->addItem(MS_TR("Line"), static_cast<int>(HighlighterStyle::StraightLine));
+    m_propertyHighlighterStyleCombo->setToolTip(MS_TR("Highlighter style"));
+    m_propertyHighlighterStyleCombo->setAccessibleName(MS_TR("Highlighter style"));
+    connect(m_propertyHighlighterStyleCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int index) {
+        if (index < 0 || !m_propertyHighlighterStyleCombo) {
+            return;
+        }
+        setSelectedHighlighterStyle(
+            static_cast<HighlighterStyle>(m_propertyHighlighterStyleCombo->itemData(index).toInt()));
+    });
+    propertyLayout->addWidget(m_propertyHighlighterStyleCombo);
+    m_propertyMagnifierScaleGlyphLabel =
+        addPropertyGlyph(markshot::ui::PropertyIcon::MagnifierScale, MS_TR("Magnifier scale"));
+    m_propertyMagnifierScaleLabel = new QLabel(magnifierScaleText(kDefaultMagnifierScale), m_annotationPropertyPanel);
+    configurePropertyValueLabel(m_propertyMagnifierScaleLabel, 48, MS_TR("Magnifier scale"));
+    propertyLayout->addWidget(m_propertyMagnifierScaleLabel);
+    m_propertyMagnifierScaleSlider = new QSlider(Qt::Horizontal, m_annotationPropertyPanel);
+    m_propertyMagnifierScaleSlider->setFocusPolicy(Qt::NoFocus);
+    m_propertyMagnifierScaleSlider->setRange(magnifierScaleSliderValue(kMinMagnifierScale),
+                                             magnifierScaleSliderValue(kMaxMagnifierScale));
+    m_propertyMagnifierScaleSlider->setFixedWidth(84);
+    m_propertyMagnifierScaleSlider->setToolTip(MS_TR("Magnifier scale"));
+    connect(m_propertyMagnifierScaleSlider, &QSlider::valueChanged, this, [this](int value) {
+        setSelectedMagnifierScale(value);
+    });
+    propertyLayout->addWidget(m_propertyMagnifierScaleSlider);
     m_propertyFontButton = new QPushButton(m_annotationPropertyPanel);
     m_propertyFontButton->setFocusPolicy(Qt::NoFocus);
     m_propertyFontButton->setIcon(markshot::ui::makePropertyIcon(markshot::ui::PropertyIcon::Font));
@@ -3811,15 +3905,17 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     m_laserTimer->setInterval(33);
     connect(m_laserTimer, &QTimer::timeout, this, [this] { cleanupLaserStrokes(); });
 
-    if (windowGeometries.isEmpty()) {
-        windowGeometries = enumerateX11WindowGeometries();
-    }
-    for (const QRect &windowGeometry : std::as_const(windowGeometries)) {
-        const QRect imageRect = windowGeometryToImageRect(windowGeometry,
-                                                          m_sourceGeometry,
-                                                          m_frozenFrame.size());
-        if (imageRect.width() > 1 && imageRect.height() > 1) {
-            m_windowRects.append(imageRect);
+    if (windowDetectionEnabled) {
+        if (windowGeometries.isEmpty()) {
+            windowGeometries = enumerateX11WindowGeometries();
+        }
+        for (const QRect &windowGeometry : std::as_const(windowGeometries)) {
+            const QRect imageRect = windowGeometryToImageRect(windowGeometry,
+                                                              m_sourceGeometry,
+                                                              m_frozenFrame.size());
+            if (imageRect.width() > 1 && imageRect.height() > 1) {
+                m_windowRects.append(imageRect);
+            }
         }
     }
 }
@@ -5196,7 +5292,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
 
         const QVector<int> selectedIds = selectedAnnotationIds();
         if (selectedIds.size() > 1) {
-            const SelectionDrag drag = annotationBoundsDragAt(imagePoint, selectedAnnotationsBounds());
+            const SelectionDrag drag = selectedAnnotationsDragAt(imagePoint);
             if (drag != SelectionDrag::None) {
                 beginAnnotationDrag(selectedIds.first(), drag, imagePoint);
                 return;
@@ -5254,6 +5350,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         annotation.rect = QRectF(sourceCenter, sourceCenter);
         annotation.color = m_currentColor;
         annotation.width = currentToolWidth();
+        annotation.magnifierScale = m_magnifierScale;
         m_dragging = true;
         m_dragStart = sourceCenter;
         m_draft = annotation;
@@ -5276,7 +5373,10 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     annotation.cornerRadius = m_tool == Tool::Rectangle ? m_rectangleCornerRadius : 0.0;
     annotation.arrowStyle = m_arrowStyle;
     annotation.fontFamily = m_textFontFamily;
-    if (m_tool == Tool::Pen || m_tool == Tool::Highlighter) {
+    annotation.rotationDegrees = 0.0;
+    annotation.highlighterStyle = m_tool == Tool::Highlighter ? m_highlighterStyle : HighlighterStyle::Freehand;
+    if (m_tool == Tool::Pen
+        || (m_tool == Tool::Highlighter && annotation.highlighterStyle == HighlighterStyle::Freehand)) {
         annotation.points.append(imagePoint);
     } else if (m_tool == Tool::Mosaic) {
         annotation.width = m_mosaicBlockSize;
@@ -5363,7 +5463,7 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
 
     if (m_mode == Mode::Editing && m_tool == Tool::Select && !m_dragging) {
         if (selectedAnnotationIds().size() > 1) {
-            m_annotationDrag = annotationBoundsDragAt(imagePoint, selectedAnnotationsBounds());
+            m_annotationDrag = selectedAnnotationsDragAt(imagePoint);
             if (m_annotationDrag != SelectionDrag::None) {
                 updateCursor();
                 return;
@@ -5398,6 +5498,8 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         switch (hoverDrag) {
         case SelectionDrag::MagnifierSource:
         case SelectionDrag::MagnifierLens:
+        case SelectionDrag::Rotate:
+        case SelectionDrag::LineControl:
             setCursor(Qt::SizeAllCursor);
             break;
         case SelectionDrag::Left:
@@ -5482,7 +5584,9 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
     }
 
     const QPointF clamped = clampImagePoint(imagePoint);
-    if (m_draft->tool == Tool::Pen || m_draft->tool == Tool::Highlighter) {
+    if (m_draft->tool == Tool::Pen
+        || (m_draft->tool == Tool::Highlighter
+            && m_draft->highlighterStyle == HighlighterStyle::Freehand)) {
         m_draft->points.append(clamped);
     } else if (m_draft->tool == Tool::Magnifier) {
         const qreal dragDistance = QLineF(m_dragStart, clamped).length();
@@ -5959,20 +6063,26 @@ void ShotWindow::commitDraft()
         return;
     }
 
-    if ((m_draft->tool == Tool::Pen || m_draft->tool == Tool::Highlighter) && m_draft->points.size() < 2) {
+    const bool highlighterLineDraft = m_draft->tool == Tool::Highlighter
+        && m_draft->highlighterStyle == HighlighterStyle::StraightLine;
+    const bool highlighterFreehandDraft = m_draft->tool == Tool::Highlighter
+        && m_draft->highlighterStyle == HighlighterStyle::Freehand;
+
+    if ((m_draft->tool == Tool::Pen || highlighterFreehandDraft) && m_draft->points.size() < 2) {
         m_draft.reset();
         update();
         return;
     }
 
-    if ((m_draft->tool == Tool::Line || m_draft->tool == Tool::Arrow) && m_draft->points.size() >= 2
+    if ((m_draft->tool == Tool::Line || m_draft->tool == Tool::Arrow || highlighterLineDraft)
+        && m_draft->points.size() >= 2
         && QLineF(m_draft->points.first(), m_draft->points.last()).length() < 2.0) {
         m_draft.reset();
         update();
         return;
     }
 
-    if (m_draft->tool != Tool::Pen && m_draft->tool != Tool::Highlighter && m_draft->tool != Tool::Line
+    if (m_draft->tool != Tool::Pen && !highlighterFreehandDraft && !highlighterLineDraft && m_draft->tool != Tool::Line
         && m_draft->tool != Tool::Arrow && m_draft->tool != Tool::Text && m_draft->tool != Tool::Number
         && (m_draft->rect.width() < 2.0 || m_draft->rect.height() < 2.0)) {
         m_draft.reset();
@@ -6038,6 +6148,8 @@ void ShotWindow::updateCursor()
         switch (m_selectionDrag) {
         case SelectionDrag::MagnifierSource:
         case SelectionDrag::MagnifierLens:
+        case SelectionDrag::Rotate:
+        case SelectionDrag::LineControl:
             setCursor(Qt::SizeAllCursor);
             return;
         case SelectionDrag::Left:
@@ -6069,6 +6181,8 @@ void ShotWindow::updateCursor()
         switch (m_annotationDrag) {
         case SelectionDrag::MagnifierSource:
         case SelectionDrag::MagnifierLens:
+        case SelectionDrag::Rotate:
+        case SelectionDrag::LineControl:
             setCursor(Qt::SizeAllCursor);
             return;
         case SelectionDrag::Left:
@@ -6202,7 +6316,86 @@ const ShotWindow::Annotation *ShotWindow::annotationById(int id) const
     return nullptr;
 }
 
-QRectF ShotWindow::annotationBounds(const Annotation &annotation) const
+bool ShotWindow::annotationSupportsRotation(const Annotation &annotation) const
+{
+    switch (annotation.tool) {
+    case Tool::Move:
+    case Tool::Select:
+    case Tool::Laser:
+        return false;
+    case Tool::Pen:
+    case Tool::Line:
+    case Tool::Highlighter:
+    case Tool::Arrow:
+    case Tool::Rectangle:
+    case Tool::Ellipse:
+    case Tool::Mosaic:
+    case Tool::Text:
+    case Tool::Number:
+    case Tool::Magnifier:
+        return true;
+    }
+    return false;
+}
+
+bool ShotWindow::annotationSupportsLineControl(const Annotation &annotation) const
+{
+    return annotation.tool == Tool::Line
+        || annotation.tool == Tool::Arrow
+        || (annotation.tool == Tool::Highlighter
+            && annotation.highlighterStyle == HighlighterStyle::StraightLine);
+}
+
+QPointF ShotWindow::annotationLineControlPoint(const Annotation &annotation) const
+{
+    if (!annotationSupportsLineControl(annotation) || annotation.points.size() < 2) {
+        return {};
+    }
+    if (annotation.points.size() >= 3) {
+        return annotation.points.at(2);
+    }
+    return (annotation.points.first() + annotation.points.at(1)) / 2.0;
+}
+
+QPointF ShotWindow::rotatedPoint(QPointF point, QPointF center, qreal degrees) const
+{
+    const qreal radians = degrees * M_PI / 180.0;
+    const qreal c = std::cos(radians);
+    const qreal s = std::sin(radians);
+    const QPointF delta = point - center;
+    return center + QPointF(delta.x() * c - delta.y() * s,
+                            delta.x() * s + delta.y() * c);
+}
+
+QRectF ShotWindow::rotatedRectBounds(QRectF rect, qreal degrees) const
+{
+    rect = rect.normalized();
+    if (rect.isEmpty() || qFuzzyIsNull(degrees)) {
+        return rect;
+    }
+
+    const QPointF center = rect.center();
+    const QVector<QPointF> points = {
+        rotatedPoint(rect.topLeft(), center, degrees),
+        rotatedPoint(rect.topRight(), center, degrees),
+        rotatedPoint(rect.bottomLeft(), center, degrees),
+        rotatedPoint(rect.bottomRight(), center, degrees),
+    };
+
+    qreal left = points.first().x();
+    qreal right = left;
+    qreal top = points.first().y();
+    qreal bottom = top;
+    for (const QPointF &point : points) {
+        left = std::min(left, point.x());
+        right = std::max(right, point.x());
+        top = std::min(top, point.y());
+        bottom = std::max(bottom, point.y());
+    }
+    return QRectF(QPointF(left, top), QPointF(right, bottom)).normalized();
+}
+
+QRectF ShotWindow::annotationUnrotatedBounds(const Annotation &annotation) const
 {
     auto pointsBounds = [&annotation] {
         if (annotation.points.isEmpty()) {
@@ -6228,10 +6421,20 @@ QRectF ShotWindow::annotationBounds(const Annotation &annotation) const
     case Tool::Laser:
         return {};
     case Tool::Pen:
-    case Tool::Highlighter:
     case Tool::Line:
     case Tool::Arrow:
         bounds = pointsBounds();
+        bounds.adjust(-annotation.width, -annotation.width, annotation.width, annotation.width);
+        break;
+    case Tool::Highlighter:
+        if (annotation.highlighterStyle == HighlighterStyle::StraightLine
+            && annotation.points.size() >= 2) {
+            bounds = annotation.points.size() >= 3
+                ? pointsBounds()
+                : QRectF(annotation.points.first(), annotation.points.at(1)).normalized();
+        } else {
+            bounds = pointsBounds();
+        }
         bounds.adjust(-annotation.width, -annotation.width, annotation.width, annotation.width);
         break;
     case Tool::Rectangle:
@@ -6260,6 +6463,73 @@ QRectF ShotWindow::annotationBounds(const Annotation &annotation) const
     }
 
     return bounds.normalized().intersected(QRectF(QPointF(0, 0), QSizeF(m_frozenFrame.size())));
+}
+
+QPointF ShotWindow::annotationRotationCenter(const Annotation &annotation, bool widgetCoordinates) const
+{
+    const QRectF bounds = annotationUnrotatedBounds(annotation);
+    const QPointF center = bounds.center();
+    return widgetCoordinates ? imageToWidget(center) : center;
+}
+
+QPointF ShotWindow::annotationRotationHandlePoint(const Annotation &annotation, bool widgetCoordinates) const
+{
+    QRectF bounds = annotationUnrotatedBounds(annotation);
+    if (bounds.isEmpty()) {
+        return {};
+    }
+
+    if (widgetCoordinates) {
+        bounds = imageRectToWidget(bounds);
+    }
+    const QPointF center = bounds.center();
+    const qreal angle = annotation.rotationDegrees;
+    const QPointF topCenter = rotatedPoint(QPointF(bounds.center().x(), bounds.top()), center, angle);
+    QPointF direction = topCenter - center;
+    const qreal length = QLineF(center, topCenter).length();
+    if (length <= 0.1) {
+        direction = QPointF(0.0, -1.0);
+    } else {
+        direction /= length;
+    }
+    const qreal handleGap = widgetCoordinates
+        ? 26.0
+        : 26.0 / std::max<qreal>(0.001, annotationSizeScale(true));
+    return topCenter + direction * handleGap;
+}
+
+QPointF ShotWindow::selectionRotationHandlePoint(QRectF imageBounds, bool widgetCoordinates) const
+{
+    imageBounds = imageBounds.normalized();
+    if (imageBounds.isEmpty()) {
+        return {};
+    }
+
+    QRectF bounds = widgetCoordinates ? imageRectToWidget(imageBounds) : imageBounds;
+    const QPointF center = bounds.center();
+    const QPointF topCenter(bounds.center().x(), bounds.top());
+    QPointF direction = topCenter - center;
+    const qreal length = QLineF(center, topCenter).length();
+    if (length <= 0.1) {
+        direction = QPointF(0.0, -1.0);
+    } else {
+        direction /= length;
+    }
+
+    const qreal handleGap = widgetCoordinates
+        ? 26.0
+        : 26.0 / std::max<qreal>(0.001, annotationSizeScale(true));
+    return topCenter + direction * handleGap;
+}
+
+QRectF ShotWindow::annotationBounds(const Annotation &annotation) const
+{
+    const QRectF bounds = annotationUnrotatedBounds(annotation);
+    if (!annotationSupportsRotation(annotation)) {
+        return bounds;
+    }
+    return rotatedRectBounds(bounds, annotation.rotationDegrees)
+        .intersected(QRectF(QPointF(0, 0), QSizeF(m_frozenFrame.size())));
 }
 
 QVector<int> ShotWindow::selectedAnnotationIds() const
@@ -6369,6 +6639,21 @@ ShotWindow::SelectionDrag ShotWindow::annotationBoundsDragAt(QPointF imagePoint,
         : SelectionDrag::None;
 }
 
+ShotWindow::SelectionDrag ShotWindow::selectedAnnotationsDragAt(QPointF imagePoint) const
+{
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    const QRectF bounds = selectedAnnotationsBounds();
+    if (selectedIds.size() > 1) {
+        const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+        const QPointF rotationHandle = selectionRotationHandlePoint(bounds, false);
+        if (!rotationHandle.isNull() && QLineF(imagePoint, rotationHandle).length() <= imageTolerance * 1.4) {
+            return SelectionDrag::Rotate;
+        }
+    }
+
+    return annotationBoundsDragAt(imagePoint, bounds);
+}
+
 ShotWindow::SelectionDrag ShotWindow::magnifierDragAt(const Annotation &annotation, QPointF imagePoint) const
 {
     if (annotation.tool != Tool::Magnifier) {
@@ -6403,17 +6688,46 @@ QVector<QPointF> ShotWindow::selectionHandlePoints(QRectF rect) const
 
 QRectF ShotWindow::selectedAnnotationDeleteButtonRect() const
 {
+    constexpr qreal buttonSize = 20.0;
+    constexpr qreal margin = 8.0;
+    auto clampedButtonRect = [this](QPointF center) {
+        constexpr qreal buttonSize = 20.0;
+        constexpr qreal margin = 8.0;
+        const qreal x = std::clamp(center.x() - buttonSize / 2.0,
+                                   margin,
+                                   std::max<qreal>(margin, width() - buttonSize - margin));
+        const qreal y = std::clamp(center.y() - buttonSize / 2.0,
+                                   margin,
+                                   std::max<qreal>(margin, height() - buttonSize - margin));
+        return QRectF(x, y, buttonSize, buttonSize);
+    };
+
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (selectedIds.size() == 1) {
+        if (const Annotation *annotation = annotationById(selectedIds.first());
+            annotation && annotationSupportsRotation(*annotation)) {
+            const QRectF localBounds = imageRectToWidget(annotationUnrotatedBounds(*annotation));
+            if (!localBounds.isEmpty()) {
+                const QPointF center = localBounds.center();
+                const QPointF corner = rotatedPoint(localBounds.topRight(), center, annotation->rotationDegrees);
+                QPointF direction = corner - center;
+                const qreal length = QLineF(center, corner).length();
+                if (length <= 0.1) {
+                    direction = QPointF(1.0, -1.0);
+                } else {
+                    direction /= length;
+                }
+                return clampedButtonRect(corner + direction * (buttonSize * 1.2));
+            }
+        }
+    }
+
     const QRectF bounds = imageRectToWidget(selectedAnnotationsBounds());
     if (bounds.isEmpty()) {
         return {};
     }
-    constexpr qreal buttonSize = 20.0;
-    const qreal x = std::clamp(bounds.right() + 8.0, 8.0, std::max<qreal>(8.0, width() - buttonSize - 8.0));
-    const qreal y = std::clamp(bounds.top() - buttonSize - 8.0, 8.0, std::max<qreal>(8.0, height() - buttonSize - 8.0));
-    return QRectF(x,
-                  y,
-                  buttonSize,
-                  buttonSize);
+    return clampedButtonRect(QPointF(bounds.right() + buttonSize / 2.0 + margin,
+                                     bounds.top() - buttonSize / 2.0 - margin));
 }
 
 QRectF ShotWindow::resizedBounds(QRectF start, SelectionDrag drag, QPointF imagePoint, bool keepAspectRatio) const
@@ -6489,6 +6803,8 @@ QRectF ShotWindow::resizedBounds(QRectF start, SelectionDrag drag, QPointF image
             return rectFromVerticalEdge(start.top(), 1.0, start.center().x());
         case SelectionDrag::MagnifierSource:
         case SelectionDrag::MagnifierLens:
+        case SelectionDrag::Rotate:
+        case SelectionDrag::LineControl:
         case SelectionDrag::Move:
         case SelectionDrag::None:
             break;
@@ -6518,11 +6834,39 @@ ShotWindow::SelectionDrag ShotWindow::annotationDragAt(QPointF imagePoint, int a
         return SelectionDrag::None;
     }
 
+    const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+    if (annotationSupportsRotation(*annotation)) {
+        const QPointF rotationHandle = annotationRotationHandlePoint(*annotation, false);
+        if (!rotationHandle.isNull() && QLineF(imagePoint, rotationHandle).length() <= imageTolerance * 1.4) {
+            return SelectionDrag::Rotate;
+        }
+    }
+
+    QRectF localBounds;
+    QPointF localPoint = imagePoint;
+    if (annotationSupportsRotation(*annotation)) {
+        localBounds = annotationUnrotatedBounds(*annotation);
+        if (!localBounds.isEmpty()) {
+            localPoint = rotatedPoint(imagePoint, localBounds.center(), -annotation->rotationDegrees);
+        }
+    }
+
     if (annotation->tool == Tool::Magnifier) {
-        const SelectionDrag magnifierDrag = magnifierDragAt(*annotation, imagePoint);
+        const SelectionDrag magnifierDrag = magnifierDragAt(*annotation, localPoint);
         if (magnifierDrag != SelectionDrag::None) {
             return magnifierDrag;
         }
+    }
+
+    if (annotationSupportsLineControl(*annotation) && annotation->points.size() >= 2) {
+        const QPointF controlPoint = annotationLineControlPoint(*annotation);
+        if (QLineF(localPoint, controlPoint).length() <= imageTolerance * 1.4) {
+            return SelectionDrag::LineControl;
+        }
+    }
+
+    if (annotationSupportsRotation(*annotation) && !localBounds.isEmpty()) {
+        return annotationBoundsDragAt(localPoint, localBounds);
     }
 
     const QRectF bounds = annotationBounds(*annotation);
@@ -6538,11 +6882,17 @@ std::optional<int> ShotWindow::annotationAt(QPointF imagePoint) const
     const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
     for (int i = m_annotations.size() - 1; i >= 0; --i) {
         const Annotation &annotation = m_annotations.at(i);
+        QPointF localPoint = imagePoint;
+        if (annotationSupportsRotation(annotation)) {
+            const QRectF localBounds = annotationUnrotatedBounds(annotation);
+            if (!localBounds.isEmpty()) {
+                localPoint = rotatedPoint(imagePoint, localBounds.center(), -annotation.rotationDegrees);
+            }
+        }
         if (annotation.tool == Tool::Magnifier) {
-            if (magnifierDragAt(annotation, imagePoint) != SelectionDrag::None) {
+            if (magnifierDragAt(annotation, localPoint) != SelectionDrag::None) {
                 return annotation.id;
             }
-            continue;
         }
         const QRectF bounds = annotationBounds(annotation).adjusted(-imageTolerance, -imageTolerance, imageTolerance, imageTolerance);
         if (bounds.contains(imagePoint)) {
@@ -6574,23 +6924,117 @@ void ShotWindow::drawSelectedAnnotationFrame(QPainter &painter) const
     }
 
     painter.save();
-    painter.setPen(QPen(QColor(251, 146, 60), 2.0, Qt::DashLine));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRoundedRect(bounds, 4.0, 4.0);
+    const Annotation *singleSelectedAnnotation = selectedIds.size() == 1
+        ? annotationById(selectedIds.first())
+        : nullptr;
+    const bool rotatedSingleSelection =
+        singleSelectedAnnotation && annotationSupportsRotation(*singleSelectedAnnotation);
     if (selectedIds.size() > 1) {
-        painter.setPen(QPen(QColor(251, 146, 60, 150), 1.0, Qt::DashLine));
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(QColor(255, 255, 255, 190), 3.0, Qt::DashLine));
+        for (int id : selectedIds) {
+            if (const Annotation *annotation = annotationById(id)) {
+                painter.drawRoundedRect(imageRectToWidget(annotationBounds(*annotation)), 3.0, 3.0);
+            }
+        }
+        painter.setPen(QPen(QColor(251, 146, 60, 170), 1.0, Qt::DashLine));
         for (int id : selectedIds) {
             if (const Annotation *annotation = annotationById(id)) {
                 painter.drawRoundedRect(imageRectToWidget(annotationBounds(*annotation)), 3.0, 3.0);
             }
         }
     }
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(251, 146, 60));
-    for (const QPointF &handle : selectionHandlePoints(bounds)) {
-        painter.drawRoundedRect(QRectF(handle.x() - 4.5, handle.y() - 4.5, 9.0, 9.0), 2.0, 2.0);
+    if (rotatedSingleSelection) {
+        const QRectF localBounds = imageRectToWidget(annotationUnrotatedBounds(*singleSelectedAnnotation));
+        const QPointF center = localBounds.center();
+        const qreal angle = singleSelectedAnnotation->rotationDegrees;
+        const QVector<QPointF> corners = {
+            rotatedPoint(localBounds.topLeft(), center, angle),
+            rotatedPoint(localBounds.topRight(), center, angle),
+            rotatedPoint(localBounds.bottomRight(), center, angle),
+            rotatedPoint(localBounds.bottomLeft(), center, angle),
+        };
+
+        QPolygonF frame;
+        for (const QPointF &corner : corners) {
+            frame.append(corner);
+        }
+        painter.setPen(QPen(QColor(251, 146, 60), 2.0, Qt::DashLine));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPolygon(frame);
+
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(251, 146, 60));
+        for (const QPointF &handle : selectionHandlePoints(localBounds)) {
+            const QPointF rotatedHandle = rotatedPoint(handle, center, angle);
+            painter.drawRoundedRect(QRectF(rotatedHandle.x() - 4.5,
+                                           rotatedHandle.y() - 4.5,
+                                           9.0,
+                                           9.0),
+                                    2.0,
+                                    2.0);
+        }
+
+        if (annotationSupportsLineControl(*singleSelectedAnnotation)
+            && singleSelectedAnnotation->points.size() >= 2) {
+            const QPointF control =
+                rotatedPoint(imageToWidget(annotationLineControlPoint(*singleSelectedAnnotation)), center, angle);
+            painter.setBrush(QColor(255, 255, 255));
+            painter.setPen(QPen(QColor(251, 146, 60), 2.0));
+            painter.drawEllipse(QRectF(control.x() - 5.5,
+                                       control.y() - 5.5,
+                                       11.0,
+                                       11.0));
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(251, 146, 60));
+        }
+
+        const QPointF topCenter =
+            rotatedPoint(QPointF(localBounds.center().x(), localBounds.top()), center, angle);
+        const QPointF rotateHandle = annotationRotationHandlePoint(*singleSelectedAnnotation, true);
+        painter.setPen(QPen(QColor(251, 146, 60), 1.8, Qt::SolidLine, Qt::RoundCap));
+        painter.drawLine(topCenter, rotateHandle);
+        painter.setBrush(QColor(251, 146, 60));
+        painter.setPen(QPen(QColor(255, 255, 255), 1.5));
+        painter.drawEllipse(QRectF(rotateHandle.x() - 6.0,
+                                   rotateHandle.y() - 6.0,
+                                   12.0,
+                                   12.0));
+    } else {
+        if (selectedIds.size() > 1) {
+            painter.setPen(QPen(QColor(255, 255, 255, 230), 4.0, Qt::DashLine));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawRoundedRect(bounds, 4.0, 4.0);
+        }
+        painter.setPen(QPen(QColor(251, 146, 60), 2.0, Qt::DashLine));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRoundedRect(bounds, 4.0, 4.0);
+        for (const QPointF &handle : selectionHandlePoints(bounds)) {
+            if (selectedIds.size() > 1) {
+                painter.setPen(QPen(QColor(255, 255, 255), 1.5));
+                painter.setBrush(QColor(255, 255, 255));
+                painter.drawRoundedRect(QRectF(handle.x() - 5.8, handle.y() - 5.8, 11.6, 11.6), 2.6, 2.6);
+            }
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(251, 146, 60));
+            painter.drawRoundedRect(QRectF(handle.x() - 4.5, handle.y() - 4.5, 9.0, 9.0), 2.0, 2.0);
+        }
+        if (selectedIds.size() > 1) {
+            const QPointF topCenter(bounds.center().x(), bounds.top());
+            const QPointF rotateHandle = selectionRotationHandlePoint(selectedAnnotationsBounds(), true);
+            if (!rotateHandle.isNull()) {
+                painter.setPen(QPen(QColor(251, 146, 60), 1.8, Qt::SolidLine, Qt::RoundCap));
+                painter.drawLine(topCenter, rotateHandle);
+                painter.setBrush(QColor(251, 146, 60));
+                painter.setPen(QPen(QColor(255, 255, 255), 1.5));
+                painter.drawEllipse(QRectF(rotateHandle.x() - 6.0,
+                                           rotateHandle.y() - 6.0,
+                                           12.0,
+                                           12.0));
+            }
+        }
     }
-    if (selectedIds.size() == 1) {
+    if (selectedIds.size() == 1 && !rotatedSingleSelection) {
         if (const Annotation *annotation = annotationById(selectedIds.first());
             annotation && annotation->tool == Tool::Magnifier) {
             const QRectF sourceRect = imageRectToWidget(magnifierSourceRect(*annotation));
@@ -6739,7 +7183,43 @@ void ShotWindow::updateAnnotationDrag(QPointF imagePoint, bool keepAspectRatio)
         }
     }
 
-    if (selectedIds.size() == 1
+    if (m_annotationDrag == SelectionDrag::Rotate) {
+        const QPointF center = selectedIds.size() == 1
+            ? annotationRotationCenter(m_annotationBeforeDrag, false)
+            : m_annotationBoundsBeforeDrag.center();
+        const QPointF startVector = m_dragStart - center;
+        const QPointF currentVector = clampImagePoint(imagePoint) - center;
+        if (QLineF(QPointF(0, 0), startVector).length() <= 0.1
+            || QLineF(QPointF(0, 0), currentVector).length() <= 0.1) {
+            return;
+        }
+        const qreal startAngle = std::atan2(startVector.y(), startVector.x());
+        const qreal currentAngle = std::atan2(currentVector.y(), currentVector.x());
+        const qreal deltaDegrees = (currentAngle - startAngle) * 180.0 / M_PI;
+        if (selectedIds.size() == 1) {
+            Annotation *annotation = annotationById(selectedIds.first());
+            if (!annotation || !annotationSupportsRotation(m_annotationBeforeDrag)) {
+                return;
+            }
+            annotation->rotationDegrees =
+                normalizedRotationDegrees(m_annotationBeforeDrag.rotationDegrees + deltaDegrees);
+        } else {
+            for (const Annotation &before : m_annotationsBeforeDrag) {
+                Annotation *annotation = annotationById(before.id);
+                if (!annotation || !annotationSupportsRotation(before)) {
+                    continue;
+                }
+                const QRectF beforeBounds = annotationUnrotatedBounds(before);
+                if (beforeBounds.isEmpty()) {
+                    continue;
+                }
+                const QPointF beforeCenter = beforeBounds.center();
+                const QPointF rotatedCenter = rotatedPoint(beforeCenter, center, deltaDegrees);
+                moveAnnotation(*annotation, rotatedCenter - beforeCenter);
+                annotation->rotationDegrees = normalizedRotationDegrees(before.rotationDegrees + deltaDegrees);
+            }
+        }
+    } else if (selectedIds.size() == 1
         && (m_annotationDrag == SelectionDrag::MagnifierSource
             || m_annotationDrag == SelectionDrag::MagnifierLens)) {
         Annotation *annotation = annotationById(selectedIds.first());
@@ -6755,9 +7235,10 @@ void ShotWindow::updateAnnotationDrag(QPointF imagePoint, bool keepAspectRatio)
 
         const qreal lensDiameter = std::min(beforeLensRect.width(), beforeLensRect.height());
         const QRectF beforeSourceRect = magnifierSourceRect(m_annotationBeforeDrag);
+        const qreal magnifierScale = clampedMagnifierScale(m_annotationBeforeDrag.magnifierScale);
         const QPointF delta = clampImagePoint(imagePoint) - m_dragStart;
         if (m_annotationDrag == SelectionDrag::MagnifierSource) {
-            const qreal sourceDiameter = lensDiameter / kMagnifierScale;
+            const qreal sourceDiameter = lensDiameter / magnifierScale;
             const QPointF sourceCenter =
                 clampedMagnifierCircleCenter(beforeSourceRect.center() + delta, sourceDiameter);
             if (annotation->points.isEmpty()) {
@@ -6781,6 +7262,23 @@ void ShotWindow::updateAnnotationDrag(QPointF imagePoint, bool keepAspectRatio)
                 annotation->points[1] = lensRect.center();
             }
         }
+    } else if (selectedIds.size() == 1 && m_annotationDrag == SelectionDrag::LineControl) {
+        Annotation *annotation = annotationById(selectedIds.first());
+        if (!annotation || !annotationSupportsLineControl(m_annotationBeforeDrag)
+            || m_annotationBeforeDrag.points.size() < 2) {
+            return;
+        }
+        const QRectF beforeBounds = annotationUnrotatedBounds(m_annotationBeforeDrag);
+        const QPointF localPoint = beforeBounds.isEmpty()
+            ? clampImagePoint(imagePoint)
+            : rotatedPoint(clampImagePoint(imagePoint),
+                           beforeBounds.center(),
+                           -m_annotationBeforeDrag.rotationDegrees);
+        while (annotation->points.size() < 3) {
+            annotation->points.append(annotationLineControlPoint(m_annotationBeforeDrag));
+        }
+        annotation->points[2] = clampImagePoint(localPoint);
+        annotation->rotationDegrees = m_annotationBeforeDrag.rotationDegrees;
     } else if (m_annotationDrag == SelectionDrag::Move) {
         const QRectF startBounds = m_annotationBoundsBeforeDrag;
         QPointF delta = clampImagePoint(imagePoint) - m_dragStart;
@@ -6791,6 +7289,23 @@ void ShotWindow::updateAnnotationDrag(QPointF imagePoint, bool keepAspectRatio)
                 moveAnnotation(*annotation, delta);
             }
         }
+    } else if (selectedIds.size() == 1 && annotationSupportsRotation(m_annotationBeforeDrag)) {
+        Annotation *annotation = annotationById(selectedIds.first());
+        if (!annotation) {
+            return;
+        }
+        bool lockAspectRatio = keepAspectRatio || annotation->tool == Tool::Magnifier;
+        const QRectF oldBounds = annotationUnrotatedBounds(m_annotationBeforeDrag);
+        const QPointF localPoint =
+            rotatedPoint(clampImagePoint(imagePoint),
+                         oldBounds.center(),
+                         -m_annotationBeforeDrag.rotationDegrees);
+        const QRectF newBounds = resizedBounds(oldBounds,
+                                               m_annotationDrag,
+                                               localPoint,
+                                               lockAspectRatio);
+        transformAnnotation(*annotation, oldBounds, newBounds);
+        annotation->rotationDegrees = m_annotationBeforeDrag.rotationDegrees;
     } else {
         bool lockAspectRatio = keepAspectRatio;
         if (selectedIds.size() == 1) {
@@ -7192,7 +7707,8 @@ QRectF ShotWindow::magnifierSourceRect(const Annotation &annotation) const
         return {};
     }
 
-    const qreal diameter = std::min(lensRect.width(), lensRect.height()) / kMagnifierScale;
+    const qreal diameter = std::min(lensRect.width(), lensRect.height())
+        / clampedMagnifierScale(annotation.magnifierScale);
     const QPointF requestedCenter = annotation.points.isEmpty()
         ? lensRect.center()
         : annotation.points.first();
@@ -7599,6 +8115,14 @@ void ShotWindow::updateAnnotationPropertyPanel()
     const int panelOpacity = qRound(panelColor.alphaF() * 100.0);
     const bool panelFilled = annotation ? annotation->filled : m_shapeFilled;
     const qreal panelRadius = annotation ? annotation->cornerRadius : m_rectangleCornerRadius;
+    const qreal panelMagnifierScale =
+        annotation && annotation->tool == Tool::Magnifier
+            ? annotation->magnifierScale
+            : m_magnifierScale;
+    const HighlighterStyle panelHighlighterStyle =
+        annotation && annotation->tool == Tool::Highlighter
+            ? annotation->highlighterStyle
+            : m_highlighterStyle;
     const QString panelFontFamily = annotation ? annotation->fontFamily : m_textFontFamily;
 
     switch (panelTool) {
@@ -7693,6 +8217,28 @@ void ShotWindow::updateAnnotationPropertyPanel()
             const QSignalBlocker blocker(m_propertyArrowStyleCombo);
             m_propertyArrowStyleCombo->setCurrentIndex(panelArrowStyle == ArrowStyle::Kde ? 1 : 0);
         }
+    }
+    if (m_propertyHighlighterStyleCombo) {
+        const bool supportsHighlighterStyle = !groupSelection && panelTool == Tool::Highlighter;
+        m_propertyHighlighterStyleCombo->setVisible(supportsHighlighterStyle);
+        if (supportsHighlighterStyle) {
+            const QSignalBlocker blocker(m_propertyHighlighterStyleCombo);
+            m_propertyHighlighterStyleCombo->setCurrentIndex(
+                panelHighlighterStyle == HighlighterStyle::StraightLine ? 1 : 0);
+        }
+    }
+    const bool supportsMagnifierScale = !groupSelection && panelTool == Tool::Magnifier;
+    if (m_propertyMagnifierScaleGlyphLabel) {
+        m_propertyMagnifierScaleGlyphLabel->setVisible(supportsMagnifierScale);
+    }
+    if (m_propertyMagnifierScaleLabel) {
+        m_propertyMagnifierScaleLabel->setVisible(supportsMagnifierScale);
+        m_propertyMagnifierScaleLabel->setText(magnifierScaleText(panelMagnifierScale));
+    }
+    if (m_propertyMagnifierScaleSlider) {
+        m_propertyMagnifierScaleSlider->setVisible(supportsMagnifierScale);
+        const QSignalBlocker blocker(m_propertyMagnifierScaleSlider);
+        m_propertyMagnifierScaleSlider->setValue(magnifierScaleSliderValue(panelMagnifierScale));
     }
     if (m_propertyWidthLabel) {
         m_propertyWidthLabel->setText(QString::number(qRound(panelWidth)));
@@ -8042,6 +8588,81 @@ void ShotWindow::setSelectedAnnotationArrowStyle(ArrowStyle style)
             return;
         }
         m_arrowStyle = style;
+    }
+    updateAnnotationPropertyPanel();
+    update();
+}
+
+void ShotWindow::setSelectedHighlighterStyle(HighlighterStyle style)
+{
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        bool changed = false;
+        for (int id : selectedIds) {
+            const Annotation *annotation = annotationById(id);
+            if (annotation && annotation->tool == Tool::Highlighter
+                && annotation->highlighterStyle != style) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
+            return;
+        }
+        pushHistorySnapshot();
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id);
+                annotation && annotation->tool == Tool::Highlighter) {
+                annotation->highlighterStyle = style;
+            }
+        }
+    } else {
+        if (m_tool != Tool::Highlighter || m_highlighterStyle == style) {
+            return;
+        }
+        m_highlighterStyle = style;
+    }
+
+    if (m_draft.has_value() && m_draft->tool == Tool::Highlighter) {
+        m_draft->highlighterStyle = style;
+    }
+    updateAnnotationPropertyPanel();
+    update();
+}
+
+void ShotWindow::setSelectedMagnifierScale(int scaleValue)
+{
+    const qreal scale = magnifierScaleFromSliderValue(scaleValue);
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        bool changed = false;
+        for (int id : selectedIds) {
+            const Annotation *annotation = annotationById(id);
+            if (annotation && annotation->tool == Tool::Magnifier
+                && !qFuzzyCompare(clampedMagnifierScale(annotation->magnifierScale), scale)) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
+            return;
+        }
+        pushHistorySnapshot();
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id);
+                annotation && annotation->tool == Tool::Magnifier) {
+                annotation->magnifierScale = scale;
+            }
+        }
+    } else {
+        if (m_tool != Tool::Magnifier || qFuzzyCompare(m_magnifierScale, scale)) {
+            return;
+        }
+        m_magnifierScale = scale;
+    }
+
+    if (m_draft.has_value() && m_draft->tool == Tool::Magnifier) {
+        m_draft->magnifierScale = scale;
     }
     updateAnnotationPropertyPanel();
     update();
@@ -8678,9 +9299,29 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
     const qreal penWidth = std::max<qreal>(1.5, annotation.width * scale);
 
     painter.save();
+    if (annotationSupportsRotation(annotation) && !qFuzzyIsNull(annotation.rotationDegrees)) {
+        const QPointF center = annotationRotationCenter(annotation, widgetCoordinates);
+        painter.translate(center);
+        painter.rotate(annotation.rotationDegrees);
+        painter.translate(-center);
+    }
+
     QPen pen(annotation.color, penWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
     painter.setPen(pen);
     painter.setBrush(Qt::NoBrush);
+
+    auto drawLinePath = [this, &painter, &mapPoint](const Annotation &lineAnnotation) {
+        if (lineAnnotation.points.size() < 2) {
+            return;
+        }
+        QPainterPath path(mapPoint(lineAnnotation.points.first()));
+        if (annotationSupportsLineControl(lineAnnotation) && lineAnnotation.points.size() >= 3) {
+            path.quadTo(mapPoint(lineAnnotation.points.at(2)), mapPoint(lineAnnotation.points.at(1)));
+        } else {
+            path.lineTo(mapPoint(lineAnnotation.points.at(1)));
+        }
+        painter.drawPath(path);
+    };
 
     switch (annotation.tool) {
     case Tool::Move:
@@ -8708,18 +9349,22 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         painter.save();
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
         painter.setPen(QPen(color, std::max<qreal>(6.0, penWidth), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        QVector<QPointF> mapped;
-        mapped.reserve(annotation.points.size());
-        for (const QPointF &point : annotation.points) {
-            mapped.append(mapPoint(point));
+        if (annotation.highlighterStyle == HighlighterStyle::StraightLine) {
+            drawLinePath(annotation);
+        } else {
+            QVector<QPointF> mapped;
+            mapped.reserve(annotation.points.size());
+            for (const QPointF &point : annotation.points) {
+                mapped.append(mapPoint(point));
+            }
+            painter.drawPath(smoothedStrokePath(mapped));
         }
-        painter.drawPath(smoothedStrokePath(mapped));
         painter.restore();
         break;
     }
     case Tool::Line:
         if (annotation.points.size() >= 2) {
-            painter.drawLine(mapPoint(annotation.points.first()), mapPoint(annotation.points.last()));
+            drawLinePath(annotation);
         }
         break;
     case Tool::Rectangle: {
@@ -8739,8 +9384,15 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         break;
     case Tool::Arrow:
         if (annotation.points.size() >= 2) {
-            drawArrow(painter, mapPoint(annotation.points.first()), mapPoint(annotation.points.last()), penWidth,
-                      annotation.arrowStyle);
+            const std::optional<QPointF> controlPoint = annotation.points.size() >= 3
+                ? std::optional<QPointF>(mapPoint(annotation.points.at(2)))
+                : std::nullopt;
+            drawArrow(painter,
+                      mapPoint(annotation.points.first()),
+                      mapPoint(annotation.points.at(1)),
+                      penWidth,
+                      annotation.arrowStyle,
+                      controlPoint);
         }
         break;
     case Tool::Text: {
@@ -8776,10 +9428,8 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         }
         break;
     case Tool::Mosaic:
-        painter.save();
         painter.setOpacity(annotation.color.alphaF());
         drawMosaic(painter, annotation.rect, annotation.width, widgetCoordinates);
-        painter.restore();
         break;
     case Tool::Magnifier:
         drawMagnifier(painter, annotation, widgetCoordinates);
@@ -8788,7 +9438,12 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
     painter.restore();
 }
 
-void ShotWindow::drawArrow(QPainter &painter, QPointF start, QPointF end, qreal width, ArrowStyle style) const
+void ShotWindow::drawArrow(QPainter &painter,
+                           QPointF start,
+                           QPointF end,
+                           qreal width,
+                           ArrowStyle style,
+                           std::optional<QPointF> controlPoint) const
 {
     const QLineF line(start, end);
     const qreal L = line.length();
@@ -8797,6 +9452,94 @@ void ShotWindow::drawArrow(QPainter &painter, QPointF start, QPointF end, qreal 
     }
 
     const QColor color = painter.pen().color();
+
+    if (controlPoint.has_value()) {
+        QPainterPath curve(start);
+        curve.quadTo(*controlPoint, end);
+
+        auto curvePoint = [start, end, control = *controlPoint](qreal t) {
+            const qreal u = 1.0 - t;
+            return start * (u * u) + control * (2.0 * u * t) + end * (t * t);
+        };
+
+        qreal curveLength = 0.0;
+        QPointF previous = start;
+        for (int i = 1; i <= 24; ++i) {
+            const QPointF current = curvePoint(static_cast<qreal>(i) / 24.0);
+            curveLength += QLineF(previous, current).length();
+            previous = current;
+        }
+
+        QPointF tangent = end - *controlPoint;
+        if (QLineF(QPointF(0, 0), tangent).length() < 1.0) {
+            tangent = end - start;
+        }
+        const qreal tangentLength = QLineF(QPointF(0, 0), tangent).length();
+        if (tangentLength < 1.0) {
+            return;
+        }
+        const QPointF direction(tangent.x() / tangentLength, tangent.y() / tangentLength);
+        const QPointF normal(-direction.y(), direction.x());
+
+        if (style == ArrowStyle::Kde) {
+            qreal headLength = std::clamp(curveLength * 0.32, width * 2.6, width * 6.0);
+            if (headLength > curveLength) {
+                headLength = curveLength;
+            }
+            const qreal headHalfWidth = headLength * 0.62;
+            const QPointF headBase = end - direction * headLength;
+            const QPointF leftWing = headBase + normal * headHalfWidth;
+            const QPointF rightWing = headBase - normal * headHalfWidth;
+
+            painter.save();
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(color, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter.setRenderHint(QPainter::Antialiasing, true);
+            painter.drawPath(curve);
+            QPainterPath head;
+            head.moveTo(leftWing);
+            head.lineTo(end);
+            head.lineTo(rightWing);
+            painter.drawPath(head);
+            painter.restore();
+            return;
+        }
+
+        qreal headLength = curveLength * 0.18;
+        headLength = std::clamp(headLength, width * 5.0, width * 9.0);
+        if (headLength > curveLength * 0.62) {
+            headLength = curveLength * 0.62;
+        }
+        headLength = std::clamp(headLength, 12.0, 60.0);
+        if (headLength > curveLength * 0.62) {
+            headLength = curveLength * 0.62;
+        }
+
+        const qreal bodyHalfWidth = width * 0.5;
+        qreal headHalfWidth = headLength * 0.28;
+        const qreal minHeadHalfWidth = bodyHalfWidth * 1.5;
+        if (headHalfWidth < minHeadHalfWidth) {
+            headHalfWidth = minHeadHalfWidth;
+        }
+
+        const QPointF headBase = end - direction * headLength;
+        QPainterPath head;
+        head.moveTo(headBase + normal * headHalfWidth);
+        head.lineTo(end);
+        head.lineTo(headBase - normal * headHalfWidth);
+        head.closeSubpath();
+
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setPen(QPen(color, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(curve);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawPath(head);
+        painter.restore();
+        return;
+    }
 
     // 1. Calculate normalized direction and normal vectors
     const QPointF direction = QPointF(line.dx() / L, line.dy() / L);

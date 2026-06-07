@@ -85,6 +85,34 @@ std::optional<int> intValue(const QJsonValue &value)
     return std::nullopt;
 }
 
+std::optional<bool> boolValue(const QJsonValue &value)
+{
+    if (value.isBool()) {
+        return value.toBool();
+    }
+    if (value.isDouble()) {
+        return !qFuzzyIsNull(value.toDouble());
+    }
+    if (value.isString()) {
+        QString text = value.toString().trimmed().toLower();
+        if (text == QStringLiteral("1")
+            || text == QStringLiteral("true")
+            || text == QStringLiteral("yes")
+            || text == QStringLiteral("on")
+            || text == QStringLiteral("enabled")) {
+            return true;
+        }
+        if (text == QStringLiteral("0")
+            || text == QStringLiteral("false")
+            || text == QStringLiteral("no")
+            || text == QStringLiteral("off")
+            || text == QStringLiteral("disabled")) {
+            return false;
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<int> namedIntValue(const QJsonObject &object, const QStringList &keys)
 {
     for (const QString &key : keys) {
@@ -269,7 +297,7 @@ QVector<QRect> parseWindowDetectionOutput(const QByteArray &output)
     return results;
 }
 
-std::optional<WindowDetectionConfig> readWindowDetectionConfig()
+std::optional<QJsonObject> readAppConfigRoot()
 {
     QFile file(appConfigPath());
     if (!file.exists()) {
@@ -292,13 +320,35 @@ std::optional<WindowDetectionConfig> readWindowDetectionConfig()
         return std::nullopt;
     }
 
-    const QJsonObject root = document.object();
-    const QJsonObject windowDetection = objectValue(root, QStringLiteral("windowDetection"));
-    WindowDetectionConfig config;
-    if (windowDetection.value(QStringLiteral("enabled")).isBool()
-        && !windowDetection.value(QStringLiteral("enabled")).toBool()) {
+    return document.object();
+}
+
+std::optional<bool> configuredWindowDetectionEnabled(const QJsonObject &root)
+{
+    const QJsonValue value = root.value(QStringLiteral("windowDetection"));
+    if (const std::optional<bool> enabled = boolValue(value)) {
+        return enabled;
+    }
+    if (!value.isObject()) {
         return std::nullopt;
     }
+
+    return boolValue(value.toObject().value(QStringLiteral("enabled")));
+}
+
+std::optional<WindowDetectionConfig> readWindowDetectionConfig()
+{
+    const std::optional<QJsonObject> root = readAppConfigRoot();
+    if (!root.has_value()) {
+        return std::nullopt;
+    }
+    if (const std::optional<bool> enabled = configuredWindowDetectionEnabled(*root);
+        enabled.has_value() && !*enabled) {
+        return std::nullopt;
+    }
+
+    const QJsonObject windowDetection = objectValue(*root, QStringLiteral("windowDetection"));
+    WindowDetectionConfig config;
     config.command = windowDetection.value(QStringLiteral("command")).toString().trimmed();
     config.workingDirectory = windowDetection.value(QStringLiteral("workingDirectory")).toString().trimmed();
     config.environment = environmentOverrides(windowDetection);
@@ -339,6 +389,15 @@ QProcessEnvironment scriptEnvironment(const QRect &captureGeometry,
 }
 
 } // namespace
+
+bool windowDetectionEnabled()
+{
+    const std::optional<QJsonObject> root = readAppConfigRoot();
+    if (!root.has_value()) {
+        return true;
+    }
+    return configuredWindowDetectionEnabled(*root).value_or(true);
+}
 
 QVector<QRect> collectConfiguredWindowGeometries(const QRect &captureGeometry,
                                                  const QString &outputName,
@@ -388,7 +447,7 @@ QVector<QRect> collectConfiguredWindowGeometries(const QRect &captureGeometry,
     }
 
     const QVector<QRect> windows = parseWindowDetectionOutput(process.readAllStandardOutput());
-    markshot::debugLog("window-detection", "script returned windows=%d", windows.size());
+    markshot::debugLog("window-detection", "script returned windows=%d", static_cast<int>(windows.size()));
     return windows;
 }
 

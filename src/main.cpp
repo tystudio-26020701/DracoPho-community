@@ -474,8 +474,10 @@ ShotWindow *showCaptureWindow(QScreen *screen,
 {
     const QRect captureGeometry = allOutputs ? virtualScreensGeometry() : (screen ? screen->geometry() : QRect());
     const QString outputName = (!allOutputs && screen) ? screen->name() : QString();
-    const QVector<QRect> windowGeometries =
-        markshot::collectConfiguredWindowGeometries(captureGeometry, outputName, allOutputs);
+    const bool detectWindows = markshot::windowDetectionEnabled();
+    const QVector<QRect> windowGeometries = detectWindows
+        ? markshot::collectConfiguredWindowGeometries(captureGeometry, outputName, allOutputs)
+        : QVector<QRect>();
     CaptureResult capture = captureScreenFrame({outputName, captureGeometry, allOutputs});
     if (capture.image.isNull()) {
         if (error) {
@@ -487,7 +489,8 @@ ShotWindow *showCaptureWindow(QScreen *screen,
     const QRect sourceGeometry = capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()
         ? capture.sourceGeometry
         : captureGeometry;
-    ShotWindow *window = new ShotWindow(capture.image, capture.outputName, sourceGeometry, windowGeometries);
+    ShotWindow *window =
+        new ShotWindow(capture.image, capture.outputName, sourceGeometry, windowGeometries, detectWindows);
     window->setDefaultTools(defaultTools.normal, defaultTools.fullscreen);
     window->setDefaultColor(defaultTools.color);
     if (screen && !allOutputs) {
