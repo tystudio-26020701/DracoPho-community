@@ -9,6 +9,9 @@
 namespace markshot::scroll {
 using namespace stitcher_internal;
 
+// The stitcher keeps one normalized vertical pipeline regardless of UI axis:
+// every placement is an absolute top position in m_full, and only the final
+// output is transposed back for horizontal sessions.
 
 StitchConfig defaultConfig()
 {
@@ -32,6 +35,9 @@ Stitcher::ColSamples Stitcher::computeCols(const QImage &frame) const
         bandRange(w, 0.68f, 0.92f),
     };
 
+    // Sample three horizontal bands instead of every pixel. This preserves page
+    // structure well enough for overlap detection while keeping live capture
+    // matching cheap.
     ColSamples result(h);
     for (int g = 0; g < 3; ++g) {
         const int start = bands[g].first;
@@ -71,6 +77,8 @@ std::pair<int, float> Stitcher::findOffsetColSample(const QImage &frame) const
     float bestDiff = kNoMatchConfidence;
     int approachCount = 0;
 
+    // Search around the previous offset first. Human scrolling has momentum, so
+    // the next offset usually stays near the last accepted movement.
     for (int offset : predictOffsetIter(maxOffset, m_lastOffset)) {
         const float diff = computeColDiff(m_lastCols, cols, offset, m_config.minOverlap);
         if (diff < bestDiff) {
@@ -107,6 +115,9 @@ float Stitcher::knownOverlapDiff(const ColSamples &frameCols, int framePos, int 
 
     const int frameStart = fullStart - framePos;
     const bool cropRows = shouldCropContentRows(len, frameH, m_config.minOverlap);
+    // Diff is measured only where the proposed frame overlaps the known full
+    // image. Optional cropping ignores edge chrome when the overlap is long
+    // enough to still leave a trustworthy content band.
     float sum = 0.0f;
     int count = 0;
     int rows = 0;
@@ -149,6 +160,8 @@ std::pair<int, float> Stitcher::findKnownPosition(const ColSamples &frameCols, i
     int bestGoodPos = predictedInsidePos;
     float bestGoodDiff = kNoMatchConfidence;
     int bestGoodDistance = std::numeric_limits<int>::max();
+    // Prefer an acceptable match nearest to the prediction, but keep the global
+    // best diff as a diagnostic fallback when no placement meets acceptDiff.
     auto visit = [&](int pos) {
         pos = std::clamp(pos, 0, maxPos);
         const float diff = knownOverlapDiff(frameCols, pos);
@@ -172,6 +185,8 @@ std::pair<int, float> Stitcher::findKnownPosition(const ColSamples &frameCols, i
     visit(m_anchorPos);
     visit(0);
     visit(maxPos);
+    // Coarse pass finds the correct basin, then a one-pixel refinement around
+    // the best basin handles slow scrolls and repeated row patterns.
     for (int pos = 0; pos <= maxPos; pos += kCoarseStep) {
         visit(pos);
     }
@@ -207,6 +222,8 @@ std::pair<int, float> Stitcher::findEdgePosition(const ColSamples &frameCols, in
     float bestDiff = kNoMatchConfidence;
     auto visit = [&](int pos) {
         pos = std::clamp(pos, minPos, maxPos);
+        // Edge recovery only considers placements that reveal new content; pure
+        // inside-known movement is handled by findKnownPosition().
         if (overhangAmount(pos, frameH, fullH, nullptr) <= 0) {
             return;
         }
@@ -236,6 +253,8 @@ std::pair<int, float> Stitcher::findEdgePosition(const ColSamples &frameCols, in
     visit(m_anchorPos);
     visit(m_anchorPos + m_lastOffset);
 
+    // Scan both true edges plus a window around the prediction. This covers
+    // forward scroll, reverse scroll, and recovery after one rejected frame.
     const int endEdgeStart = std::max(minPos, fullH - frameH + 1);
     const int endEdgeEnd = maxPos;
     const int startEdgeStart = minPos;
@@ -286,6 +305,8 @@ Stitcher::EdgeLineMatch Stitcher::findLineRunPosition(const QImage &frame, int p
         trimCandidates.push_back(std::clamp(m_bestBottomTrim, 0, maxTrim));
     }
 
+    // Detect repeated bottom rows, commonly caused by fixed footers. If present,
+    // trim them from the accumulated edge before looking for a pixel-row run.
     int detectedTrim = 0;
     for (int row = 0; row < maxTrim; ++row) {
         const float diff = rowMeanAbsDiff(m_full, fullH - 1 - row, current, frameH - 1 - row, side, roiW);
@@ -313,6 +334,8 @@ Stitcher::EdgeLineMatch Stitcher::findLineRunPosition(const QImage &frame, int p
         for (int currentY = frameH - 1; currentY >= 0 && best.matchedRows < matchLimit; --currentY) {
             int rows = 0;
             float diffSum = 0.0f;
+            // Walk upward while exact rows keep matching. This fallback is
+            // stricter than the column sampler and is used only near an edge.
             while (rows < matchLimit && edgeY - rows >= 0 && currentY - rows >= 0) {
                 const float diff = rowMeanAbsDiff(m_full, edgeY - rows, current, currentY - rows, side, roiW);
                 if (diff > kLineRowMaxDiff) {
@@ -453,6 +476,9 @@ StitchResult Stitcher::pushFrame(const QImage &rawFrame)
         return overhangAmount(pos, fh, H - trimBottom, edge);
     };
 
+    // NoProgress paths update the anchor when the frame is recognized inside the
+    // known image; pending paths leave the anchor unchanged until enough new
+    // content accumulates to cross minAppend.
     auto adoptKnownFrame = [&](int pos, int appliedOffset) {
         m_anchorPos = pos;
         rememberFrame(frame);
@@ -489,6 +515,9 @@ StitchResult Stitcher::pushFrame(const QImage &rawFrame)
     const bool anchorNearEdge = m_anchorPos <= m_config.minAppend
         || m_anchorPos + fh >= H - m_config.minAppend;
     auto tryEdgeRecovery = [&]() {
+        // Edge recovery is deliberately separated from adjacent-frame matching:
+        // a single noisy frame can fail against m_lastFrame while still matching
+        // the stable accumulated edge.
         const std::pair<int, float> edgePlacement = findEdgePosition(frameCols, predictedPos);
         edgeRecoveryPos = edgePlacement.first;
         edgeRecoveryDiff = edgePlacement.second;
@@ -592,6 +621,8 @@ StitchResult Stitcher::pushFrame(const QImage &rawFrame)
         && std::abs(appliedOffset) >= m_config.minAppend
         && overlapLen >= m_config.minOverlap;
 
+    // If the proposed append would grow the image but the final overlap check is
+    // weak, retry edge recovery before falling back to known-position adoption.
     if (amount > 0 && (edgeDiff > m_config.acceptDiff || overlapLen < m_config.minOverlap)) {
         const int rejectedPos = newPos;
         const float rejectedDiff = edgeDiff;
@@ -629,6 +660,9 @@ StitchResult Stitcher::pushFrame(const QImage &rawFrame)
 
     const int heightDelta = edge == StitchEdge::End ? amount - bottomTrim : amount;
     if (heightDelta >= m_config.minAppend) {
+        // Once growth starts on one edge, require strong evidence before
+        // switching to the opposite edge. This rejects jitter near repeated
+        // content while still allowing the user to reverse at a real boundary.
         auto canSwitchGrowthEdge = [&]() {
             if (m_growthEdge == StitchEdge::None || edge == StitchEdge::None || edge == m_growthEdge) {
                 return true;

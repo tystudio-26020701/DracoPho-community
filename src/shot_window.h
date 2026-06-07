@@ -36,10 +36,17 @@ namespace markshot::ui {
 class ColorPicker;
 }
 
+// Main capture and annotation surface. It owns the frozen screenshot, region
+// selection, annotation model, tool panels, shortcuts, and export actions. The
+// implementation is split into focused translation units, but this class keeps
+// the single interactive state machine so pointer/keyboard gestures can update
+// selection, annotations, and UI chrome consistently.
 class ShotWindow final : public QWidget {
     Q_OBJECT
 
 public:
+    // Toolbar and shortcut commands. The enum is intentionally dense because
+    // m_actionShortcuts indexes it by the underlying integer value.
     enum class Action {
         ToolMove,
         ToolSelect,
@@ -69,6 +76,8 @@ public:
         Cancel,
     };
 
+    // Editing tools available after a region is selected. These values are also
+    // used as stable config names and shortcut-table indexes.
     enum class Tool {
         Move,
         Select,
@@ -85,6 +94,7 @@ public:
         Laser,
     };
 
+    // Desktop file entry used by the Open With panel.
     struct DesktopApp {
         QString name;
         QString desktopPath;
@@ -92,6 +102,8 @@ public:
         QString icon;
     };
 
+    // User-configured external command. Placeholders can receive the current
+    // selection geometry or a temporary PNG rendered from the selection.
     struct ExtensionCommand {
         QString name;
         QString command;
@@ -133,27 +145,36 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 private:
+    // High-level interaction mode: first pick a capture region, then edit the
+    // selected image area and its annotations.
     enum class Mode {
         Selecting,
         Editing,
     };
 
+    // Startup-only tools run before regular selection/editing gestures.
     enum class StartupTool {
         None,
         ColorPicker,
         Ruler,
     };
 
+    // Arrow renderer variants. The default uses a filled tapered shaft; KDE uses
+    // a constant-width open arrow to match Spectacle-style annotations.
     enum class ArrowStyle {
         Fletched,
         Kde,
     };
 
+    // Highlighter can either follow the freehand stroke path or constrain to a
+    // single editable line.
     enum class HighlighterStyle {
         Freehand,
         StraightLine,
     };
 
+    // Active drag target for selected annotations. Line and magnifier controls
+    // live beside the usual resize/move handles.
     enum class SelectionDrag {
         None,
         Move,
@@ -171,16 +192,20 @@ private:
         BottomRight,
     };
 
+    // Canonical annotation record. Geometry is stored in image pixels, not
+    // widget coordinates; painting maps it through imageToWidget() only when
+    // rendering the live window. The meaning of rect and points depends on tool:
+    // shapes use rect, strokes/lines/arrows use points, and magnifier uses both.
     struct Annotation {
-        int id = 0;
+        int id = 0;            // Stable id used for selection and history.
         Tool tool = Tool::Pen;
-        QRectF rect;
-        QVector<QPointF> points;
+        QRectF rect;           // Image-space bounds for area-based tools.
+        QVector<QPointF> points; // Image-space control points for path tools.
         QString text;
         int number = 0;
         QColor color = QColor(255, 77, 77);
         QColor backgroundColor = QColor(0, 0, 0, 0);
-        qreal width = 4.0;
+        qreal width = 4.0;     // Tool-specific size: stroke width, font scale, or mosaic block size.
         bool filled = false;
         qreal cornerRadius = 0.0;
         ArrowStyle arrowStyle = ArrowStyle::Fletched;
@@ -190,6 +215,8 @@ private:
         QString fontFamily = markshot::theme::textFontFamily();
     };
 
+    // Undo/redo captures only the annotation graph and id counters. The frozen
+    // image and selected capture region remain immutable for a ShotWindow.
     struct HistorySnapshot {
         QVector<Annotation> annotations;
         std::optional<int> selectedAnnotationId;
@@ -198,6 +225,8 @@ private:
         int nextAnnotationId = 1;
     };
 
+    // Transient laser strokes are painted on top of annotations and expire by
+    // timer, so they are intentionally excluded from HistorySnapshot.
     struct LaserStroke {
         QVector<QPointF> points;
         QColor color;
@@ -385,6 +414,7 @@ private:
     bool handleConfiguredActionShortcut(QKeyEvent *event);
     bool handleConfiguredToolShortcut(QKeyEvent *event);
 
+    // Captured source image and image navigation state.
     QImage m_frozenFrame;
     QString m_outputName;
     QRect m_sourceGeometry;
@@ -410,6 +440,9 @@ private:
     qreal m_sharpViewportCacheDpr = 0.0;
     QPointF m_imagePanStartWidget;
     QPointF m_imagePanStartCenter;
+
+    // Selection and annotation interaction state. All geometry here is stored in
+    // image coordinates so export and live painting share the same data model.
     QRectF m_selection;
     QPointF m_selectionStart;
     QRectF m_selectionBeforeDrag;
@@ -442,6 +475,9 @@ private:
     QPointF m_wheelPreviewPosition;
     QElapsedTimer m_wheelPreviewTimer;
     QElapsedTimer m_laserClock;
+
+    // Current tool defaults and styling. These seed new Annotation records and
+    // are updated by tool panels, shortcuts, and config/CLI defaults.
     QColor m_currentColor = QColor(255, 77, 77);
     qreal m_penWidth = 2.0;
     qreal m_shapeWidth = 3.0;
@@ -463,6 +499,9 @@ private:
     std::optional<Annotation> m_draft;
     QVector<LaserStroke> m_laserStrokes;
     std::optional<LaserStroke> m_laserDraft;
+
+    // Persistent widgets owned by the annotation window. Their geometry is
+    // recomputed after selection changes, zoom/pan changes, and panel toggles.
     QWidget *m_toolbar = nullptr;
     QBoxLayout *m_toolbarLayout = nullptr;
     QScrollBar *m_horizontalImageScrollBar = nullptr;
@@ -505,6 +544,8 @@ private:
     std::optional<QRectF> m_selectionBeforeFullscreenAnnotation;
     QVector<QPushButton *> m_fullscreenActionButtons;
     bool m_toolbarVerticalLayout = false;
+
+    // Editor, history, and window-detection auxiliaries.
     QTimer *m_laserTimer = nullptr;
     QTextEdit *m_textEditor = nullptr;
     QPointF m_textEditorImagePoint;
