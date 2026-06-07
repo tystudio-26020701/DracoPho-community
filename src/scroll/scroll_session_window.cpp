@@ -46,6 +46,8 @@
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
+#include <optional>
 #include <utility>
 
 namespace markshot::scroll {
@@ -67,6 +69,9 @@ constexpr int kControlButtonHeight = 36;
 constexpr int kStatusHeight = 22;
 constexpr int kPanelMargin = 4;
 constexpr int kFloatingDragHandleGap = 6;
+constexpr int kAntialiasPad = 2;
+constexpr int kCaptureFrameArtifactScanPx = 10;
+constexpr int kCaptureFrameArtifactDistance = 70;
 constexpr int kGnomePreviewIntervalMs = 140;
 constexpr int kScrollIdlePauseMs = 1000;
 
@@ -187,6 +192,176 @@ void logScrollDebug(const char *format, ...)
     va_start(args, format);
     markshot::debugLogV("session", format, args);
     va_end(args);
+}
+
+bool nearColor(QRgb pixel, int red, int green, int blue)
+{
+    const int dr = qRed(pixel) - red;
+    const int dg = qGreen(pixel) - green;
+    const int db = qBlue(pixel) - blue;
+    return dr * dr + dg * dg + db * db
+        <= kCaptureFrameArtifactDistance * kCaptureFrameArtifactDistance;
+}
+
+bool isCaptureFrameArtifactPixel(QRgb pixel)
+{
+    return nearColor(pixel, 45, 212, 191)
+        || nearColor(pixel, 250, 204, 21);
+}
+
+bool rowLooksLikeCaptureFrameArtifact(const QImage &frame, int y)
+{
+    if (y < 0 || y >= frame.height() || frame.width() <= 0) {
+        return false;
+    }
+
+    const auto *row = reinterpret_cast<const QRgb *>(frame.constScanLine(y));
+    int hits = 0;
+    for (int x = 0; x < frame.width(); ++x) {
+        if (isCaptureFrameArtifactPixel(row[x])) {
+            ++hits;
+        }
+    }
+    return hits >= std::max(12, frame.width() * 35 / 100);
+}
+
+bool columnLooksLikeCaptureFrameArtifact(const QImage &frame, int x)
+{
+    if (x < 0 || x >= frame.width() || frame.height() <= 0) {
+        return false;
+    }
+
+    int hits = 0;
+    for (int y = 0; y < frame.height(); ++y) {
+        const auto *row = reinterpret_cast<const QRgb *>(frame.constScanLine(y));
+        if (isCaptureFrameArtifactPixel(row[x])) {
+            ++hits;
+        }
+    }
+    return hits >= std::max(12, frame.height() * 35 / 100);
+}
+
+std::optional<int> replacementRowForEdgeArtifact(const QImage &frame, bool topEdge)
+{
+    if (topEdge) {
+        for (int y = std::min(kCaptureFrameArtifactScanPx, frame.height() - 1);
+             y < frame.height();
+             ++y) {
+            if (!rowLooksLikeCaptureFrameArtifact(frame, y)) {
+                return y;
+            }
+        }
+        return std::nullopt;
+    }
+
+    for (int y = std::max(0, frame.height() - kCaptureFrameArtifactScanPx - 1);
+         y >= 0;
+         --y) {
+        if (!rowLooksLikeCaptureFrameArtifact(frame, y)) {
+            return y;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<int> replacementColumnForEdgeArtifact(const QImage &frame, bool leftEdge)
+{
+    if (leftEdge) {
+        for (int x = std::min(kCaptureFrameArtifactScanPx, frame.width() - 1);
+             x < frame.width();
+             ++x) {
+            if (!columnLooksLikeCaptureFrameArtifact(frame, x)) {
+                return x;
+            }
+        }
+        return std::nullopt;
+    }
+
+    for (int x = std::max(0, frame.width() - kCaptureFrameArtifactScanPx - 1);
+         x >= 0;
+         --x) {
+        if (!columnLooksLikeCaptureFrameArtifact(frame, x)) {
+            return x;
+        }
+    }
+    return std::nullopt;
+}
+
+void copyImageRow(QImage *frame, int dstY, int srcY)
+{
+    if (!frame || dstY == srcY) {
+        return;
+    }
+    std::memcpy(frame->scanLine(dstY), frame->constScanLine(srcY), frame->bytesPerLine());
+}
+
+void copyImageColumn(QImage *frame, int dstX, int srcX)
+{
+    if (!frame || dstX == srcX) {
+        return;
+    }
+    for (int y = 0; y < frame->height(); ++y) {
+        auto *row = reinterpret_cast<QRgb *>(frame->scanLine(y));
+        row[dstX] = row[srcX];
+    }
+}
+
+int scrubCaptureFrameArtifacts(QImage *frame)
+{
+    if (!frame || frame->isNull()) {
+        return 0;
+    }
+    if (frame->format() != QImage::Format_ARGB32_Premultiplied
+        && frame->format() != QImage::Format_ARGB32) {
+        *frame = frame->convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
+
+    int scrubbedEdges = 0;
+    const int scanRows = std::min(kCaptureFrameArtifactScanPx, frame->height());
+    if (const std::optional<int> replacement = replacementRowForEdgeArtifact(*frame, true)) {
+        bool changed = false;
+        for (int y = 0; y < scanRows; ++y) {
+            if (rowLooksLikeCaptureFrameArtifact(*frame, y)) {
+                copyImageRow(frame, y, *replacement);
+                changed = true;
+            }
+        }
+        scrubbedEdges += changed ? 1 : 0;
+    }
+    if (const std::optional<int> replacement = replacementRowForEdgeArtifact(*frame, false)) {
+        bool changed = false;
+        for (int y = std::max(0, frame->height() - scanRows); y < frame->height(); ++y) {
+            if (rowLooksLikeCaptureFrameArtifact(*frame, y)) {
+                copyImageRow(frame, y, *replacement);
+                changed = true;
+            }
+        }
+        scrubbedEdges += changed ? 1 : 0;
+    }
+
+    const int scanColumns = std::min(kCaptureFrameArtifactScanPx, frame->width());
+    if (const std::optional<int> replacement = replacementColumnForEdgeArtifact(*frame, true)) {
+        bool changed = false;
+        for (int x = 0; x < scanColumns; ++x) {
+            if (columnLooksLikeCaptureFrameArtifact(*frame, x)) {
+                copyImageColumn(frame, x, *replacement);
+                changed = true;
+            }
+        }
+        scrubbedEdges += changed ? 1 : 0;
+    }
+    if (const std::optional<int> replacement = replacementColumnForEdgeArtifact(*frame, false)) {
+        bool changed = false;
+        for (int x = std::max(0, frame->width() - scanColumns); x < frame->width(); ++x) {
+            if (columnLooksLikeCaptureFrameArtifact(*frame, x)) {
+                copyImageColumn(frame, x, *replacement);
+                changed = true;
+            }
+        }
+        scrubbedEdges += changed ? 1 : 0;
+    }
+
+    return scrubbedEdges;
 }
 
 enum class ControlIcon {
@@ -653,6 +828,27 @@ QRect ScrollSessionWindow::previewPanelRect() const
     return choosePreviewPanelPlacement(anchor, bounds, panelSize, m_uiConfig.previewGap).rect;
 }
 
+QRegion ScrollSessionWindow::framePaintRegion() const
+{
+    const QRect bounds(QPoint(0, 0), size());
+    if (bounds.isEmpty() || !m_uiConfig.frameEnabled || m_panelOnlyWindow) {
+        return {};
+    }
+
+    const QRect region = regionLocalRect();
+    QRegion frame = QRegion(captureFrameOuterRect(region, m_uiConfig.frameGap)
+                                .adjusted(-kAntialiasPad,
+                                          -kAntialiasPad,
+                                          kAntialiasPad,
+                                          kAntialiasPad));
+    frame -= QRegion(captureFrameInnerRect(region, m_uiConfig.frameGap)
+                         .adjusted(kAntialiasPad,
+                                   kAntialiasPad,
+                                   -kAntialiasPad,
+                                   -kAntialiasPad));
+    return frame.intersected(QRegion(bounds));
+}
+
 bool ScrollSessionWindow::previewPanelFitsAvailableSpace() const
 {
     if (m_panelOnlyWindow || m_gnomeShellPreview) {
@@ -672,7 +868,11 @@ bool ScrollSessionWindow::previewPanelFitsAvailableSpace() const
 
 bool ScrollSessionWindow::floatingDragHandleActive() const
 {
-    if (m_previewPanelVisible || previewPanelFitsAvailableSpace()) {
+    if (m_previewPanelVisible) {
+        return false;
+    }
+
+    if (!m_uiConfig.hidePreviewDuringCapture && previewPanelFitsAvailableSpace()) {
         return false;
     }
 
@@ -752,21 +952,8 @@ QRegion ScrollSessionWindow::overlayPaintRegion() const
         return (m_previewPanelVisible || floatingDragHandleActive()) ? QRegion(bounds) : QRegion();
     }
 
-    constexpr int kAntialiasPad = 2;
     QRegion painted;
-    if (m_uiConfig.frameEnabled && (m_previewPanelVisible || floatingDragHandleActive())) {
-        const QRect region = regionLocalRect();
-        painted += QRegion(captureFrameOuterRect(region, m_uiConfig.frameGap)
-                               .adjusted(-kAntialiasPad,
-                                         -kAntialiasPad,
-                                         kAntialiasPad,
-                                         kAntialiasPad));
-        painted -= QRegion(captureFrameInnerRect(region, m_uiConfig.frameGap)
-                               .adjusted(kAntialiasPad,
-                                         kAntialiasPad,
-                                         -kAntialiasPad,
-                                         -kAntialiasPad));
-    }
+    painted += framePaintRegion();
     if (m_previewPanelVisible) {
         painted += QRegion(previewPanelRect().adjusted(-kAntialiasPad,
                                                        -kAntialiasPad,
@@ -995,12 +1182,9 @@ void ScrollSessionWindow::updateInputMask()
         return;
     }
 
-    // Only the preview panel and floating drag handle should catch input; the
-    // captured region interior and the rest of the overlay stay click-through
-    // so the user can keep scrolling the page underneath. The handle drag-to-
-    // translate is handled via an event filter on the button itself. During
-    // a drag, old paint locations stay in the mask until one cleanup paint
-    // has been submitted.
+    // QWidget masks also clip painting on X11, so the visible frame must stay
+    // in the mask. The capture region interior remains click-through so the
+    // user can keep scrolling the page underneath.
     QRegion mask;
     if (m_previewPanelVisible) {
         mask += QRegion(previewPanelRect());
@@ -1008,6 +1192,7 @@ void ScrollSessionWindow::updateInputMask()
     if (floatingDragHandleActive()) {
         mask += QRegion(floatingDragHandleLocalRect());
     }
+    mask += framePaintRegion();
     mask += m_transientPaintMask;
     setMask(mask);
     if (QWindow *nativeWindow = windowHandle()) {
@@ -1122,6 +1307,14 @@ void ScrollSessionWindow::captureTick()
 
         Q_UNUSED(debugTag);
         frame = result.image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+        const int scrubbedEdges = scrubCaptureFrameArtifacts(&frame);
+        if (scrubbedEdges > 0) {
+            logScrollDebug("%s-scrub-frame-artifacts edges=%d frame=%dx%d",
+                           debugTag,
+                           scrubbedEdges,
+                           frame.width(),
+                           frame.height());
+        }
         return true;
     };
 
@@ -1274,7 +1467,8 @@ void ScrollSessionWindow::setPreviewPanelVisible(bool visible)
 
 bool ScrollSessionWindow::shouldHidePreviewWhileCapturing() const
 {
-    return !m_paused && !previewPanelFitsAvailableSpace();
+    return !m_paused
+        && (m_uiConfig.hidePreviewDuringCapture || !previewPanelFitsAvailableSpace());
 }
 
 void ScrollSessionWindow::updatePreviewPanelVisibility()
@@ -1809,8 +2003,7 @@ void ScrollSessionWindow::paintEvent(QPaintEvent *)
         return;
     }
 
-    if ((m_previewPanelVisible || floatingDragHandleActive()) && m_uiConfig.frameEnabled
-        && !m_panelOnlyWindow) {
+    if (m_uiConfig.frameEnabled && !m_panelOnlyWindow) {
         const QRect region = regionLocalRect();
         QPainterPath framePath;
         framePath.setFillRule(Qt::OddEvenFill);

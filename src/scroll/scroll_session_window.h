@@ -27,6 +27,7 @@ namespace markshot::scroll {
 
 struct ScrollSessionUiConfig {
     bool frameEnabled = true;
+    bool hidePreviewDuringCapture = false;
     int frameGap = 5;
     int previewGap = 5;
 };
@@ -150,6 +151,7 @@ private:
     QRect frameOuterLocalRect() const;
     QRect previewAnchorLocalRect() const;
     QRect previewAnchorGlobalRect() const;
+    QRegion framePaintRegion() const;
     bool previewPanelFitsAvailableSpace() const;
     // The preview panel rectangle in local coordinates.
     QRect previewPanelRect() const;

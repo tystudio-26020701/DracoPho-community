@@ -22,6 +22,7 @@ enum class PropertyIcon {
     Color,
     TextBackground,
     CornerRadius,
+    MagnifierScale,
     Font,
     EditText,
 };

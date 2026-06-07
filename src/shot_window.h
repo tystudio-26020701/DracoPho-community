@@ -102,6 +102,7 @@ public:
                         QString outputName,
                         QRect sourceGeometry = {},
                         QVector<QRect> windowGeometries = {},
+                        bool windowDetectionEnabled = true,
                         QWidget *parent = nullptr);
     static std::optional<Tool> toolFromName(QString name);
     static QStringList supportedToolNames();
@@ -144,9 +145,16 @@ private:
         Kde,
     };
 
+    enum class HighlighterStyle {
+        Freehand,
+        StraightLine,
+    };
+
     enum class SelectionDrag {
         None,
         Move,
+        Rotate,
+        LineControl,
         MagnifierSource,
         MagnifierLens,
         Left,
@@ -172,6 +180,9 @@ private:
         bool filled = false;
         qreal cornerRadius = 0.0;
         ArrowStyle arrowStyle = ArrowStyle::Fletched;
+        HighlighterStyle highlighterStyle = HighlighterStyle::StraightLine;
+        qreal rotationDegrees = 0.0;
+        qreal magnifierScale = 2.75;
         QString fontFamily = QStringLiteral("Sans Serif");
     };
 
@@ -219,12 +230,22 @@ private:
     QRectF constrainedRect(QPointF start, QPointF end) const;
     Annotation *annotationById(int id);
     const Annotation *annotationById(int id) const;
+    bool annotationSupportsRotation(const Annotation &annotation) const;
+    bool annotationSupportsLineControl(const Annotation &annotation) const;
+    QPointF annotationLineControlPoint(const Annotation &annotation) const;
+    QPointF rotatedPoint(QPointF point, QPointF center, qreal degrees) const;
+    QRectF rotatedRectBounds(QRectF rect, qreal degrees) const;
+    QRectF annotationUnrotatedBounds(const Annotation &annotation) const;
+    QPointF annotationRotationCenter(const Annotation &annotation, bool widgetCoordinates) const;
+    QPointF annotationRotationHandlePoint(const Annotation &annotation, bool widgetCoordinates) const;
+    QPointF selectionRotationHandlePoint(QRectF imageBounds, bool widgetCoordinates) const;
     QRectF annotationBounds(const Annotation &annotation) const;
     QVector<int> selectedAnnotationIds() const;
     void setSelectedAnnotations(QVector<int> annotationIds);
     QRectF selectedAnnotationsBounds() const;
     QVector<int> annotationsInRect(QRectF imageRect) const;
     SelectionDrag annotationBoundsDragAt(QPointF imagePoint, QRectF bounds) const;
+    SelectionDrag selectedAnnotationsDragAt(QPointF imagePoint) const;
     SelectionDrag magnifierDragAt(const Annotation &annotation, QPointF imagePoint) const;
     QRectF resizedBounds(QRectF start, SelectionDrag drag, QPointF imagePoint, bool keepAspectRatio) const;
     QVector<QPointF> selectionHandlePoints(QRectF rect) const;
@@ -249,7 +270,12 @@ private:
     void copySelection();
     void redoAnnotation();
     void drawAnnotation(QPainter &painter, const Annotation &annotation, bool widgetCoordinates) const;
-    void drawArrow(QPainter &painter, QPointF start, QPointF end, qreal width, ArrowStyle style) const;
+    void drawArrow(QPainter &painter,
+                   QPointF start,
+                   QPointF end,
+                   qreal width,
+                   ArrowStyle style,
+                   std::optional<QPointF> controlPoint = std::nullopt) const;
     void drawMosaic(QPainter &painter, QRectF imageRect, qreal blockSize, bool widgetCoordinates) const;
     void drawMagnifier(QPainter &painter, const Annotation &annotation, bool widgetCoordinates) const;
     void drawNumber(QPainter &painter,
@@ -305,6 +331,8 @@ private:
     void setSelectedAnnotationFilled(bool filled);
     void setSelectedAnnotationCornerRadius(int radius);
     void setSelectedAnnotationArrowStyle(ArrowStyle style);
+    void setSelectedHighlighterStyle(HighlighterStyle style);
+    void setSelectedMagnifierScale(int scaleValue);
     void setSelectedTextFontFamily(const QString &fontFamily);
     void applyPropertyColor(QColor color);
     void deleteSelectedAnnotation();
@@ -406,9 +434,11 @@ private:
     qreal m_numberWidth = 3.0;
     qreal m_mosaicBlockSize = 14.0;
     qreal m_laserWidth = 10.0;
+    qreal m_magnifierScale = 2.75;
     bool m_shapeFilled = false;
     qreal m_rectangleCornerRadius = 0.0;
     ArrowStyle m_arrowStyle = ArrowStyle::Fletched;
+    HighlighterStyle m_highlighterStyle = HighlighterStyle::StraightLine;
     QString m_textFontFamily = QStringLiteral("Sans Serif");
     QColor m_textBackgroundColor = QColor(0, 0, 0, 0);
     int m_nextNumber = 1;
@@ -438,6 +468,10 @@ private:
     QSlider *m_propertyRadiusSlider = nullptr;
     QLabel *m_propertyArrowStyleLabel = nullptr;
     QComboBox *m_propertyArrowStyleCombo = nullptr;
+    QComboBox *m_propertyHighlighterStyleCombo = nullptr;
+    QLabel *m_propertyMagnifierScaleGlyphLabel = nullptr;
+    QLabel *m_propertyMagnifierScaleLabel = nullptr;
+    QSlider *m_propertyMagnifierScaleSlider = nullptr;
     QPushButton *m_propertyFontButton = nullptr;
     QWidget *m_propertyFontPanel = nullptr;
     QListWidget *m_propertyFontList = nullptr;
