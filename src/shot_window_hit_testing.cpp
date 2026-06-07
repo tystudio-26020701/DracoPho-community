@@ -1,0 +1,780 @@
+#include "shot_window_module.h"
+
+namespace cfg = markshot::config;
+namespace shortcuts = markshot::shortcut;
+using namespace markshot::shot;
+
+void ShotWindow::updateCursor()
+{
+    if (m_showWheelPreview && m_wheelPreviewTimer.isValid() && m_wheelPreviewTimer.elapsed() <= 900) {
+        setCursor(Qt::BlankCursor);
+        return;
+    }
+
+    if (m_imagePanning) {
+        setCursor(Qt::ClosedHandCursor);
+        return;
+    }
+
+    if (m_imageNavigationEnabled && m_tool == Tool::Select && m_imageSelected) {
+        setCursor(m_imagePanning ? Qt::ClosedHandCursor : Qt::OpenHandCursor);
+        return;
+    }
+
+    if (m_tool == Tool::Move && !m_fullscreenAnnotation) {
+        switch (m_selectionDrag) {
+        case SelectionDrag::MagnifierSource:
+        case SelectionDrag::MagnifierLens:
+        case SelectionDrag::Rotate:
+        case SelectionDrag::LineControl:
+            setCursor(Qt::SizeAllCursor);
+            return;
+        case SelectionDrag::Left:
+        case SelectionDrag::Right:
+            setCursor(Qt::SizeHorCursor);
+            return;
+        case SelectionDrag::Top:
+        case SelectionDrag::Bottom:
+            setCursor(Qt::SizeVerCursor);
+            return;
+        case SelectionDrag::TopLeft:
+        case SelectionDrag::BottomRight:
+            setCursor(Qt::SizeFDiagCursor);
+            return;
+        case SelectionDrag::TopRight:
+        case SelectionDrag::BottomLeft:
+            setCursor(Qt::SizeBDiagCursor);
+            return;
+        case SelectionDrag::Move:
+            setCursor(Qt::SizeAllCursor);
+            return;
+        case SelectionDrag::None:
+            setCursor(Qt::CrossCursor);
+            return;
+        }
+    }
+
+    if (m_tool == Tool::Select) {
+        switch (m_annotationDrag) {
+        case SelectionDrag::MagnifierSource:
+        case SelectionDrag::MagnifierLens:
+        case SelectionDrag::Rotate:
+        case SelectionDrag::LineControl:
+            setCursor(Qt::SizeAllCursor);
+            return;
+        case SelectionDrag::Left:
+        case SelectionDrag::Right:
+            setCursor(Qt::SizeHorCursor);
+            return;
+        case SelectionDrag::Top:
+        case SelectionDrag::Bottom:
+            setCursor(Qt::SizeVerCursor);
+            return;
+        case SelectionDrag::TopLeft:
+        case SelectionDrag::BottomRight:
+            setCursor(Qt::SizeFDiagCursor);
+            return;
+        case SelectionDrag::TopRight:
+        case SelectionDrag::BottomLeft:
+            setCursor(Qt::SizeBDiagCursor);
+            return;
+        case SelectionDrag::Move:
+            setCursor(Qt::SizeAllCursor);
+            return;
+        case SelectionDrag::None:
+            setCursor(Qt::ArrowCursor);
+            return;
+        }
+    }
+
+    setCursor(m_tool == Tool::Text ? Qt::IBeamCursor : Qt::CrossCursor);
+}
+
+void ShotWindow::clearWheelPreview()
+{
+    if (!m_showWheelPreview) {
+        return;
+    }
+
+    m_showWheelPreview = false;
+    m_wheelPreviewTimer.invalidate();
+    updateCursor();
+    update();
+}
+
+bool ShotWindow::hasUsableSelection() const
+{
+    const QRectF selection = normalizedSelection();
+    return selection.width() >= kMinSelectionSize && selection.height() >= kMinSelectionSize;
+}
+
+bool ShotWindow::imageNavigationAvailable() const
+{
+    return m_imageNavigationEnabled || m_mode == Mode::Editing;
+}
+
+bool ShotWindow::wheelZoomsImage() const
+{
+    return m_imageNavigationEnabled || (m_mode == Mode::Editing && m_tool == Tool::Select);
+}
+
+qreal ShotWindow::annotationSizeScale(bool widgetCoordinates) const
+{
+    if (!widgetCoordinates || m_frozenFrame.isNull()) {
+        return 1.0;
+    }
+
+    return !m_frozenImageRect.isEmpty()
+        ? m_frozenImageRect.width() / std::max<qreal>(1.0, m_frozenFrame.width())
+        : 1.0;
+}
+
+ShotWindow::SelectionDrag ShotWindow::selectionDragAt(QPointF imagePoint) const
+{
+    const QRectF selection = normalizedSelection();
+    if (selection.isEmpty() || m_frozenImageRect.isEmpty()) {
+        return SelectionDrag::None;
+    }
+
+    const qreal imageTolerance = 10.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+    if (!selection.adjusted(-imageTolerance, -imageTolerance, imageTolerance, imageTolerance).contains(imagePoint)) {
+        return SelectionDrag::None;
+    }
+
+    const bool nearLeft = std::abs(imagePoint.x() - selection.left()) <= imageTolerance;
+    const bool nearRight = std::abs(imagePoint.x() - selection.right()) <= imageTolerance;
+    const bool nearTop = std::abs(imagePoint.y() - selection.top()) <= imageTolerance;
+    const bool nearBottom = std::abs(imagePoint.y() - selection.bottom()) <= imageTolerance;
+
+    if (nearLeft && nearTop) {
+        return SelectionDrag::TopLeft;
+    }
+    if (nearRight && nearTop) {
+        return SelectionDrag::TopRight;
+    }
+    if (nearLeft && nearBottom) {
+        return SelectionDrag::BottomLeft;
+    }
+    if (nearRight && nearBottom) {
+        return SelectionDrag::BottomRight;
+    }
+    if (nearLeft) {
+        return SelectionDrag::Left;
+    }
+    if (nearRight) {
+        return SelectionDrag::Right;
+    }
+    if (nearTop) {
+        return SelectionDrag::Top;
+    }
+    if (nearBottom) {
+        return SelectionDrag::Bottom;
+    }
+    return selection.contains(imagePoint) ? SelectionDrag::Move : SelectionDrag::None;
+}
+
+ShotWindow::Annotation *ShotWindow::annotationById(int id)
+{
+    for (Annotation &annotation : m_annotations) {
+        if (annotation.id == id) {
+            return &annotation;
+        }
+    }
+    return nullptr;
+}
+
+const ShotWindow::Annotation *ShotWindow::annotationById(int id) const
+{
+    for (const Annotation &annotation : m_annotations) {
+        if (annotation.id == id) {
+            return &annotation;
+        }
+    }
+    return nullptr;
+}
+
+bool ShotWindow::annotationSupportsRotation(const Annotation &annotation) const
+{
+    switch (annotation.tool) {
+    case Tool::Move:
+    case Tool::Select:
+    case Tool::Laser:
+        return false;
+    case Tool::Pen:
+    case Tool::Line:
+    case Tool::Highlighter:
+    case Tool::Arrow:
+    case Tool::Rectangle:
+    case Tool::Ellipse:
+    case Tool::Mosaic:
+    case Tool::Text:
+    case Tool::Number:
+    case Tool::Magnifier:
+        return true;
+    }
+    return false;
+}
+
+bool ShotWindow::annotationSupportsLineControl(const Annotation &annotation) const
+{
+    return annotation.tool == Tool::Line
+        || annotation.tool == Tool::Arrow
+        || (annotation.tool == Tool::Highlighter
+            && annotation.highlighterStyle == HighlighterStyle::StraightLine);
+}
+
+QPointF ShotWindow::annotationLineControlPoint(const Annotation &annotation) const
+{
+    if (!annotationSupportsLineControl(annotation) || annotation.points.size() < 2) {
+        return {};
+    }
+    if (annotation.points.size() >= 3) {
+        return annotation.points.at(2);
+    }
+    return (annotation.points.first() + annotation.points.at(1)) / 2.0;
+}
+
+QPointF ShotWindow::rotatedPoint(QPointF point, QPointF center, qreal degrees) const
+{
+    const qreal radians = degrees * M_PI / 180.0;
+    const qreal c = std::cos(radians);
+    const qreal s = std::sin(radians);
+    const QPointF delta = point - center;
+    return center + QPointF(delta.x() * c - delta.y() * s,
+                            delta.x() * s + delta.y() * c);
+}
+
+QRectF ShotWindow::rotatedRectBounds(QRectF rect, qreal degrees) const
+{
+    rect = rect.normalized();
+    if (rect.isEmpty() || qFuzzyIsNull(degrees)) {
+        return rect;
+    }
+
+    const QPointF center = rect.center();
+    const QVector<QPointF> points = {
+        rotatedPoint(rect.topLeft(), center, degrees),
+        rotatedPoint(rect.topRight(), center, degrees),
+        rotatedPoint(rect.bottomLeft(), center, degrees),
+        rotatedPoint(rect.bottomRight(), center, degrees),
+    };
+
+    qreal left = points.first().x();
+    qreal right = left;
+    qreal top = points.first().y();
+    qreal bottom = top;
+    for (const QPointF &point : points) {
+        left = std::min(left, point.x());
+        right = std::max(right, point.x());
+        top = std::min(top, point.y());
+        bottom = std::max(bottom, point.y());
+    }
+    return QRectF(QPointF(left, top), QPointF(right, bottom)).normalized();
+}
+
+QRectF ShotWindow::annotationUnrotatedBounds(const Annotation &annotation) const
+{
+    auto pointsBounds = [&annotation] {
+        if (annotation.points.isEmpty()) {
+            return QRectF();
+        }
+        qreal left = annotation.points.first().x();
+        qreal right = left;
+        qreal top = annotation.points.first().y();
+        qreal bottom = top;
+        for (const QPointF &point : annotation.points) {
+            left = std::min(left, point.x());
+            right = std::max(right, point.x());
+            top = std::min(top, point.y());
+            bottom = std::max(bottom, point.y());
+        }
+        return QRectF(QPointF(left, top), QPointF(right, bottom)).normalized();
+    };
+
+    QRectF bounds;
+    switch (annotation.tool) {
+    case Tool::Move:
+    case Tool::Select:
+    case Tool::Laser:
+        return {};
+    case Tool::Pen:
+    case Tool::Line:
+    case Tool::Arrow:
+        bounds = pointsBounds();
+        bounds.adjust(-annotation.width, -annotation.width, annotation.width, annotation.width);
+        break;
+    case Tool::Highlighter:
+        if (annotation.highlighterStyle == HighlighterStyle::StraightLine
+            && annotation.points.size() >= 2) {
+            bounds = annotation.points.size() >= 3
+                ? pointsBounds()
+                : QRectF(annotation.points.first(), annotation.points.at(1)).normalized();
+        } else {
+            bounds = pointsBounds();
+        }
+        bounds.adjust(-annotation.width, -annotation.width, annotation.width, annotation.width);
+        break;
+    case Tool::Rectangle:
+    case Tool::Ellipse:
+    case Tool::Mosaic:
+        bounds = annotation.rect.normalized();
+        break;
+    case Tool::Magnifier:
+        bounds = annotation.rect.normalized().united(magnifierSourceRect(annotation));
+        bounds.adjust(-annotation.width, -annotation.width, annotation.width, annotation.width);
+        break;
+    case Tool::Text:
+        bounds = textContentRect(annotation, false);
+        break;
+    case Tool::Number: {
+        if (annotation.points.isEmpty()) {
+            return {};
+        }
+        const qreal radius = std::max<qreal>(13.0, 13.0 + annotation.width * 1.35);
+        const QPointF center = annotation.points.first();
+        const QPointF tip = annotation.points.size() >= 2 ? annotation.points.last() : center;
+        bounds = QRectF(center.x() - radius, center.y() - radius, radius * 2.0, radius * 2.0);
+        bounds = bounds.united(QRectF(tip, QSizeF(0.0, 0.0)));
+        break;
+    }
+    }
+
+    return bounds.normalized().intersected(QRectF(QPointF(0, 0), QSizeF(m_frozenFrame.size())));
+}
+
+QPointF ShotWindow::annotationRotationCenter(const Annotation &annotation, bool widgetCoordinates) const
+{
+    const QRectF bounds = annotationUnrotatedBounds(annotation);
+    const QPointF center = bounds.center();
+    return widgetCoordinates ? imageToWidget(center) : center;
+}
+
+QPointF ShotWindow::annotationRotationHandlePoint(const Annotation &annotation, bool widgetCoordinates) const
+{
+    QRectF bounds = annotationUnrotatedBounds(annotation);
+    if (bounds.isEmpty()) {
+        return {};
+    }
+
+    if (widgetCoordinates) {
+        bounds = imageRectToWidget(bounds);
+    }
+    const QPointF center = bounds.center();
+    const qreal angle = annotation.rotationDegrees;
+    const QPointF topCenter = rotatedPoint(QPointF(bounds.center().x(), bounds.top()), center, angle);
+    QPointF direction = topCenter - center;
+    const qreal length = QLineF(center, topCenter).length();
+    if (length <= 0.1) {
+        direction = QPointF(0.0, -1.0);
+    } else {
+        direction /= length;
+    }
+    const qreal handleGap = widgetCoordinates
+        ? 26.0
+        : 26.0 / std::max<qreal>(0.001, annotationSizeScale(true));
+    return topCenter + direction * handleGap;
+}
+
+QPointF ShotWindow::selectionRotationHandlePoint(QRectF imageBounds, bool widgetCoordinates) const
+{
+    imageBounds = imageBounds.normalized();
+    if (imageBounds.isEmpty()) {
+        return {};
+    }
+
+    QRectF bounds = widgetCoordinates ? imageRectToWidget(imageBounds) : imageBounds;
+    const QPointF center = bounds.center();
+    const QPointF topCenter(bounds.center().x(), bounds.top());
+    QPointF direction = topCenter - center;
+    const qreal length = QLineF(center, topCenter).length();
+    if (length <= 0.1) {
+        direction = QPointF(0.0, -1.0);
+    } else {
+        direction /= length;
+    }
+
+    const qreal handleGap = widgetCoordinates
+        ? 26.0
+        : 26.0 / std::max<qreal>(0.001, annotationSizeScale(true));
+    return topCenter + direction * handleGap;
+}
+
+QRectF ShotWindow::annotationBounds(const Annotation &annotation) const
+{
+    const QRectF bounds = annotationUnrotatedBounds(annotation);
+    if (!annotationSupportsRotation(annotation)) {
+        return bounds;
+    }
+    return rotatedRectBounds(bounds, annotation.rotationDegrees)
+        .intersected(QRectF(QPointF(0, 0), QSizeF(m_frozenFrame.size())));
+}
+
+QVector<int> ShotWindow::selectedAnnotationIds() const
+{
+    QVector<int> ids;
+    for (int id : m_selectedAnnotationIds) {
+        if (annotationById(id) && !ids.contains(id)) {
+            ids.append(id);
+        }
+    }
+    if (m_selectedAnnotationId.has_value() && annotationById(*m_selectedAnnotationId) && !ids.contains(*m_selectedAnnotationId)) {
+        ids.append(*m_selectedAnnotationId);
+    }
+    return ids;
+}
+
+void ShotWindow::setSelectedAnnotations(QVector<int> annotationIds)
+{
+    QVector<int> validIds;
+    for (int id : annotationIds) {
+        if (annotationById(id) && !validIds.contains(id)) {
+            validIds.append(id);
+        }
+    }
+    m_selectedAnnotationIds = validIds;
+    m_selectedAnnotationId = validIds.size() == 1
+        ? std::optional<int>(validIds.first())
+        : std::nullopt;
+    if (!validIds.isEmpty()) {
+        m_imageSelected = false;
+        m_imagePanning = false;
+    }
+}
+
+QRectF ShotWindow::selectedAnnotationsBounds() const
+{
+    QRectF bounds;
+    for (int id : selectedAnnotationIds()) {
+        const Annotation *annotation = annotationById(id);
+        if (!annotation) {
+            continue;
+        }
+        const QRectF annotationRect = annotationBounds(*annotation);
+        if (annotationRect.isEmpty()) {
+            continue;
+        }
+        bounds = bounds.isEmpty() ? annotationRect : bounds.united(annotationRect);
+    }
+    return bounds.normalized();
+}
+
+QVector<int> ShotWindow::annotationsInRect(QRectF imageRect) const
+{
+    imageRect = imageRect.normalized();
+    QVector<int> ids;
+    if (imageRect.width() < 2.0 || imageRect.height() < 2.0) {
+        return ids;
+    }
+    for (const Annotation &annotation : m_annotations) {
+        const QRectF bounds = annotationBounds(annotation);
+        if (!bounds.isEmpty() && imageRect.intersects(bounds)) {
+            ids.append(annotation.id);
+        }
+    }
+    return ids;
+}
+
+ShotWindow::SelectionDrag ShotWindow::annotationBoundsDragAt(QPointF imagePoint, QRectF bounds) const
+{
+    bounds = bounds.normalized();
+    if (bounds.isEmpty()) {
+        return SelectionDrag::None;
+    }
+
+    const qreal imageTolerance = 10.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+    const bool nearLeft = std::abs(imagePoint.x() - bounds.left()) <= imageTolerance;
+    const bool nearRight = std::abs(imagePoint.x() - bounds.right()) <= imageTolerance;
+    const bool nearTop = std::abs(imagePoint.y() - bounds.top()) <= imageTolerance;
+    const bool nearBottom = std::abs(imagePoint.y() - bounds.bottom()) <= imageTolerance;
+
+    if (nearLeft && nearTop) {
+        return SelectionDrag::TopLeft;
+    }
+    if (nearRight && nearTop) {
+        return SelectionDrag::TopRight;
+    }
+    if (nearLeft && nearBottom) {
+        return SelectionDrag::BottomLeft;
+    }
+    if (nearRight && nearBottom) {
+        return SelectionDrag::BottomRight;
+    }
+    if (nearLeft) {
+        return SelectionDrag::Left;
+    }
+    if (nearRight) {
+        return SelectionDrag::Right;
+    }
+    if (nearTop) {
+        return SelectionDrag::Top;
+    }
+    if (nearBottom) {
+        return SelectionDrag::Bottom;
+    }
+    return bounds.adjusted(-imageTolerance, -imageTolerance, imageTolerance, imageTolerance).contains(imagePoint)
+        ? SelectionDrag::Move
+        : SelectionDrag::None;
+}
+
+ShotWindow::SelectionDrag ShotWindow::selectedAnnotationsDragAt(QPointF imagePoint) const
+{
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    const QRectF bounds = selectedAnnotationsBounds();
+    if (selectedIds.size() > 1) {
+        const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+        const QPointF rotationHandle = selectionRotationHandlePoint(bounds, false);
+        if (!rotationHandle.isNull() && QLineF(imagePoint, rotationHandle).length() <= imageTolerance * 1.4) {
+            return SelectionDrag::Rotate;
+        }
+    }
+
+    return annotationBoundsDragAt(imagePoint, bounds);
+}
+
+ShotWindow::SelectionDrag ShotWindow::magnifierDragAt(const Annotation &annotation, QPointF imagePoint) const
+{
+    if (annotation.tool != Tool::Magnifier) {
+        return SelectionDrag::None;
+    }
+
+    const QRectF lensRect = annotation.rect.normalized();
+    const QRectF sourceRect = magnifierSourceRect(annotation);
+    if (lensRect.isEmpty() || sourceRect.isEmpty()) {
+        return SelectionDrag::None;
+    }
+
+    const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+    if (ellipseContainsPoint(sourceRect, imagePoint, imageTolerance)) {
+        return SelectionDrag::MagnifierSource;
+    }
+    if (ellipseContainsPoint(lensRect, imagePoint, imageTolerance)) {
+        return SelectionDrag::MagnifierLens;
+    }
+    return SelectionDrag::None;
+}
+
+QVector<QPointF> ShotWindow::selectionHandlePoints(QRectF rect) const
+{
+    rect = rect.normalized();
+    return {
+        rect.topLeft(), QPointF(rect.center().x(), rect.top()), rect.topRight(),
+        QPointF(rect.left(), rect.center().y()), QPointF(rect.right(), rect.center().y()),
+        rect.bottomLeft(), QPointF(rect.center().x(), rect.bottom()), rect.bottomRight(),
+    };
+}
+
+QRectF ShotWindow::selectedAnnotationDeleteButtonRect() const
+{
+    constexpr qreal buttonSize = 20.0;
+    constexpr qreal margin = 8.0;
+    auto clampedButtonRect = [this](QPointF center) {
+        constexpr qreal buttonSize = 20.0;
+        constexpr qreal margin = 8.0;
+        const qreal x = std::clamp(center.x() - buttonSize / 2.0,
+                                   margin,
+                                   std::max<qreal>(margin, width() - buttonSize - margin));
+        const qreal y = std::clamp(center.y() - buttonSize / 2.0,
+                                   margin,
+                                   std::max<qreal>(margin, height() - buttonSize - margin));
+        return QRectF(x, y, buttonSize, buttonSize);
+    };
+
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (selectedIds.size() == 1) {
+        if (const Annotation *annotation = annotationById(selectedIds.first());
+            annotation && annotationSupportsRotation(*annotation)) {
+            const QRectF localBounds = imageRectToWidget(annotationUnrotatedBounds(*annotation));
+            if (!localBounds.isEmpty()) {
+                const QPointF center = localBounds.center();
+                const QPointF corner = rotatedPoint(localBounds.topRight(), center, annotation->rotationDegrees);
+                QPointF direction = corner - center;
+                const qreal length = QLineF(center, corner).length();
+                if (length <= 0.1) {
+                    direction = QPointF(1.0, -1.0);
+                } else {
+                    direction /= length;
+                }
+                return clampedButtonRect(corner + direction * (buttonSize * 1.2));
+            }
+        }
+    }
+
+    const QRectF bounds = imageRectToWidget(selectedAnnotationsBounds());
+    if (bounds.isEmpty()) {
+        return {};
+    }
+    return clampedButtonRect(QPointF(bounds.right() + buttonSize / 2.0 + margin,
+                                     bounds.top() - buttonSize / 2.0 - margin));
+}
+
+QRectF ShotWindow::resizedBounds(QRectF start, SelectionDrag drag, QPointF imagePoint, bool keepAspectRatio) const
+{
+    start = start.normalized();
+    const QPointF clamped = clampImagePoint(imagePoint);
+    qreal left = start.left();
+    qreal top = start.top();
+    qreal right = start.right();
+    qreal bottom = start.bottom();
+    const qreal maxWidth = m_frozenFrame.width();
+    const qreal maxHeight = m_frozenFrame.height();
+
+    if (keepAspectRatio && drag != SelectionDrag::Move && start.width() > 0.0 && start.height() > 0.0) {
+        const qreal minScale = std::max(kMinSelectionSize / start.width(), kMinSelectionSize / start.height());
+
+        auto boundedScale = [minScale](qreal rawScale, qreal maxScale) {
+            maxScale = std::max<qreal>(0.0, maxScale);
+            const qreal lower = std::min(minScale, maxScale);
+            return std::clamp(rawScale, lower, maxScale);
+        };
+
+        auto rectFromCorner = [&](QPointF anchor, qreal xSign, qreal ySign) {
+            const qreal xDistance = std::abs(clamped.x() - anchor.x());
+            const qreal yDistance = std::abs(clamped.y() - anchor.y());
+            const qreal rawScale = std::max(xDistance / start.width(), yDistance / start.height());
+            const qreal maxXScale = (xSign > 0.0 ? maxWidth - anchor.x() : anchor.x()) / start.width();
+            const qreal maxYScale = (ySign > 0.0 ? maxHeight - anchor.y() : anchor.y()) / start.height();
+            const qreal scale = boundedScale(rawScale, std::min(maxXScale, maxYScale));
+            return QRectF(anchor,
+                          QPointF(anchor.x() + xSign * start.width() * scale,
+                                  anchor.y() + ySign * start.height() * scale)).normalized();
+        };
+
+        auto rectFromHorizontalEdge = [&](qreal anchorX, qreal xSign, qreal centerY) {
+            const qreal rawScale = std::abs(clamped.x() - anchorX) / start.width();
+            const qreal maxXScale = (xSign > 0.0 ? maxWidth - anchorX : anchorX) / start.width();
+            const qreal maxYScale = (2.0 * std::min(centerY, maxHeight - centerY)) / start.height();
+            const qreal scale = boundedScale(rawScale, std::min(maxXScale, maxYScale));
+            const qreal newWidth = start.width() * scale;
+            const qreal newHeight = start.height() * scale;
+            return QRectF(QPointF(anchorX, centerY - newHeight / 2.0),
+                          QPointF(anchorX + xSign * newWidth, centerY + newHeight / 2.0)).normalized();
+        };
+
+        auto rectFromVerticalEdge = [&](qreal anchorY, qreal ySign, qreal centerX) {
+            const qreal rawScale = std::abs(clamped.y() - anchorY) / start.height();
+            const qreal maxYScale = (ySign > 0.0 ? maxHeight - anchorY : anchorY) / start.height();
+            const qreal maxXScale = (2.0 * std::min(centerX, maxWidth - centerX)) / start.width();
+            const qreal scale = boundedScale(rawScale, std::min(maxXScale, maxYScale));
+            const qreal newWidth = start.width() * scale;
+            const qreal newHeight = start.height() * scale;
+            return QRectF(QPointF(centerX - newWidth / 2.0, anchorY),
+                          QPointF(centerX + newWidth / 2.0, anchorY + ySign * newHeight)).normalized();
+        };
+
+        switch (drag) {
+        case SelectionDrag::TopLeft:
+            return rectFromCorner(start.bottomRight(), -1.0, -1.0);
+        case SelectionDrag::TopRight:
+            return rectFromCorner(start.bottomLeft(), 1.0, -1.0);
+        case SelectionDrag::BottomLeft:
+            return rectFromCorner(start.topRight(), -1.0, 1.0);
+        case SelectionDrag::BottomRight:
+            return rectFromCorner(start.topLeft(), 1.0, 1.0);
+        case SelectionDrag::Left:
+            return rectFromHorizontalEdge(start.right(), -1.0, start.center().y());
+        case SelectionDrag::Right:
+            return rectFromHorizontalEdge(start.left(), 1.0, start.center().y());
+        case SelectionDrag::Top:
+            return rectFromVerticalEdge(start.bottom(), -1.0, start.center().x());
+        case SelectionDrag::Bottom:
+            return rectFromVerticalEdge(start.top(), 1.0, start.center().x());
+        case SelectionDrag::MagnifierSource:
+        case SelectionDrag::MagnifierLens:
+        case SelectionDrag::Rotate:
+        case SelectionDrag::LineControl:
+        case SelectionDrag::Move:
+        case SelectionDrag::None:
+            break;
+        }
+    }
+
+    if (drag == SelectionDrag::Left || drag == SelectionDrag::TopLeft || drag == SelectionDrag::BottomLeft) {
+        left = std::clamp(clamped.x(), 0.0, right - kMinSelectionSize);
+    }
+    if (drag == SelectionDrag::Right || drag == SelectionDrag::TopRight || drag == SelectionDrag::BottomRight) {
+        right = std::clamp(clamped.x(), left + kMinSelectionSize, maxWidth);
+    }
+    if (drag == SelectionDrag::Top || drag == SelectionDrag::TopLeft || drag == SelectionDrag::TopRight) {
+        top = std::clamp(clamped.y(), 0.0, bottom - kMinSelectionSize);
+    }
+    if (drag == SelectionDrag::Bottom || drag == SelectionDrag::BottomLeft || drag == SelectionDrag::BottomRight) {
+        bottom = std::clamp(clamped.y(), top + kMinSelectionSize, maxHeight);
+    }
+
+    return QRectF(QPointF(left, top), QPointF(right, bottom)).normalized();
+}
+
+ShotWindow::SelectionDrag ShotWindow::annotationDragAt(QPointF imagePoint, int annotationId) const
+{
+    const Annotation *annotation = annotationById(annotationId);
+    if (!annotation) {
+        return SelectionDrag::None;
+    }
+
+    const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+    if (annotationSupportsRotation(*annotation)) {
+        const QPointF rotationHandle = annotationRotationHandlePoint(*annotation, false);
+        if (!rotationHandle.isNull() && QLineF(imagePoint, rotationHandle).length() <= imageTolerance * 1.4) {
+            return SelectionDrag::Rotate;
+        }
+    }
+
+    QRectF localBounds;
+    QPointF localPoint = imagePoint;
+    if (annotationSupportsRotation(*annotation)) {
+        localBounds = annotationUnrotatedBounds(*annotation);
+        if (!localBounds.isEmpty()) {
+            localPoint = rotatedPoint(imagePoint, localBounds.center(), -annotation->rotationDegrees);
+        }
+    }
+
+    if (annotation->tool == Tool::Magnifier) {
+        const SelectionDrag magnifierDrag = magnifierDragAt(*annotation, localPoint);
+        if (magnifierDrag != SelectionDrag::None) {
+            return magnifierDrag;
+        }
+    }
+
+    if (annotationSupportsLineControl(*annotation) && annotation->points.size() >= 2) {
+        const QPointF controlPoint = annotationLineControlPoint(*annotation);
+        if (QLineF(localPoint, controlPoint).length() <= imageTolerance * 1.4) {
+            return SelectionDrag::LineControl;
+        }
+    }
+
+    if (annotationSupportsRotation(*annotation) && !localBounds.isEmpty()) {
+        return annotationBoundsDragAt(localPoint, localBounds);
+    }
+
+    const QRectF bounds = annotationBounds(*annotation);
+    if (bounds.isEmpty()) {
+        return SelectionDrag::None;
+    }
+
+    return annotationBoundsDragAt(imagePoint, bounds);
+}
+
+std::optional<int> ShotWindow::annotationAt(QPointF imagePoint) const
+{
+    const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+    for (int i = m_annotations.size() - 1; i >= 0; --i) {
+        const Annotation &annotation = m_annotations.at(i);
+        QPointF localPoint = imagePoint;
+        if (annotationSupportsRotation(annotation)) {
+            const QRectF localBounds = annotationUnrotatedBounds(annotation);
+            if (!localBounds.isEmpty()) {
+                localPoint = rotatedPoint(imagePoint, localBounds.center(), -annotation.rotationDegrees);
+            }
+        }
+        if (annotation.tool == Tool::Magnifier) {
+            if (magnifierDragAt(annotation, localPoint) != SelectionDrag::None) {
+                return annotation.id;
+            }
+        }
+        const QRectF bounds = annotationBounds(annotation).adjusted(-imageTolerance, -imageTolerance, imageTolerance, imageTolerance);
+        if (bounds.contains(imagePoint)) {
+            return annotation.id;
+        }
+    }
+    return std::nullopt;
+}

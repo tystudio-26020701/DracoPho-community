@@ -1,0 +1,762 @@
+#include "shot_window_module.h"
+
+namespace cfg = markshot::config;
+namespace shortcuts = markshot::shortcut;
+using namespace markshot::shot;
+
+void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation, bool widgetCoordinates) const
+{
+    auto mapPoint = [this, widgetCoordinates](QPointF point) {
+        return widgetCoordinates ? imageToWidget(point) : point;
+    };
+
+    auto mapRect = [this, widgetCoordinates](QRectF rect) {
+        return widgetCoordinates ? imageRectToWidget(rect) : rect;
+    };
+
+    const qreal scale = annotationSizeScale(widgetCoordinates);
+    const qreal penWidth = std::max<qreal>(1.5, annotation.width * scale);
+
+    painter.save();
+    if (annotationSupportsRotation(annotation) && !qFuzzyIsNull(annotation.rotationDegrees)) {
+        const QPointF center = annotationRotationCenter(annotation, widgetCoordinates);
+        painter.translate(center);
+        painter.rotate(annotation.rotationDegrees);
+        painter.translate(-center);
+    }
+
+    QPen pen(annotation.color, penWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+
+    auto drawLinePath = [this, &painter, &mapPoint](const Annotation &lineAnnotation) {
+        if (lineAnnotation.points.size() < 2) {
+            return;
+        }
+        QPainterPath path(mapPoint(lineAnnotation.points.first()));
+        if (annotationSupportsLineControl(lineAnnotation) && lineAnnotation.points.size() >= 3) {
+            path.quadTo(mapPoint(lineAnnotation.points.at(2)), mapPoint(lineAnnotation.points.at(1)));
+        } else {
+            path.lineTo(mapPoint(lineAnnotation.points.at(1)));
+        }
+        painter.drawPath(path);
+    };
+
+    switch (annotation.tool) {
+    case Tool::Move:
+    case Tool::Select:
+    case Tool::Laser:
+        break;
+    case Tool::Pen: {
+        if (annotation.points.size() < 2) {
+            break;
+        }
+        QVector<QPointF> mapped;
+        mapped.reserve(annotation.points.size());
+        for (const QPointF &point : annotation.points) {
+            mapped.append(mapPoint(point));
+        }
+        painter.drawPath(smoothedStrokePath(mapped));
+        break;
+    }
+    case Tool::Highlighter: {
+        if (annotation.points.size() < 2) {
+            break;
+        }
+        QColor color = annotation.color;
+        color.setAlpha(qRound(annotation.color.alphaF() * 120.0));
+        painter.save();
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        painter.setPen(QPen(color, std::max<qreal>(6.0, penWidth), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        if (annotation.highlighterStyle == HighlighterStyle::StraightLine) {
+            drawLinePath(annotation);
+        } else {
+            QVector<QPointF> mapped;
+            mapped.reserve(annotation.points.size());
+            for (const QPointF &point : annotation.points) {
+                mapped.append(mapPoint(point));
+            }
+            painter.drawPath(smoothedStrokePath(mapped));
+        }
+        painter.restore();
+        break;
+    }
+    case Tool::Line:
+        if (annotation.points.size() >= 2) {
+            drawLinePath(annotation);
+        }
+        break;
+    case Tool::Rectangle: {
+        painter.setBrush(annotation.filled ? QBrush(annotation.color) : QBrush(Qt::NoBrush));
+        const QRectF rect = mapRect(annotation.rect);
+        const qreal radius = annotation.cornerRadius * scale;
+        if (radius > 0.0) {
+            painter.drawRoundedRect(rect, radius, radius);
+        } else {
+            painter.drawRect(rect);
+        }
+        break;
+    }
+    case Tool::Ellipse:
+        painter.setBrush(annotation.filled ? QBrush(annotation.color) : QBrush(Qt::NoBrush));
+        painter.drawEllipse(mapRect(annotation.rect));
+        break;
+    case Tool::Arrow:
+        if (annotation.points.size() >= 2) {
+            const std::optional<QPointF> controlPoint = annotation.points.size() >= 3
+                ? std::optional<QPointF>(mapPoint(annotation.points.at(2)))
+                : std::nullopt;
+            drawArrow(painter,
+                      mapPoint(annotation.points.first()),
+                      mapPoint(annotation.points.at(1)),
+                      penWidth,
+                      annotation.arrowStyle,
+                      controlPoint);
+        }
+        break;
+    case Tool::Text: {
+        QFont font = markshot::theme::textFont(qRound((19.0 + annotation.width) * scale),
+                                               QFont::DemiBold,
+                                               annotation.fontFamily);
+        QRectF backgroundRect = textContentRect(annotation, widgetCoordinates);
+        QRectF textRect = backgroundRect.adjusted(kTextBackgroundPaddingX * scale,
+                                                  kTextBackgroundPaddingY * scale,
+                                                  -kTextBackgroundPaddingX * scale,
+                                                  -kTextBackgroundPaddingY * scale);
+        QTextOption option;
+        option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+        option.setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        painter.save();
+        painter.setFont(font);
+        if (annotation.backgroundColor.alpha() > 0) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(annotation.backgroundColor);
+            painter.drawRoundedRect(backgroundRect, 4.0 * scale, 4.0 * scale);
+        }
+        painter.setPen(annotation.color);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawText(textRect, annotation.text, option);
+        painter.restore();
+        break;
+    }
+    case Tool::Number:
+        if (!annotation.points.isEmpty()) {
+            const QPointF bubblePoint = annotation.points.first();
+            const QPointF tipPoint = annotation.points.size() >= 2 ? annotation.points.last() : bubblePoint;
+            drawNumber(painter, tipPoint, bubblePoint, annotation.number, annotation.color, annotation.width, widgetCoordinates);
+        }
+        break;
+    case Tool::Mosaic:
+        painter.setOpacity(annotation.color.alphaF());
+        drawMosaic(painter, annotation.rect, annotation.width, widgetCoordinates);
+        break;
+    case Tool::Magnifier:
+        drawMagnifier(painter, annotation, widgetCoordinates);
+        break;
+    }
+    painter.restore();
+}
+
+void ShotWindow::drawArrow(QPainter &painter,
+                           QPointF start,
+                           QPointF end,
+                           qreal width,
+                           ArrowStyle style,
+                           std::optional<QPointF> controlPoint) const
+{
+    const QLineF line(start, end);
+    const qreal L = line.length();
+    if (L < 1.0) {
+        return;
+    }
+
+    const QColor color = painter.pen().color();
+
+    if (controlPoint.has_value()) {
+        QPainterPath curve(start);
+        curve.quadTo(*controlPoint, end);
+
+        auto curvePoint = [start, end, control = *controlPoint](qreal t) {
+            const qreal u = 1.0 - t;
+            return start * (u * u) + control * (2.0 * u * t) + end * (t * t);
+        };
+
+        qreal curveLength = 0.0;
+        QPointF previous = start;
+        for (int i = 1; i <= 24; ++i) {
+            const QPointF current = curvePoint(static_cast<qreal>(i) / 24.0);
+            curveLength += QLineF(previous, current).length();
+            previous = current;
+        }
+
+        QPointF tangent = end - *controlPoint;
+        if (QLineF(QPointF(0, 0), tangent).length() < 1.0) {
+            tangent = end - start;
+        }
+        const qreal tangentLength = QLineF(QPointF(0, 0), tangent).length();
+        if (tangentLength < 1.0) {
+            return;
+        }
+        const QPointF direction(tangent.x() / tangentLength, tangent.y() / tangentLength);
+        const QPointF normal(-direction.y(), direction.x());
+
+        if (style == ArrowStyle::Kde) {
+            qreal headLength = std::clamp(curveLength * 0.32, width * 2.6, width * 6.0);
+            if (headLength > curveLength) {
+                headLength = curveLength;
+            }
+            const qreal headHalfWidth = headLength * 0.62;
+            const QPointF headBase = end - direction * headLength;
+            const QPointF leftWing = headBase + normal * headHalfWidth;
+            const QPointF rightWing = headBase - normal * headHalfWidth;
+
+            painter.save();
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(color, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter.setRenderHint(QPainter::Antialiasing, true);
+            painter.drawPath(curve);
+            QPainterPath head;
+            head.moveTo(leftWing);
+            head.lineTo(end);
+            head.lineTo(rightWing);
+            painter.drawPath(head);
+            painter.restore();
+            return;
+        }
+
+        qreal headLength = curveLength * 0.18;
+        headLength = std::clamp(headLength, width * 5.0, width * 9.0);
+        if (headLength > curveLength * 0.62) {
+            headLength = curveLength * 0.62;
+        }
+        headLength = std::clamp(headLength, 12.0, 60.0);
+        if (headLength > curveLength * 0.62) {
+            headLength = curveLength * 0.62;
+        }
+
+        const qreal bodyHalfWidth = width * 0.5;
+        qreal headHalfWidth = headLength * 0.28;
+        const qreal minHeadHalfWidth = bodyHalfWidth * 1.5;
+        if (headHalfWidth < minHeadHalfWidth) {
+            headHalfWidth = minHeadHalfWidth;
+        }
+
+        const QPointF headBase = end - direction * headLength;
+        QPainterPath head;
+        head.moveTo(headBase + normal * headHalfWidth);
+        head.lineTo(end);
+        head.lineTo(headBase - normal * headHalfWidth);
+        head.closeSubpath();
+
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setPen(QPen(color, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(curve);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawPath(head);
+        painter.restore();
+        return;
+    }
+
+    // 1. Calculate normalized direction and normal vectors
+    const QPointF direction = QPointF(line.dx() / L, line.dy() / L);
+    const QPointF normal(-direction.y(), direction.x());
+
+    if (style == ArrowStyle::Kde) {
+        // Uniform round-capped shaft topped by an open V head, matching the
+        // KDE/Spectacle arrow: the stroke width stays constant end to end.
+        qreal headLength = std::clamp(L * 0.32, width * 2.6, width * 6.0);
+        if (headLength > L) {
+            headLength = L;
+        }
+        const qreal headHalfWidth = headLength * 0.62;
+        const QPointF headBase = end - direction * headLength;
+        const QPointF leftWing = headBase + normal * headHalfWidth;
+        const QPointF rightWing = headBase - normal * headHalfWidth;
+
+        painter.save();
+        QPen pen(color, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(pen);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.drawLine(start, end);
+        QPainterPath head;
+        head.moveTo(leftWing);
+        head.lineTo(end);
+        head.lineTo(rightWing);
+        painter.drawPath(head);
+        painter.restore();
+        return;
+    }
+
+    // 2. Compute physical body half-width (perfectly aligned with pen brush width)
+    const qreal bodyHalfWidth = width * 0.5;
+
+    // 3. Compute adaptive arrow head length based on L (golden stretch ratio)
+    qreal headLength = L * 0.18;
+    headLength = std::clamp(headLength, width * 5.0, width * 9.0);
+    if (headLength > L * 0.62) {
+        headLength = L * 0.62;
+    }
+    headLength = std::clamp(headLength, 12.0, 60.0);
+    if (headLength > L * 0.62) {
+        headLength = L * 0.62;
+    }
+
+    // 4. Compute head half-width (sleeker, sharper aerodynamic 28% stretch ratio for acute angle nose)
+    qreal headHalfWidth = headLength * 0.28;
+    const qreal minHeadHalfWidth = bodyHalfWidth * 1.5;
+    if (headHalfWidth < minHeadHalfWidth) {
+        headHalfWidth = minHeadHalfWidth;
+    }
+
+    // 5. Locate headBase position
+    const QPointF headBase = end - direction * headLength;
+
+    // 6. Construct the elegant 6-vertex classic pointy-tailed gradient triangle polygon path
+    QPainterPath arrow;
+    arrow.moveTo(start);                              // 1. Pointy start (sharp tail converges to 0 width)
+    arrow.lineTo(headBase + normal * bodyHalfWidth);  // 2. Left side body (gradient shaft)
+    arrow.lineTo(headBase + normal * headHalfWidth);  // 3. Left wing base (vertical fold-out)
+    arrow.lineTo(end);                                // 4. Arrow tip (aerodynamic nose)
+    arrow.lineTo(headBase - normal * headHalfWidth);  // 5. Right wing base (aerodynamic nose)
+    arrow.lineTo(headBase - normal * bodyHalfWidth);  // 6. Right side body (vertical fold-in)
+    arrow.closeSubpath();                             // 7. Close back to pointy start
+
+    // 7. Render the gorgeous hard-line polygon with anti-aliasing
+    painter.save();
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(color);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.drawPath(arrow);
+    painter.restore();
+}
+
+void ShotWindow::drawWheelPreview(QPainter &painter)
+{
+    if (!m_showWheelPreview || !m_wheelPreviewTimer.isValid() || m_wheelPreviewTimer.elapsed() > 900) {
+        m_showWheelPreview = false;
+        updateCursor();
+        return;
+    }
+
+    if (wheelZoomsImage()) {
+        const QString zoomText = QStringLiteral("%1%").arg(qRound(m_imageZoom * 100.0));
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setFont(markshot::theme::uiFont(12, QFont::DemiBold));
+        const QFontMetrics metrics(painter.font());
+        const QRectF textBounds = metrics.boundingRect(zoomText);
+        QRectF bubble(m_wheelPreviewPosition.x() + 14.0,
+                      m_wheelPreviewPosition.y() + 14.0,
+                      textBounds.width() + 24.0,
+                      textBounds.height() + 14.0);
+        bubble.moveLeft(std::min<qreal>(bubble.left(), width() - bubble.width() - 8.0));
+        bubble.moveTop(std::min<qreal>(bubble.top(), height() - bubble.height() - 8.0));
+        bubble.moveLeft(std::max<qreal>(8.0, bubble.left()));
+        bubble.moveTop(std::max<qreal>(8.0, bubble.top()));
+
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(8, 13, 19, 230));
+        painter.drawRoundedRect(bubble, 10.0, 10.0);
+        painter.setPen(QColor(204, 251, 241, 245));
+        painter.drawText(bubble, Qt::AlignCenter, zoomText);
+        painter.restore();
+        return;
+    }
+
+    const qreal size = std::clamp(currentToolPreviewSize(), 2.0, 96.0);
+    QRectF preview(m_wheelPreviewPosition.x() - size / 2.0,
+                   m_wheelPreviewPosition.y() - size / 2.0,
+                   size,
+                   size);
+
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing,
+                          m_tool == Tool::Number || m_tool == Tool::Magnifier);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(m_currentColor);
+    if (m_tool == Tool::Number || m_tool == Tool::Magnifier) {
+        painter.drawEllipse(preview);
+    } else {
+        painter.drawRect(preview);
+    }
+    painter.restore();
+}
+
+void ShotWindow::drawLaserStroke(QPainter &painter, const LaserStroke &stroke, bool widgetCoordinates, qreal opacity) const
+{
+    if (stroke.points.size() < 2 || opacity <= 0.0) {
+        return;
+    }
+
+    auto mapPoint = [this, widgetCoordinates](QPointF point) {
+        return widgetCoordinates ? imageToWidget(point) : point;
+    };
+    const qreal scale = annotationSizeScale(widgetCoordinates);
+    const qreal width = std::max<qreal>(3.0, stroke.width * scale);
+
+    QPainterPath path(mapPoint(stroke.points.first()));
+    for (int i = 1; i < stroke.points.size(); ++i) {
+        path.lineTo(mapPoint(stroke.points.at(i)));
+    }
+
+    const qreal configuredOpacity = stroke.color.alphaF();
+    QColor glow = stroke.color;
+    glow.setAlpha(qRound(80 * opacity * configuredOpacity));
+    QColor core = stroke.color;
+    core.setAlpha(qRound(230 * opacity * configuredOpacity));
+    QColor hot(255, 255, 255, qRound(170 * opacity * configuredOpacity));
+
+    painter.save();
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    painter.setPen(QPen(glow, width * 2.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.drawPath(path);
+    painter.setPen(QPen(core, width, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.drawPath(path);
+    painter.setPen(QPen(hot, std::max<qreal>(1.4, width * 0.22), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.drawPath(path);
+    painter.restore();
+}
+
+void ShotWindow::beginLaserStroke(QPointF imagePoint)
+{
+    m_dragging = true;
+    m_dragStart = imagePoint;
+    LaserStroke stroke;
+    stroke.points.append(clampImagePoint(imagePoint));
+    stroke.color = m_currentColor;
+    stroke.width = m_laserWidth;
+    stroke.expiresAt = m_laserClock.elapsed() + kLaserLifetimeMs;
+    m_laserDraft = stroke;
+    update();
+}
+
+void ShotWindow::updateLaserStroke(QPointF imagePoint)
+{
+    if (!m_laserDraft.has_value()) {
+        return;
+    }
+    m_laserDraft->points.append(clampImagePoint(imagePoint));
+    update();
+}
+
+void ShotWindow::commitLaserStroke()
+{
+    if (!m_laserDraft.has_value()) {
+        return;
+    }
+    if (m_laserDraft->points.size() >= 2) {
+        m_laserDraft->expiresAt = m_laserClock.elapsed() + kLaserLifetimeMs;
+        m_laserStrokes.append(*m_laserDraft);
+        if (m_laserTimer && !m_laserTimer->isActive()) {
+            m_laserTimer->start();
+        }
+    }
+    m_laserDraft.reset();
+    update();
+}
+
+void ShotWindow::cleanupLaserStrokes()
+{
+    const qint64 now = m_laserClock.elapsed();
+    for (int i = m_laserStrokes.size() - 1; i >= 0; --i) {
+        if (m_laserStrokes.at(i).expiresAt <= now) {
+            m_laserStrokes.removeAt(i);
+        }
+    }
+    if (m_laserStrokes.isEmpty() && m_laserTimer) {
+        m_laserTimer->stop();
+    }
+    update();
+}
+
+void ShotWindow::drawNumber(QPainter &painter,
+                            QPointF tipPoint,
+                            QPointF bubblePoint,
+                            int number,
+                            QColor color,
+                            qreal width,
+                            bool widgetCoordinates) const
+{
+    const QPointF tip = widgetCoordinates ? imageToWidget(tipPoint) : tipPoint;
+    const QPointF center = widgetCoordinates ? imageToWidget(bubblePoint) : bubblePoint;
+    const qreal scale = annotationSizeScale(widgetCoordinates);
+    const qreal radius = std::max<qreal>(13.0, (13.0 + width * 1.35) * scale);
+    const QRectF bubble(center.x() - radius, center.y() - radius, radius * 2.0, radius * 2.0);
+
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    const QLineF leader(center, tip);
+    if (leader.length() > radius * 0.45) {
+        const QPointF direction(leader.dx() / leader.length(), leader.dy() / leader.length());
+        const QPointF normal(-direction.y(), direction.x());
+        const qreal tailHalfWidth = std::clamp(radius * 0.46, 8.0, 38.0);
+        const QPointF baseCenter = center + direction * (radius * 0.82);
+        QPainterPath tail;
+        tail.moveTo(tip);
+        tail.lineTo(baseCenter + normal * tailHalfWidth);
+        tail.lineTo(baseCenter - normal * tailHalfWidth);
+        tail.closeSubpath();
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawPath(tail);
+    }
+
+    painter.setPen(QPen(QColor(255, 255, 255), std::clamp(width * 0.22 * scale, 2.0, 9.0)));
+    painter.setBrush(color);
+    painter.drawEllipse(bubble);
+
+    QFont font = markshot::theme::uiFont(qRound(std::clamp(radius * 0.92, 12.0, 54.0)), QFont::Black);
+    painter.setFont(font);
+    painter.setPen(Qt::white);
+    painter.drawText(bubble, Qt::AlignCenter, QString::number(number));
+    painter.restore();
+}
+
+void ShotWindow::drawMosaic(QPainter &painter, QRectF imageRect, qreal blockSize, bool widgetCoordinates) const
+{
+    QRect sourceRect = imageRect.normalized().toAlignedRect().intersected(QRect(QPoint(0, 0), m_frozenFrame.size()));
+    if (sourceRect.isEmpty()) {
+        return;
+    }
+
+    const QImage mosaic = mosaicImage(sourceRect, qRound(blockSize));
+    if (mosaic.isNull()) {
+        return;
+    }
+
+    painter.save();
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+    painter.drawImage(widgetCoordinates ? imageRectToWidget(sourceRect) : QRectF(sourceRect), mosaic);
+    painter.restore();
+}
+
+void ShotWindow::drawMagnifier(QPainter &painter, const Annotation &annotation, bool widgetCoordinates) const
+{
+    const QRectF lensImageRect = annotation.rect.normalized();
+    const QRectF sourceImageRect = magnifierSourceRect(annotation);
+    if (lensImageRect.width() < 4.0 || lensImageRect.height() < 4.0
+        || sourceImageRect.isEmpty() || m_frozenFrame.isNull()) {
+        return;
+    }
+
+    const QRectF lensRect = widgetCoordinates ? imageRectToWidget(lensImageRect) : lensImageRect;
+    const QRectF sourceRect = widgetCoordinates ? imageRectToWidget(sourceImageRect) : sourceImageRect;
+    const qreal scale = annotationSizeScale(widgetCoordinates);
+    const qreal borderWidth = std::clamp(annotation.width * scale, 1.5, 18.0);
+    const QColor borderColor = annotation.color;
+
+    QPainterPath lensPath;
+    lensPath.addEllipse(lensRect);
+
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    const QPointF sourceCenter = sourceRect.center();
+    const QPointF lensCenter = lensRect.center();
+    const QLineF centerLine(sourceCenter, lensCenter);
+    const qreal sourceRadius = sourceRect.width() / 2.0;
+    const qreal lensRadius = lensRect.width() / 2.0;
+    if (centerLine.length() > lensRadius + sourceRadius * 0.65) {
+        const QPointF towardLens(centerLine.dx() / centerLine.length(),
+                                 centerLine.dy() / centerLine.length());
+        const QPointF normal(-towardLens.y(), towardLens.x());
+        constexpr qreal connectorAngle = 34.0 * M_PI / 180.0;
+        const qreal along = std::cos(connectorAngle);
+        const qreal across = std::sin(connectorAngle);
+        const QPointF sourceUpper = sourceCenter
+            + towardLens * (sourceRadius * along)
+            + normal * (sourceRadius * across);
+        const QPointF sourceLower = sourceCenter
+            + towardLens * (sourceRadius * along)
+            - normal * (sourceRadius * across);
+        const QPointF towardSource = -towardLens;
+        const QPointF lensUpper = lensCenter
+            + towardSource * (lensRadius * along)
+            + normal * (lensRadius * across);
+        const QPointF lensLower = lensCenter
+            + towardSource * (lensRadius * along)
+            - normal * (lensRadius * across);
+
+        painter.setPen(QPen(borderColor,
+                            borderWidth,
+                            Qt::SolidLine,
+                            Qt::RoundCap,
+                            Qt::RoundJoin));
+        painter.drawLine(sourceUpper, lensUpper);
+        painter.drawLine(sourceLower, lensLower);
+    }
+
+    painter.setClipPath(lensPath);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter.drawImage(lensRect, m_frozenFrame, sourceImageRect);
+    painter.setClipping(false);
+
+    painter.setPen(QPen(borderColor, borderWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(lensRect.adjusted(borderWidth / 2.0,
+                                          borderWidth / 2.0,
+                                          -borderWidth / 2.0,
+                                          -borderWidth / 2.0));
+    painter.drawEllipse(sourceRect.adjusted(borderWidth / 2.0,
+                                            borderWidth / 2.0,
+                                            -borderWidth / 2.0,
+                                            -borderWidth / 2.0));
+    painter.restore();
+}
+
+void ShotWindow::beginTextAnnotation(QPointF imagePoint)
+{
+    m_editingTextAnnotationId.reset();
+    m_textEditorImagePoint = imagePoint;
+    m_draft.reset();
+    m_textEditor->clear();
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, qRound(20.0 + m_shapeWidth)));
+    m_textEditor->setFont(markshot::theme::textFont(qRound(20.0 + m_shapeWidth),
+                                                    QFont::DemiBold,
+                                                    m_textFontFamily));
+    m_textEditor->show();
+    m_textEditor->raise();
+    updateTextEditorGeometry();
+    m_textEditor->setFocus(Qt::MouseFocusReason);
+    update();
+}
+
+void ShotWindow::beginEditingSelectedTextAnnotation()
+{
+    if (!m_selectedAnnotationId.has_value()) {
+        return;
+    }
+    Annotation *annotation = annotationById(*m_selectedAnnotationId);
+    if (!annotation || annotation->tool != Tool::Text) {
+        return;
+    }
+
+    m_editingTextAnnotationId = annotation->id;
+    m_textEditorImagePoint = annotation->rect.normalized().topLeft();
+    m_draft.reset();
+    m_textEditor->setPlainText(annotation->text);
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(annotation->color, annotation->backgroundColor, qRound(20.0 + annotation->width)));
+    m_textEditor->setFont(markshot::theme::textFont(qRound(20.0 + annotation->width),
+                                                    QFont::DemiBold,
+                                                    annotation->fontFamily));
+    if (m_annotationPropertyPanel) {
+        m_annotationPropertyPanel->hide();
+    }
+    if (m_propertyColorDialogPanel) {
+        m_propertyColorDialogPanel->hide();
+    }
+    if (m_propertyFontPanel) {
+        m_propertyFontPanel->hide();
+    }
+    m_textEditor->show();
+    m_textEditor->raise();
+    const QRectF widgetRect = textContentRect(*annotation, true);
+    m_textEditor->setGeometry(widgetRect.toAlignedRect().adjusted(0, 0, 1, 1));
+    m_textEditor->setFocus(Qt::MouseFocusReason);
+    update();
+}
+
+void ShotWindow::commitTextEditor()
+{
+    if (m_committingText || !m_textEditor || !m_textEditor->isVisible()) {
+        return;
+    }
+
+    m_committingText = true;
+    const QString text = m_textEditor->toPlainText().trimmed();
+    const QRect editorGeometry = m_textEditor->geometry();
+    m_textEditor->hide();
+    m_textEditor->clear();
+    setFocus(Qt::OtherFocusReason);
+
+    if (m_editingTextAnnotationId.has_value()) {
+        if (Annotation *annotation = annotationById(*m_editingTextAnnotationId)) {
+            pushHistorySnapshot();
+            annotation->text = text;
+            annotation->rect = QRectF(widgetToImage(editorGeometry.topLeft()),
+                                      widgetToImage(editorGeometry.bottomRight())).normalized();
+            annotation->fontFamily = m_textEditor->font().family();
+            annotation->rect = textContentRect(*annotation, false);
+            if (!annotation->points.isEmpty()) {
+                annotation->points[0] = annotation->rect.topLeft();
+            }
+        }
+        m_editingTextAnnotationId.reset();
+        m_committingText = false;
+        updateAnnotationPropertyPanel();
+        update();
+        return;
+    }
+
+    if (!text.isEmpty()) {
+        pushHistorySnapshot();
+        Annotation annotation;
+        annotation.id = m_nextAnnotationId++;
+        annotation.tool = Tool::Text;
+        annotation.points.append(m_textEditorImagePoint);
+        annotation.rect = QRectF(widgetToImage(editorGeometry.topLeft()),
+                                 widgetToImage(editorGeometry.bottomRight())).normalized();
+        annotation.text = text;
+        annotation.color = m_currentColor;
+        annotation.backgroundColor = m_textBackgroundColor;
+        annotation.width = m_shapeWidth;
+        annotation.fontFamily = m_textEditor->font().family();
+        annotation.rect = textContentRect(annotation, false);
+        m_textFontFamily = annotation.fontFamily;
+        m_annotations.append(annotation);
+    }
+
+    m_committingText = false;
+    update();
+}
+
+QString ShotWindow::saveSelectionToTempFile() const
+{
+    if (!hasUsableSelection()) {
+        return {};
+    }
+
+    const QImage output = renderedSelection();
+    if (output.isNull()) {
+        return {};
+    }
+
+    const QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation).isEmpty()
+        ? QDir::tempPath()
+        : QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    const QString filename = QStringLiteral("mark-shot-open-%1.png")
+                                 .arg(QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-hhmmss-zzz")));
+    const QString path = QDir(tempDir).filePath(filename);
+    return output.save(path, "PNG") ? path : QString();
+}
+
+void ShotWindow::openSelectionWithDesktop(const DesktopApp &app)
+{
+    commitTextEditor();
+    if (m_openWithPanel) {
+        m_openWithPanel->hide();
+    }
+    if (m_extensionPanel) {
+        m_extensionPanel->hide();
+    }
+
+    const QString imagePath = saveSelectionToTempFile();
+    if (imagePath.isEmpty()) {
+        return;
+    }
+
+    QStringList command = expandDesktopExec(app, imagePath);
+    if (command.isEmpty()) {
+        return;
+    }
+
+    const QString program = command.takeFirst();
+    if (QProcess::startDetached(program, command)) {
+        close();
+    }
+}
