@@ -192,9 +192,11 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json`. Pin
   },
   "scrollCapture": {
     "frame": 5,
-    "previewGap": 5
+    "previewGap": 5,
+    "hidePreviewDuringCapture": false
   },
   "windowDetection": {
+    "enabled": true,
     "command": "mark-shot-window-detection-niri",
     "env": {
       "MARK_SHOT_NIRI_PANEL_EDGE": "top",
@@ -235,9 +237,11 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json`. Pin
 | `pinnedWindow.border` | Boolean/Object | `false` | Outer border configuration for pinned sticker windows. Can be a boolean, or an object containing `enabled` (bool), `color` (name/hex/RGBA object), and `width` (float, `1.0` to `12.0`). Also flat configs like `borderEnabled`, `borderColor`, and `borderWidth` are supported. |
 | `scrollCapture.frame` | Boolean/Number/Object | `5` | Outer frame offset for scrolling capture. A number sets the pixel gap between the captured region and the frame; `false` disables the frame. Object form supports `enabled` and `gap`. Aliases: `captureFrame`, `border`, `outline`, plus flat `frameEnabled`/`frameGap`. |
 | `scrollCapture.previewGap` | Number/Object | `5` | Pixel gap between the outer frame and the scrolling preview panel. The panel is placed around the frame using the first available non-overlapping position. Aliases: `previewDistance`, `previewOffset`, `panelGap`; object form supports `gap`. |
+| `scrollCapture.hidePreviewDuringCapture` | Boolean | `false` | Hides the scrolling preview panel while capture is running even when the panel would fit, showing the floating drag handle instead. Pausing still reveals the preview panel. Aliases: `hidePreviewWhileCapturing`, `hidePanelDuringCapture`, `hideUiDuringCapture`; nested `scrollCapture.preview.hideWhileCapturing` is also supported. |
 | `ocr.enabled` | Boolean | `true` | Controls whether OCR features are available. Does not enable pinned-window background OCR by itself. |
 | `ocr.resultPanel` | Boolean/Object | `true` | Controls whether the main selection OCR flow opens an editable result window. Object form supports `enabled`, `show`, `visible`, or `use`. Aliases include `resultWindow`, `ocrResultPanel`, and `ocrResultWindow`. Environment variables `MARK_SHOT_OCR_RESULT_PANEL` and `MARK_SHOT_OCR_RESULT_WINDOW` override this config. |
 | `translation.autoAfterOcr` | Boolean | `false` | Controls whether translation starts automatically after a successful pinned-window OCR result. If enabled, choosing Translate later displays the cached translation instantly. |
+| `windowDetection.enabled` | Boolean | `true` | Controls window boundary recognition. Set to `false` to disable both built-in X11 window detection and configured external detection scripts. |
 | `windowDetection.env` | Object | `{}` | Environment variables passed to the window boundary detection script. Alias: `environment`. <br>• **Niri Script**: Supports `MARK_SHOT_NIRI_PANEL_EDGE` (`top`/`bottom`/`left`/`right`/`none`) and pixel offsets `MARK_SHOT_NIRI_OFFSET_X/Y/WIDTH/HEIGHT`.<br>• **Hyprland Script**: Supports `MARK_SHOT_HYPRLAND_INCLUDE_INACTIVE` (`1`/`0`) and pixel offsets `MARK_SHOT_HYPRLAND_OFFSET_X/Y/WIDTH/HEIGHT`. |
 
 ### OCR Result Panel Toggle
@@ -612,6 +616,15 @@ The expected result is `('2',)`. On GNOME Wayland, restart `mark-shot` after ena
 ---
 
 ## Release Notes
+
+### 0.1.22
+
+- **Annotation Rotation & Curved Arrow**: Added rotation handle to annotation items (rectangles, ellipses, text, etc.) allowing arbitrary angle adjustments. Upgraded arrow annotations to support curvature adjustment via Bezier curve control points.
+- **Highlighter Style & Magnifier Scale**: Added freehand and straight-line drawing modes for highlighters with a selector in the property bar. Added magnifier scale customisation slider (default 2.75) to precisely tweak magnification strength.
+- **Scroll Capture Frame Polish**: Re-engineered X11 window input masks to correctly overlay capture border regions without sacrificing click-through capabilities for nested scrolling.
+- **Scroll Capture Edge Artifact Scrubbing**: Implemented an automated scan-and-repair algorithm (`scrubCaptureFrameArtifacts`) to scrub stray outline pixels and border remnants from final scrolling capture composites.
+- **Scroll Capture Hide Preview option**: Introduced `scrollCapture.hidePreviewDuringCapture` (`hidePreviewWhileCapturing`) to collapse preview panel structures while capturing.
+- **Rebuilt X11 Window Boundary Detection**: Switched X11 window lookup queries to leverage root stacking trackers (`_NET_CLIENT_LIST_STACKING` / `_NET_CLIENT_LIST`), parse window extents (`_NET_FRAME_EXTENTS`), skip obscured frames (`_NET_WM_STATE_HIDDEN` or iconic state), and bypass override-redirect surfaces. Added `windowDetection.enabled` global flag.
 
 ### 0.1.21
 
