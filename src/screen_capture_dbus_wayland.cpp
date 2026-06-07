@@ -1,5 +1,8 @@
 #include "screen_capture_internal.h"
 
+/// @brief Captures the screen using the grim utility.
+/// @param request The capture request details such as source geometry and output name.
+/// @return The result of the screen capture operation.
 CaptureResult captureWithGrim(const CaptureRequest &request)
 {
     const QStringList baseArguments{QStringLiteral("-t"), QStringLiteral("ppm")};

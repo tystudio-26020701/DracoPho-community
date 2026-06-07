@@ -67,6 +67,11 @@ std::uint8_t grayPixel(const QImage &frame, int x, int y)
 // as the previous one (the user has not scrolled yet). Mirrors wayscrollshot's
 // frame_signature. Duplicate frames are skipped so idle captures are not sent
 // into the stitcher as real scroll movement.
+/// @brief Generates a downsampled grayscale grid signature for a given frame.
+/// @param frame The input image frame.
+/// @param cols Number of columns in the grid.
+/// @param rows Number of rows in the grid.
+/// @return A vector representing the downsampled grayscale values.
 QVector<std::uint8_t> frameSignature(const QImage &frame, int cols, int rows)
 {
     QVector<std::uint8_t> signature;
@@ -86,6 +91,10 @@ QVector<std::uint8_t> frameSignature(const QImage &frame, int cols, int rows)
     return signature;
 }
 
+/// @brief Checks if two frame signatures are sufficiently similar to be considered duplicates.
+/// @param previous The signature of the previous frame.
+/// @param current The signature of the current frame.
+/// @return True if the signatures are duplicates, false otherwise.
 bool isDuplicateSignature(const QVector<std::uint8_t> &previous,
                           const QVector<std::uint8_t> &current)
 {

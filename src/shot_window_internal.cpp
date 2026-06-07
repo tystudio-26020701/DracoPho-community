@@ -215,6 +215,9 @@ QRect windowGeometryToImageRect(QRect windowGeometry, QRect sourceGeometry, QSiz
 // and rounds off the corners that appear when the pointer moves fast and the
 // samples are sparse. The original points are left untouched; this only
 // affects rendering.
+/// @brief Builds a smoothed stroke path from raw sample points.
+/// @param points The raw sample points.
+/// @return A QPainterPath containing the smoothed path.
 QPainterPath smoothedStrokePath(const QVector<QPointF> &points)
 {
     QPainterPath path;
@@ -254,17 +257,27 @@ qreal imageNavigationWheelFactor(const QWheelEvent *event)
     return 1.0;
 }
 
+/// @brief A single resampling sample representing an input pixel weight.
 struct AxisSample {
+    /// @brief The input index of the sample.
     int index = 0;
+    /// @brief The weight contribution of the sample.
     double weight = 0.0;
 };
 
+/// @brief Resampling lookup table for a single coordinate axis.
 struct AxisTable {
+    /// @brief Precalculated kernel samples for each output coordinate.
     std::vector<std::vector<AxisSample>> samples;
+    /// @brief The lowest input coordinate index referenced in the table.
     int first = 0;
+    /// @brief The highest input coordinate index referenced in the table.
     int last = -1;
 };
 
+/// @brief Evaluates a sharpening filter kernel.
+/// @param distance The distance from the center.
+/// @return The filter weight at the given distance.
 double sharpKernel(double distance)
 {
     const double x = std::abs(distance);
@@ -280,6 +293,12 @@ double sharpKernel(double distance)
     return -1.0 / 8.0 * x * x + 5.0 / 8.0 * x - 25.0 / 32.0;
 }
 
+/// @brief Builds an AxisTable for 1D image scaling.
+/// @param inputSize The size of the input axis.
+/// @param outputSize The size of the output axis.
+/// @param sourceStart The starting coordinate in the source coordinate system.
+/// @param scale The scaling factor.
+/// @return The populated AxisTable.
 AxisTable buildAxisTable(int inputSize, int outputSize, double sourceStart, double scale)
 {
     AxisTable table;
@@ -328,11 +347,20 @@ AxisTable buildAxisTable(int inputSize, int outputSize, double sourceStart, doub
     return table;
 }
 
+/// @brief Converts a weighted double value into a byte.
+/// @param value The double value to convert.
+/// @return The converted integer value clamped between 0 and 255.
 int byteFromWeightedSum(double value)
 {
     return std::clamp(static_cast<int>(std::lround(value)), 0, 255);
 }
 
+/// @brief Blends and packs red, green, blue, and alpha components into a premultiplied QRgb value.
+/// @param red The red color component.
+/// @param green The green color component.
+/// @param blue The blue color component.
+/// @param alpha The alpha opacity component.
+/// @return The premultiplied QRgb value.
 QRgb premultipliedPixel(double red, double green, double blue, double alpha)
 {
     const int a = byteFromWeightedSum(alpha);
@@ -349,18 +377,25 @@ void forRowRanges(int rowCount, Function function)
         return;
     }
 
+    /// @brief The ideal number of concurrent threads to use.
     const int idealThreads = std::max(1, QThread::idealThreadCount());
+    /// @brief The number of threads selected for processing.
     const int threadCount = std::clamp(rowCount / kMinSharpRowsPerThread, 1, idealThreads);
     if (threadCount == 1) {
         function(0, rowCount);
         return;
     }
 
+    /// @brief The ranges of rows to be processed by each thread.
     std::vector<std::pair<int, int>> ranges;
     ranges.reserve(threadCount);
+    /// @brief The number of rows allocated to each thread.
     const int rowsPerThread = rowCount / threadCount;
+    /// @brief The starting row index of the current range.
     int begin = 0;
+    /// @brief The loop counter for iterating thread ranges.
     for (int i = 0; i < threadCount; ++i) {
+        /// @brief The ending row index of the current range.
         const int end = i == threadCount - 1 ? rowCount : begin + rowsPerThread;
         ranges.push_back({begin, end});
         begin = end;

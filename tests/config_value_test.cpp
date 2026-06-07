@@ -2,8 +2,11 @@
 
 #include <QtTest/QtTest>
 
+/// @brief Test suite for testing configurations and JSON parsers.
 class ConfigValueTest : public QObject
 {
+    /// @brief Qt private signal structure.
+    /// @brief Qt meta-object instance.
     Q_OBJECT
 
 private slots:
@@ -55,6 +58,10 @@ private slots:
     }
 };
 
+/// @brief Main function for the ConfigValue test suite.
+/// @param argc Argument count.
+/// @param argv Argument vector.
+/// @return Standard C++ exit code.
 QTEST_APPLESS_MAIN(ConfigValueTest)
 
 #include "config_value_test.moc"

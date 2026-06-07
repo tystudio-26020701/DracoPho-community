@@ -587,8 +587,11 @@ void ShotWindow::showStartupColorDialog(QColor color, QPoint anchor)
         "}").arg(hex, propertyIconInkForFill(color).name()));
     layout->addWidget(preview);
 
+    /// @brief Struct representing a row of formatted color information.
     struct FormatRow {
+        /// @brief The name of the color format.
         QString name;
+        /// @brief The formatted value string.
         QString value;
     };
     const QVector<FormatRow> rows = {

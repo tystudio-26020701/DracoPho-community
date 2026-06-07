@@ -4,6 +4,7 @@ namespace {
 
 using namespace markshot::shot;
 
+/// @brief Window displaying OCR results, allowing reviewing, editing, and translation.
 class OcrResultWindow final : public QWidget {
 public:
     explicit OcrResultWindow(QString text)
@@ -225,6 +226,7 @@ private:
                                  bool enabled,
                                  Callback callback)
     {
+        /// @brief The newly created action for the context menu.
         QAction *action = menu->addAction(text, this, callback);
         action->setShortcut(shortcut);
         action->setShortcutVisibleInContextMenu(true);
@@ -481,15 +483,25 @@ private:
         }
     }
 
+    /// @brief Title bar widget.
     QWidget *m_titleBar = nullptr;
+    /// @brief Title label widget.
     QLabel *m_titleLabel = nullptr;
+    /// @brief Text editor containing the recognized OCR text.
     QTextEdit *m_editor = nullptr;
+    /// @brief Label showing helper/informational messages.
     QLabel *m_hintLabel = nullptr;
+    /// @brief Button to trigger text translation.
     QPushButton *m_translateButton = nullptr;
+    /// @brief Subprocess used for running translation tasks.
     QProcess *m_translationProcess = nullptr;
+    /// @brief Path to the temporary translation input text file.
     QString m_translationInputPath;
+    /// @brief Mouse drag offset vector.
     QPoint m_dragOffset;
+    /// @brief Configuration settings for the OCR result window.
     PinnedWindowConfig m_config;
+    /// @brief Flag indicating if the window is currently being dragged.
     bool m_dragging = false;
 };
 

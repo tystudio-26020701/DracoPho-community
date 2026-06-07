@@ -2,8 +2,10 @@
 
 #include <QtTest/QtTest>
 
+/// @brief Test class for verifying capture geometry calculations.
 class CaptureGeometryTest : public QObject
 {
+    /// @brief Qt meta-object declaration for this class.
     Q_OBJECT
 
 private slots:
@@ -96,6 +98,10 @@ private slots:
     }
 };
 
+/// @brief Main entry point for the CaptureGeometryTest test suite.
+/// @param argc The number of command-line arguments.
+/// @param argv The array of command-line arguments.
+/// @return The exit status of the test suite.
 QTEST_APPLESS_MAIN(CaptureGeometryTest)
 
 #include "capture_geometry_test.moc"

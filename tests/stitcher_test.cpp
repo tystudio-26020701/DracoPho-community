@@ -6,6 +6,9 @@
 
 namespace {
 
+/// @brief Helper function to compute a pseudo-random color for a given row index.
+/// @param index The index of the row.
+/// @return The calculated QColor object.
 QColor rowColor(int index)
 {
     return QColor((index * 3 + 17) % 256,
@@ -13,6 +16,11 @@ QColor rowColor(int index)
                   (index * 7 + 43) % 256);
 }
 
+/// @brief Helper function to generate a test frame with vertical color strips.
+/// @param firstRow Starting index for row color calculations.
+/// @param height Height of the generated frame.
+/// @param width Width of the generated frame (defaults to 24).
+/// @return The generated test frame QImage.
 QImage verticalFrame(int firstRow, int height, int width = 24)
 {
     QImage image(width, height, QImage::Format_ARGB32_Premultiplied);
@@ -24,6 +32,11 @@ QImage verticalFrame(int firstRow, int height, int width = 24)
     return image;
 }
 
+/// @brief Helper function to generate a test frame with horizontal color strips.
+/// @param firstColumn Starting index for row color calculations.
+/// @param width Width of the generated frame.
+/// @param height Height of the generated frame (defaults to 12).
+/// @return The generated test frame QImage.
 QImage horizontalFrame(int firstColumn, int width, int height = 12)
 {
     QImage image(width, height, QImage::Format_ARGB32_Premultiplied);
@@ -35,6 +48,8 @@ QImage horizontalFrame(int firstColumn, int width, int height = 12)
     return image;
 }
 
+/// @brief Helper function to generate a standard StitchConfig for testing.
+/// @return The generated StitchConfig structure.
 markshot::scroll::StitchConfig testConfig()
 {
     return markshot::scroll::StitchConfig{20, 0.5f, 10, 0.01f};
@@ -42,8 +57,11 @@ markshot::scroll::StitchConfig testConfig()
 
 }  // namespace
 
+/// @brief Test suite for testing the Stitcher class.
 class StitcherTest : public QObject
 {
+    /// @brief Qt private signal structure.
+    /// @brief Qt meta-object instance.
     Q_OBJECT
 
 private slots:
@@ -121,6 +139,10 @@ private slots:
     }
 };
 
+/// @brief Main function for the Stitcher test suite.
+/// @param argc Argument count.
+/// @param argv Argument vector.
+/// @return Standard C++ exit code.
 QTEST_APPLESS_MAIN(StitcherTest)
 
 #include "stitcher_test.moc"

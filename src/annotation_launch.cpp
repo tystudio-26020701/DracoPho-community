@@ -14,6 +14,8 @@ namespace markshot {
 
 namespace {
 
+/// @brief Retrieves the name of the currently focused output in the niri window manager.
+/// @return The name of the focused output, or an empty string if not running on niri or on error.
 QString niriFocusedOutputName()
 {
 #if defined(Q_OS_WIN)
@@ -38,6 +40,9 @@ QString niriFocusedOutputName()
 #endif
 }
 
+/// @brief Finds a QScreen object by its name.
+/// @param name The name of the screen to find.
+/// @return A pointer to the QScreen if found, or nullptr if not found or if the name is empty.
 QScreen *screenByName(const QString &name)
 {
     if (name.isEmpty()) {

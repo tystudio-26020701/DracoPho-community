@@ -694,6 +694,10 @@ QString ShotWindow::shortcutText(Tool tool) const
     return sequence.isEmpty() ? QString() : sequence.toString(QKeySequence::NativeText);
 }
 
+/// @brief Checks if a given key sequence matches a key event.
+/// @param sequence The key sequence to match against.
+/// @param event The keyboard event to check.
+/// @return True if the key event matches the sequence, false otherwise.
 bool shortcutMatchesEvent(const QKeySequence &sequence, const QKeyEvent *event)
 {
     if (!event || sequence.isEmpty() || event->key() == Qt::Key_unknown) {

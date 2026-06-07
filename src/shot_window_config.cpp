@@ -4,6 +4,9 @@ namespace cfg = markshot::config;
 
 namespace markshot::shot {
 
+/// @brief Checks if the given string consists only of valid hexadecimal color digits.
+/// @param text The string to check.
+/// @return True if the string contains only hex color digits, false otherwise.
 bool isHexColorDigits(const QString &text)
 {
     if (text.isEmpty()) {
@@ -19,6 +22,9 @@ bool isHexColorDigits(const QString &text)
     return true;
 }
 
+/// @brief Parses a QColor from a configuration string.
+/// @param value The configuration string to parse.
+/// @return An optional QColor if parsing was successful, otherwise std::nullopt.
 std::optional<QColor> colorFromConfigString(QString value)
 {
     QString text = value.trimmed();
@@ -49,6 +55,9 @@ std::optional<QColor> colorFromConfigString(QString value)
     return color.isValid() ? std::optional<QColor>(color) : std::nullopt;
 }
 
+/// @brief Parses a QColor from a JSON value (supports string, hex, or RGB(A) objects).
+/// @param value The JSON value representing the color.
+/// @return An optional QColor if parsing was successful, otherwise std::nullopt.
 std::optional<QColor> colorFromConfigValue(const QJsonValue &value)
 {
     if (value.isString()) {
@@ -78,6 +87,9 @@ std::optional<QColor> colorFromConfigValue(const QJsonValue &value)
                   alpha);
 }
 
+/// @brief Extracts a floating-point number from a JSON value.
+/// @param value The JSON value to parse.
+/// @return An optional floating-point number if valid, otherwise std::nullopt.
 std::optional<qreal> realFromConfigValue(const QJsonValue &value)
 {
     if (value.isDouble()) {
@@ -93,6 +105,11 @@ std::optional<qreal> realFromConfigValue(const QJsonValue &value)
     return std::nullopt;
 }
 
+/// @brief Parses a pixel distance from a JSON value and clamps it within a range.
+/// @param value The JSON value representing the distance.
+/// @param minimum The minimum allowable distance.
+/// @param maximum The maximum allowable distance.
+/// @return An optional integer distance if valid, otherwise std::nullopt.
 std::optional<int> pixelDistanceFromConfigValue(const QJsonValue &value,
                                                 int minimum,
                                                 int maximum)
@@ -103,6 +120,9 @@ std::optional<int> pixelDistanceFromConfigValue(const QJsonValue &value,
     return std::nullopt;
 }
 
+/// @brief Extracts a list of strings from a JSON value.
+/// @param value The JSON value containing a string or an array of strings.
+/// @return A list of extracted strings.
 QStringList jsonStringList(const QJsonValue &value)
 {
     QStringList items;
@@ -118,6 +138,9 @@ QStringList jsonStringList(const QJsonValue &value)
     return items;
 }
 
+/// @brief Checks if the given OCR error text suggests a missing backend.
+/// @param errorText The error message to check.
+/// @return True if the error indicates a missing backend, false otherwise.
 bool ocrErrorLooksLikeMissingBackend(QString errorText)
 {
     const QString text = errorText.toLower();
@@ -311,6 +334,9 @@ PinnedWindowConfig pinnedWindowConfig()
     return config;
 }
 
+/// @brief Parses a boolean value from the OCR result panel JSON configuration.
+/// @param value The JSON value to parse.
+/// @return An optional boolean value if parsing was successful, otherwise std::nullopt.
 std::optional<bool> boolFromResultPanelValue(const QJsonValue &value)
 {
     if (const std::optional<bool> result = boolFromConfigValue(value)) {
@@ -377,6 +403,9 @@ bool ocrResultPanelEnabled()
     return true;
 }
 
+/// @brief Applies frame configuration from a JSON value to a scroll session UI configuration.
+/// @param value The JSON value containing the frame configuration.
+/// @param config Pointer to the scroll session UI config to be updated.
 void applyScrollFrameConfig(const QJsonValue &value, markshot::scroll::ScrollSessionUiConfig *config)
 {
     if (!config || value.isUndefined()) {
@@ -424,6 +453,9 @@ void applyScrollFrameConfig(const QJsonValue &value, markshot::scroll::ScrollSes
     }
 }
 
+/// @brief Applies preview configuration from a JSON value to a scroll session UI configuration.
+/// @param value The JSON value containing the preview configuration.
+/// @param config Pointer to the scroll session UI config to be updated.
 void applyScrollPreviewConfig(const QJsonValue &value, markshot::scroll::ScrollSessionUiConfig *config)
 {
     if (!config || value.isUndefined()) {
