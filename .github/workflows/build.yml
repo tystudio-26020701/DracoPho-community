@@ -141,6 +141,69 @@ jobs:
       - name: Install into artifact tree
         run: |
           cmake --install build --prefix "$PWD/app"
+
+      - name: Deploy runtime libraries
+        run: |
+          set -euo pipefail
+
+          app_bin="$PWD/app/bin"
+          exe="$app_bin/mark-shot.exe"
+          if [ ! -x "$exe" ]; then
+            echo "Expected executable not found: $exe" >&2
+            exit 1
+          fi
+
+          windeployqt_path="$(command -v windeployqt || true)"
+          if [ -z "$windeployqt_path" ]; then
+            windeployqt_path="$(command -v windeployqt6 || true)"
+          fi
+          if [ -z "$windeployqt_path" ]; then
+            windeployqt_path="$(find /ucrt64 -type f -name windeployqt.exe -print -quit)"
+          fi
+          if [ -z "$windeployqt_path" ]; then
+            echo "windeployqt was not found" >&2
+            exit 1
+          fi
+
+          "$windeployqt_path" --release --compiler-runtime --dir "$app_bin" "$exe"
+
+          ucrt_bin="$(cygpath -am /ucrt64/bin)"
+          declare -A seen
+          mapfile -t queue < <(find "$app_bin" -type f \( -name "*.exe" -o -name "*.dll" \))
+          while ((${#queue[@]})); do
+            current="${queue[0]}"
+            queue=("${queue[@]:1}")
+            current_key="$(cygpath -am "$current" 2>/dev/null || printf '%s' "$current")"
+            if [[ -n "${seen[$current_key]:-}" ]]; then
+              continue
+            fi
+            seen["$current_key"]=1
+
+            while IFS= read -r dep; do
+              dep_unix="$(cygpath -u "$dep" 2>/dev/null || printf '%s' "$dep")"
+              dep_win="$(cygpath -am "$dep_unix" 2>/dev/null || printf '%s' "$dep")"
+              case "$dep_win" in
+                "$ucrt_bin"/*.dll|"$ucrt_bin"/*.DLL)
+                  dest="$app_bin/$(basename "$dep_unix")"
+                  if [ ! -f "$dest" ]; then
+                    cp "$dep_unix" "$dest"
+                  fi
+                  queue+=("$dest")
+                  ;;
+              esac
+            done < <(ldd "$current" | awk '{
+              for (i = 1; i <= NF; ++i) {
+                if ($i ~ /(^\/|^[A-Za-z]:\\).*[.][dD][lL][lL]$/) {
+                  print $i
+                }
+              }
+            }')
+          done
+
+          find "$app_bin" -maxdepth 1 -type f -name "*.dll" -printf "%f\n" | sort
+
+      - name: Package artifact
+        run: |
           tar -C app -czf mark-shot-windows-x86_64.tar.gz .
 
       - name: Upload artifact
