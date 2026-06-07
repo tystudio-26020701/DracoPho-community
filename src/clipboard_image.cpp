@@ -35,8 +35,21 @@ enum class ClipboardPayload {
 
 constexpr qsizetype kInlineImageClipboardLimitBytes = 4 * 1024 * 1024;
 
+bool shouldCacheLargeImagesForClipboard()
+{
+#if defined(Q_OS_WIN)
+    return false;
+#else
+    return true;
+#endif
+}
+
 ClipboardBackend clipboardBackend(const QProcessEnvironment &environment)
 {
+#if defined(Q_OS_WIN)
+    Q_UNUSED(environment);
+    return ClipboardBackend::None;
+#else
     const QString sessionType = environment.value(QStringLiteral("XDG_SESSION_TYPE")).toLower();
     if (sessionType == QStringLiteral("wayland")) {
         return ClipboardBackend::Wayland;
@@ -45,6 +58,7 @@ ClipboardBackend clipboardBackend(const QProcessEnvironment &environment)
         return ClipboardBackend::X11;
     }
     return ClipboardBackend::None;
+#endif
 }
 
 QString clipboardExecutable(ClipboardBackend backend)
@@ -154,6 +168,12 @@ std::optional<QUrl> savePngToClipboardCache(const QByteArray &png)
 
 bool copyToPersistentClipboardOwner(const QByteArray &payload, const QString &suffix, const ClipboardOwnerCommand &owner)
 {
+#if defined(Q_OS_WIN)
+    Q_UNUSED(payload);
+    Q_UNUSED(suffix);
+    Q_UNUSED(owner);
+    return false;
+#else
     if (payload.isEmpty()) {
         return false;
     }
@@ -184,6 +204,7 @@ bool copyToPersistentClipboardOwner(const QByteArray &payload, const QString &su
         QFile::remove(tempPath);
     }
     return started;
+#endif
 }
 
 bool copyImageDataToClipboard(const QImage &image, const QByteArray &png)
@@ -253,7 +274,7 @@ bool copyImageToClipboard(const QImage &image)
         return false;
     }
 
-    if (png.size() > kInlineImageClipboardLimitBytes) {
+    if (shouldCacheLargeImagesForClipboard() && png.size() > kInlineImageClipboardLimitBytes) {
         const std::optional<QUrl> cachedUrl = savePngToClipboardCache(png);
         if (cachedUrl.has_value()) {
             return copyUrlToClipboard(*cachedUrl);

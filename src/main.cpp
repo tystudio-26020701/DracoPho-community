@@ -22,6 +22,7 @@
 #include <QMessageBox>
 #include <QPointer>
 #include <QProcess>
+#include <QProcessEnvironment>
 #include <QScreen>
 #include <QStringList>
 #include <QTimer>
@@ -53,6 +54,27 @@ QJsonObject objectValue(const QJsonObject &object, const QString &key)
 
 QString preApplicationConfigPath()
 {
+#if defined(Q_OS_WIN)
+    const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    const QString localAppData = env.value(QStringLiteral("LOCALAPPDATA"));
+    if (!localAppData.isEmpty()) {
+        return QDir(localAppData)
+            .filePath(QStringLiteral("mark-shot/config.json"));
+    }
+
+    const QString appData = env.value(QStringLiteral("APPDATA"));
+    if (!appData.isEmpty()) {
+        return QDir(appData)
+            .filePath(QStringLiteral("mark-shot/config.json"));
+    }
+
+    const QString userProfile = env.value(QStringLiteral("USERPROFILE"));
+    if (!userProfile.isEmpty()) {
+        return QDir(userProfile)
+            .filePath(QStringLiteral("AppData/Local/mark-shot/config.json"));
+    }
+    return {};
+#else
     const QByteArray xdgConfigHome = qgetenv("XDG_CONFIG_HOME");
     if (!xdgConfigHome.isEmpty()) {
         return QDir(QString::fromLocal8Bit(xdgConfigHome))
@@ -64,6 +86,7 @@ QString preApplicationConfigPath()
         return QDir(QString::fromLocal8Bit(home)).filePath(QStringLiteral(".config/mark-shot/config.json"));
     }
     return {};
+#endif
 }
 
 std::optional<QString> environmentStringValue(const QJsonValue &value)
@@ -383,6 +406,9 @@ DefaultTools configuredDefaultTools(QString *warning)
 
 QString niriFocusedOutputName()
 {
+#if defined(Q_OS_WIN)
+    return {};
+#else
     QProcess niri;
     niri.setProgram(QStringLiteral("niri"));
     niri.setArguments({QStringLiteral("msg"), QStringLiteral("-j"), QStringLiteral("focused-output")});
@@ -399,6 +425,7 @@ QString niriFocusedOutputName()
         return {};
     }
     return document.object().value(QStringLiteral("name")).toString();
+#endif
 }
 
 QScreen *screenByName(const QString &name)
@@ -539,7 +566,7 @@ int main(int argc, char *argv[])
     markshot::i18n::initialize();
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(QStringLiteral("Wayland screenshot selection and annotation tool for niri."));
+    parser.setApplicationDescription(QStringLiteral("Screenshot selection and annotation tool."));
     parser.addHelpOption();
     parser.addVersionOption();
     parser.addPositionalArgument(QStringLiteral("file"), QStringLiteral("Open an existing image file for annotation instead of capturing the screen."), QStringLiteral("[file]"));

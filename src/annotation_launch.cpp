@@ -16,6 +16,9 @@ namespace {
 
 QString niriFocusedOutputName()
 {
+#if defined(Q_OS_WIN)
+    return {};
+#else
     QProcess niri;
     niri.setProgram(QStringLiteral("niri"));
     niri.setArguments({QStringLiteral("msg"), QStringLiteral("-j"), QStringLiteral("focused-output")});
@@ -32,6 +35,7 @@ QString niriFocusedOutputName()
         return {};
     }
     return document.object().value(QStringLiteral("name")).toString();
+#endif
 }
 
 QScreen *screenByName(const QString &name)

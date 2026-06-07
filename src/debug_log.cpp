@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QDateTime>
+#include <QDir>
 #include <QString>
 
 #include <cstdio>
@@ -36,7 +37,7 @@ const char *logFilePath()
         if (override && override[0] != '\0') {
             return QByteArray(override);
         }
-        return QByteArray("/tmp/mark-shot-scroll.log");
+        return QDir::temp().filePath(QStringLiteral("mark-shot-scroll.log")).toLocal8Bit();
     }();
     return path.constData();
 }
