@@ -24,6 +24,9 @@ void ScrollSessionWindow::captureTick()
 
     QImage frame;
     auto captureFrame = [&](const char *debugTag) {
+        // Scroll capture needs non-interactive, repeatable frames. Request the
+        // screencast path when possible and disable portal screenshot fallback
+        // so a stalled stream fails instead of opening prompts during scrolling.
         CaptureRequest request;
         request.preferredOutputName = m_outputName;
         request.sourceGeometry = m_geometry;
@@ -35,6 +38,9 @@ void ScrollSessionWindow::captureTick()
         const bool makePanelTransparentForCapture =
             !m_gnomeShellPreview && m_panelOnlyWindow && m_previewPanelVisible && isVisible();
         if (makePanelTransparentForCapture) {
+            // Plain Wayland fallback windows can overlap the capture rectangle.
+            // Hide their controls for one compositor frame so the next backend
+            // frame contains only the user-selected page area.
             m_panelTransparentForCapture = true;
             if (m_controlBar) {
                 m_controlBar->hide();
@@ -45,6 +51,7 @@ void ScrollSessionWindow::captureTick()
         }
         const CaptureResult result = captureScreenFrame(request);
         if (makePanelTransparentForCapture) {
+            // Restore UI immediately after the backend has produced a frame.
             m_panelTransparentForCapture = false;
             if (m_controlBar) {
                 layoutOverlay();
@@ -88,6 +95,8 @@ void ScrollSessionWindow::captureTick()
         return;
     }
 
+    // Static duplicate frames usually mean the user has not scrolled yet. Skip
+    // them so the stitcher only sees actual page movement.
     const QVector<std::uint8_t> signature = frameSignature(frame, kSignatureCols, kSignatureRows);
     if (!m_lastSignature.isEmpty() && isDuplicateSignature(m_lastSignature, signature)) {
         m_statusText = MS_TR("Waiting for scroll");
@@ -105,6 +114,8 @@ void ScrollSessionWindow::captureTick()
     m_lastSignature = signature;
     dumpDebugFrame(frame, "candidate");
 
+    // Stitcher owns geometric truth for the long image. The session window only
+    // mirrors its result into status text, preview scrub position, and exports.
     const StitchResult outcome = m_stitcher.pushFrame(frame);
     const StitchStats stats = m_stitcher.stats();
     const int oldCapturePos = m_capturePos;
@@ -133,6 +144,8 @@ void ScrollSessionWindow::captureTick()
         || outcome.status == StitchStatus::Appended
         || oldCapturePos != m_capturePos
         || oldCaptureLen != m_captureLen) {
+        // GNOME shell preview is rendered out-of-process, so mark it dirty only
+        // when the visible image or live viewport position actually changed.
         m_gnomePreviewImageDirty = true;
     }
     syncPreviewScroll(outcome);
