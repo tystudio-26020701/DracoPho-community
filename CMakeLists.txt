@@ -71,6 +71,8 @@ qt_add_executable(mark-shot
     src/layer_shell_runtime.h
     src/window_detection.cpp
     src/window_detection.h
+    src/windows_integration.cpp
+    src/windows_integration.h
     src/screen_capture.cpp
     src/screen_capture.h
     src/shot_window.cpp
@@ -95,6 +97,7 @@ target_include_directories(mark-shot PRIVATE src)
 target_compile_definitions(mark-shot PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(WIN32)
     set_target_properties(mark-shot PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_link_libraries(mark-shot PRIVATE dwmapi user32)
 endif()
 
 target_link_libraries(mark-shot

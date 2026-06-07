@@ -10,6 +10,7 @@
 #include "ui/i18n.h"
 #include "ui/icons.h"
 #include "ui/theme.h"
+#include "windows_integration.h"
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -62,6 +63,7 @@
 #include <QScrollBar>
 #include <QScreen>
 #include <QShortcut>
+#include <QShowEvent>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QStandardPaths>
@@ -3508,6 +3510,7 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_DeleteOnClose);
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    markshot::windows::setExcludedFromCapture(this);
     if (m_frozenFrame.format() != QImage::Format_ARGB32_Premultiplied) {
         m_frozenFrame = m_frozenFrame.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     }
@@ -3970,7 +3973,11 @@ ShotWindow::ShotWindow(QImage frozenFrame,
 
     if (windowDetectionEnabled) {
         if (windowGeometries.isEmpty()) {
+#if defined(Q_OS_WIN)
+            windowGeometries = markshot::windows::enumerateWindowGeometries();
+#else
             windowGeometries = enumerateX11WindowGeometries();
+#endif
         }
         for (const QRect &windowGeometry : std::as_const(windowGeometries)) {
             const QRect imageRect = windowGeometryToImageRect(windowGeometry,
@@ -5209,6 +5216,12 @@ void ShotWindow::resizeEvent(QResizeEvent *)
     updateAnnotationPropertyPanelGeometry();
     updateOpenWithPanelGeometry();
     updateExtensionPanelGeometry();
+}
+
+void ShotWindow::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    markshot::windows::setExcludedFromCapture(this);
 }
 
 void ShotWindow::mousePressEvent(QMouseEvent *event)

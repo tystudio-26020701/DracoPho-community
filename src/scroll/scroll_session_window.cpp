@@ -7,6 +7,7 @@
 #include "screen_capture.h"
 #include "ui/i18n.h"
 #include "ui/theme.h"
+#include "windows_integration.h"
 
 #include <QCloseEvent>
 #include <QCoreApplication>
@@ -658,6 +659,7 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    markshot::windows::setExcludedFromCapture(this);
     setObjectName(QStringLiteral("scrollSessionWindow"));
     setMouseTracking(true);
     setFocusPolicy(Qt::NoFocus);
@@ -1207,6 +1209,7 @@ void ScrollSessionWindow::updateInputMask()
 void ScrollSessionWindow::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
+    markshot::windows::setExcludedFromCapture(this);
     updatePreviewPanelVisibility();
     if (m_panelOnlyWindow) {
         updatePanelWindowGeometry();

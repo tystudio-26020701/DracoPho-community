@@ -15,6 +15,7 @@
 #include <optional>
 
 class QPainter;
+class QShowEvent;
 class QByteArray;
 class QBoxLayout;
 class QComboBox;
@@ -126,6 +127,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
 
 private:
