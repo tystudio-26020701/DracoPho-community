@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QFont>
 #include <QString>
 #include <QVector>
 
@@ -19,6 +20,16 @@ inline const QColor kAccent{94, 234, 212};
 // Quick palette shown in the radial color picker and used as the default
 // preset list for annotations.
 QVector<QColor> paletteColors();
+
+// Platform-aware font choices for widgets, painted labels, and annotations.
+QString uiFontFamily();
+QString textFontFamily();
+QString monospaceFontFamily();
+QString uiFontFamilyCss();
+QString monospaceFontFamilyCss();
+QFont uiFont(int pointSize = -1, QFont::Weight weight = QFont::Normal);
+QFont textFont(int pointSize = -1, QFont::Weight weight = QFont::Normal, QString family = {});
+QFont monospaceFont(int pointSize = -1, QFont::Weight weight = QFont::Normal);
 
 // Stylesheet for the main toolbar, action toolbar, and annotation property
 // panel. They share an object-name-scoped rule set so the same string can be

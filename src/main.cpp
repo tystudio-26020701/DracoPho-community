@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QFont>
 #include <QGuiApplication>
 #include <QImageReader>
 #include <QJsonDocument>
@@ -562,6 +563,9 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName(QStringLiteral("mark-shot"));
     QApplication::setApplicationDisplayName(QStringLiteral("Mark Shot"));
     QApplication::setApplicationVersion(QStringLiteral(MARK_SHOT_VERSION));
+    QFont applicationFont = app.font();
+    applicationFont.setFamily(markshot::theme::uiFontFamily());
+    app.setFont(applicationFont);
 
     markshot::i18n::initialize();
 
