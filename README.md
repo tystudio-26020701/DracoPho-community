@@ -48,13 +48,14 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **GNOME Wayland**: scrolling capture requires the bundled `mark-shot-scroll-helper@snemc.org` GNOME Shell extension. GNOME does not expose the capture and preview hooks Mark Shot needs to normal desktop applications, so the extension provides a private D-Bus helper for area screenshots and the scroll preview panel.
 - **Compatibility notice**: scrolling capture on KDE, X11, and other non-`niri` environments is a test feature and is not complete yet. Portal backends, shell policies, window geometry behavior, frame timing, and scroll event handling differ substantially across these desktop stacks.
 - If scrolling capture fails, use normal screenshots or configure an external long-screenshot command through Mark Shot extension commands.
-- To report a scrolling capture issue, run `DEBUG=1 mark-shot`, reproduce the failure, then attach `/tmp/mark-shot-scroll.log` to a GitHub issue. Set `MARK_SHOT_DEBUG_LOG=/path/to/log` if the log should be written elsewhere.
+- To report a scrolling capture issue, run `DEBUG=1 mark-shot`, reproduce the failure, then attach `mark-shot-scroll.log` from the system temporary directory to a GitHub issue. Set `MARK_SHOT_DEBUG_LOG=/path/to/log` if the log should be written elsewhere.
 
 ### Cross-Platform Display Server Support
 - **Wayland**: Uses PipeWire portal screencast for experimental scrolling capture, `grim` for wlroots screenshot capture, `layer-shell-qt` for native overlay, and `wl-copy` for clipboard persistence.
 - **GNOME Wayland**: Uses the Mark Shot Scroll Helper GNOME Shell extension for scrolling capture. Without the extension, Mark Shot disables the scrolling capture action on GNOME Wayland.
 - **X11**: Uses `QScreen::grabWindow` for screen capture, fullscreen top-level window for overlay, and `xclip` for clipboard persistence.
-- Runtime auto-detection via `$XDG_SESSION_TYPE` — no configuration needed.
+- **Windows**: Uses Qt's native screen capture and clipboard APIs for the core screenshot, annotation, copy, save, and pin workflows. Linux-specific backends such as PipeWire, xdg-desktop-portal, `grim`, XCB window detection, LayerShellQt, and GNOME Shell helpers are disabled at build time.
+- Linux display server backends are detected at runtime via `$XDG_SESSION_TYPE`; Windows uses Qt's native platform backend.
 
 ### Desktop Integration
 - **Desktop Entries**:
@@ -153,11 +154,11 @@ The right-side action toolbar includes an **Extensions** button. It reads user-d
 }
 ```
 
-`command` is executed through `$SHELL -c`, so shell features work. Use `{slurp}` to pass the current selection as `x,y widthxheight` geometry. Use `{image}` or `{imagePath}` to pass the current rendered selection as a temporary PNG path, or `{imageUrl}` for a `file://` URL. These placeholders are shell-quoted automatically. Set `saveImage` or `needsImage` to `true` to append the temporary PNG path when no image placeholder is present. `workingDirectory` and `cwd` are aliases. `closeOnStart` defaults to `true`, hiding and closing Mark Shot before the command starts.
+`command` is executed through `$SHELL -c` on Unix-like systems and `%COMSPEC% /C` on Windows, so shell features work. Use `{slurp}` to pass the current selection as `x,y widthxheight` geometry. Use `{image}` or `{imagePath}` to pass the current rendered selection as a temporary PNG path, or `{imageUrl}` for a `file://` URL. These placeholders are shell-quoted automatically. Set `saveImage` or `needsImage` to `true` to append the temporary PNG path when no image placeholder is present. `workingDirectory` and `cwd` are aliases. `closeOnStart` defaults to `true`, hiding and closing Mark Shot before the command starts.
 
 ### Application Config
 
-Mark Shot reads application settings from `~/.config/mark-shot/config.json`. Pinned windows use the OCR and translation settings in the same file. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`; the translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
+Mark Shot reads application settings from `~/.config/mark-shot/config.json` on Linux and the Qt application config directory on other platforms. Pinned windows use the OCR and translation settings in the same file. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`; the translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
 
 ```json
 {
@@ -486,6 +487,18 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 python3 -m venv ~/.local/share/mark-shot/ocr-venv
 ~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
+
+#### Windows
+
+Install Qt 6 for your compiler toolchain, CMake, Ninja, and a C++17 compiler such as MSVC or MinGW. The Windows build does not require Qt DBus, PipeWire, X11/XCB, LayerShellQt, `grim`, `wl-copy`, or `xclip`.
+
+```powershell
+cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
+  -DCMAKE_PREFIX_PATH=C:\Qt\6.7.3\msvc2019_64
+cmake --build build-windows
+```
+
+Windows support currently targets normal screenshots and image annotation. Scrolling capture, compositor-specific window detection, Linux desktop entries, and bundled Linux helper scripts are not installed on Windows.
 
 ### Build Steps
 

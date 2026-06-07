@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
     tags:
       - 'v*'
   pull_request:
@@ -97,4 +98,54 @@ jobs:
         with:
           name: mark-shot-linux-arm64
           path: mark-shot-linux-arm64.tar.gz
+          if-no-files-found: error
+
+  windows:
+    name: Windows Qt 6 (x86_64)
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-tools
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DMARK_SHOT_WITH_LAYER_SHELL=OFF \
+            -DMARK_SHOT_WITH_LIBPORTAL=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Install into artifact tree
+        run: |
+          cmake --install build --prefix "$PWD/app"
+          tar -C app -czf mark-shot-windows-x86_64.tar.gz .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mark-shot-windows-x86_64
+          path: mark-shot-windows-x86_64.tar.gz
           if-no-files-found: error

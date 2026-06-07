@@ -64,6 +64,27 @@ QString expandUserPath(const QString &path)
     return path;
 }
 
+QString commandShellProgram()
+{
+#if defined(Q_OS_WIN)
+    const QString comspec = QProcessEnvironment::systemEnvironment().value(QStringLiteral("COMSPEC"));
+    return comspec.isEmpty() ? QStringLiteral("cmd.exe") : comspec;
+#else
+    QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"),
+                                                                   QStringLiteral("/bin/sh"));
+    return shell.isEmpty() ? QStringLiteral("/bin/sh") : shell;
+#endif
+}
+
+QStringList commandShellArguments(const QString &commandLine)
+{
+#if defined(Q_OS_WIN)
+    return {QStringLiteral("/D"), QStringLiteral("/V:OFF"), QStringLiteral("/S"), QStringLiteral("/C"), commandLine};
+#else
+    return {QStringLiteral("-c"), commandLine};
+#endif
+}
+
 QJsonObject objectValue(const QJsonObject &object, const QString &key)
 {
     const QJsonValue value = object.value(key);
@@ -408,14 +429,9 @@ QVector<QRect> collectConfiguredWindowGeometries(const QRect &captureGeometry,
         return {};
     }
 
-    QString shell = QProcessEnvironment::systemEnvironment().value(QStringLiteral("SHELL"), QStringLiteral("/bin/sh"));
-    if (shell.isEmpty()) {
-        shell = QStringLiteral("/bin/sh");
-    }
-
     QProcess process;
-    process.setProgram(shell);
-    process.setArguments({QStringLiteral("-c"), config->command});
+    process.setProgram(commandShellProgram());
+    process.setArguments(commandShellArguments(config->command));
     process.setProcessEnvironment(scriptEnvironment(captureGeometry,
                                                    outputName,
                                                    allOutputs,

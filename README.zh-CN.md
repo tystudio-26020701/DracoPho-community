@@ -47,12 +47,13 @@
   - **点击切换轴向**：在未开始捕获前，点击悬浮手柄可直接切换滚动方向（垂直/水平）。
 - **兼容性说明**：KDE、GNOME、X11 以及其他非 `niri` 环境中的滚动截图仍是测试特性，尚不完善。这些桌面栈的 portal 后端策略、Shell 或窗口管理器行为、窗口几何反馈、帧时序和滚动事件处理存在差异。
 - 如果滚动截图无法使用，请使用普通截图流程，或者通过 Mark Shot 拓展命令接入外部长截图工具。
-- 如果需要提交滚动截图问题，请先运行 `DEBUG=1 mark-shot` 并复现问题，然后把 `/tmp/mark-shot-scroll.log` 附到 GitHub issue 中。需要自定义日志路径时，可设置 `MARK_SHOT_DEBUG_LOG=/path/to/log`。
+- 如果需要提交滚动截图问题，请先运行 `DEBUG=1 mark-shot` 并复现问题，然后把系统临时目录中的 `mark-shot-scroll.log` 附到 GitHub issue 中。需要自定义日志路径时，可设置 `MARK_SHOT_DEBUG_LOG=/path/to/log`。
 
 ### 跨显示服务器支持
 - **Wayland**：使用 PipeWire portal screencast 支持实验性滚动截图，使用 `grim` 支持 wlroots 截屏，使用 `layer-shell-qt` 创建原生覆盖层，使用 `wl-copy` 持久化剪贴板。
 - **X11**：使用 `QScreen::grabWindow` 截屏、全屏置顶窗口作为覆盖层、`xclip` 持久化剪贴板。
-- 运行时通过 `$XDG_SESSION_TYPE` 自动检测，无需手动配置。
+- **Windows**：使用 Qt 原生截屏与剪贴板 API 支持基础截图、标注、复制、保存和贴图流程。PipeWire、xdg-desktop-portal、`grim`、XCB 窗口检测、LayerShellQt、GNOME Shell helper 等 Linux 专用后端会在编译期关闭。
+- Linux 显示服务器后端会在运行时通过 `$XDG_SESSION_TYPE` 自动检测；Windows 使用 Qt 原生平台后端。
 
 ### 桌面集成
 - **桌面快捷方式**：
@@ -151,11 +152,11 @@ bindsym Print exec mark-shot
 }
 ```
 
-`command` 会通过 `$SHELL -c` 执行，因此支持 shell 表达式。使用 `{slurp}` 可把当前选区作为 `x,y widthxheight` 几何字符串传入命令。使用 `{image}` 或 `{imagePath}` 可把当前已渲染选区作为临时 PNG 路径传入命令，使用 `{imageUrl}` 可传入 `file://` URL。这些占位符会自动进行 shell 引用转义，配置中不要再额外加引号。若未使用图片占位符，可设置 `saveImage` 或 `needsImage` 为 `true`，程序会自动把临时 PNG 路径追加到命令末尾。`workingDirectory` 与 `cwd` 等价。`closeOnStart` 默认值为 `true`，命令启动前会先隐藏并关闭 Mark Shot。
+`command` 在类 Unix 系统上通过 `$SHELL -c` 执行，在 Windows 上通过 `%COMSPEC% /C` 执行，因此支持 shell 表达式。使用 `{slurp}` 可把当前选区作为 `x,y widthxheight` 几何字符串传入命令。使用 `{image}` 或 `{imagePath}` 可把当前已渲染选区作为临时 PNG 路径传入命令，使用 `{imageUrl}` 可传入 `file://` URL。这些占位符会自动进行 shell 引用转义，配置中不要再额外加引号。若未使用图片占位符，可设置 `saveImage` 或 `needsImage` 为 `true`，程序会自动把临时 PNG 路径追加到命令末尾。`workingDirectory` 与 `cwd` 等价。`closeOnStart` 默认值为 `true`，命令启动前会先隐藏并关闭 Mark Shot。
 
 ### 应用配置文件
 
-Mark Shot 会从 `~/.config/mark-shot/config.json` 读取应用配置。贴图窗口同样使用该文件中的 OCR 与翻译配置。默认 OCR helper 会优先使用 `rapidocr`，也可以回退到 `tesseract`。翻译 helper 使用 OpenAI 兼容的 `/chat/completions` 接口。
+Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置，在其他平台上使用 Qt 应用配置目录。贴图窗口同样使用该文件中的 OCR 与翻译配置。默认 OCR helper 会优先使用 `rapidocr`，也可以回退到 `tesseract`。翻译 helper 使用 OpenAI 兼容的 `/chat/completions` 接口。
 
 ```json
 {
@@ -480,6 +481,18 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 python3 -m venv ~/.local/share/mark-shot/ocr-venv
 ~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
+
+#### Windows
+
+安装与当前编译器匹配的 Qt 6、CMake、Ninja，以及支持 C++17 的编译器，例如 MSVC 或 MinGW。Windows 构建不需要 Qt DBus、PipeWire、X11/XCB、LayerShellQt、`grim`、`wl-copy` 或 `xclip`。
+
+```powershell
+cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
+  -DCMAKE_PREFIX_PATH=C:\Qt\6.7.3\msvc2019_64
+cmake --build build-windows
+```
+
+当前 Windows 支持范围是普通截图与图片标注。滚动截图、合成器专用窗口检测、Linux 桌面快捷方式和内置 Linux helper 脚本不会在 Windows 上安装。
 
 ### 构建与编译
 

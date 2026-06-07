@@ -11,8 +11,10 @@
 #include <QCloseEvent>
 #include <QCoreApplication>
 #include <QDateTime>
+#ifdef MARK_SHOT_WITH_DBUS
 #include <QDBusConnection>
 #include <QDBusMessage>
+#endif
 #include <QDir>
 #include <QEvent>
 #include <QEventLoop>
@@ -675,6 +677,7 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
     buildControlBar();
     m_gnomeShellPreview = isGnomeWaylandSession() && hasGnomeScrollPreviewHelper();
     m_gnomePreviewSessionId = QString::number(m_sessionId);
+#ifdef MARK_SHOT_WITH_DBUS
     if (m_gnomeShellPreview) {
         QDBusConnection::sessionBus().connect(QString::fromLatin1(kGnomeShellService),
                                               QString::fromLatin1(kGnomeHelperPath),
@@ -683,6 +686,7 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
                                               this,
                                               SLOT(handleGnomePreviewAction(QString,QString)));
     }
+#endif
 
     m_layerShell = configureLayerShell(screen);
     m_panelOnlyWindow = !m_layerShell && isWaylandPlatform();
@@ -2252,6 +2256,10 @@ QImage ScrollSessionWindow::renderGnomePreviewImage(const QSize &size) const
 
 void ScrollSessionWindow::updateGnomeShellPreview(bool force)
 {
+#ifndef MARK_SHOT_WITH_DBUS
+    Q_UNUSED(force);
+    return;
+#else
     if (!gnomeShellPreviewActive()) {
         return;
     }
@@ -2317,10 +2325,14 @@ void ScrollSessionWindow::updateGnomeShellPreview(bool force)
             << std::max(0, m_uiConfig.previewGap);
     QDBusConnection::sessionBus().call(message, QDBus::NoBlock);
     m_gnomePreviewVisible = true;
+#endif
 }
 
 void ScrollSessionWindow::hideGnomeShellPreview()
 {
+#ifndef MARK_SHOT_WITH_DBUS
+    return;
+#else
     if (!gnomeShellPreviewActive()) {
         return;
     }
@@ -2335,6 +2347,7 @@ void ScrollSessionWindow::hideGnomeShellPreview()
     QDBusConnection::sessionBus().call(message, QDBus::NoBlock);
     m_gnomePreviewVisible = false;
     cleanupGnomePreviewFiles(0);
+#endif
 }
 
 void ScrollSessionWindow::cleanupGnomePreviewFiles(int keepLatest)
@@ -2377,12 +2390,14 @@ void ScrollSessionWindow::closeEvent(QCloseEvent *event)
     cancelScrollIdlePause();
     hideGnomeShellPreview();
     if (m_gnomeShellPreview) {
+#ifdef MARK_SHOT_WITH_DBUS
         QDBusConnection::sessionBus().disconnect(QString::fromLatin1(kGnomeShellService),
                                                  QString::fromLatin1(kGnomeHelperPath),
                                                  QString::fromLatin1(kGnomeHelperInterface),
                                                  QStringLiteral("PreviewAction"),
                                                  this,
                                                  SLOT(handleGnomePreviewAction(QString,QString)));
+#endif
     }
     stopActiveScreencastCapture();
     event->accept();
