@@ -1961,7 +1961,7 @@ private:
     {
         auto *label = new QLabel(text, this);
         label->setAlignment(Qt::AlignCenter);
-        label->setFont(QFont(QStringLiteral("Sans Serif"), 12, QFont::DemiBold));
+        label->setFont(markshot::theme::uiFont(12, QFont::DemiBold));
         label->setStyleSheet(QStringLiteral(
             "background: rgba(8, 13, 19, 220);"
             "color: rgba(204, 251, 241, 238);"
@@ -4707,7 +4707,7 @@ void ShotWindow::showStartupColorDialog(QColor color, QPoint anchor)
         "QLabel { color: #172033; font-size: 12px; }"
         "QLabel#formatName { font-weight: 700; color: #475569; min-width: 76px; }"
         "QLabel#formatValue {"
-        " font-family: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;"
+        " font-family: %1;"
         " font-weight: 700;"
         " color: #172033;"
         "}"
@@ -4723,7 +4723,8 @@ void ShotWindow::showStartupColorDialog(QColor color, QPoint anchor)
         " color: #334155;"
         " font-weight: 700;"
         "}"
-        "QPushButton:hover { background: rgba(45, 212, 191, 150); color: #042F2E; }"));
+        "QPushButton:hover { background: rgba(45, 212, 191, 150); color: #042F2E; }")
+            .arg(markshot::theme::monospaceFontFamilyCss()));
 
     auto *layout = new QVBoxLayout(m_startupColorPanel);
     layout->setContentsMargins(12, 12, 12, 12);
@@ -4858,7 +4859,7 @@ void ShotWindow::drawStartupColorLoupe(QPainter &painter, QPointF imagePoint) co
     painter.drawLine(QPointF(c.x() - 12.0, c.y()), QPointF(c.x() + 12.0, c.y()));
     painter.drawLine(QPointF(c.x(), c.y() - 12.0), QPointF(c.x(), c.y() + 12.0));
 
-    painter.setFont(QFont(QStringLiteral("Sans Serif"), 11, QFont::DemiBold));
+    painter.setFont(markshot::theme::uiFont(11, QFont::DemiBold));
     const QString hex = colorHexRgb(color);
     const QFontMetrics metrics(painter.font());
     const QRectF label(loupe.center().x() - (metrics.horizontalAdvance(hex) + 20.0) / 2.0,
@@ -4876,7 +4877,7 @@ void ShotWindow::drawStartupRuler(QPainter &painter) const
     }
 
     painter.save();
-    painter.setFont(QFont(QStringLiteral("Sans Serif"), 10, QFont::DemiBold));
+    painter.setFont(markshot::theme::uiFont(10, QFont::DemiBold));
     painter.setPen(QPen(QColor(45, 212, 191, 150), 1.0, Qt::DashLine));
     auto clampFloatingRect = [this](QRectF rect) {
         if (rect.right() > width() - 8.0) {
@@ -5160,7 +5161,7 @@ void ShotWindow::paintEvent(QPaintEvent *)
             || (m_showSelectionInfo && m_selectionInfoTimer.isValid() && m_selectionInfoTimer.elapsed() <= 1000);
         if (selectionInfoVisible) {
             const QString sizeText = QStringLiteral("%1 x %2").arg(qRound(selection.width())).arg(qRound(selection.height()));
-            painter.setFont(QFont(QStringLiteral("Sans Serif"), 11, QFont::DemiBold));
+            painter.setFont(markshot::theme::uiFont(11, QFont::DemiBold));
             const QFontMetrics metrics(painter.font());
             const QRectF labelRect(widgetSelection.left() + 10.0,
                                    widgetSelection.top() + 10.0,
@@ -5187,7 +5188,7 @@ void ShotWindow::paintEvent(QPaintEvent *)
 
     if (!hasUsableSelection() && m_startupTool == StartupTool::None) {
         const QString hint = MS_TR("Drag to select   C color picker   R ruler   Middle switches   Right/Esc cancels");
-        painter.setFont(QFont(QStringLiteral("Sans Serif"), 15, QFont::DemiBold));
+        painter.setFont(markshot::theme::uiFont(15, QFont::DemiBold));
         const QFontMetrics metrics(painter.font());
         const QRectF hintRect((width() - metrics.horizontalAdvance(hint) - 44.0) / 2.0,
                               (height() - metrics.height() - 24.0) / 2.0,
@@ -7800,9 +7801,9 @@ QRectF ShotWindow::textContentRect(const Annotation &annotation, bool widgetCoor
     const QPointF topLeft = widgetCoordinates ? imageToWidget(baseRect.topLeft()) : baseRect.topLeft();
     const qreal wrapWidth = std::max<qreal>(16.0, baseRect.width() * scale - kTextBackgroundPaddingX * 2.0 * scale);
 
-    QFont font(annotation.fontFamily.isEmpty() ? QStringLiteral("Sans Serif") : annotation.fontFamily,
-               qRound((19.0 + annotation.width) * scale),
-               QFont::DemiBold);
+    QFont font = markshot::theme::textFont(qRound((19.0 + annotation.width) * scale),
+                                           QFont::DemiBold,
+                                           annotation.fontFamily);
     QTextOption option;
     option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     option.setAlignment(Qt::AlignLeft | Qt::AlignTop);
@@ -8252,7 +8253,7 @@ void ShotWindow::updateAnnotationPropertyPanel()
     if (m_propertyFontButton) {
         m_propertyFontButton->setVisible(!groupSelection && panelTool == Tool::Text);
         if (!groupSelection && panelTool == Tool::Text) {
-            const QString family = panelFontFamily.isEmpty() ? QStringLiteral("Sans Serif") : panelFontFamily;
+            const QString family = panelFontFamily.isEmpty() ? markshot::theme::textFontFamily() : panelFontFamily;
             m_propertyFontButton->setToolTip(family);
             if (m_propertyFontList) {
                 const auto matches = m_propertyFontList->findItems(family, Qt::MatchExactly);
@@ -8995,7 +8996,9 @@ void ShotWindow::setSelectedTextFontFamily(const QString &fontFamily)
         }
         m_textFontFamily = fontFamily;
         if (m_textEditor && m_textEditor->isVisible() && !m_editingTextAnnotationId.has_value()) {
-            m_textEditor->setFont(QFont(m_textFontFamily, qRound(20.0 + m_shapeWidth), QFont::DemiBold));
+            m_textEditor->setFont(markshot::theme::textFont(qRound(20.0 + m_shapeWidth),
+                                                            QFont::DemiBold,
+                                                            m_textFontFamily));
         }
     }
     updateAnnotationPropertyPanel();
@@ -9472,9 +9475,9 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         }
         break;
     case Tool::Text: {
-        QFont font(annotation.fontFamily.isEmpty() ? QStringLiteral("Sans Serif") : annotation.fontFamily,
-                   qRound((19.0 + annotation.width) * scale),
-                   QFont::DemiBold);
+        QFont font = markshot::theme::textFont(qRound((19.0 + annotation.width) * scale),
+                                               QFont::DemiBold,
+                                               annotation.fontFamily);
         QRectF backgroundRect = textContentRect(annotation, widgetCoordinates);
         QRectF textRect = backgroundRect.adjusted(kTextBackgroundPaddingX * scale,
                                                   kTextBackgroundPaddingY * scale,
@@ -9703,7 +9706,7 @@ void ShotWindow::drawWheelPreview(QPainter &painter)
         const QString zoomText = QStringLiteral("%1%").arg(qRound(m_imageZoom * 100.0));
         painter.save();
         painter.setRenderHint(QPainter::Antialiasing, true);
-        painter.setFont(QFont(QStringLiteral("Sans Serif"), 12, QFont::DemiBold));
+        painter.setFont(markshot::theme::uiFont(12, QFont::DemiBold));
         const QFontMetrics metrics(painter.font());
         const QRectF textBounds = metrics.boundingRect(zoomText);
         QRectF bubble(m_wheelPreviewPosition.x() + 14.0,
@@ -9867,7 +9870,7 @@ void ShotWindow::drawNumber(QPainter &painter,
     painter.setBrush(color);
     painter.drawEllipse(bubble);
 
-    QFont font(QStringLiteral("Sans Serif"), qRound(std::clamp(radius * 0.92, 12.0, 54.0)), QFont::Black);
+    QFont font = markshot::theme::uiFont(qRound(std::clamp(radius * 0.92, 12.0, 54.0)), QFont::Black);
     painter.setFont(font);
     painter.setPen(Qt::white);
     painter.drawText(bubble, Qt::AlignCenter, QString::number(number));
@@ -9973,7 +9976,9 @@ void ShotWindow::beginTextAnnotation(QPointF imagePoint)
     m_draft.reset();
     m_textEditor->clear();
     m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, qRound(20.0 + m_shapeWidth)));
-    m_textEditor->setFont(QFont(m_textFontFamily, qRound(20.0 + m_shapeWidth), QFont::DemiBold));
+    m_textEditor->setFont(markshot::theme::textFont(qRound(20.0 + m_shapeWidth),
+                                                    QFont::DemiBold,
+                                                    m_textFontFamily));
     m_textEditor->show();
     m_textEditor->raise();
     updateTextEditorGeometry();
@@ -9996,9 +10001,9 @@ void ShotWindow::beginEditingSelectedTextAnnotation()
     m_draft.reset();
     m_textEditor->setPlainText(annotation->text);
     m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(annotation->color, annotation->backgroundColor, qRound(20.0 + annotation->width)));
-    m_textEditor->setFont(QFont(annotation->fontFamily.isEmpty() ? QStringLiteral("Sans Serif") : annotation->fontFamily,
-                                qRound(20.0 + annotation->width),
-                                QFont::DemiBold));
+    m_textEditor->setFont(markshot::theme::textFont(qRound(20.0 + annotation->width),
+                                                    QFont::DemiBold,
+                                                    annotation->fontFamily));
     if (m_annotationPropertyPanel) {
         m_annotationPropertyPanel->hide();
     }
@@ -10455,7 +10460,7 @@ void ShotWindow::showToast(const QString &text, int durationMs)
 {
     auto *label = new QLabel(text, this);
     label->setAlignment(Qt::AlignCenter);
-    label->setFont(QFont(QStringLiteral("Sans Serif"), 12, QFont::DemiBold));
+    label->setFont(markshot::theme::uiFont(12, QFont::DemiBold));
     label->setStyleSheet(QStringLiteral(
         "background: rgba(8, 13, 19, 220);"
         "color: rgba(204, 251, 241, 238);"

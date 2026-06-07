@@ -1,5 +1,7 @@
 #include "ui/color_picker.h"
 
+#include "ui/theme.h"
+
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QLinearGradient>
@@ -345,13 +347,14 @@ ColorPicker::ColorPicker(QWidget *parent) : QWidget(parent)
         " border: 1px solid rgba(255,255,255,28);"
         " border-radius: 6px;"
         " padding: 4px 8px;"
-        " font-family: 'Sans Serif';"
+        " font-family: %1;"
         " font-size: 12px;"
         " font-weight: 600;"
         " selection-background-color: #2DD4BF;"
         " selection-color: #042F2E;"
         "}"
-        "QLineEdit:focus { border-color: rgba(45,212,191,180); }"));
+        "QLineEdit:focus { border-color: rgba(45,212,191,180); }")
+            .arg(markshot::theme::uiFontFamilyCss()));
     bottom->addWidget(m_hex, 1);
     layout->addLayout(bottom);
 

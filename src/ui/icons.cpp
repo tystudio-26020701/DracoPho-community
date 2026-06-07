@@ -1,5 +1,7 @@
 #include "ui/icons.h"
 
+#include "ui/theme.h"
+
 #include <QFont>
 #include <QPainter>
 #include <QPainterPath>
@@ -239,7 +241,7 @@ QIcon makeToolIcon(ShotWindow::Action action)
         // Outlined disc with a numeral 1 — replaces the filled orange chip.
         p.setPen(makePen(kInk, 1.9));
         p.drawEllipse(QRectF(5.5, 5.5, 21, 21));
-        QFont font(QStringLiteral("Sans Serif"), 13, QFont::Bold);
+        QFont font = markshot::theme::uiFont(13, QFont::Bold);
         p.setFont(font);
         p.setPen(kInk);
         p.drawText(QRectF(5.5, 5.0, 21, 21), Qt::AlignCenter, QStringLiteral("1"));

@@ -11,6 +11,8 @@
 #include <QVector>
 #include <QWidget>
 
+#include "ui/theme.h"
+
 #include <array>
 #include <optional>
 
@@ -185,7 +187,7 @@ private:
         HighlighterStyle highlighterStyle = HighlighterStyle::StraightLine;
         qreal rotationDegrees = 0.0;
         qreal magnifierScale = 2.75;
-        QString fontFamily = QStringLiteral("Sans Serif");
+        QString fontFamily = markshot::theme::textFontFamily();
     };
 
     struct HistorySnapshot {
@@ -441,7 +443,7 @@ private:
     qreal m_rectangleCornerRadius = 0.0;
     ArrowStyle m_arrowStyle = ArrowStyle::Fletched;
     HighlighterStyle m_highlighterStyle = HighlighterStyle::StraightLine;
-    QString m_textFontFamily = QStringLiteral("Sans Serif");
+    QString m_textFontFamily = markshot::theme::textFontFamily();
     QColor m_textBackgroundColor = QColor(0, 0, 0, 0);
     int m_nextNumber = 1;
     int m_nextAnnotationId = 1;

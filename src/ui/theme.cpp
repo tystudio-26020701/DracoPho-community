@@ -1,8 +1,45 @@
 #include "ui/theme.h"
 
+#include <QFontDatabase>
 #include <QStringLiteral>
+#include <QStringList>
 
 namespace markshot::theme {
+namespace {
+
+QString firstAvailableFontFamily(const QStringList &candidates, const QString &fallback)
+{
+    const QStringList families = QFontDatabase::families();
+    for (const QString &candidate : candidates) {
+        if (families.contains(candidate, Qt::CaseInsensitive)) {
+            return candidate;
+        }
+    }
+    return fallback;
+}
+
+QString quotedCssFontFamily(QString family)
+{
+    family = family.trimmed();
+    if (family.isEmpty()) {
+        return {};
+    }
+    family.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+    family.replace(QLatin1Char('\''), QStringLiteral("\\'"));
+    return QStringLiteral("'%1'").arg(family);
+}
+
+QFont makeFont(const QString &family, int pointSize, QFont::Weight weight)
+{
+    QFont font(family);
+    if (pointSize > 0) {
+        font.setPointSize(pointSize);
+    }
+    font.setWeight(weight);
+    return font;
+}
+
+}  // namespace
 
 QVector<QColor> paletteColors()
 {
@@ -18,6 +55,74 @@ QVector<QColor> paletteColors()
         QColor(0xF8, 0xFA, 0xFC),  // slate-50
         QColor(0x0F, 0x17, 0x2A),  // slate-900
     };
+}
+
+QString uiFontFamily()
+{
+#if defined(Q_OS_WIN)
+    static const QString family = firstAvailableFontFamily({
+        QStringLiteral("Microsoft YaHei UI"),
+        QStringLiteral("Segoe UI Variable Text"),
+        QStringLiteral("Segoe UI"),
+        QStringLiteral("Microsoft YaHei"),
+    }, QStringLiteral("Segoe UI"));
+    return family;
+#else
+    return QStringLiteral("Sans Serif");
+#endif
+}
+
+QString textFontFamily()
+{
+    return uiFontFamily();
+}
+
+QString monospaceFontFamily()
+{
+#if defined(Q_OS_WIN)
+    static const QString family = firstAvailableFontFamily({
+        QStringLiteral("Cascadia Mono"),
+        QStringLiteral("Consolas"),
+        QStringLiteral("JetBrains Mono"),
+    }, QStringLiteral("Consolas"));
+    return family;
+#else
+    static const QString family = firstAvailableFontFamily({
+        QStringLiteral("JetBrains Mono"),
+        QStringLiteral("DejaVu Sans Mono"),
+        QStringLiteral("Noto Sans Mono"),
+    }, QStringLiteral("monospace"));
+    return family;
+#endif
+}
+
+QString uiFontFamilyCss()
+{
+    return quotedCssFontFamily(uiFontFamily());
+}
+
+QString monospaceFontFamilyCss()
+{
+    const QString primary = quotedCssFontFamily(monospaceFontFamily());
+    return primary.isEmpty()
+        ? QStringLiteral("monospace")
+        : QStringLiteral("%1, 'DejaVu Sans Mono', monospace").arg(primary);
+}
+
+QFont uiFont(int pointSize, QFont::Weight weight)
+{
+    return makeFont(uiFontFamily(), pointSize, weight);
+}
+
+QFont textFont(int pointSize, QFont::Weight weight, QString family)
+{
+    family = family.trimmed();
+    return makeFont(family.isEmpty() ? textFontFamily() : family, pointSize, weight);
+}
+
+QFont monospaceFont(int pointSize, QFont::Weight weight)
+{
+    return makeFont(monospaceFontFamily(), pointSize, weight);
 }
 
 QString panelStyleSheet()
