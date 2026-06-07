@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.22 - 2026-06-07
+
+### Features & Enhancements
+
+- **Annotation Rotation & Curved Arrow**: Added rotation handle to annotation items (rectangles, ellipses, text, etc.) allowing arbitrary angle adjustments. Upgraded arrow annotations to support curvature adjustment via Bezier curve control points.
+- **Highlighter Style & Magnifier Scale**: Added freehand and straight-line drawing modes for highlighters with a selector in the property bar. Added magnifier scale customisation slider (default 2.75) to precisely tweak magnification strength.
+- **Scroll Capture Frame Polish**: Re-engineered X11 window input masks to correctly overlay capture border regions without sacrificing click-through capabilities for nested scrolling.
+- **Scroll Capture Edge Artifact Scrubbing**: Implemented an automated scan-and-repair algorithm (`scrubCaptureFrameArtifacts`) to scrub stray outline pixels and border remnants from final scrolling capture composites.
+- **Scroll Capture Hide Preview option**: Introduced `scrollCapture.hidePreviewDuringCapture` (`hidePreviewWhileCapturing`) to collapse preview panel structures while capturing.
+- **Rebuilt X11 Window Boundary Detection**: Switched X11 window lookup queries to leverage root stacking trackers (`_NET_CLIENT_LIST_STACKING` / `_NET_CLIENT_LIST`), parse window extents (`_NET_FRAME_EXTENTS`), skip obscured frames (`_NET_WM_STATE_HIDDEN` or iconic state), and bypass override-redirect surfaces. Added `windowDetection.enabled` global flag.
+
+### Release Artifacts
+
+- `mark-shot-v0.1.22-linux-x86_64.tar.gz`
+- `mark-shot-v0.1.22-linux-arm64.tar.gz`
+- `mark-shot_0.1.22_amd64.deb`
+- `mark-shot_0.1.22_arm64.deb`
+- `mark-shot_0.1.22_fedora_x86_64.rpm`
+- `mark-shot_0.1.22_fedora_aarch64.rpm`
+- `mark-shot-v0.1.22-linux-x86_64.AppImage`
+- `mark-shot-v0.1.22-linux-x86_64.flatpak`
+
 ## 0.1.21 - 2026-06-06
 
 ### Features & Enhancements
