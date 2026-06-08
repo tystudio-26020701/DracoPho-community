@@ -146,6 +146,7 @@ qt_add_executable(mark-shot
 target_include_directories(mark-shot PRIVATE src)
 target_compile_definitions(mark-shot PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(WIN32)
+    set_property(TARGET mark-shot PROPERTY CXX_STANDARD 20)
     set(MARK_SHOT_WINDOWS_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/mark-shot.ico")
     configure_file(packaging/windows/mark-shot.rc.in "${CMAKE_CURRENT_BINARY_DIR}/mark-shot.rc" @ONLY)
     target_sources(mark-shot PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/mark-shot.rc")
