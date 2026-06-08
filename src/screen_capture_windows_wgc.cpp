@@ -143,6 +143,42 @@ bool windowsGraphicsCaptureSupported(QString *error)
     return false;
 }
 
+bool windowsGraphicsCaptureBorderControlAvailable()
+{
+    static const bool available = [] {
+        try {
+            ensureWinrtApartment();
+            return Metadata::ApiInformation::IsPropertyPresent(
+                L"Windows.Graphics.Capture.GraphicsCaptureSession",
+                L"IsBorderRequired");
+        } catch (const winrt::hresult_error &) {
+            return false;
+        }
+    }();
+    return available;
+}
+
+void requestBorderlessWindowsGraphicsCapture(const Capture::GraphicsCaptureSession &session)
+{
+    if (!windowsGraphicsCaptureBorderControlAvailable()) {
+        markshot::debugLog("capture", "windows-graphics-capture-border unsupported");
+        return;
+    }
+
+    try {
+        session.IsBorderRequired(false);
+        markshot::debugLog("capture",
+                           "windows-graphics-capture-border requested=0 effective=%d",
+                           session.IsBorderRequired() ? 1 : 0);
+    } catch (const winrt::hresult_error &exception) {
+        markshot::debugLog("capture",
+                           "windows-graphics-capture-border failed error=%s",
+                           winrtError(QStringLiteral("setting borderless capture failed"), exception)
+                               .toUtf8()
+                               .constData());
+    }
+}
+
 HRESULT createD3DDeviceWithDriver(D3D_DRIVER_TYPE driverType,
                                   winrt::com_ptr<ID3D11Device> *device,
                                   winrt::com_ptr<ID3D11DeviceContext> *context)
@@ -425,6 +461,7 @@ QImage captureItemFrame(const Capture::GraphicsCaptureItem &item,
                 state->condition.notify_one();
             });
 
+        requestBorderlessWindowsGraphicsCapture(session);
         session.StartCapture();
 
         {
