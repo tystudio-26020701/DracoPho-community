@@ -2,13 +2,20 @@
 
 #include <cstdarg>
 
+#include <QString>
+
 namespace markshot {
 
-// True when the DEBUG environment variable is set to a truthy value. The result
-// is computed once and cached. When enabled, debugLog writes detailed
-// diagnostics to stderr and to mark-shot-scroll.log in the system temporary
-// directory so a scrolling capture session can be replayed after the fact.
+// Configures debug logging after startup config and command-line options have
+// been parsed. Before this is called, DEBUG and MARK_SHOT_DEBUG_LOG keep their
+// historical behavior.
+void configureDebugLogging(bool enabled, const QString &logPath = QString());
+
+// True when debug logging is enabled by runtime configuration or by the DEBUG
+// environment variable. When enabled, debugLog writes detailed diagnostics to
+// stderr and to debugLogPath().
 bool debugEnabled();
+QString debugLogPath();
 
 // printf-style diagnostic logging, gated by debugEnabled(). The category is a
 // short tag (for example "capture", "session", "stitch") used to prefix each

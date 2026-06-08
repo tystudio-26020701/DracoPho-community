@@ -3,6 +3,7 @@
 #include <QByteArray>
 #include <QDateTime>
 #include <QDir>
+#include <QFileInfo>
 #include <QString>
 
 #include <cstdio>
@@ -13,45 +14,73 @@ namespace markshot {
 
 namespace {
 
-/// @brief Evaluates whether debug logging is enabled based on the environment.
-/// @return True if debug logging is enabled, false otherwise.
-bool computeDebugEnabled()
+struct DebugState {
+    bool configured = false;
+    bool enabled = false;
+    QString logPath;
+};
+
+DebugState &debugState()
 {
-    const char *raw = std::getenv("DEBUG");
-    if (!raw || raw[0] == '\0') {
-        return false;
-    }
-    // Accept the common truthy spellings; treat "0", "false", "off", "no" and an
-    // empty value as disabled so `DEBUG=0` does not accidentally turn it on.
-    if (std::strcmp(raw, "0") == 0) {
-        return false;
-    }
-    const QByteArray value = QByteArray(raw).trimmed().toLower();
-    return value != "false" && value != "off" && value != "no" && !value.isEmpty();
+    static DebugState state;
+    return state;
 }
 
-/// @brief Retrieves the file path for debug logs.
-/// @return A pointer to a character array representing the log file path.
-const char *logFilePath()
+bool truthyDebugValue(const QByteArray &raw)
 {
-    // Allow redirecting the log file; default keeps the historical scroll log
-    // path so existing tooling that tails it keeps working.
-    static const QByteArray path = [] {
-        const char *override = std::getenv("MARK_SHOT_DEBUG_LOG");
-        if (override && override[0] != '\0') {
-            return QByteArray(override);
-        }
-        return QDir::temp().filePath(QStringLiteral("mark-shot-scroll.log")).toLocal8Bit();
-    }();
-    return path.constData();
+    const QByteArray value = raw.trimmed().toLower();
+    if (value.isEmpty() || value == "0" || value == "false" || value == "off" || value == "no") {
+        return false;
+    }
+    return true;
+}
+
+bool environmentDebugEnabled()
+{
+    const char *raw = std::getenv("DEBUG");
+    return raw && truthyDebugValue(QByteArray(raw));
+}
+
+QString defaultLogPath()
+{
+    const char *override = std::getenv("MARK_SHOT_DEBUG_LOG");
+    if (override && override[0] != '\0') {
+        return QString::fromLocal8Bit(override);
+    }
+    return QDir::temp().filePath(QStringLiteral("mark-shot-scroll.log"));
+}
+
+void ensureLogDir(const QString &path)
+{
+    const QString dirPath = QFileInfo(path).absolutePath();
+    if (!dirPath.isEmpty()) {
+        QDir().mkpath(dirPath);
+    }
 }
 
 }  // namespace
 
+void configureDebugLogging(bool enabled, const QString &logPath)
+{
+    DebugState &state = debugState();
+    state.configured = true;
+    state.enabled = enabled;
+    state.logPath = logPath.trimmed().isEmpty() ? defaultLogPath() : logPath;
+}
+
 bool debugEnabled()
 {
-    static const bool enabled = computeDebugEnabled();
-    return enabled;
+    const DebugState &state = debugState();
+    return state.configured ? state.enabled : environmentDebugEnabled();
+}
+
+QString debugLogPath()
+{
+    const DebugState &state = debugState();
+    if (state.configured && !state.logPath.isEmpty()) {
+        return state.logPath;
+    }
+    return defaultLogPath();
 }
 
 /// @brief Helper to write formatted debug log messages to stderr and/or the debug log file.
@@ -72,7 +101,10 @@ void debugLogV(const char *category, const char *format, va_list args)
     char message[2048];
     std::vsnprintf(message, sizeof(message), format, args);
 
-    if (FILE *file = std::fopen(logFilePath(), "a")) {
+    const QString path = debugLogPath();
+    ensureLogDir(path);
+    const QByteArray localPath = path.toLocal8Bit();
+    if (FILE *file = std::fopen(localPath.constData(), "a")) {
         std::fprintf(file, "%s [%s] %s\n", stamp.constData(), tag, message);
         std::fclose(file);
     }
