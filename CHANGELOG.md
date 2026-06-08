@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.1.24 - 2026-06-09
+
+### Features & Enhancements
+
+- **Wayland Pinned Window Topmost Support (Always on Top)**: 
+  - Implemented custom cross-platform topmost management (`pinned_window_top.cpp`) for pinned image windows.
+  - Added native support for Wayland LayerShell Top protocol role, with dynamic role switching and fallback strategies.
+  - Introduced configurable `"alwaysOnTop"` preference for pinned windows (default `true`) with toggle option in the context menu.
+  - Added delayed scheduling (`schedulePinnedWindowRaise`) to reliably assert topmost status across different Wayland compositors during window mapping.
+- **Windows Graphics Capture (WGC) Backend**:
+  - Added high-performance native Windows Graphics Capture backend (`screen_capture_windows_wgc.cpp`) for smooth, hardware-accelerated screen capturing on Windows 10/11.
+  - Enabled borderless window capture mode to strip shadow margins and window borders for clean screenshot outputs.
+  - Resolved MinGW compatibility and runtime dependency issues for MSYS2/UCRT64 toolchains.
+- **GNOME Shell Extension & Window Detection Refactor**:
+  - Heavy refactoring of the GNOME Shell scroll helper extension (`extension.js`) to improve GNOME Wayland compatibility.
+  - Introduced `mark-shot-window-detection-gnome` helper script for reliable window geometry and boundary detection under GNOME.
+- **Unified Configuration Storage**:
+  - Implemented standard configuration store (`app_config_store.cpp`) for atomic preference updates, improving robustness when reading and writing configuration settings.
+- **Improved Annotation Workflows**:
+  - Added support for multiple number stamp sequences and numbering styles (Arabic, Alphabetic, Roman, Chinese, and Heavenly Stems) with sequence reset button.
+  - Smart automatic repositioning of the text annotation editor based on remaining boundary space to prevent input panels from clipping.
+  - Enabled native input method (IME) support for the text editor and ensured text cursor visibility during long multi-line inputs.
+- **Configurable Debug Logging**:
+  - Added `--debug`, `--no-debug`, and `--debug-log <path>` CLI options for configurable troubleshooting.
+  - Added `debug.enabled` and `debug.logPath` to `config.json` while maintaining backward compatibility with `DEBUG` env vars.
+
+### Bug Fixes
+
+- **Windows Scroll & Capture Artifacts**:
+  - Fixed scroll preview positioning and visibility issues in multi-monitor setups.
+  - Added exclusionary logic in Windows hook routines to filter out scroll preview overlays from capture frames.
+- **Windows Thread Affinity**:
+  - Corrected Windows affinity configuration logic during system API integration.
+- **Wayland Overlay Handling**:
+  - Improved screen overlay placement and coordinate translations under Wayland LayerShell environments.
+
+### CI & Build
+
+- **Windows Build Pipeline**:
+  - Configured CI workflows to provision required C++ WinRT headers, allowing successful automated builds on Windows runner environments.
+
+### Release Artifacts
+
+- `mark-shot-v0.1.24-linux-x86_64.tar.gz`
+- `mark-shot-v0.1.24-linux-arm64.tar.gz`
+- `mark-shot_0.1.24_amd64.deb`
+- `mark-shot_0.1.24_arm64.deb`
+- `mark-shot_0.1.24_fedora_x86_64.rpm`
+- `mark-shot_0.1.24_fedora_aarch64.rpm`
+- `mark-shot-v0.1.24-linux-x86_64.AppImage`
+- `mark-shot-v0.1.24-linux-x86_64.flatpak`
+
 ## 0.1.23 - 2026-06-08
 
 ### Features & Enhancements
