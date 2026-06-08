@@ -233,6 +233,15 @@ bool ScrollSessionWindow::previewPanelFitsAvailableSpace() const
         .fitsWithoutOverlap;
 }
 
+bool ScrollSessionWindow::shouldAvoidPreviewOverlapForCapture() const
+{
+#if defined(Q_OS_WIN)
+    return false;
+#else
+    return true;
+#endif
+}
+
 bool ScrollSessionWindow::floatingDragHandleActive() const
 {
     if (m_previewPanelVisible) {

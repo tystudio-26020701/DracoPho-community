@@ -92,6 +92,7 @@ private:
     void handleScrollIdleTimeout();
     void resumeAutoPausedCapture();
     bool shouldHidePreviewWhileCapturing() const;
+    bool shouldAvoidPreviewOverlapForCapture() const;
     bool floatingDragHandleActive() const;
     QRect floatingDragHandleLocalRect() const;
     QRect floatingDragHandleGlobalRect() const;
