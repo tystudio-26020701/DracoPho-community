@@ -217,12 +217,43 @@ void setExcludedFromCapture(QWidget *widget, bool excluded)
         return;
     }
 
+    const LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+    const LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+    const bool topLevel = GetAncestor(hwnd, GA_ROOT) == hwnd;
+    BOOL compositionEnabled = FALSE;
+    DwmIsCompositionEnabled(&compositionEnabled);
+
     const DWORD affinity = excluded ? kWdaExcludeFromCapture : kWdaNone;
     if (!SetWindowDisplayAffinity(hwnd, affinity)) {
         markshot::debugLog("windows",
-                           "SetWindowDisplayAffinity failed error=%lu excluded=%d",
+                           "SetWindowDisplayAffinity failed hwnd=%p error=%lu excluded=%d top_level=%d visible=%d layered=%d composition=%d style=0x%llx exstyle=0x%llx",
+                           static_cast<void *>(hwnd),
                            static_cast<unsigned long>(GetLastError()),
-                           excluded ? 1 : 0);
+                           excluded ? 1 : 0,
+                           topLevel ? 1 : 0,
+                           IsWindowVisible(hwnd) ? 1 : 0,
+                           (exStyle & WS_EX_LAYERED) != 0 ? 1 : 0,
+                           compositionEnabled ? 1 : 0,
+                           static_cast<unsigned long long>(style),
+                           static_cast<unsigned long long>(exStyle));
+        return;
+    }
+
+    DWORD appliedAffinity = 0;
+    const bool readBack = GetWindowDisplayAffinity(hwnd, &appliedAffinity);
+    markshot::debugLog("windows",
+                       "SetWindowDisplayAffinity ok hwnd=%p excluded=%d affinity=0x%lx readback=%d applied=0x%lx top_level=%d visible=%d layered=%d composition=%d style=0x%llx exstyle=0x%llx",
+                       static_cast<void *>(hwnd),
+                       excluded ? 1 : 0,
+                       static_cast<unsigned long>(affinity),
+                       readBack ? 1 : 0,
+                       static_cast<unsigned long>(appliedAffinity),
+                       topLevel ? 1 : 0,
+                       IsWindowVisible(hwnd) ? 1 : 0,
+                       (exStyle & WS_EX_LAYERED) != 0 ? 1 : 0,
+                       compositionEnabled ? 1 : 0,
+                       static_cast<unsigned long long>(style),
+                       static_cast<unsigned long long>(exStyle));
     }
 #else
     Q_UNUSED(widget);
