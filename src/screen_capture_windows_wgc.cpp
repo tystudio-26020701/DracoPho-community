@@ -50,6 +50,7 @@ namespace {
 
 namespace Capture = winrt::Windows::Graphics::Capture;
 namespace Direct3D11 = winrt::Windows::Graphics::DirectX::Direct3D11;
+namespace Direct3D11Abi = ::Windows::Graphics::DirectX::Direct3D11;
 namespace DirectX = winrt::Windows::Graphics::DirectX;
 namespace Metadata = winrt::Windows::Foundation::Metadata;
 
@@ -204,12 +205,6 @@ std::optional<D3DDeviceBundle> createD3DDevice(QString *error)
         return std::nullopt;
     }
 
-    winrt::com_ptr<ID3D11Multithread> multithread;
-    if (SUCCEEDED(bundle.device->QueryInterface(__uuidof(ID3D11Multithread),
-                                                multithread.put_void()))) {
-        multithread->SetMultithreadProtected(TRUE);
-    }
-
     winrt::com_ptr<IDXGIDevice> dxgiDevice;
     result = bundle.device->QueryInterface(__uuidof(IDXGIDevice), dxgiDevice.put_void());
     if (FAILED(result)) {
@@ -320,8 +315,8 @@ QImage imageFromFrame(const Capture::Direct3D11CaptureFrame &frame,
         return {};
     }
 
-    winrt::com_ptr<IDirect3DDxgiInterfaceAccess> access =
-        surface.as<IDirect3DDxgiInterfaceAccess>();
+    winrt::com_ptr<Direct3D11Abi::IDirect3DDxgiInterfaceAccess> access =
+        surface.as<Direct3D11Abi::IDirect3DDxgiInterfaceAccess>();
     winrt::com_ptr<ID3D11Texture2D> texture;
     HRESULT result = access->GetInterface(__uuidof(ID3D11Texture2D), texture.put_void());
     if (FAILED(result)) {
