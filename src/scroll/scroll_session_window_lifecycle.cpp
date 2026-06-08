@@ -17,10 +17,11 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
 {
     setWindowTitle(MS_TR("Scroll Capture"));
     setAttribute(Qt::WA_DeleteOnClose);
+#if !defined(Q_OS_WIN)
     setAttribute(Qt::WA_TranslucentBackground);
+#endif
     setAttribute(Qt::WA_ShowWithoutActivating);
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    markshot::windows::setExcludedFromCapture(this);
     setObjectName(QStringLiteral("scrollSessionWindow"));
     setMouseTracking(true);
     setFocusPolicy(Qt::NoFocus);
@@ -62,6 +63,8 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
             setGeometry(screen->geometry());
         }
     }
+    layoutOverlay();
+    updateInputMask();
 
     m_timer = new QTimer(this);
     m_timer->setInterval(kCaptureIntervalMs);
@@ -579,7 +582,6 @@ void ScrollSessionWindow::updateInputMask()
 void ScrollSessionWindow::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    markshot::windows::setExcludedFromCapture(this);
     updatePreviewPanelVisibility();
     if (m_panelOnlyWindow) {
         updatePanelWindowGeometry();
@@ -588,6 +590,7 @@ void ScrollSessionWindow::showEvent(QShowEvent *event)
     }
     layoutOverlay();
     updateInputMask();
+    markshot::windows::setExcludedFromCapture(this);
     syncPreviewWindowVisibility();
     const QRect region = regionLocalRect();
     const QRect panel = previewPanelRect();
