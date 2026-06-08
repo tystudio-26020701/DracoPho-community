@@ -48,7 +48,7 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **GNOME Wayland**: scrolling capture requires the bundled `mark-shot-scroll-helper@snemc.org` GNOME Shell extension. GNOME does not expose the capture and preview hooks Mark Shot needs to normal desktop applications, so the extension provides a private D-Bus helper for area screenshots and the scroll preview panel.
 - **Compatibility notice**: scrolling capture on KDE, X11, and other non-`niri` environments is a test feature and is not complete yet. Portal backends, shell policies, window geometry behavior, frame timing, and scroll event handling differ substantially across these desktop stacks.
 - If scrolling capture fails, use normal screenshots or configure an external long-screenshot command through Mark Shot extension commands.
-- To report a scrolling capture issue, run `DEBUG=1 mark-shot`, reproduce the failure, then attach `mark-shot-scroll.log` from the system temporary directory to a GitHub issue. Set `MARK_SHOT_DEBUG_LOG=/path/to/log` if the log should be written elsewhere.
+- To report a scrolling capture issue, run `mark-shot --debug --debug-log /path/to/mark-shot.log`, reproduce the failure, then attach the log to a GitHub issue. The same logging can be enabled through `debug.enabled` and `debug.logPath` in `config.json`; `DEBUG=1` and `MARK_SHOT_DEBUG_LOG=/path/to/log` remain supported.
 
 ### Cross-Platform Display Server Support
 - **Wayland**: Uses PipeWire portal screencast for experimental scrolling capture, `grim` for wlroots screenshot capture, `layer-shell-qt` for native overlay, and `wl-copy` for clipboard persistence.
@@ -104,6 +104,9 @@ mark-shot --xdg-window
 | `--default-tool <tool>` | Sets the annotation tool selected after region selection. Also seeds fullscreen mode unless `--fullscreen-default-tool` is set. |
 | `--fullscreen-default-tool <tool>` | Sets the annotation tool selected in fullscreen annotation mode. |
 | `--default-color <color>` | Sets the default annotation color. Supports `#RRGGBB` and `#RRGGBBAA`. |
+| `--debug` | Enables debug logging for this run. |
+| `--no-debug` | Disables debug logging for this run, overriding config and environment variables. |
+| `--debug-log <path>` | Writes debug logs to the specified path and enables debug logging unless `--no-debug` is also set. |
 
 ### Compositor / Desktop Hotkey Integration
 
@@ -176,6 +179,10 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 {
   "env": {
     "QT_FONT_DPI": 96
+  },
+  "debug": {
+    "enabled": false,
+    "logPath": ""
   },
   "annotation": {
     "defaultTool": "move",
@@ -250,6 +257,8 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | Configuration Key | Data Type | Default Value | Description |
 | :--- | :---: | :---: | :--- |
 | `env` | Object | `{}` | Environment variables applied to the process before `QApplication` creation (e.g., `"QT_FONT_DPI": 96` to normalize high-DPI scaling). Alias: `environment`. |
+| `debug.enabled` | Boolean | `false` | Enables debug logging on Linux and Windows. CLI `--debug` / `--no-debug` override this value; `DEBUG=1` still enables logging unless `--no-debug` is set. |
+| `debug.logPath` | String | system temp `mark-shot-scroll.log` | Debug log destination. CLI `--debug-log` overrides this value; `MARK_SHOT_DEBUG_LOG` remains supported when no config or CLI path is set. |
 | `annotation.defaultTool` | String | `"move"` | The default annotation tool active after selecting a region. Supported values: `move`, `select`, `pen`, `line`, `highlighter`, `rectangle`, `ellipse`, `arrow`, `text`, `number`, `mosaic`, `magnifier`, `laser`. Overridden by CLI `--default-tool`. |
 | `annotation.fullscreenDefaultTool` | String | `"laser"` | The default tool active in fullscreen annotation mode. Overridden by CLI `--fullscreen-default-tool`. If configured as `move` in fullscreen, the program defaults to `select`. |
 | `annotation.defaultColor` | String | `"#FF4D4D"` | Initial annotation color. Supports `#RRGGBB` (opaque) or `#RRGGBBAA` (with alpha). Overridden by CLI `--default-color`. |
