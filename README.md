@@ -667,15 +667,25 @@ The expected result is `('4.2',)`. On GNOME Wayland, restart `mark-shot` after e
 
 ## Release Notes
 
+### 0.1.24
+
+- **Wayland Pinned Window Topmost Support**: Implemented cross-platform topmost management for pinned windows. Added native Wayland LayerShell Top protocol support with dynamic fallback, scheduling, and configuration toggles.
+- **Windows Graphics Capture (WGC) Backend**: Integrated high-performance native WGC capture capabilities, supporting borderless capture, multi-monitor setups, and full compatibility with MSYS2/UCRT64 MinGW toolchains.
+- **GNOME Wayland Support & Window Detection**: Refactored the GNOME Shell scroll helper extension and introduced a dedicated helper script for robust window boundary detection under GNOME.
+- **Unified Config Storage**: Added standard config store (`app_config_store.cpp`) to handle configuration serialization reliably.
+- **Improved Annotation Workflows**: Enhanced the number stamp tool with style selectors (Arabic, Roman, Chinese, etc.) and reset actions. Optimized text editor positioning, boundary clipping safety, and Chinese/IME input compatibility.
+- **Configurable Debug Logging**: Introduced `--debug`, `--no-debug`, and `--debug-log` flags to control runtime diagnostics, with configurable file targets in `config.json`.
+- **Bug Fixes**: Resolved multi-monitor scroll preview clipping, thread affinity compilation issues, and Wayland LayerShell geometry alignment.
+
+<details>
+<summary>Older Release Notes</summary>
+
 ### 0.1.23
 
 - **Windows Build Support & Tray Integration**: Added support for compiling on Windows (MSYS2/UCRT64) with Qt 6. Implemented system tray icon support, global hotkey registration, native system fonts, and virtual screen geometry calculations for multi-monitor Windows setups.
 - **App Icon & Tray Default Configuration**: Added application icon `mark-shot.ico` and updated default tray settings.
 - **Supporting Documentation & Code Comments**: Added detailed in-code documentation and comments for core modules to make the system architecture clearer.
 - **Source Code Restructuring**: Split oversized source files (such as `shot_window.cpp` and `screen_capture.cpp`) into cohesive submodules to improve maintainability and testability.
-
-<details>
-<summary>Older Release Notes</summary>
 
 ### 0.1.22
 
