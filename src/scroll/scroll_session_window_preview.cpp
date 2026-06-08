@@ -277,7 +277,8 @@ void ScrollSessionWindow::refreshControlLabels()
     const QString axisLabel = horizontal ? MS_TR("Dir: Horizontal") : MS_TR("Dir: Vertical");
     const QString dragLabel = horizontal ? MS_TR("Drag region horizontally")
                                          : MS_TR("Drag region vertically");
-    const bool largeRangeMode = !previewPanelFitsAvailableSpace();
+    const bool largeRangeMode =
+        shouldAvoidPreviewOverlapForCapture() && !previewPanelFitsAvailableSpace();
     if (m_axisButton) {
         configureIconButton(m_axisButton,
                             axisIcon,
