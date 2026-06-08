@@ -104,6 +104,11 @@ QJsonObject defaultAppConfigRoot()
     QJsonObject root;
     root.insert(QStringLiteral("env"), QJsonObject());
 
+    QJsonObject debug;
+    debug.insert(QStringLiteral("enabled"), false);
+    debug.insert(QStringLiteral("logPath"), QString());
+    root.insert(QStringLiteral("debug"), debug);
+
     QJsonObject annotation;
     annotation.insert(QStringLiteral("defaultTool"), QStringLiteral("pen"));
     annotation.insert(QStringLiteral("fullscreenDefaultTool"), QStringLiteral("pen"));

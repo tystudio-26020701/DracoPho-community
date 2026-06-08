@@ -309,6 +309,76 @@ struct DefaultTools {
     QColor color = markshot::theme::kDefaultAnnotationColor;
 };
 
+struct DebugRuntimeConfig {
+    bool enabled = markshot::debugEnabled();
+    QString logPath = markshot::debugLogPath();
+};
+
+QString expandedConfigPath(QString path)
+{
+    path = path.trimmed();
+    if (path == QStringLiteral("~")) {
+        return QDir::homePath();
+    }
+    if (path.startsWith(QStringLiteral("~/"))) {
+        return QDir::home().filePath(path.mid(2));
+    }
+    return path;
+}
+
+DebugRuntimeConfig configuredDebugRuntimeConfig()
+{
+    DebugRuntimeConfig config;
+    QFile file(markshot::appConfigPath());
+    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return config;
+    }
+
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+        return config;
+    }
+
+    const QJsonObject root = document.object();
+    const QJsonValue debugValue = root.value(QStringLiteral("debug"));
+    if (const std::optional<bool> enabled = markshot::config::boolValue(debugValue)) {
+        config.enabled = *enabled;
+    }
+
+    if (debugValue.isObject()) {
+        const QJsonObject debug = debugValue.toObject();
+        if (const std::optional<bool> enabled = markshot::config::boolValue(
+                markshot::config::valueForKeys(debug,
+                                               {QStringLiteral("enabled"),
+                                                QStringLiteral("enable"),
+                                                QStringLiteral("on")}))) {
+            config.enabled = *enabled;
+        }
+
+        const QString path = stringValue(debug,
+                                         {QStringLiteral("logPath"),
+                                          QStringLiteral("path"),
+                                          QStringLiteral("file"),
+                                          QStringLiteral("logFile")});
+        if (!path.isEmpty()) {
+            config.logPath = expandedConfigPath(path);
+        }
+    }
+
+    const QString rootLogPath = stringValue(root,
+                                           {QStringLiteral("debugLogPath"),
+                                            QStringLiteral("debugLog"),
+                                            QStringLiteral("logPath")});
+    if (!rootLogPath.isEmpty()) {
+        config.logPath = expandedConfigPath(rootLogPath);
+    }
+    if (markshot::debugEnabled()) {
+        config.enabled = true;
+    }
+    return config;
+}
+
 /// @brief Loads and returns the configured default annotation tools and colors.
 /// @param warning Output parameter to receive warning messages during configuration loading.
 /// @return The configured DefaultTools structure.
@@ -640,6 +710,13 @@ int main(int argc, char *argv[])
     QCommandLineOption defaultColorOption(QStringLiteral("default-color"),
                                           QStringLiteral("Set the default annotation color. Supported formats: #RRGGBB or #RRGGBBAA."),
                                           QStringLiteral("color"));
+    QCommandLineOption debugOption(QStringLiteral("debug"),
+                                   QStringLiteral("Enable debug logging."));
+    QCommandLineOption noDebugOption(QStringLiteral("no-debug"),
+                                     QStringLiteral("Disable debug logging even if config or environment enables it."));
+    QCommandLineOption debugLogOption(QStringLiteral("debug-log"),
+                                      QStringLiteral("Write debug logs to the specified file path."),
+                                      QStringLiteral("path"));
     parser.addOption(allOutputsOption);
     parser.addOption(xdgWindowOption);
     parser.addOption(fullscreenAnnotationOption);
@@ -648,6 +725,9 @@ int main(int argc, char *argv[])
     parser.addOption(defaultToolOption);
     parser.addOption(fullscreenDefaultToolOption);
     parser.addOption(defaultColorOption);
+    parser.addOption(debugOption);
+    parser.addOption(noDebugOption);
+    parser.addOption(debugLogOption);
     parser.process(app);
 
     const QStringList positionalArguments = parser.positionalArguments();
@@ -657,6 +737,34 @@ int main(int argc, char *argv[])
     }
 
     markshot::ensureAppConfigFile();
+
+    if (parser.isSet(debugOption) && parser.isSet(noDebugOption)) {
+        QMessageBox::critical(nullptr,
+                              QStringLiteral("Mark Shot"),
+                              MS_TR("--debug and --no-debug cannot be used together."));
+        return 1;
+    }
+
+    DebugRuntimeConfig debugConfig = configuredDebugRuntimeConfig();
+    if (parser.isSet(debugOption)) {
+        debugConfig.enabled = true;
+    }
+    if (parser.isSet(noDebugOption)) {
+        debugConfig.enabled = false;
+    }
+    if (parser.isSet(debugLogOption)) {
+        const QString optionPath = parser.value(debugLogOption).trimmed();
+        if (!optionPath.isEmpty()) {
+            debugConfig.logPath = expandedConfigPath(optionPath);
+        }
+        if (!parser.isSet(noDebugOption)) {
+            debugConfig.enabled = true;
+        }
+    }
+    markshot::configureDebugLogging(debugConfig.enabled, debugConfig.logPath);
+    markshot::debugLog("config",
+                       "debug enabled path=%s",
+                       markshot::debugLogPath().toUtf8().constData());
 
     QString configDefaultToolWarning;
     DefaultTools defaultTools = configuredDefaultTools(&configDefaultToolWarning);
