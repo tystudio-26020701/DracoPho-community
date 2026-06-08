@@ -247,7 +247,8 @@ void ScrollSessionWindow::setPreviewPanelVisible(bool visible)
 bool ScrollSessionWindow::shouldHidePreviewWhileCapturing() const
 {
     return !m_paused
-        && (m_uiConfig.hidePreviewDuringCapture || !previewPanelFitsAvailableSpace());
+        && (m_uiConfig.hidePreviewDuringCapture
+            || (shouldAvoidPreviewOverlapForCapture() && !previewPanelFitsAvailableSpace()));
 }
 
 void ScrollSessionWindow::updatePreviewPanelVisibility()
