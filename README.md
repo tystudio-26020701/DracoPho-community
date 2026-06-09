@@ -258,6 +258,7 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | Configuration Key | Data Type | Default Value | Description |
 | :--- | :---: | :---: | :--- |
 | `env` | Object | `{}` | Environment variables applied to the process before `QApplication` creation (e.g., `"QT_FONT_DPI": 96` to normalize high-DPI scaling). Alias: `environment`. |
+| `capture.freezeScope` | String | `"all-screens"` | Scope of displays frozen during region screenshot session. Only effective in multi-monitor setups when not capturing all outputs explicitly. Supported values: `all-screens` (freeze all monitors) and `cursor-screen` (freeze only the monitor containing the mouse cursor). Aliases: `freezeScope`, `freezeDisplayScope`, etc. |
 | `debug.enabled` | Boolean | `false` | Enables debug logging on Linux and Windows. CLI `--debug` / `--no-debug` override this value; `DEBUG=1` still enables logging unless `--no-debug` is set. |
 | `debug.logPath` | String | system temp `mark-shot-scroll.log` | Debug log destination. CLI `--debug-log` overrides this value; `MARK_SHOT_DEBUG_LOG` remains supported when no config or CLI path is set. |
 | `annotation.defaultTool` | String | `"move"` | The default annotation tool active after selecting a region. Supported values: `move`, `select`, `pen`, `line`, `highlighter`, `rectangle`, `ellipse`, `arrow`, `text`, `number`, `mosaic`, `magnifier`, `laser`. Overridden by CLI `--default-tool`. |
@@ -666,6 +667,13 @@ The expected result is `('4.2',)`. On GNOME Wayland, restart `mark-shot` after e
 ---
 
 ## Release Notes
+
+### 0.1.25
+
+- **Configure Screen Freeze Scope**: Introduced the `capture.freezeScope` configuration option to control the freeze behavior of displays during region screenshots in multi-monitor setups. Supports freezing all displays (`all-screens`, default) or freezing only the monitor containing the mouse cursor (`cursor-screen`).
+- **Pinned Image Window Architecture Refactor**: Decoupled and extracted the complex sticker/pinned window logic from `shot_window_pinned_window.cpp` into a modular directory structure under `src/pinned_window/` (splitting into distinct modules for OCR, translation, text selection, geometry, and the resize controller) to improve code readability and maintainability.
+- **Modularized Startup and Capture Launch**: Modularized startup routines (environment override, configuration parsing, default tools setup, and Qt desktop portal suppression) into a dedicated `startup_config` module. Extracted capture viewport mapping and multi-screen freezing coordination logic into a separate `capture_session_launcher` module.
+- **Expanded Unit Test Coverage**: Added unit tests for screen freeze scope (`capture_freeze_scope_test`) and pinned resize controls (`pinned_resize_controller_test`) to verify both core configuration mapping and geometry calculations.
 
 ### 0.1.24
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.25 - 2026-06-09
+
+### Features & Enhancements
+
+- **Configure Screen Freeze Scope**: 
+  - Introduced screen freeze scope config (`capture.freezeScope` / `captureFreezeScope`) to control which screens are frozen during region selection screenshots in multi-monitor environments.
+  - Supports `all-screens` (default) to capture and freeze all connected outputs or `cursor-screen` to freeze only the display containing the cursor.
+- **Pinned Image Window Architecture Refactor**: 
+  - Extracted the massive inline sticker/pinned window logic from `shot_window_pinned_window.cpp` into a modular directory structure under `src/pinned_window/` (`pinned_image_window.cpp/h`, OCR, translation, selection, geometry, and resize controller modules) for better code readability and maintenance.
+- **Modularized Startup and Capture Initialization**:
+  - Refactored various initialization routines (environment variable override, configuration parsing, default tools, and Qt portal service disabling) out of `main.cpp` into a dedicated `startup_config` module.
+  - Relocated session launch logic to a standalone `capture_session_launcher` module, separating viewport calculation, window instantiation, and screen freezing strategies from the main executable entry.
+
+### Tests
+
+- **Added Unit Tests**:
+  - Added unit tests for capture freeze scope (`tests/capture_freeze_scope_test.cpp`) and pinned resize controller (`tests/pinned_resize_controller_test.cpp`).
+
 ## 0.1.24 - 2026-06-09
 
 ### Features & Enhancements
