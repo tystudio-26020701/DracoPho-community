@@ -7,6 +7,7 @@
 #include "ui/i18n.h"
 #include "ui/theme.h"
 #include "window_detection.h"
+#include "windows_integration.h"
 #include "windows_tray_controller.h"
 
 #include <QApplication>
@@ -589,7 +590,7 @@ ShotWindow *showCaptureWindow(QScreen *screen,
         if (allOutputs) {
             window->show();
         } else {
-            window->showFullScreen();
+            markshot::windows::showFullScreenOnScreen(window, screen);
         }
         window->raise();
         window->activateWindow();
