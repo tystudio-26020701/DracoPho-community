@@ -314,6 +314,14 @@ HMONITOR monitorForScreen(QScreen *screen)
         return nullptr;
     }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    if (auto *nativeScreen = screen->nativeInterface<QNativeInterface::QWindowsScreen>()) {
+        if (HMONITOR monitor = nativeScreen->handle()) {
+            return monitor;
+        }
+    }
+#endif
+
     MonitorSearch search;
     search.screen = screen;
     EnumDisplayMonitors(nullptr, nullptr, findMonitorForScreen, reinterpret_cast<LPARAM>(&search));
@@ -616,6 +624,11 @@ CaptureResult cropWindowsGraphicsCaptureFrame(CaptureResult capture,
     }
 
     if (!request.sourceGeometry.isValid() || request.sourceGeometry.isEmpty()) {
+        if (request.preferScreencast) {
+            // 1. 【Windows捕获】【滚动选区】长截屏帧尺寸需要与逻辑选区一致
+            capture.image = markshot::capture::resizeFrameToGeometrySize(capture.image,
+                                                                          capture.sourceGeometry);
+        }
         return capture;
     }
 
@@ -642,6 +655,11 @@ CaptureResult cropWindowsGraphicsCaptureFrame(CaptureResult capture,
     const QRect frameGeometry = capture.sourceGeometry;
     capture.image = cropped.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     capture.sourceGeometry = overlap;
+    if (request.preferScreencast) {
+        // 1. 【Windows捕获】【滚动选区】WGC 输出物理像素，录制帧按逻辑选区归一
+        capture.image = markshot::capture::resizeFrameToGeometrySize(capture.image,
+                                                                      capture.sourceGeometry);
+    }
     markshot::debugLog("capture",
                        "windows-graphics-capture-crop frame=%dx%d frame_geom=%d,%d %dx%d "
                        "requested=%d,%d %dx%d overlap=%d,%d %dx%d result=%dx%d",

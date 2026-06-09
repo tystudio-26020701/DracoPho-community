@@ -84,6 +84,36 @@ private slots:
         QCOMPARE(cropped.devicePixelRatio(), 1.0);
     }
 
+    void resizeFrameToGeometrySizeMatchesLogicalBounds()
+    {
+        QImage image(400, 200, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::black);
+        image.setDevicePixelRatio(2.0);
+
+        const QImage resized =
+            markshot::capture::resizeFrameToGeometrySize(image, QRect(10, 20, 200, 100));
+
+        QCOMPARE(resized.size(), QSize(200, 100));
+        QCOMPARE(resized.devicePixelRatio(), 1.0);
+    }
+
+    void cropAndResizeMatchesScrollCaptureSelectionBounds()
+    {
+        QImage image(400, 200, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::black);
+
+        const QRect sourceGeometry(0, 0, 200, 100);
+        const QRect selectedGeometry(50, 25, 100, 50);
+        const QImage cropped =
+            markshot::capture::cropFrameToRequest(image, sourceGeometry, selectedGeometry);
+        const QImage resized =
+            markshot::capture::resizeFrameToGeometrySize(cropped, selectedGeometry);
+
+        QCOMPARE(cropped.size(), QSize(200, 100));
+        QCOMPARE(resized.size(), selectedGeometry.size());
+        QCOMPARE(resized.devicePixelRatio(), 1.0);
+    }
+
     void imageRectAndGeometryRoundTrip()
     {
         const QRect source(100, 50, 800, 400);

@@ -41,6 +41,24 @@ QImage cropFrameToRequest(const QImage &frame, QRect streamGeometry, QRect reque
     return crop.isEmpty() ? QImage() : frame.copy(crop);
 }
 
+QImage resizeFrameToGeometrySize(const QImage &frame, QRect geometry)
+{
+    if (frame.isNull() || !geometry.isValid() || geometry.isEmpty()) {
+        return frame;
+    }
+
+    const QSize targetSize = geometry.normalized().size();
+    if (targetSize.isEmpty() || frame.size() == targetSize) {
+        QImage unchanged = frame;
+        unchanged.setDevicePixelRatio(1.0);
+        return unchanged;
+    }
+
+    QImage resized = frame.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    resized.setDevicePixelRatio(1.0);
+    return resized;
+}
+
 QRect imageRectFromGeometry(QRect geometry, QRect sourceGeometry, QSize imageSize)
 {
     if (geometry.isEmpty() || imageSize.isEmpty()) {

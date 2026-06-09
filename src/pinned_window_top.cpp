@@ -2,6 +2,7 @@
 
 #include "debug_log.h"
 #include "layer_shell_runtime.h"
+#include "windows_integration.h"
 
 #include <QGuiApplication>
 #include <QMargins>
@@ -229,6 +230,7 @@ void applyPinnedWindowTopState(QWidget *window, bool alwaysOnTop)
         window->setProperty("markShotPinnedLayerShellActive", false);
     }
     applyQtTopHint(window, alwaysOnTop, !layerShellTop);
+    markshot::windows::setWindowTopMost(window, alwaysOnTop);
     if (alwaysOnTop) {
         configurePinnedLayerShell(window);
         if (layerShellTop && wasVisible && !window->isVisible()) {
@@ -252,6 +254,7 @@ void raisePinnedWindowOnPlatform(QWidget *window)
     if (QWindow *nativeWindow = window->windowHandle()) {
         nativeWindow->raise();
     }
+    markshot::windows::raiseTopMostWindow(window);
     updatePinnedLayerShell(window);
 
 #ifdef MARK_SHOT_WITH_DBUS

@@ -6,6 +6,7 @@
 #include <QScreen>
 #include <QString>
 #include <QWidget>
+#include <QWindow>
 
 #include <algorithm>
 #include <string>
@@ -28,6 +29,20 @@ namespace {
 
 constexpr DWORD kWdaNone = 0x00000000;
 constexpr DWORD kWdaExcludeFromCapture = 0x00000011;
+
+HMONITOR nativeMonitorForScreen(QScreen *screen)
+{
+    if (!screen) {
+        return nullptr;
+    }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    if (auto *nativeScreen = screen->nativeInterface<QNativeInterface::QWindowsScreen>()) {
+        return nativeScreen->handle();
+    }
+#endif
+    return nullptr;
+}
 
 QString windowClassName(HWND hwnd)
 {
@@ -95,6 +110,12 @@ QScreen *screenForNativeMonitor(HMONITOR monitor, MONITORINFOEXW *monitorInfo)
         if (!screen) {
             continue;
         }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+        if (nativeMonitorForScreen(screen) == monitor) {
+            return screen;
+        }
+#endif
 
         const QString screenName = screen->name();
         if (screenName == deviceName
@@ -257,6 +278,113 @@ void setExcludedFromCapture(QWidget *widget, bool excluded)
 #else
     Q_UNUSED(widget);
     Q_UNUSED(excluded);
+#endif
+}
+
+void showFullScreenOnScreen(QWidget *widget, QScreen *screen)
+{
+    if (!widget) {
+        return;
+    }
+
+    if (screen) {
+        widget->setScreen(screen);
+        widget->setGeometry(screen->geometry());
+    }
+#if defined(Q_OS_WIN)
+    widget->setWindowState(widget->windowState() & ~Qt::WindowFullScreen);
+    widget->show();
+#else
+    widget->showFullScreen();
+#endif
+
+#if defined(Q_OS_WIN)
+    HWND hwnd = hwndForWidget(widget);
+    HMONITOR monitor = nativeMonitorForScreen(screen);
+    MONITORINFOEXW monitorInfo = {};
+    monitorInfo.cbSize = sizeof(monitorInfo);
+    if (hwnd && monitor && GetMonitorInfoW(monitor, &monitorInfo)) {
+        const RECT rect = monitorInfo.rcMonitor;
+        constexpr UINT flags = SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_FRAMECHANGED;
+        if (!SetWindowPos(hwnd,
+                          HWND_TOPMOST,
+                          rect.left,
+                          rect.top,
+                          rect.right - rect.left,
+                          rect.bottom - rect.top,
+                          flags)) {
+            markshot::debugLog("windows",
+                               "fullscreen placement failed screen=%s hwnd=%p monitor=%p error=%lu",
+                               screen ? screen->name().toUtf8().constData() : "(none)",
+                               static_cast<void *>(hwnd),
+                               static_cast<void *>(monitor),
+                               static_cast<unsigned long>(GetLastError()));
+        }
+    }
+
+    QScreen *actualScreen = widget->windowHandle() ? widget->windowHandle()->screen() : widget->screen();
+    markshot::debugLog("windows",
+                       "fullscreen placement target=%s target_geom=%d,%d %dx%d monitor=%p "
+                       "native_geom=%ld,%ld %ldx%ld "
+                       "window_geom=%d,%d %dx%d actual=%s",
+                       screen ? screen->name().toUtf8().constData() : "(none)",
+                       screen ? screen->geometry().x() : 0,
+                       screen ? screen->geometry().y() : 0,
+                       screen ? screen->geometry().width() : 0,
+                       screen ? screen->geometry().height() : 0,
+                       static_cast<void *>(monitor),
+                       static_cast<long>(monitorInfo.rcMonitor.left),
+                       static_cast<long>(monitorInfo.rcMonitor.top),
+                       static_cast<long>(monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left),
+                       static_cast<long>(monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top),
+                       widget->geometry().x(),
+                       widget->geometry().y(),
+                       widget->geometry().width(),
+                       widget->geometry().height(),
+                       actualScreen ? actualScreen->name().toUtf8().constData() : "(none)");
+#endif
+}
+
+void setWindowTopMost(QWidget *widget, bool alwaysOnTop)
+{
+#if defined(Q_OS_WIN)
+    HWND hwnd = hwndForWidget(widget);
+    if (!hwnd) {
+        return;
+    }
+
+    const HWND insertAfter = alwaysOnTop ? HWND_TOPMOST : HWND_NOTOPMOST;
+    constexpr UINT flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+    if (!SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, flags)) {
+        markshot::debugLog("windows",
+                           "【Windows】【置顶窗口】SetWindowPos failed hwnd=%p error=%lu topmost=%d",
+                           static_cast<void *>(hwnd),
+                           static_cast<unsigned long>(GetLastError()),
+                           alwaysOnTop ? 1 : 0);
+    }
+#else
+    Q_UNUSED(widget);
+    Q_UNUSED(alwaysOnTop);
+#endif
+}
+
+void raiseTopMostWindow(QWidget *widget)
+{
+#if defined(Q_OS_WIN)
+    HWND hwnd = hwndForWidget(widget);
+    if (!hwnd) {
+        return;
+    }
+
+    constexpr UINT flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+    if (!SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags)) {
+        markshot::debugLog("windows",
+                           "【Windows】【置顶窗口】raise SetWindowPos failed hwnd=%p error=%lu",
+                           static_cast<void *>(hwnd),
+                           static_cast<unsigned long>(GetLastError()));
+    }
+#else
+    Q_UNUSED(widget);
 #endif
 }
 
