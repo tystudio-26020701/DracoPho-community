@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(mark-shot VERSION 0.1.24 LANGUAGES CXX)
+project(mark-shot VERSION 0.1.25 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -73,11 +73,18 @@ qt_add_executable(mark-shot
     src/debug_log.h
     src/config_value.cpp
     src/config_value.h
+    src/capture_freeze_scope.cpp
+    src/capture_freeze_scope.h
+    src/capture_freeze_scope_config.cpp
     src/capture_geometry.cpp
     src/capture_geometry.h
+    src/capture_session_launcher.cpp
+    src/capture_session_launcher.h
     src/layer_shell_plugin_interface.h
     src/layer_shell_runtime.cpp
     src/layer_shell_runtime.h
+    src/startup_config.cpp
+    src/startup_config.h
     src/window_detection.cpp
     src/window_detection.h
     src/windows_integration.cpp
@@ -121,6 +128,14 @@ qt_add_executable(mark-shot
     src/shot_window_property_panels.cpp
     src/shot_window_setup.cpp
     src/shot_window_pinned_window.cpp
+    src/pinned_window/pinned_image_window.cpp
+    src/pinned_window/pinned_image_window.h
+    src/pinned_window/pinned_image_window_geometry.cpp
+    src/pinned_window/pinned_image_window_ocr.cpp
+    src/pinned_window/pinned_image_window_text_selection.cpp
+    src/pinned_window/pinned_image_window_translation.cpp
+    src/pinned_window/pinned_resize_controller.cpp
+    src/pinned_window/pinned_resize_controller.h
     src/pinned_window_top.cpp
     src/pinned_window_top.h
     src/annotation_launch.cpp
@@ -259,6 +274,22 @@ if(BUILD_TESTING)
     )
     add_test(NAME config-value COMMAND mark-shot-config-value-test)
 
+    qt_add_executable(mark-shot-capture-freeze-scope-test
+        tests/capture_freeze_scope_test.cpp
+        src/capture_freeze_scope.cpp
+        src/capture_freeze_scope.h
+        src/config_value.cpp
+        src/config_value.h
+    )
+    target_include_directories(mark-shot-capture-freeze-scope-test PRIVATE src)
+    target_link_libraries(mark-shot-capture-freeze-scope-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME capture-freeze-scope COMMAND mark-shot-capture-freeze-scope-test)
+
     qt_add_executable(mark-shot-ocr-result-test
         tests/ocr_result_test.cpp
         src/ocr_result.cpp
@@ -272,6 +303,20 @@ if(BUILD_TESTING)
             Qt6::Test
     )
     add_test(NAME ocr-result COMMAND mark-shot-ocr-result-test)
+
+    qt_add_executable(mark-shot-pinned-resize-controller-test
+        tests/pinned_resize_controller_test.cpp
+        src/pinned_window/pinned_resize_controller.cpp
+        src/pinned_window/pinned_resize_controller.h
+    )
+    target_include_directories(mark-shot-pinned-resize-controller-test PRIVATE src)
+    target_link_libraries(mark-shot-pinned-resize-controller-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME pinned-resize-controller COMMAND mark-shot-pinned-resize-controller-test)
 
     qt_add_executable(mark-shot-stitcher-test
         tests/stitcher_test.cpp

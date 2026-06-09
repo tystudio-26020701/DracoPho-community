@@ -1,21 +1,18 @@
 #include "annotation_launch.h"
-#include "config_value.h"
-#include "screen_capture.h"
-#include "shot_window.h"
+#include "capture_freeze_scope.h"
+#include "capture_session_launcher.h"
 #include "debug_log.h"
+#include "shot_window.h"
+#include "startup_config.h"
 #include "ui/icons.h"
 #include "ui/i18n.h"
 #include "ui/theme.h"
 #include "window_detection.h"
-#include "windows_integration.h"
 #include "windows_tray_controller.h"
 
 #include <QApplication>
 #include <QByteArray>
-#include <QColor>
 #include <QCommandLineParser>
-#include <QDir>
-#include <QFile>
 #include <QFileInfo>
 #include <QFont>
 #include <QGuiApplication>
@@ -31,7 +28,6 @@
 #endif
 #include <QMessageBox>
 #include <QPointer>
-#include <QProcessEnvironment>
 #include <QScreen>
 #include <QStringList>
 #include <QTimer>
@@ -44,285 +40,6 @@
 #include <utility>
 
 namespace {
-
-/// @brief Calculates the bounding rectangle of all connected screens combined.
-/// @return A QRect representing the geometry of the virtual desktop.
-QRect virtualScreensGeometry()
-{
-    QRect geometry;
-    const QList<QScreen *> screens = QGuiApplication::screens();
-    for (QScreen *screen : screens) {
-        if (!screen) {
-            continue;
-        }
-        geometry = geometry.isNull() ? screen->geometry() : geometry.united(screen->geometry());
-    }
-    return geometry;
-}
-
-/// @brief Generates a list of candidate file paths for the application configuration.
-/// @return A list of candidate file paths.
-QStringList preApplicationConfigPathCandidates()
-{
-    QStringList candidates;
-#if defined(Q_OS_WIN)
-    const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    const QString localAppData = env.value(QStringLiteral("LOCALAPPDATA"));
-    if (!localAppData.isEmpty()) {
-        candidates.append(QDir(localAppData).filePath(QStringLiteral("mark-shot/config.json")));
-    }
-
-    const QString appData = env.value(QStringLiteral("APPDATA"));
-    if (!appData.isEmpty()) {
-        candidates.append(QDir(appData).filePath(QStringLiteral("mark-shot/config.json")));
-    }
-
-    const QString userProfile = env.value(QStringLiteral("USERPROFILE"));
-    if (!userProfile.isEmpty()) {
-        candidates.append(QDir(userProfile).filePath(QStringLiteral("AppData/Local/mark-shot/config.json")));
-    }
-#else
-    const QByteArray xdgConfigHome = qgetenv("XDG_CONFIG_HOME");
-    if (!xdgConfigHome.isEmpty()) {
-        candidates.append(QDir(QString::fromLocal8Bit(xdgConfigHome))
-                              .filePath(QStringLiteral("mark-shot/config.json")));
-    }
-
-    const QByteArray home = qgetenv("HOME");
-    if (!home.isEmpty()) {
-        candidates.append(QDir(QString::fromLocal8Bit(home)).filePath(QStringLiteral(".config/mark-shot/config.json")));
-    }
-#endif
-    candidates.removeAll(QString());
-    candidates.removeDuplicates();
-    return candidates;
-}
-
-/// @brief Finds the path to the application configuration file by scanning candidates.
-/// @return The path to the first existing configuration file, or a default candidate path.
-QString preApplicationConfigPath()
-{
-    const QStringList candidates = preApplicationConfigPathCandidates();
-    for (const QString &path : candidates) {
-        if (QFileInfo::exists(path)) {
-            return path;
-        }
-    }
-    return candidates.isEmpty() ? QString() : candidates.first();
-}
-
-/// @brief Applies environment variables configured in the application config file.
-void applyConfiguredEnvironment()
-{
-    const QString configPath = preApplicationConfigPath();
-    if (configPath.isEmpty()) {
-        return;
-    }
-
-    QFile file(configPath);
-    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return;
-    }
-
-    QJsonParseError parseError;
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
-    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        return;
-    }
-
-    QJsonObject environment = markshot::config::objectValue(document.object(), QStringLiteral("env"));
-    const QJsonObject namedEnvironment = markshot::config::objectValue(document.object(), QStringLiteral("environment"));
-    for (auto it = namedEnvironment.constBegin(); it != namedEnvironment.constEnd(); ++it) {
-        environment.insert(it.key(), it.value());
-    }
-
-    for (auto it = environment.constBegin(); it != environment.constEnd(); ++it) {
-        const QString key = it.key().trimmed();
-        if (key.isEmpty()) {
-            continue;
-        }
-        if (const std::optional<QString> value = markshot::config::environmentStringValue(it.value())) {
-            const QByteArray keyBytes = key.toUtf8();
-            const QByteArray valueBytes = value->toUtf8();
-            qputenv(keyBytes.constData(), valueBytes);
-            markshot::debugLog("config", "env override %s", keyBytes.constData());
-        }
-    }
-}
-
-/// @brief Resolves the first non-empty string value from a list of candidate keys in a JSON object.
-/// @param object The JSON object to inspect.
-/// @param keys The list of candidate keys to look up.
-/// @return The resolved non-empty string, or an empty string if none.
-QString stringValue(const QJsonObject &object, const QStringList &keys)
-{
-    for (const QString &key : keys) {
-        const QString value = object.value(key).toString().trimmed();
-        if (!value.isEmpty()) {
-            return value;
-        }
-    }
-    return {};
-}
-
-/// @brief Retrieves the first non-empty trimmed string from a list.
-/// @param values The list of string values.
-/// @return The first non-empty trimmed string, or an empty string if none.
-QString firstStringValue(const QStringList &values)
-{
-    for (const QString &value : values) {
-        const QString trimmed = value.trimmed();
-        if (!trimmed.isEmpty()) {
-            return trimmed;
-        }
-    }
-    return {};
-}
-
-/// @brief Resolves the first defined JSON value from a list of candidate keys.
-/// @param object The JSON object to inspect.
-/// @param keys The candidate keys to look up.
-/// @return The resolved JSON value, or an undefined QJsonValue if none were found.
-QJsonValue jsonValue(const QJsonObject &object, const QStringList &keys)
-{
-    for (const QString &key : keys) {
-        const QJsonValue value = object.value(key);
-        if (!value.isUndefined()) {
-            return value;
-        }
-    }
-    return {};
-}
-
-/// @brief Checks whether the given text consists entirely of hexadecimal digits.
-/// @param text The text to inspect.
-/// @return True if the text only contains hex digits, false otherwise.
-bool isHexDigits(const QString &text)
-{
-    for (const QChar ch : text) {
-        if (!ch.isDigit()
-            && (ch < QLatin1Char('a') || ch > QLatin1Char('f'))
-            && (ch < QLatin1Char('A') || ch > QLatin1Char('F'))) {
-            return false;
-        }
-    }
-    return !text.isEmpty();
-}
-
-/// @brief Extracts a color channel value from a JSON object.
-/// @param object The JSON object to inspect.
-/// @param keys The list of candidate keys representing the channel.
-/// @return An optional integer channel value clamped between 0 and 255.
-std::optional<int> channelValue(const QJsonObject &object, const QStringList &keys)
-{
-    return markshot::config::clampedIntValue(jsonValue(object, keys), 0, 255);
-}
-
-/// @brief Parses a QColor from a string representation.
-/// @param value The string representing the color.
-/// @return An optional QColor if parsing is successful.
-std::optional<QColor> colorFromString(QString value);
-
-/// @brief Parses a QColor from a QJsonObject.
-/// @param object The JSON object representing a color.
-/// @return An optional QColor if parsing is successful.
-std::optional<QColor> colorFromObject(const QJsonObject &object)
-{
-    const QJsonValue nestedColor =
-        jsonValue(object,
-                  {QStringLiteral("value"),
-                   QStringLiteral("color"),
-                   QStringLiteral("hex"),
-                   QStringLiteral("format"),
-                   QStringLiteral("formats")});
-    if (nestedColor.isString()) {
-        return colorFromString(nestedColor.toString());
-    }
-
-    const std::optional<int> red = channelValue(object, {QStringLiteral("r"), QStringLiteral("red")});
-    const std::optional<int> green = channelValue(object, {QStringLiteral("g"), QStringLiteral("green")});
-    const std::optional<int> blue = channelValue(object, {QStringLiteral("b"), QStringLiteral("blue")});
-    if (!red.has_value() || !green.has_value() || !blue.has_value()) {
-        return std::nullopt;
-    }
-
-    const std::optional<int> alpha = channelValue(object, {QStringLiteral("a"), QStringLiteral("alpha")});
-    return QColor(*red, *green, *blue, alpha.value_or(255));
-}
-
-/// @brief Parses a QColor from a string representation.
-/// @param value The string representing the color.
-/// @return An optional QColor if parsing is successful.
-std::optional<QColor> colorFromString(QString value)
-{
-    QString text = value.trimmed();
-    if (text.isEmpty()) {
-        return std::nullopt;
-    }
-    if (text.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)) {
-        text = text.mid(2);
-    }
-    if (!text.startsWith(QLatin1Char('#')) && (text.size() == 6 || text.size() == 8) && isHexDigits(text)) {
-        text.prepend(QLatin1Char('#'));
-    }
-    if (text.startsWith(QLatin1Char('#')) && text.size() == 9 && isHexDigits(text.mid(1))) {
-        bool ok = false;
-        const int red = text.mid(1, 2).toInt(&ok, 16);
-        if (!ok) {
-            return std::nullopt;
-        }
-        const int green = text.mid(3, 2).toInt(&ok, 16);
-        if (!ok) {
-            return std::nullopt;
-        }
-        const int blue = text.mid(5, 2).toInt(&ok, 16);
-        if (!ok) {
-            return std::nullopt;
-        }
-        const int alpha = text.mid(7, 2).toInt(&ok, 16);
-        if (!ok) {
-            return std::nullopt;
-        }
-        return QColor(red, green, blue, alpha);
-    }
-
-    const QColor color(text);
-    if (color.isValid()) {
-        return color;
-    }
-    return std::nullopt;
-}
-
-/// @brief Parses a QColor from a QJsonValue.
-/// @param value The JSON value containing color information (string or object).
-/// @return An optional QColor if parsing is successful.
-std::optional<QColor> colorFromValue(const QJsonValue &value)
-{
-    if (value.isString()) {
-        return colorFromString(value.toString());
-    }
-    if (value.isObject()) {
-        return colorFromObject(value.toObject());
-    }
-    return std::nullopt;
-}
-
-/// @brief Structure to store default annotation tool and color settings.
-struct DefaultTools {
-    /// @brief Default tool for normal capture mode.
-    ShotWindow::Tool normal = ShotWindow::Tool::Pen;
-    /// @brief Default tool for fullscreen capture mode.
-    ShotWindow::Tool fullscreen = ShotWindow::Tool::Pen;
-    /// @brief Default tool for annotating an existing image file.
-    ShotWindow::Tool file = ShotWindow::Tool::Pen;
-    /// @brief Default annotation color.
-    QColor color = markshot::theme::kDefaultAnnotationColor;
-};
-
-struct DebugRuntimeConfig {
-    bool enabled = markshot::debugEnabled();
-    QString logPath = markshot::debugLogPath();
-};
 
 #if defined(Q_OS_WIN)
 
@@ -458,375 +175,6 @@ void installSingleInstanceCommandHandler(
 
 #endif
 
-QString expandedConfigPath(QString path)
-{
-    path = path.trimmed();
-    if (path == QStringLiteral("~")) {
-        return QDir::homePath();
-    }
-    if (path.startsWith(QStringLiteral("~/"))) {
-        return QDir::home().filePath(path.mid(2));
-    }
-    return path;
-}
-
-DebugRuntimeConfig configuredDebugRuntimeConfig()
-{
-    DebugRuntimeConfig config;
-    QFile file(markshot::appConfigPath());
-    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return config;
-    }
-
-    QJsonParseError parseError;
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
-    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        return config;
-    }
-
-    const QJsonObject root = document.object();
-    const QJsonValue debugValue = root.value(QStringLiteral("debug"));
-    if (const std::optional<bool> enabled = markshot::config::boolValue(debugValue)) {
-        config.enabled = *enabled;
-    }
-
-    if (debugValue.isObject()) {
-        const QJsonObject debug = debugValue.toObject();
-        if (const std::optional<bool> enabled = markshot::config::boolValue(
-                markshot::config::valueForKeys(debug,
-                                               {QStringLiteral("enabled"),
-                                                QStringLiteral("enable"),
-                                                QStringLiteral("on")}))) {
-            config.enabled = *enabled;
-        }
-
-        const QString path = stringValue(debug,
-                                         {QStringLiteral("logPath"),
-                                          QStringLiteral("path"),
-                                          QStringLiteral("file"),
-                                          QStringLiteral("logFile")});
-        if (!path.isEmpty()) {
-            config.logPath = expandedConfigPath(path);
-        }
-    }
-
-    const QString rootLogPath = stringValue(root,
-                                           {QStringLiteral("debugLogPath"),
-                                            QStringLiteral("debugLog"),
-                                            QStringLiteral("logPath")});
-    if (!rootLogPath.isEmpty()) {
-        config.logPath = expandedConfigPath(rootLogPath);
-    }
-    if (markshot::debugEnabled()) {
-        config.enabled = true;
-    }
-    return config;
-}
-
-/// @brief Loads and returns the configured default annotation tools and colors.
-/// @param warning Output parameter to receive warning messages during configuration loading.
-/// @return The configured DefaultTools structure.
-DefaultTools configuredDefaultTools(QString *warning)
-{
-    if (warning) {
-        warning->clear();
-    }
-
-    DefaultTools tools;
-    QFile file(markshot::appConfigPath());
-    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return tools;
-    }
-
-    QJsonParseError parseError;
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
-    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-        return tools;
-    }
-
-    const QJsonObject root = document.object();
-    const QJsonObject annotation = markshot::config::objectValue(root, QStringLiteral("annotation"));
-    const QJsonObject defaultTools = markshot::config::objectValue(annotation, QStringLiteral("defaultTools"));
-    const QJsonObject rootDefaultTools = markshot::config::objectValue(root, QStringLiteral("defaultTools"));
-    QStringList warnings;
-    bool hasToolWarnings = false;
-
-    auto parseTool = [&warnings, &hasToolWarnings](const QString &name, const QString &source) -> std::optional<ShotWindow::Tool> {
-        if (name.isEmpty()) {
-            return std::nullopt;
-        }
-        const std::optional<ShotWindow::Tool> tool = ShotWindow::toolFromName(name);
-        if (tool.has_value()) {
-            return tool;
-        }
-        warnings.append(MS_TR("Unsupported default tool in config %1: %2").arg(source, name));
-        hasToolWarnings = true;
-        return std::nullopt;
-    };
-
-    const QString commonDefault = firstStringValue({
-        stringValue(annotation, {QStringLiteral("defaultTool"), QStringLiteral("defaultAnnotationTool")}),
-        stringValue(root, {QStringLiteral("defaultTool"), QStringLiteral("defaultAnnotationTool")}),
-    });
-    if (const std::optional<ShotWindow::Tool> tool =
-            parseTool(commonDefault, QStringLiteral("annotation.defaultTool"))) {
-        tools.normal = *tool;
-        tools.fullscreen = *tool;
-        tools.file = *tool;
-    }
-
-    const QString normalDefault = firstStringValue({
-        stringValue(defaultTools,
-                    {QStringLiteral("normal"), QStringLiteral("region"), QStringLiteral("selection")}),
-        stringValue(rootDefaultTools,
-                    {QStringLiteral("normal"), QStringLiteral("region"), QStringLiteral("selection")}),
-        stringValue(annotation,
-                    {QStringLiteral("normalDefaultTool"),
-                     QStringLiteral("regionDefaultTool"),
-                     QStringLiteral("selectionDefaultTool")}),
-        stringValue(root,
-                    {QStringLiteral("normalDefaultTool"),
-                     QStringLiteral("regionDefaultTool"),
-                     QStringLiteral("selectionDefaultTool")}),
-    });
-    if (const std::optional<ShotWindow::Tool> tool =
-            parseTool(normalDefault, QStringLiteral("annotation.defaultTools.normal"))) {
-        tools.normal = *tool;
-    }
-
-    const QString fullscreenDefault = firstStringValue({
-        stringValue(defaultTools,
-                    {QStringLiteral("fullscreen"), QStringLiteral("fullScreen"), QStringLiteral("full-screen")}),
-        stringValue(rootDefaultTools,
-                    {QStringLiteral("fullscreen"), QStringLiteral("fullScreen"), QStringLiteral("full-screen")}),
-        stringValue(annotation,
-                    {QStringLiteral("fullscreenDefaultTool"),
-                     QStringLiteral("fullScreenDefaultTool"),
-                     QStringLiteral("defaultFullscreenTool")}),
-        stringValue(root,
-                    {QStringLiteral("fullscreenDefaultTool"),
-                     QStringLiteral("fullScreenDefaultTool"),
-                     QStringLiteral("defaultFullscreenTool")}),
-    });
-    if (const std::optional<ShotWindow::Tool> tool =
-            parseTool(fullscreenDefault, QStringLiteral("annotation.fullscreenDefaultTool"))) {
-        tools.fullscreen = *tool;
-        tools.file = *tool;
-    }
-
-    const QString fileDefault = firstStringValue({
-        stringValue(annotation,
-                    {QStringLiteral("fileDefaultTool"),
-                     QStringLiteral("imageDefaultTool"),
-                     QStringLiteral("openFileDefaultTool")}),
-        stringValue(root,
-                    {QStringLiteral("fileDefaultTool"),
-                     QStringLiteral("imageDefaultTool"),
-                     QStringLiteral("openFileDefaultTool")}),
-        stringValue(defaultTools,
-                    {QStringLiteral("file"), QStringLiteral("image"), QStringLiteral("openFile")}),
-        stringValue(rootDefaultTools,
-                    {QStringLiteral("file"), QStringLiteral("image"), QStringLiteral("openFile")}),
-    });
-    if (const std::optional<ShotWindow::Tool> tool =
-            parseTool(fileDefault, QStringLiteral("annotation.fileDefaultTool"))) {
-        tools.file = *tool;
-    }
-
-    const QJsonValue defaultColor = jsonValue(annotation,
-                                             {QStringLiteral("defaultColor"),
-                                              QStringLiteral("defaultAnnotationColor")});
-    const QJsonValue rootDefaultColor = jsonValue(root,
-                                                 {QStringLiteral("defaultColor"),
-                                                  QStringLiteral("defaultAnnotationColor")});
-    const QJsonValue configuredColor = !defaultColor.isUndefined() ? defaultColor : rootDefaultColor;
-    if (!configuredColor.isUndefined()) {
-        if (const std::optional<QColor> color = colorFromValue(configuredColor)) {
-            tools.color = *color;
-        } else {
-            markshot::debugLog("config",
-                               "unsupported default color in annotation.defaultColor; using built-in default");
-        }
-    }
-
-    if (warning && !warnings.isEmpty()) {
-        QStringList supportLines;
-        if (hasToolWarnings) {
-            supportLines.append(MS_TR("Supported tools: %1").arg(ShotWindow::supportedToolNames().join(QStringLiteral(", "))));
-        }
-        *warning = warnings.join(QStringLiteral("\n"));
-        if (!supportLines.isEmpty()) {
-            *warning += QStringLiteral("\n") + supportLines.join(QStringLiteral("\n"));
-        }
-    }
-    return tools;
-}
-
-/// @brief Disables standard Qt portal services to allow custom host application registration.
-void disableQtPortalServicesForHostApp()
-{
-#if defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN)
-    if (qEnvironmentVariableIsSet("QT_NO_XDG_DESKTOP_PORTAL")) {
-        return;
-    }
-    if (QFileInfo::exists(QStringLiteral("/.flatpak-info")) || qEnvironmentVariableIsSet("SNAP")) {
-        return;
-    }
-
-    // Qt 6.10+ can query the portal before registering the app id, which makes
-    // host registration fail on xdg-desktop-portal versions that bind an id to
-    // the first portal call. mark-shot performs its own registration before
-    // screenshot portal calls.
-    qputenv("QT_NO_XDG_DESKTOP_PORTAL", QByteArrayLiteral("1"));
-#endif
-}
-
-/// @brief Captures a screen and displays the screenshot inside a capture window.
-/// @param screen The screen to capture.
-/// @param allOutputs Whether to capture all screen outputs as a single virtual screen.
-/// @param useRegularWindow Whether to use standard windows instead of layer shell overlays.
-/// @param fullscreenAnnotation Whether to automatically start annotation in fullscreen mode.
-/// @param defaultTools Configuration specifying the default annotation tools and color.
-/// @param error Output parameter to receive any error message that occurs.
-/// @return Pointer to the created ShotWindow instance, or nullptr on failure.
-ShotWindow *showCaptureWindow(QScreen *screen,
-                              bool allOutputs,
-                              bool useRegularWindow,
-                              bool fullscreenAnnotation,
-                              const DefaultTools &defaultTools,
-                              QString *error)
-{
-    const QRect captureGeometry = allOutputs ? virtualScreensGeometry() : (screen ? screen->geometry() : QRect());
-    const QString outputName = (!allOutputs && screen) ? screen->name() : QString();
-    const bool detectWindows = markshot::windowDetectionEnabled();
-    const QVector<QRect> windowGeometries = detectWindows
-        ? markshot::collectConfiguredWindowGeometries(captureGeometry, outputName, allOutputs)
-        : QVector<QRect>();
-    CaptureResult capture = captureScreenFrame({outputName, captureGeometry, allOutputs});
-    if (capture.image.isNull()) {
-        if (error) {
-            *error = capture.error;
-        }
-        return nullptr;
-    }
-
-    const QRect sourceGeometry = capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()
-        ? capture.sourceGeometry
-        : captureGeometry;
-    ShotWindow *window =
-        new ShotWindow(capture.image, capture.outputName, sourceGeometry, windowGeometries, detectWindows);
-    window->setDefaultTools(defaultTools.normal, defaultTools.fullscreen);
-    window->setDefaultColor(defaultTools.color);
-    if (screen && !allOutputs) {
-        window->setScreen(screen);
-    }
-
-    const bool layerShellReady = !allOutputs && !useRegularWindow && window->configureLayerShell(screen);
-    if (layerShellReady) {
-        window->show();
-    } else {
-        if (capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()) {
-            window->setGeometry(capture.sourceGeometry);
-        }
-        if (allOutputs) {
-            window->show();
-        } else {
-            markshot::windows::showFullScreenOnScreen(window, screen);
-        }
-        window->raise();
-        window->activateWindow();
-    }
-
-    if (fullscreenAnnotation) {
-        QTimer::singleShot(0, window, [window] {
-            window->startFullscreenAnnotation();
-        });
-    }
-
-    return window;
-}
-
-/// @brief Starts a capture session and shows capture windows for the relevant screens.
-/// @param app Pointer to the QApplication instance.
-/// @param allOutputs Whether to capture all screen outputs as a single virtual screen.
-/// @param useRegularWindow Whether to use standard windows instead of layer shell overlays.
-/// @param fullscreenAnnotation Whether to automatically start annotation in fullscreen mode.
-/// @param defaultTools Configuration specifying the default annotation tools and color.
-/// @param error Output parameter to receive any error message that occurs.
-/// @return A vector of pointers to the created ShotWindow instances.
-QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
-                                                 bool allOutputs,
-                                                 bool useRegularWindow,
-                                                 bool fullscreenAnnotation,
-                                                 const DefaultTools &defaultTools,
-                                                 QString *error)
-{
-    QVector<QPointer<ShotWindow>> windows;
-    QScreen *screen = markshot::focusedScreen();
-    const QList<QScreen *> screens = QGuiApplication::screens();
-    if (!allOutputs && !fullscreenAnnotation && screens.size() > 1) {
-        for (QScreen *candidate : screens) {
-            if (!candidate || candidate->geometry().isEmpty()) {
-                continue;
-            }
-            ShotWindow *window =
-                showCaptureWindow(candidate, false, useRegularWindow, fullscreenAnnotation, defaultTools, error);
-            if (!window) {
-                for (const QPointer<ShotWindow> &existingWindow : std::as_const(windows)) {
-                    if (existingWindow) {
-                        existingWindow->close();
-                    }
-                }
-                windows.clear();
-                return windows;
-            }
-            windows.append(window);
-        }
-
-        if (!windows.isEmpty()) {
-            auto closingSession = std::make_shared<bool>(false);
-            for (const QPointer<ShotWindow> &candidateWindow : std::as_const(windows)) {
-                ShotWindow *window = candidateWindow.data();
-                if (!window) {
-                    continue;
-                }
-                QObject::connect(window, &ShotWindow::selectionActivated, app, [windows, closingSession](ShotWindow *activeWindow) {
-                    if (*closingSession) {
-                        return;
-                    }
-                    *closingSession = true;
-                    for (const QPointer<ShotWindow> &peerWindow : std::as_const(windows)) {
-                        if (peerWindow && peerWindow.data() != activeWindow) {
-                            peerWindow->close();
-                        }
-                    }
-                    *closingSession = false;
-                });
-                QObject::connect(window, &ShotWindow::sessionCancelRequested, app, [windows, closingSession] {
-                    if (*closingSession) {
-                        return;
-                    }
-                    *closingSession = true;
-                    for (const QPointer<ShotWindow> &peerWindow : std::as_const(windows)) {
-                        if (peerWindow) {
-                            peerWindow->close();
-                        }
-                    }
-                    *closingSession = false;
-                });
-            }
-        }
-        return windows;
-    }
-
-    ShotWindow *window =
-        showCaptureWindow(allOutputs ? nullptr : screen, allOutputs, useRegularWindow, fullscreenAnnotation, defaultTools, error);
-    if (window) {
-        windows.append(window);
-    }
-    return windows;
-}
-
 } // namespace
 
 /// @brief Main entry point of the application.
@@ -835,10 +183,10 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
 /// @return Exit code of the application.
 int main(int argc, char *argv[])
 {
-    applyConfiguredEnvironment();
+    markshot::applyConfiguredEnvironment();
 
     QGuiApplication::setDesktopFileName(QStringLiteral("mark-shot"));
-    disableQtPortalServicesForHostApp();
+    markshot::disableQtPortalServicesForHostApp();
 
     QApplication app(argc, argv);
     QApplication::setApplicationName(QStringLiteral("mark-shot"));
@@ -916,7 +264,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    DebugRuntimeConfig debugConfig = configuredDebugRuntimeConfig();
+    markshot::DebugRuntimeConfig debugConfig = markshot::configuredDebugRuntimeConfig();
     if (parser.isSet(debugOption)) {
         debugConfig.enabled = true;
     }
@@ -926,7 +274,7 @@ int main(int argc, char *argv[])
     if (parser.isSet(debugLogOption)) {
         const QString optionPath = parser.value(debugLogOption).trimmed();
         if (!optionPath.isEmpty()) {
-            debugConfig.logPath = expandedConfigPath(optionPath);
+            debugConfig.logPath = markshot::expandedConfigPath(optionPath);
         }
         if (!parser.isSet(noDebugOption)) {
             debugConfig.enabled = true;
@@ -938,7 +286,7 @@ int main(int argc, char *argv[])
                        markshot::debugLogPath().toUtf8().constData());
 
     QString configDefaultToolWarning;
-    DefaultTools defaultTools = configuredDefaultTools(&configDefaultToolWarning);
+    markshot::DefaultTools defaultTools = markshot::configuredDefaultTools(&configDefaultToolWarning);
     auto parseRuntimeTool = [](const QString &optionValue) {
         return ShotWindow::toolFromName(optionValue);
     };
@@ -984,7 +332,7 @@ int main(int argc, char *argv[])
     }
     if (parser.isSet(defaultColorOption)) {
         const QString optionValue = parser.value(defaultColorOption);
-        const std::optional<QColor> parsedColor = colorFromString(optionValue);
+        const std::optional<QColor> parsedColor = markshot::colorFromString(optionValue);
         if (!parsedColor.has_value()) {
             QMessageBox::critical(nullptr,
                                   QStringLiteral("Mark Shot"),
@@ -1040,6 +388,7 @@ int main(int argc, char *argv[])
     }
 
     const bool allOutputs = parser.isSet(allOutputsOption);
+    const markshot::CaptureFreezeScope freezeScope = markshot::configuredCaptureFreezeScope();
     const bool useRegularWindow = parser.isSet(xdgWindowOption);
     const bool fullscreenAnnotation = parser.isSet(fullscreenAnnotationOption);
     const markshot::WindowsTrayController::Config trayConfig = markshot::WindowsTrayController::readConfig();
@@ -1090,14 +439,20 @@ int main(int argc, char *argv[])
 
         auto *trayController = new markshot::WindowsTrayController(&app, trayConfig, &app);
         bool captureActive = false;
-        auto launchCapture = [&app, &captureActive, useRegularWindow, defaultTools](bool startFullscreen, bool requestAllOutputs) {
+        auto launchCapture = [&app, &captureActive, freezeScope, useRegularWindow, defaultTools](bool startFullscreen, bool requestAllOutputs) {
             if (captureActive) {
                 return;
             }
 
             QString captureError;
             QVector<QPointer<ShotWindow>> windows =
-                showCaptureSession(&app, requestAllOutputs, useRegularWindow, startFullscreen, defaultTools, &captureError);
+                markshot::showCaptureSession(&app,
+                                             requestAllOutputs,
+                                             freezeScope,
+                                             useRegularWindow,
+                                             startFullscreen,
+                                             defaultTools,
+                                             &captureError);
             if (windows.isEmpty()) {
                 if (!captureError.isEmpty()) {
                     QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), captureError);
@@ -1146,7 +501,13 @@ int main(int argc, char *argv[])
 
     QString captureError;
     QVector<QPointer<ShotWindow>> windows =
-        showCaptureSession(&app, allOutputs, useRegularWindow, fullscreenAnnotation, defaultTools, &captureError);
+        markshot::showCaptureSession(&app,
+                                     allOutputs,
+                                     freezeScope,
+                                     useRegularWindow,
+                                     fullscreenAnnotation,
+                                     defaultTools,
+                                     &captureError);
     if (windows.isEmpty()) {
         QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), captureError);
         return 1;
