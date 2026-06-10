@@ -164,6 +164,8 @@ private:
     enum class ArrowStyle {
         Fletched,
         Kde,
+        BidirectionalFletched,
+        BidirectionalKde,
     };
 
     // Highlighter can either follow the freehand stroke path or constrain to a
@@ -192,6 +194,8 @@ private:
         Move,
         Rotate,
         LineControl,
+        LineStart,
+        LineEnd,
         MagnifierSource,
         MagnifierLens,
         NumberTip,
@@ -288,7 +292,9 @@ private:
     const Annotation *annotationById(int id) const;
     bool annotationSupportsRotation(const Annotation &annotation) const;
     bool annotationSupportsLineControl(const Annotation &annotation) const;
+    bool annotationSupportsLineAnchors(const Annotation &annotation) const;
     QPointF annotationLineControlPoint(const Annotation &annotation) const;
+    SelectionDrag lineAnchorDragAt(const Annotation &annotation, QPointF imagePoint) const;
     QString numberLabelText(int number, NumberStyle style) const;
     SelectionDrag numberDragAt(const Annotation &annotation, QPointF imagePoint) const;
     QPointF rotatedPoint(QPointF point, QPointF center, qreal degrees) const;
@@ -311,10 +317,16 @@ private:
     SelectionDrag annotationDragAt(QPointF imagePoint, int annotationId) const;
     std::optional<int> annotationAt(QPointF imagePoint) const;
     void drawSelectedAnnotationFrame(QPainter &painter) const;
+    void drawLineAnchorHandles(QPainter &painter,
+                               const Annotation &annotation,
+                               QPointF center,
+                               qreal angle,
+                               bool rotateHandles) const;
     void moveAnnotation(Annotation &annotation, QPointF delta) const;
     void transformAnnotation(Annotation &annotation, QRectF oldBounds, QRectF newBounds) const;
     void beginAnnotationDrag(int annotationId, SelectionDrag drag, QPointF imagePoint);
     void updateAnnotationDrag(QPointF imagePoint, bool keepAspectRatio);
+    bool updateLineAnchorDrag(QPointF imagePoint);
     void beginAnnotationSelectionBox(QPointF imagePoint);
     void updateAnnotationSelectionBox(QPointF imagePoint);
     void commitAnnotationSelectionBox();

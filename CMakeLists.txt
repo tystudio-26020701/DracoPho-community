@@ -113,6 +113,8 @@ qt_add_executable(mark-shot
     src/shell_command.h
     src/ocr_result.cpp
     src/ocr_result.h
+    src/save_path_config.cpp
+    src/save_path_config.h
     src/shortcut_config.cpp
     src/shortcut_config.h
     src/shot_window.cpp
@@ -125,13 +127,17 @@ qt_add_executable(mark-shot
     src/shot_window_actions.cpp
     src/shot_window_annotation_editing.cpp
     src/shot_window_annotation_painting.cpp
+    src/shot_window_arrow_rendering.cpp
     src/shot_window_canvas.cpp
     src/shot_window_hit_testing.cpp
     src/shot_window_input.cpp
     src/shot_window_layout.cpp
+    src/shot_window_line_anchors.cpp
     src/shot_window_modes.cpp
     src/shot_window_property_panels.cpp
+    src/shot_window_selection_frame.cpp
     src/shot_window_setup.cpp
+    src/shot_window_shortcuts.cpp
     src/shot_window_pinned_window.cpp
     src/pinned_window/pinned_image_window.cpp
     src/pinned_window/pinned_image_window.h
@@ -310,6 +316,22 @@ if(BUILD_TESTING)
             Qt6::Test
     )
     add_test(NAME capture-cursor-policy COMMAND mark-shot-capture-cursor-policy-test)
+
+    qt_add_executable(mark-shot-save-path-config-test
+        tests/save_path_config_test.cpp
+        src/save_path_config.cpp
+        src/save_path_config.h
+        src/config_value.cpp
+        src/config_value.h
+    )
+    target_include_directories(mark-shot-save-path-config-test PRIVATE src)
+    target_link_libraries(mark-shot-save-path-config-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME save-path-config COMMAND mark-shot-save-path-config-test)
 
     qt_add_executable(mark-shot-screen-capture-cursor-test
         tests/screen_capture_cursor_test.cpp
