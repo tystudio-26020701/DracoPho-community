@@ -487,17 +487,7 @@ When installing manually, install `mark-shot`, `mark-shot-ocr`, and `mark-shot-t
 
 ## Compilation & Installation
 
-### Official Release Artifacts
-
-Each release publishes Linux binary archives, Debian packages, and Fedora RPM packages:
-
-- `linux-x86_64.tar.gz` and `linux-arm64.tar.gz`
-- `amd64.deb` and `arm64.deb`
-- `fedora_x86_64.rpm` and `fedora_aarch64.rpm`
-
-The distribution packages install `mark-shot`, helper scripts, desktop entries, icons, and runtime metadata together.
-
-#### Installation Guide
+### Installation Guide
 
 ##### Arch Linux (AUR)
 Arch Linux users can install directly from the AUR using helpers like `paru` or `yay`:
