@@ -508,7 +508,7 @@ void ShotWindow::updateAnnotationPropertyPanel()
         if (supportsArrowStyle) {
             const ArrowStyle panelArrowStyle = annotation ? annotation->arrowStyle : m_arrowStyle;
             const QSignalBlocker blocker(m_propertyArrowStyleCombo);
-            m_propertyArrowStyleCombo->setCurrentIndex(panelArrowStyle == ArrowStyle::Kde ? 1 : 0);
+            m_propertyArrowStyleCombo->setCurrentIndex(std::max(0, m_propertyArrowStyleCombo->findData(static_cast<int>(panelArrowStyle))));
         }
     }
     if (m_propertyHighlighterStyleCombo) {
