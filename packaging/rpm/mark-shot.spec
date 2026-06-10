@@ -67,6 +67,7 @@ sed -i '1s|^#!/usr/bin/env python3$|#!/usr/bin/python3|' \
 %{_libdir}/mark-shot/
 %{_datadir}/applications/mark-shot.desktop
 %{_datadir}/applications/mark-shot-edit.desktop
+%{_datadir}/applications/net.local.mark-shot.desktop
 %{_datadir}/icons/hicolor/scalable/apps/mark-shot.svg
 %{_datadir}/icons/hicolor/scalable/apps/mark-shot-edit.svg
 %{_datadir}/gnome-shell/extensions/mark-shot-scroll-helper@snemc.org/

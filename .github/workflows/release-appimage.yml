@@ -124,7 +124,7 @@ jobs:
           ./linuxdeploy-x86_64.AppImage \
             --appdir "$APPDIR" \
             --executable "$APPDIR/usr/bin/mark-shot" \
-            --desktop-file data/mark-shot.desktop \
+            --desktop-file "$APPDIR/usr/share/applications/mark-shot.desktop" \
             --icon-file data/icons/hicolor/scalable/apps/mark-shot.svg \
             --plugin qt \
             --output appimage
