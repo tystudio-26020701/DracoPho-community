@@ -65,8 +65,12 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 
 ### KDE KWin ScreenShot2 Authorization
 
-On KDE Wayland, Mark Shot can use KWin's `org.kde.KWin.ScreenShot2` interface for exact area capture. KWin treats this as a restricted D-Bus interface, so the application must have a desktop entry that declares the permission:
+On KDE Wayland, Mark Shot can use KWin's `org.kde.KWin.ScreenShot2` interface for exact area capture. KWin treats this as a restricted D-Bus interface, so the application must have a desktop entry that declares the permission.
 
+<details>
+<summary>KDE KWin ScreenShot2 Authorization Details (Click to expand)</summary>
+
+Desktop entry permission:
 ```ini
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
@@ -102,6 +106,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
 After changing desktop entries, refresh KDE's desktop file cache by logging out and back in. If the current KDE session still returns `NoAuthorized`, restart KWin or reboot once.
+</details>
 
 ---
 
@@ -215,6 +220,9 @@ The right-side action toolbar includes an **Extensions** button. It reads user-d
 
 Mark Shot reads application settings from `~/.config/mark-shot/config.json` on Linux and the Qt application config directory on other platforms. If the file does not exist, Mark Shot creates a default `config.json` on first startup. Pinned windows use the OCR and translation settings in the same file. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`; the translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
 
+<details>
+<summary>Application Config JSON Example & Options Details (Click to expand)</summary>
+
 ```json
 {
   "env": {
@@ -231,6 +239,15 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
   },
   "save": {
     "pathTemplate": "{pictures}/mark-shot/{yyyy}/{MM}/{dd}/mark-shot-{datetime}-{selection.width}x{selection.height}.png"
+  },
+  "capture": {
+    "wayland": {
+      "kde": {
+        "kwinScreenshot": {
+          "enabled": true
+        }
+      }
+    }
   },
   "shortcuts": {
     "tools": {
@@ -302,12 +319,14 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | :--- | :---: | :---: | :--- |
 | `env` | Object | `{}` | Environment variables applied to the process before `QApplication` creation (e.g., `"QT_FONT_DPI": 96` to normalize high-DPI scaling). Alias: `environment`. |
 | `capture.freezeScope` | String | `"all-screens"` | Scope of displays frozen during region screenshot session. Only effective in multi-monitor setups when not capturing all outputs explicitly. Supported values: `all-screens` (freeze all monitors) and `cursor-screen` (freeze only the monitor containing the mouse cursor). Aliases: `freezeScope`, `freezeDisplayScope`, etc. |
+| `capture.wayland.kde.kwinScreenshot.enabled` | Boolean | `true` | Whether to enable KWin `org.kde.KWin.ScreenShot2` restricted D-Bus interface screenshot capture on KDE Wayland. If disabled, fallback to standard Portal capture. |
 | `debug.enabled` | Boolean | `false` | Enables debug logging on Linux and Windows. CLI `--debug` / `--no-debug` override this value; `DEBUG=1` still enables logging unless `--no-debug` is set. |
 | `debug.logPath` | String | system temp `mark-shot-scroll.log` | Debug log destination. CLI `--debug-log` overrides this value; `MARK_SHOT_DEBUG_LOG` remains supported when no config or CLI path is set. |
 | `annotation.defaultTool` | String | `"move"` | The default annotation tool active after selecting a region. Supported values: `move`, `select`, `pen`, `line`, `highlighter`, `rectangle`, `ellipse`, `arrow`, `text`, `number`, `mosaic`, `magnifier`, `laser`. Overridden by CLI `--default-tool`. |
 | `annotation.fullscreenDefaultTool` | String | `"laser"` | The default tool active in fullscreen annotation mode. Overridden by CLI `--fullscreen-default-tool`. If configured as `move` in fullscreen, the program defaults to `select`. |
 | `annotation.defaultColor` | String | `"#FF4D4D"` | Initial annotation color. Supports `#RRGGBB` (opaque) or `#RRGGBBAA` (with alpha). Overridden by CLI `--default-color`. |
 | `save.pathTemplate` | String | `"{pictures}/mark-shot/mark-shot-{datetime}.png"` | Default PNG path used by Save and as the initial Save As filename. Parent directories are created before saving. Aliases include `save.path`, `save.location`, root `savePathTemplate`, and directory-only `save.directory`. |
+| `save.directoryTemplate` | String | `""` | Directory-only save template. If set, filename automatically uses `mark-shot-{datetime}.png`. Aliases: `save.directory`, `save.dir`, `save.folder`. |
 | `shortcuts` | Object | - | Customizable keyboard shortcuts. Alias: `hotkeys` (or under `annotation.shortcuts`/`annotation.hotkeys`). See details below. |
 | `windows.tray.enabled` | Boolean | `true` on Windows, `false` elsewhere | Starts the Windows system tray controller automatically. Use `mark-shot --tray` to start tray mode without changing config, or `mark-shot --capture` to force one-shot capture when autostart is enabled. |
 | `windows.hotkeys.capture` | String | `"Ctrl+Alt+S"` | Windows global hotkey for region capture while tray mode is running. Aliases include `hotkey`, `captureHotkey`, and `screenshot`. |
@@ -324,7 +343,7 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | `windowDetection.enabled` | Boolean | `true` | Controls window boundary recognition. Set to `false` to disable both built-in X11 window detection and configured external detection scripts. |
 | `windowDetection.env` | Object | `{}` | Environment variables passed to the window boundary detection script. Alias: `environment`. <br>• **Niri Script**: Supports `MARK_SHOT_NIRI_PANEL_EDGE` (`top`/`bottom`/`left`/`right`/`none`) and pixel offsets `MARK_SHOT_NIRI_OFFSET_X/Y/WIDTH/HEIGHT`.<br>• **Hyprland Script**: Supports `MARK_SHOT_HYPRLAND_INCLUDE_INACTIVE` (`1`/`0`) and pixel offsets `MARK_SHOT_HYPRLAND_OFFSET_X/Y/WIDTH/HEIGHT`.<br>• **GNOME Script**: Supports pixel offsets `MARK_SHOT_GNOME_OFFSET_X/Y/WIDTH/HEIGHT`. |
 
-### OCR Result Panel Toggle
+##### OCR Result Panel Toggle
 
 The main selection OCR flow opens an editable OCR result window by default.
 
@@ -346,10 +365,10 @@ MARK_SHOT_OCR_RESULT_PANEL=0 mark-shot
 
 Accepted truthy values are `1`, `true`, `yes`, and `on`; accepted falsy values are `0`, `false`, `no`, and `off`. Environment variables have higher priority than the config file.
 
-Save path placeholders: path values `{home}`, `{pictures}`, `{desktop}`, `{downloads}`, `{config}`, `{data}`; time values `{timestamp}`, `{timestamp.ms}`, `{yyyy}`, `{yy}`, `{MM}`, `{M}`, `{dd}`, `{d}`, `{HH}`, `{hh}`, `{mm}`, `{ss}`, `{zzz}`, `{date}`, `{time}`, `{datetime}`, and `{datetime:FORMAT}` such as `{datetime:yyyy-MM-dd_HH-mm-ss-zzz}`; geometry values `{selection.x}`, `{selection.y}`, `{selection.width}`, `{selection.height}`, `{selection.right}`, `{selection.bottom}`, `{selection.geometry}`, and the same `{source.*}` fields for the capture source; image/output values `{image.width}`, `{image.height}`, `{name}`, and `{ext}`. Relative expanded paths are resolved below the default pictures `mark-shot` directory, missing `.png` suffixes are appended, and unknown placeholders make the template fall back to the default path.
+##### Save Path Placeholders
+Path values: `{home}` (user home), `{pictures}` (pictures directory), `{desktop}` (desktop directory), `{downloads}` (downloads directory), `{config}` (config directory), `{data}` (data directory); time values `{timestamp}`, `{timestamp.ms}`, `{yyyy}`, `{yy}`, `{MM}`, `{M}`, `{dd}`, `{d}`, `{HH}`, `{hh}`, `{mm}`, `{ss}`, `{zzz}`, `{date}`, `{time}`, `{datetime}`, and `{datetime:FORMAT}` such as `{datetime:yyyy-MM-dd_HH-mm-ss-zzz}`; geometry values `{selection.x}`, `{selection.y}`, `{selection.width}`, `{selection.height}`, `{selection.right}`, `{selection.bottom}`, `{selection.geometry}`, and the same `{source.*}` fields for the capture source; image/output values `{image.width}`, `{image.height}`, `{name}`, and `{ext}`. Relative expanded paths are resolved below the default pictures `mark-shot` directory, missing `.png` suffixes are appended, and unknown placeholders make the template fall back to the default path.
 
-<details>
-<summary>Keyboard Shortcut Config Details</summary>
+##### Keyboard Shortcut Config Details
 
 The `shortcuts` node supports the following sub-nodes:
 - **`tools`** (alias: `tool`, `toolShortcuts`): Keyboard shortcuts for switching tools (`move`, `select`, `pen`, `line`, `highlighter`, `rectangle`, `ellipse`, `arrow`, `text`, `number`, `mosaic`, `magnifier`, `laser`).
@@ -357,6 +376,7 @@ The `shortcuts` node supports the following sub-nodes:
 - **`startup`** (alias: `startupTools`, `selection`): Keyboard shortcuts for selection-phase tools (`colorPicker`, `ruler`).
 
 *Shortcut values use Qt key-sequence text (e.g. `Ctrl+C`, `Ctrl+Shift+Z`, or `Alt+R`). Shortcut keys can also be specified directly at the root of `shortcuts`.*
+
 </details>
 
 ### Pre-Capture Window Detection & Script Contribution Guide
@@ -714,12 +734,21 @@ The expected result is `('4.2',)`. On GNOME Wayland, restart `mark-shot` after e
 
 ## Release Notes
 
+### 0.1.26
+
+- **Custom Save Path & Placeholders**: Introduced flexible screenshot save templates (`save.pathTemplate` and `save.directoryTemplate`), supporting 30+ dynamic placeholders like `{pictures}`, `{datetime}`, and custom formatting like `{datetime:yyyy-MM-dd}` for versatile directory structures and naming schemes.
+- **KDE KWin Screenshot Control Switch**: Added the `capture.wayland.kde.kwinScreenshot.enabled` option to enable or disable using KWin's restricted `org.kde.KWin.ScreenShot2` D-Bus interface, facilitating fallback debug routines.
+- **Document Layout Optimization & Details Collapsing**: Refactored the user guide to collapse long KDE DBus setup details and application configuration parameters, improving overall readability.
+
 ### 0.1.25
 
 - **Configure Screen Freeze Scope**: Introduced the `capture.freezeScope` configuration option to control the freeze behavior of displays during region screenshots in multi-monitor setups. Supports freezing all displays (`all-screens`, default) or freezing only the monitor containing the mouse cursor (`cursor-screen`).
 - **Pinned Image Window Architecture Refactor**: Decoupled and extracted the complex sticker/pinned window logic from `shot_window_pinned_window.cpp` into a modular directory structure under `src/pinned_window/` (splitting into distinct modules for OCR, translation, text selection, geometry, and the resize controller) to improve code readability and maintainability.
 - **Modularized Startup and Capture Launch**: Modularized startup routines (environment override, configuration parsing, default tools setup, and Qt desktop portal suppression) into a dedicated `startup_config` module. Extracted capture viewport mapping and multi-screen freezing coordination logic into a separate `capture_session_launcher` module.
 - **Expanded Unit Test Coverage**: Added unit tests for screen freeze scope (`capture_freeze_scope_test`) and pinned resize controls (`pinned_resize_controller_test`) to verify both core configuration mapping and geometry calculations.
+
+<details>
+<summary>Older Release Notes</summary>
 
 ### 0.1.24
 
@@ -730,9 +759,6 @@ The expected result is `('4.2',)`. On GNOME Wayland, restart `mark-shot` after e
 - **Improved Annotation Workflows**: Enhanced the number stamp tool with style selectors (Arabic, Roman, Chinese, etc.) and reset actions. Optimized text editor positioning, boundary clipping safety, and Chinese/IME input compatibility.
 - **Configurable Debug Logging**: Introduced `--debug`, `--no-debug`, and `--debug-log` flags to control runtime diagnostics, with configurable file targets in `config.json`.
 - **Bug Fixes**: Resolved multi-monitor scroll preview clipping, thread affinity compilation issues, and Wayland LayerShell geometry alignment.
-
-<details>
-<summary>Older Release Notes</summary>
 
 ### 0.1.23
 
