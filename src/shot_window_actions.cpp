@@ -1,5 +1,8 @@
 #include "shot_window_module.h"
 
+#include "app_config_store.h"
+#include "save_path_config.h"
+
 namespace cfg = markshot::config;
 namespace shortcuts = markshot::shortcut;
 using namespace markshot::shot;
@@ -284,8 +287,18 @@ QImage ShotWindow::renderedSelection() const
 
 QString ShotWindow::defaultSavePath() const
 {
-    const QString filename = QStringLiteral("mark-shot-%1.png").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-hhmmss")));
-    return QDir(markShotPicturesDir()).filePath(filename);
+    const QRect sourceBounds(QPoint(0, 0), m_frozenFrame.size());
+    markshot::SavePathContext context;
+    context.timestamp = QDateTime::currentDateTime();
+    context.selectionRect = normalizedSelection().toAlignedRect().intersected(sourceBounds);
+    context.sourceGeometry = m_sourceGeometry;
+    context.imageSize = m_frozenFrame.size();
+    context.outputName = m_outputName;
+    context.extension = QStringLiteral("png");
+
+    bool ok = false;
+    const QJsonObject root = markshot::readAppConfigRoot(&ok);
+    return ok ? markshot::savePathFromConfigRoot(root, context) : markshot::defaultSavePath(context);
 }
 
 void ShotWindow::saveSelection()
@@ -302,7 +315,7 @@ void ShotWindow::saveSelection()
     }
 
     const QString path = defaultSavePath();
-    if (output.save(path, "PNG")) {
+    if (markshot::ensureSavePathDirectory(path) && output.save(path, "PNG")) {
         const QString message = MS_TR("Saved to %1").arg(path);
         // Keyboard save should finish without another dialog round-trip.
         if (!sendDesktopNotification(QStringLiteral("Mark Shot"), message, 3000)) {
@@ -356,11 +369,15 @@ void ShotWindow::saveSelectionAs()
     dialog->setNameFilter(MS_TR("PNG Images (*.png)"));
     dialog->setDefaultSuffix(QStringLiteral("png"));
     dialog->setOption(QFileDialog::DontUseNativeDialog, true);
-    dialog->selectFile(defaultSavePath());
+    const QString initialPath = defaultSavePath();
+    markshot::ensureSavePathDirectory(initialPath);
+    dialog->selectFile(initialPath);
 
     connect(dialog, &QFileDialog::accepted, this, [this, dialog, output] {
         const QStringList files = dialog->selectedFiles();
-        if (!files.isEmpty() && output.save(files.first(), "PNG")) {
+        if (!files.isEmpty()
+            && markshot::ensureSavePathDirectory(files.first())
+            && output.save(files.first(), "PNG")) {
             const QString message = MS_TR("Saved to %1").arg(files.first());
             // Prefer desktop notifications because the window may close immediately after saving.
             if (!sendDesktopNotification(QStringLiteral("Mark Shot"), message, 3000)) {

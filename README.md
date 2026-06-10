@@ -189,6 +189,9 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
     "fullscreenDefaultTool": "laser",
     "defaultColor": "#FF4D4D"
   },
+  "save": {
+    "pathTemplate": "{pictures}/mark-shot/{yyyy}/{MM}/{dd}/mark-shot-{datetime}-{selection.width}x{selection.height}.png"
+  },
   "shortcuts": {
     "tools": {
       "pen": "P",
@@ -264,6 +267,7 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | `annotation.defaultTool` | String | `"move"` | The default annotation tool active after selecting a region. Supported values: `move`, `select`, `pen`, `line`, `highlighter`, `rectangle`, `ellipse`, `arrow`, `text`, `number`, `mosaic`, `magnifier`, `laser`. Overridden by CLI `--default-tool`. |
 | `annotation.fullscreenDefaultTool` | String | `"laser"` | The default tool active in fullscreen annotation mode. Overridden by CLI `--fullscreen-default-tool`. If configured as `move` in fullscreen, the program defaults to `select`. |
 | `annotation.defaultColor` | String | `"#FF4D4D"` | Initial annotation color. Supports `#RRGGBB` (opaque) or `#RRGGBBAA` (with alpha). Overridden by CLI `--default-color`. |
+| `save.pathTemplate` | String | `"{pictures}/mark-shot/mark-shot-{datetime}.png"` | Default PNG path used by Save and as the initial Save As filename. Parent directories are created before saving. Aliases include `save.path`, `save.location`, root `savePathTemplate`, and directory-only `save.directory`. |
 | `shortcuts` | Object | - | Customizable keyboard shortcuts. Alias: `hotkeys` (or under `annotation.shortcuts`/`annotation.hotkeys`). See details below. |
 | `windows.tray.enabled` | Boolean | `true` on Windows, `false` elsewhere | Starts the Windows system tray controller automatically. Use `mark-shot --tray` to start tray mode without changing config, or `mark-shot --capture` to force one-shot capture when autostart is enabled. |
 | `windows.hotkeys.capture` | String | `"Ctrl+Alt+S"` | Windows global hotkey for region capture while tray mode is running. Aliases include `hotkey`, `captureHotkey`, and `screenshot`. |
@@ -301,6 +305,8 @@ MARK_SHOT_OCR_RESULT_PANEL=0 mark-shot
 ```
 
 Accepted truthy values are `1`, `true`, `yes`, and `on`; accepted falsy values are `0`, `false`, `no`, and `off`. Environment variables have higher priority than the config file.
+
+Save path placeholders: path values `{home}`, `{pictures}`, `{desktop}`, `{downloads}`, `{config}`, `{data}`; time values `{timestamp}`, `{timestamp.ms}`, `{yyyy}`, `{yy}`, `{MM}`, `{M}`, `{dd}`, `{d}`, `{HH}`, `{hh}`, `{mm}`, `{ss}`, `{zzz}`, `{date}`, `{time}`, `{datetime}`, and `{datetime:FORMAT}` such as `{datetime:yyyy-MM-dd_HH-mm-ss-zzz}`; geometry values `{selection.x}`, `{selection.y}`, `{selection.width}`, `{selection.height}`, `{selection.right}`, `{selection.bottom}`, `{selection.geometry}`, and the same `{source.*}` fields for the capture source; image/output values `{image.width}`, `{image.height}`, `{name}`, and `{ext}`. Relative expanded paths are resolved below the default pictures `mark-shot` directory, missing `.png` suffixes are appended, and unknown placeholders make the template fall back to the default path.
 
 <details>
 <summary>Keyboard Shortcut Config Details</summary>

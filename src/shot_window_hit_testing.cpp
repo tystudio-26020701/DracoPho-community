@@ -27,6 +27,8 @@ void ShotWindow::updateCursor()
         case SelectionDrag::MagnifierLens:
         case SelectionDrag::Rotate:
         case SelectionDrag::LineControl:
+        case SelectionDrag::LineStart:
+        case SelectionDrag::LineEnd:
         case SelectionDrag::NumberTip:
         case SelectionDrag::NumberBubble:
             setCursor(Qt::SizeAllCursor);
@@ -62,6 +64,8 @@ void ShotWindow::updateCursor()
         case SelectionDrag::MagnifierLens:
         case SelectionDrag::Rotate:
         case SelectionDrag::LineControl:
+        case SelectionDrag::LineStart:
+        case SelectionDrag::LineEnd:
         case SelectionDrag::NumberTip:
         case SelectionDrag::NumberBubble:
             setCursor(Qt::SizeAllCursor);
@@ -608,216 +612,6 @@ ShotWindow::SelectionDrag ShotWindow::annotationBoundsDragAt(QPointF imagePoint,
         : SelectionDrag::None;
 }
 
-ShotWindow::SelectionDrag ShotWindow::selectedAnnotationsDragAt(QPointF imagePoint) const
-{
-    const QVector<int> selectedIds = selectedAnnotationIds();
-    const QRectF bounds = selectedAnnotationsBounds();
-    if (selectedIds.size() > 1) {
-        const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
-        const QPointF rotationHandle = selectionRotationHandlePoint(bounds, false);
-        if (!rotationHandle.isNull() && QLineF(imagePoint, rotationHandle).length() <= imageTolerance * 1.4) {
-            return SelectionDrag::Rotate;
-        }
-    }
-
-    return annotationBoundsDragAt(imagePoint, bounds);
-}
-
-ShotWindow::SelectionDrag ShotWindow::magnifierDragAt(const Annotation &annotation, QPointF imagePoint) const
-{
-    if (annotation.tool != Tool::Magnifier) {
-        return SelectionDrag::None;
-    }
-
-    const QRectF lensRect = annotation.rect.normalized();
-    const QRectF sourceRect = magnifierSourceRect(annotation);
-    if (lensRect.isEmpty() || sourceRect.isEmpty()) {
-        return SelectionDrag::None;
-    }
-
-    const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
-    if (ellipseContainsPoint(sourceRect, imagePoint, imageTolerance)) {
-        return SelectionDrag::MagnifierSource;
-    }
-    if (ellipseContainsPoint(lensRect, imagePoint, imageTolerance)) {
-        return SelectionDrag::MagnifierLens;
-    }
-    return SelectionDrag::None;
-}
-
-ShotWindow::SelectionDrag ShotWindow::numberDragAt(const Annotation &annotation, QPointF imagePoint) const
-{
-    if (annotation.tool != Tool::Number || annotation.points.isEmpty()) {
-        return SelectionDrag::None;
-    }
-
-    const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
-    const qreal radius = std::max<qreal>(13.0, 13.0 + annotation.width * 1.35);
-    const QPointF tip = annotation.points.first();
-    const QPointF bubble = annotation.points.size() >= 2 ? annotation.points.last() : tip;
-    const QRectF bubbleRect(bubble.x() - radius, bubble.y() - radius, radius * 2.0, radius * 2.0);
-    if (ellipseContainsPoint(bubbleRect, imagePoint, imageTolerance)) {
-        return SelectionDrag::NumberBubble;
-    }
-    if (QLineF(imagePoint, tip).length() <= imageTolerance * 1.6) {
-        return SelectionDrag::NumberTip;
-    }
-    return SelectionDrag::None;
-}
-
-QVector<QPointF> ShotWindow::selectionHandlePoints(QRectF rect) const
-{
-    rect = rect.normalized();
-    return {
-        rect.topLeft(), QPointF(rect.center().x(), rect.top()), rect.topRight(),
-        QPointF(rect.left(), rect.center().y()), QPointF(rect.right(), rect.center().y()),
-        rect.bottomLeft(), QPointF(rect.center().x(), rect.bottom()), rect.bottomRight(),
-    };
-}
-
-QRectF ShotWindow::selectedAnnotationDeleteButtonRect() const
-{
-    constexpr qreal buttonSize = 20.0;
-    constexpr qreal margin = 8.0;
-    auto clampedButtonRect = [this](QPointF center) {
-        constexpr qreal buttonSize = 20.0;
-        constexpr qreal margin = 8.0;
-        const qreal x = std::clamp(center.x() - buttonSize / 2.0,
-                                   margin,
-                                   std::max<qreal>(margin, width() - buttonSize - margin));
-        const qreal y = std::clamp(center.y() - buttonSize / 2.0,
-                                   margin,
-                                   std::max<qreal>(margin, height() - buttonSize - margin));
-        return QRectF(x, y, buttonSize, buttonSize);
-    };
-
-    const QVector<int> selectedIds = selectedAnnotationIds();
-    if (selectedIds.size() == 1) {
-        if (const Annotation *annotation = annotationById(selectedIds.first());
-            annotation && annotationSupportsRotation(*annotation)) {
-            const QRectF localBounds = imageRectToWidget(annotationUnrotatedBounds(*annotation));
-            if (!localBounds.isEmpty()) {
-                const QPointF center = localBounds.center();
-                const QPointF corner = rotatedPoint(localBounds.topRight(), center, annotation->rotationDegrees);
-                QPointF direction = corner - center;
-                const qreal length = QLineF(center, corner).length();
-                if (length <= 0.1) {
-                    direction = QPointF(1.0, -1.0);
-                } else {
-                    direction /= length;
-                }
-                return clampedButtonRect(corner + direction * (buttonSize * 1.2));
-            }
-        }
-    }
-
-    const QRectF bounds = imageRectToWidget(selectedAnnotationsBounds());
-    if (bounds.isEmpty()) {
-        return {};
-    }
-    return clampedButtonRect(QPointF(bounds.right() + buttonSize / 2.0 + margin,
-                                     bounds.top() - buttonSize / 2.0 - margin));
-}
-
-QRectF ShotWindow::resizedBounds(QRectF start, SelectionDrag drag, QPointF imagePoint, bool keepAspectRatio) const
-{
-    start = start.normalized();
-    const QPointF clamped = clampImagePoint(imagePoint);
-    qreal left = start.left();
-    qreal top = start.top();
-    qreal right = start.right();
-    qreal bottom = start.bottom();
-    const qreal maxWidth = m_frozenFrame.width();
-    const qreal maxHeight = m_frozenFrame.height();
-
-    if (keepAspectRatio && drag != SelectionDrag::Move && start.width() > 0.0 && start.height() > 0.0) {
-        const qreal minScale = std::max(kMinSelectionSize / start.width(), kMinSelectionSize / start.height());
-
-        auto boundedScale = [minScale](qreal rawScale, qreal maxScale) {
-            maxScale = std::max<qreal>(0.0, maxScale);
-            const qreal lower = std::min(minScale, maxScale);
-            return std::clamp(rawScale, lower, maxScale);
-        };
-
-        auto rectFromCorner = [&](QPointF anchor, qreal xSign, qreal ySign) {
-            const qreal xDistance = std::abs(clamped.x() - anchor.x());
-            const qreal yDistance = std::abs(clamped.y() - anchor.y());
-            const qreal rawScale = std::max(xDistance / start.width(), yDistance / start.height());
-            const qreal maxXScale = (xSign > 0.0 ? maxWidth - anchor.x() : anchor.x()) / start.width();
-            const qreal maxYScale = (ySign > 0.0 ? maxHeight - anchor.y() : anchor.y()) / start.height();
-            const qreal scale = boundedScale(rawScale, std::min(maxXScale, maxYScale));
-            return QRectF(anchor,
-                          QPointF(anchor.x() + xSign * start.width() * scale,
-                                  anchor.y() + ySign * start.height() * scale)).normalized();
-        };
-
-        auto rectFromHorizontalEdge = [&](qreal anchorX, qreal xSign, qreal centerY) {
-            const qreal rawScale = std::abs(clamped.x() - anchorX) / start.width();
-            const qreal maxXScale = (xSign > 0.0 ? maxWidth - anchorX : anchorX) / start.width();
-            const qreal maxYScale = (2.0 * std::min(centerY, maxHeight - centerY)) / start.height();
-            const qreal scale = boundedScale(rawScale, std::min(maxXScale, maxYScale));
-            const qreal newWidth = start.width() * scale;
-            const qreal newHeight = start.height() * scale;
-            return QRectF(QPointF(anchorX, centerY - newHeight / 2.0),
-                          QPointF(anchorX + xSign * newWidth, centerY + newHeight / 2.0)).normalized();
-        };
-
-        auto rectFromVerticalEdge = [&](qreal anchorY, qreal ySign, qreal centerX) {
-            const qreal rawScale = std::abs(clamped.y() - anchorY) / start.height();
-            const qreal maxYScale = (ySign > 0.0 ? maxHeight - anchorY : anchorY) / start.height();
-            const qreal maxXScale = (2.0 * std::min(centerX, maxWidth - centerX)) / start.width();
-            const qreal scale = boundedScale(rawScale, std::min(maxXScale, maxYScale));
-            const qreal newWidth = start.width() * scale;
-            const qreal newHeight = start.height() * scale;
-            return QRectF(QPointF(centerX - newWidth / 2.0, anchorY),
-                          QPointF(centerX + newWidth / 2.0, anchorY + ySign * newHeight)).normalized();
-        };
-
-        switch (drag) {
-        case SelectionDrag::TopLeft:
-            return rectFromCorner(start.bottomRight(), -1.0, -1.0);
-        case SelectionDrag::TopRight:
-            return rectFromCorner(start.bottomLeft(), 1.0, -1.0);
-        case SelectionDrag::BottomLeft:
-            return rectFromCorner(start.topRight(), -1.0, 1.0);
-        case SelectionDrag::BottomRight:
-            return rectFromCorner(start.topLeft(), 1.0, 1.0);
-        case SelectionDrag::Left:
-            return rectFromHorizontalEdge(start.right(), -1.0, start.center().y());
-        case SelectionDrag::Right:
-            return rectFromHorizontalEdge(start.left(), 1.0, start.center().y());
-        case SelectionDrag::Top:
-            return rectFromVerticalEdge(start.bottom(), -1.0, start.center().x());
-        case SelectionDrag::Bottom:
-            return rectFromVerticalEdge(start.top(), 1.0, start.center().x());
-        case SelectionDrag::MagnifierSource:
-        case SelectionDrag::MagnifierLens:
-        case SelectionDrag::Rotate:
-        case SelectionDrag::LineControl:
-        case SelectionDrag::NumberTip:
-        case SelectionDrag::NumberBubble:
-        case SelectionDrag::Move:
-        case SelectionDrag::None:
-            break;
-        }
-    }
-
-    if (drag == SelectionDrag::Left || drag == SelectionDrag::TopLeft || drag == SelectionDrag::BottomLeft) {
-        left = std::clamp(clamped.x(), 0.0, right - kMinSelectionSize);
-    }
-    if (drag == SelectionDrag::Right || drag == SelectionDrag::TopRight || drag == SelectionDrag::BottomRight) {
-        right = std::clamp(clamped.x(), left + kMinSelectionSize, maxWidth);
-    }
-    if (drag == SelectionDrag::Top || drag == SelectionDrag::TopLeft || drag == SelectionDrag::TopRight) {
-        top = std::clamp(clamped.y(), 0.0, bottom - kMinSelectionSize);
-    }
-    if (drag == SelectionDrag::Bottom || drag == SelectionDrag::BottomLeft || drag == SelectionDrag::BottomRight) {
-        bottom = std::clamp(clamped.y(), top + kMinSelectionSize, maxHeight);
-    }
-
-    return QRectF(QPointF(left, top), QPointF(right, bottom)).normalized();
-}
-
 ShotWindow::SelectionDrag ShotWindow::annotationDragAt(QPointF imagePoint, int annotationId) const
 {
     const Annotation *annotation = annotationById(annotationId);
@@ -856,10 +650,10 @@ ShotWindow::SelectionDrag ShotWindow::annotationDragAt(QPointF imagePoint, int a
         }
     }
 
-    if (annotationSupportsLineControl(*annotation) && annotation->points.size() >= 2) {
-        const QPointF controlPoint = annotationLineControlPoint(*annotation);
-        if (QLineF(localPoint, controlPoint).length() <= imageTolerance * 1.4) {
-            return SelectionDrag::LineControl;
+    if (annotationSupportsLineAnchors(*annotation) && annotation->points.size() >= 2) {
+        const SelectionDrag lineDrag = lineAnchorDragAt(*annotation, localPoint);
+        if (lineDrag != SelectionDrag::None) {
+            return lineDrag;
         }
     }
 
