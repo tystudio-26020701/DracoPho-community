@@ -343,28 +343,6 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | `windowDetection.enabled` | Boolean | `true` | Controls window boundary recognition. Set to `false` to disable both built-in X11 window detection and configured external detection scripts. |
 | `windowDetection.env` | Object | `{}` | Environment variables passed to the window boundary detection script. Alias: `environment`. <br>• **Niri Script**: Supports `MARK_SHOT_NIRI_PANEL_EDGE` (`top`/`bottom`/`left`/`right`/`none`) and pixel offsets `MARK_SHOT_NIRI_OFFSET_X/Y/WIDTH/HEIGHT`.<br>• **Hyprland Script**: Supports `MARK_SHOT_HYPRLAND_INCLUDE_INACTIVE` (`1`/`0`) and pixel offsets `MARK_SHOT_HYPRLAND_OFFSET_X/Y/WIDTH/HEIGHT`.<br>• **GNOME Script**: Supports pixel offsets `MARK_SHOT_GNOME_OFFSET_X/Y/WIDTH/HEIGHT`. |
 
-##### OCR Result Panel Toggle
-
-The main selection OCR flow opens an editable OCR result window by default.
-
-To disable it and copy recognized text directly, add this to `~/.config/mark-shot/config.json`:
-
-```json
-{
-  "ocr": {
-    "resultPanel": false
-  }
-}
-```
-
-You can also override the config from the shell before launch:
-
-```bash
-MARK_SHOT_OCR_RESULT_PANEL=0 mark-shot
-```
-
-Accepted truthy values are `1`, `true`, `yes`, and `on`; accepted falsy values are `0`, `false`, `no`, and `off`. Environment variables have higher priority than the config file.
-
 ##### Save Path Placeholders
 Path values: `{home}` (user home), `{pictures}` (pictures directory), `{desktop}` (desktop directory), `{downloads}` (downloads directory), `{config}` (config directory), `{data}` (data directory); time values `{timestamp}`, `{timestamp.ms}`, `{yyyy}`, `{yy}`, `{MM}`, `{M}`, `{dd}`, `{d}`, `{HH}`, `{hh}`, `{mm}`, `{ss}`, `{zzz}`, `{date}`, `{time}`, `{datetime}`, and `{datetime:FORMAT}` such as `{datetime:yyyy-MM-dd_HH-mm-ss-zzz}`; geometry values `{selection.x}`, `{selection.y}`, `{selection.width}`, `{selection.height}`, `{selection.right}`, `{selection.bottom}`, `{selection.geometry}`, and the same `{source.*}` fields for the capture source; image/output values `{image.width}`, `{image.height}`, `{name}`, and `{ext}`. Relative expanded paths are resolved below the default pictures `mark-shot` directory, missing `.png` suffixes are appended, and unknown placeholders make the template fall back to the default path.
 
