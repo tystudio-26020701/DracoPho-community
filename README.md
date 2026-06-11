@@ -35,9 +35,9 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - Supports OpenAI-compatible LLM translation for OCR text, rendering translated text back onto the image at the original layout positions.
 - **Interactive Gestures**:
   - Drag with left click to reposition.
-  - Scroll mouse wheel to scale, or double-tap `Ctrl` to reset to original aspect ratio.
+  - Scroll mouse wheel to scale.
   - Double left-click or press `Esc` to close.
-  - Right-click to open a context menu with options to rotate, copy image text, translate, save, copy, or adjust opacity (0.2 to 1.0).
+  - Right-click to open a context menu with options to rotate, copy image text, translate, save, copy, or close.
 
 ### Scrolling Screenshot Capture
 - Captures a long scrolling region by combining PipeWire screencast frames with an interactive scrolling overlay and stitcher.
@@ -367,7 +367,21 @@ The project bundles default window detection scripts for the following window ma
 - **GNOME Wayland**: `mark-shot-window-detection-gnome` (requires the bundled GNOME Shell helper extension)
 - **KDE Plasma / KWin**: `mark-shot-window-detection-kde`
 
-##### How to Use & Configure:
+<details>
+<summary><b>Expand/Collapse Window Detection Script Configuration & Contribution Guide</b></summary>
+
+#### How to Contribute Adapters
+Currently, the repository ships adapter scripts for niri, Hyprland, GNOME Wayland, and KDE Plasma (KWin Wayland).
+
+We highly welcome and encourage community members to contribute adapter scripts for various desktop environments and Wayland compositors to expand compatibility. If you run Mark Shot on Hyprland, Sway, KDE (KWin Wayland), or GNOME (Mutter Wayland) and have configured a working script, please submit a Pull Request to share it with the community. Here are implementation guidelines for different environments:
+- **Hyprland**: Use `hyprctl clients -j` and parse the output JSON.
+- **Sway**: Use `swaymsg -t get_tree` to fetch the layout tree.
+- **KDE / KWin**: Implement a simple KWin Script, or query KWin's D-Bus interfaces.
+- **GNOME**: Use the bundled `mark-shot-window-detection-gnome` script together with the `mark-shot-scroll-helper@snemc.org` GNOME Shell extension, which exports Mutter window geometry over D-Bus.
+
+If the script fails to execute or times out (default: `1000ms`), Mark Shot will proceed with screenshot capture normally and fall back to its internal X11-based window detector where applicable.
+
+#### How to Use & Configure:
 1. Copy the script corresponding to your compositor from the `scripts/` directory in the repository to a folder in your system `$PATH` (e.g. `~/.local/bin/` or `/usr/local/bin/`).
 2. Make the script executable:
    ```bash
@@ -385,8 +399,6 @@ The project bundles default window detection scripts for the following window ma
      "command": "mark-shot-window-detection-gnome"
    }
    ```
-
-We highly welcome and encourage community members to contribute adapter scripts for various desktop environments and Wayland compositors to expand compatibility.
 
 #### 1. Input Provided to the Script (Environment Variables)
 
@@ -472,17 +484,7 @@ Each element in the array (or the root object itself) can take one of the follow
 }
 ```
 
-#### 3. How to Contribute Adapters
-
-Currently, the repository ships adapter scripts for niri, Hyprland, GNOME Wayland, and KDE Plasma (KWin Wayland).
-
-If you run Mark Shot on Hyprland, Sway, KDE (KWin Wayland), or GNOME (Mutter Wayland) and have configured a working script, please submit a Pull Request to share it with the community. Here are implementation guidelines for different environments:
-- **Hyprland**: Use `hyprctl clients -j` and parse the output JSON.
-- **Sway**: Use `swaymsg -t get_tree` to fetch the layout tree.
-- **KDE / KWin**: Implement a simple KWin Script, or query KWin's D-Bus interfaces.
-- **GNOME**: Use the bundled `mark-shot-window-detection-gnome` script together with the `mark-shot-scroll-helper@snemc.org` GNOME Shell extension, which exports Mutter window geometry over D-Bus.
-
-If the script fails to execute or times out (default: `1000ms`), Mark Shot will proceed with screenshot capture normally and fall back to its internal X11-based window detector where applicable.
+</details>
 
 When installing manually, install `mark-shot`, `mark-shot-ocr`, and `mark-shot-translate` together. Otherwise the pinned window opens, but image-text copying and translation cannot call the backend helpers.
 
@@ -605,7 +607,8 @@ GNOME Wayland scrolling capture requires the **Mark Shot Scroll Helper** extensi
 
 The extension files are bundled in the project repository at `packaging/gnome-extension/mark-shot-scroll-helper@snemc.org`.
 
-#### Enabling the Extension
+<details>
+<summary><b>Expand/Collapse GNOME Wayland Scrolling Capture Extension Installation & Enable Guide</b></summary>
 
 ##### Method A: Installed from Distribution Package
 If Mark Shot was installed via a distribution package, the extension is already installed system-wide. Enable it with:
@@ -640,6 +643,8 @@ gdbus call --session \
 ```
 
 The expected result is `('4.2',)`. On GNOME Wayland, restart `mark-shot` after enabling the extension.
+
+</details>
 
 ---
 
@@ -697,7 +702,6 @@ The expected result is `('4.2',)`. On GNOME Wayland, restart `mark-shot` after e
 | **Hold Left Click & Drag** | Repositions the floating window on your desktop. |
 | **Scroll Wheel Up / Down** | Scales the floating window size proportionally. |
 | **Double Left Click** | Closes the pinned window immediately. |
-| **Double Tap Ctrl Key** | Resets the window size to original aspect ratio. |
 | **Right Click** | Opens the context menu (Rotate, Zoom, Always on Top, Copy Image Text, Translate, Save, Copy, Close). |
 | **Esc Key** | Closes the currently active pinned window. |
 
