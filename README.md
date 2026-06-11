@@ -238,7 +238,7 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
     "defaultColor": "#FF4D4D"
   },
   "save": {
-    "pathTemplate": "{pictures}/mark-shot/{yyyy}/{MM}/{dd}/mark-shot-{datetime}-{selection.width}x{selection.height}.png"
+    "pathTemplate": "{pictures}/mark-shot/mark-shot-{datetime}.png"
   },
   "capture": {
     "wayland": {
@@ -365,6 +365,7 @@ The project bundles default window detection scripts for the following window ma
 - **Niri**: `mark-shot-window-detection-niri`
 - **Hyprland**: `mark-shot-window-detection-hyprland`
 - **GNOME Wayland**: `mark-shot-window-detection-gnome` (requires the bundled GNOME Shell helper extension)
+- **KDE Plasma / KWin**: `mark-shot-window-detection-kde`
 
 ##### How to Use & Configure:
 1. Copy the script corresponding to your compositor from the `scripts/` directory in the repository to a folder in your system `$PATH` (e.g. `~/.local/bin/` or `/usr/local/bin/`).
@@ -375,6 +376,8 @@ The project bundles default window detection scripts for the following window ma
    chmod +x ~/.local/bin/mark-shot-window-detection-hyprland
    # or
    chmod +x ~/.local/bin/mark-shot-window-detection-gnome
+   # or
+   chmod +x ~/.local/bin/mark-shot-window-detection-kde
    ```
 3. Update your `~/.config/mark-shot/config.json` configuration file, specifying the script name or its absolute path in the `windowDetection.command` field:
    ```json
@@ -471,7 +474,7 @@ Each element in the array (or the root object itself) can take one of the follow
 
 #### 3. How to Contribute Adapters
 
-Currently, the repository ships adapter scripts for niri, Hyprland, and GNOME Wayland.
+Currently, the repository ships adapter scripts for niri, Hyprland, GNOME Wayland, and KDE Plasma (KWin Wayland).
 
 If you run Mark Shot on Hyprland, Sway, KDE (KWin Wayland), or GNOME (Mutter Wayland) and have configured a working script, please submit a Pull Request to share it with the community. Here are implementation guidelines for different environments:
 - **Hyprland**: Use `hyprctl clients -j` and parse the output JSON.
