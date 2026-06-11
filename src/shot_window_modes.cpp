@@ -180,7 +180,11 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
     QWidget *toolbar = parentToolbar ? parentToolbar : m_toolbar;
     auto *button = new QPushButton(toolbar);
     button->setIcon(markshot::ui::makeToolIcon(action));
-    button->setIconSize(QSize(22, 22));
+    const bool actionToolbarButton = parentToolbar && parentToolbar == m_actionToolbar;
+    const int iconSize = actionToolbarButton
+        ? m_toolbarAppearance.actionToolbarIconSize
+        : m_toolbarAppearance.toolbarIconSize;
+    button->setIconSize(QSize(iconSize, iconSize));
     button->setFocusPolicy(Qt::NoFocus);
     button->setToolTip(QStringLiteral("%1 (%2)").arg(markshot::i18n::translate(markshot::ui::actionName(action)), shortcutText));
     button->setProperty("action", markshot::ui::actionName(action));

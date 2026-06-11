@@ -115,6 +115,11 @@ QJsonObject defaultAppConfigRoot()
     annotation.insert(QStringLiteral("defaultColor"), QStringLiteral("#FF4D4D"));
     root.insert(QStringLiteral("annotation"), annotation);
 
+    QJsonObject toolbar;
+    toolbar.insert(QStringLiteral("iconSize"), QStringLiteral("middle"));
+    toolbar.insert(QStringLiteral("fontSize"), QStringLiteral("middle"));
+    root.insert(QStringLiteral("toolbar"), toolbar);
+
     QJsonObject save;
     save.insert(QStringLiteral("pathTemplate"), QStringLiteral("{pictures}/mark-shot/mark-shot-{datetime}.png"));
     root.insert(QStringLiteral("save"), save);

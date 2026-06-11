@@ -36,6 +36,12 @@ QFont monospaceFont(int pointSize = -1, QFont::Weight weight = QFont::Normal);
 // applied to all three widgets.
 QString panelStyleSheet();
 
+/// @brief 生成可配置尺寸的工具面板样式表。
+/// @param buttonSize 工具栏按钮边长。
+/// @param fontSize 工具栏控件字体大小。
+/// @return 工具面板样式表。
+QString panelStyleSheet(int buttonSize, int fontSize);
+
 // Stylesheet for the "Open With" panel that lists desktop applications.
 QString openWithPanelStyleSheet();
 

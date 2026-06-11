@@ -4,6 +4,8 @@
 #include <QStringLiteral>
 #include <QStringList>
 
+#include <algorithm>
+
 namespace markshot::theme {
 namespace {
 
@@ -139,8 +141,15 @@ QFont monospaceFont(int pointSize, QFont::Weight weight)
     return makeFont(monospaceFontFamily(), pointSize, weight);
 }
 
-QString panelStyleSheet()
+QString panelStyleSheet(int buttonSize, int fontSize)
 {
+    buttonSize = std::clamp(buttonSize, 24, 64);
+    fontSize = std::clamp(fontSize, 8, 24);
+    const int propertyValueFontSize = std::max(8, fontSize - 1);
+    const int propertyControlHeight = std::max(28, buttonSize - 2);
+    const int propertyGlyphSize = std::max(18, std::min(buttonSize - 8, fontSize + 8));
+    const int comboMinHeight = std::max(20, fontSize + 9);
+
     return QStringLiteral(
         "QWidget#shotToolbar, QWidget#actionToolbar,"
         "QWidget#annotationPropertyPanel, QWidget#propertyColorDialogPanel {"
@@ -154,10 +163,11 @@ QString panelStyleSheet()
         " border: 1px solid transparent;"
         " border-radius: 7px;"
         " padding: 0;"
-        " min-width: 30px;"
-        " min-height: 30px;"
-        " max-width: 30px;"
-        " max-height: 30px;"
+        " font-size: %2px;"
+        " min-width: %1px;"
+        " min-height: %1px;"
+        " max-width: %1px;"
+        " max-height: %1px;"
         "}"
         "QPushButton:hover {"
         " background: rgba(45, 212, 191, 30);"
@@ -192,7 +202,7 @@ QString panelStyleSheet()
         "}"
         "QLabel {"
         " color: #E5E7EB;"
-        " font-size: 11px;"
+        " font-size: %2px;"
         " font-weight: 500;"
         " letter-spacing: 0.2px;"
         " padding: 0 1px;"
@@ -203,23 +213,23 @@ QString panelStyleSheet()
         " border: 1px solid rgba(255, 255, 255, 20);"
         " border-radius: 7px;"
         " padding: 0 8px;"
-        " min-height: 28px;"
+        " min-height: %4px;"
         " font-weight: 700;"
         "}"
         "QLabel#propertyGlyph {"
         " padding: 0;"
-        " min-width: 18px;"
-        " max-width: 18px;"
-        " min-height: 28px;"
-        " max-height: 28px;"
+        " min-width: %5px;"
+        " max-width: %5px;"
+        " min-height: %4px;"
+        " max-height: %4px;"
         "}"
         "QLabel#propertyValue {"
         " color: #F8FAFC;"
-        " font-size: 10px;"
+        " font-size: %3px;"
         " font-weight: 700;"
         " letter-spacing: 0;"
         " padding: 0;"
-        " min-height: 28px;"
+        " min-height: %4px;"
         "}"
         "QComboBox {"
         " color: #E5E7EB;"
@@ -227,7 +237,8 @@ QString panelStyleSheet()
         " border: 1px solid rgba(255, 255, 255, 24);"
         " border-radius: 7px;"
         " padding: 3px 6px;"
-        " min-height: 20px;"
+        " font-size: %2px;"
+        " min-height: %6px;"
         "}"
         "QComboBox:hover {"
         " border-color: rgba(45, 212, 191, 110);"
@@ -267,7 +278,17 @@ QString panelStyleSheet()
         "QSlider::handle:horizontal:hover {"
         " border-color: #5EEAD4;"
         " background: #FFFFFF;"
-        "}");
+        "}").arg(buttonSize)
+        .arg(fontSize)
+        .arg(propertyValueFontSize)
+        .arg(propertyControlHeight)
+        .arg(propertyGlyphSize)
+        .arg(comboMinHeight);
+}
+
+QString panelStyleSheet()
+{
+    return panelStyleSheet(30, 11);
 }
 
 QString openWithPanelStyleSheet()
