@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.27 - 2026-06-11
+
+### Features & Enhancements
+
+- **Multi-point Line/Arrow Skeleton Editing**: Introduced support for adding, dragging, and deleting multiple skeleton (control) points on line and arrow annotations. Paths are smoothed using continuous quadratic Bezier curves, ensuring endpoints precisely target endpoints.
+- **KDE Window Detection Script**: Added bundled `mark-shot-window-detection-kde` helper for KDE Plasma (KWin Wayland), expanding window boundary detection support.
+- **Toolbar Appearance Configuration**: Added `toolbarAppearance` config options to customize the annotation toolbar layout and icon styles.
+- **Shortcut & Interaction Improvements**: Enhanced keyboard and scroll interactions (e.g. using Backspace/Delete to remove selected skeleton points), and refactored input shortcut processing logic.
+
+### Bug Fixes
+
+- **Release Packaging**: Repaired AppImage and RPM release packaging, fixed tag-based AUR package publishing, and included the KDE helper in RPM packages.
+
+## 0.1.26 - 2026-06-10
+
+### Features & Enhancements
+
+- **Custom Save Path & Placeholders**: Introduced flexible screenshot save templates (`save.pathTemplate` and `save.directoryTemplate`), supporting 30+ dynamic placeholders like `{pictures}`, `{datetime}`, and custom formatting like `{datetime:yyyy-MM-dd}` for versatile directory structures and naming schemes.
+- **KDE KWin Screenshot Control Switch**: Added the `capture.wayland.kde.kwinScreenshot.enabled` option to enable or disable using KWin's restricted `org.kde.KWin.ScreenShot2` D-Bus interface, facilitating fallback debug routines.
+- **Document Layout Optimization**: Refactored the user guide to collapse long KDE DBus setup details and application configuration parameters, improving overall readability.
+
 ## 0.1.25 - 2026-06-09
 
 ### Features & Enhancements
