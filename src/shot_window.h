@@ -11,6 +11,7 @@
 #include <QVector>
 #include <QWidget>
 
+#include "display_capture/display_capture_target.h"
 #include "toolbar_appearance_config.h"
 #include "ui/theme.h"
 
@@ -35,6 +36,10 @@ class QWheelEvent;
 
 namespace markshot::ui {
 class ColorPicker;
+}
+
+namespace markshot::display_capture {
+class DisplayCapturePicker;
 }
 
 // Main capture and annotation surface. It owns the frozen screenshot, region
@@ -128,9 +133,12 @@ public:
     void setDefaultTool(Tool tool);
     void setDefaultTools(Tool tool, Tool fullscreenTool);
     void setDefaultColor(QColor color);
+    void showDisplayCaptureTargets(QVector<markshot::display_capture::Target> targets);
 
 signals:
     void selectionActivated(ShotWindow *window);
+    void displayCaptureSnapshotRequested(ShotWindow *window);
+    void displayCaptureEditRequested(ShotWindow *window, markshot::display_capture::Target target);
     void sessionCancelRequested();
 
 protected:
@@ -158,6 +166,7 @@ private:
         None,
         ColorPicker,
         Ruler,
+        CodeScanner,
     };
 
     // Arrow renderer variants. The default uses a filled tapered shaft; KDE uses
@@ -370,6 +379,7 @@ private:
     void pinSelection();
     void startScrollCapture();
     void ocrCopySelection();
+    void scanCodeSelection();
     void showToast(const QString &text, int durationMs = 2000);
     QString saveSelectionToTempFile() const;
     void setCurrentColor(QColor color);
@@ -432,6 +442,15 @@ private:
     QRect clampedToolbarGeometry(QRect toolbarGeometry) const;
     void setStartupTool(StartupTool tool);
     void leaveStartupTool();
+    void toggleDisplayCapturePicker();
+    void hideDisplayCapturePicker();
+    bool displayCapturePickerVisible() const;
+    bool displayCapturePickerContains(QPoint point) const;
+    void ensureDisplayCapturePicker();
+    void copyDisplayCaptureTarget(int index);
+    void editDisplayCaptureTarget(int index);
+    void saveDisplayCaptureTarget(int index);
+    void updateDisplayCapturePickerGeometry();
     QColor sampledImageColor(QPointF imagePoint) const;
     void showStartupColorDialog(QColor color, QPoint anchor);
     void drawStartupToolOverlay(QPainter &painter);
@@ -444,6 +463,7 @@ private:
     bool eventMatchesShortcut(const QKeyEvent *event, Action action) const;
     bool eventMatchesShortcut(const QKeyEvent *event, Tool tool) const;
     bool eventMatchesStartupShortcut(const QKeyEvent *event, StartupTool tool) const;
+    bool eventMatchesDisplayCaptureShortcut(const QKeyEvent *event) const;
     bool handleConfiguredActionShortcut(QKeyEvent *event);
     bool handleConfiguredToolShortcut(QKeyEvent *event);
 
@@ -495,6 +515,8 @@ private:
     std::array<QKeySequence, static_cast<int>(Tool::Laser) + 1> m_toolShortcuts;
     QKeySequence m_startupColorPickerShortcut;
     QKeySequence m_startupRulerShortcut;
+    QKeySequence m_startupCodeScannerShortcut;
+    QKeySequence m_startupDisplayCaptureShortcut;
     bool m_dragging = false;
     bool m_annotationHistoryCaptured = false;
     bool m_annotationSelectionBoxActive = false;
@@ -575,6 +597,8 @@ private:
     QWidget *m_openWithPanel = nullptr;
     QWidget *m_extensionPanel = nullptr;
     QWidget *m_startupColorPanel = nullptr;
+    markshot::display_capture::DisplayCapturePicker *m_displayCapturePicker = nullptr;
+    QVector<markshot::display_capture::Target> m_displayCaptureTargets;
     QWidget *m_colorPalette = nullptr;
     QWidget *m_colorPalettePreview = nullptr;
     QPoint m_colorPaletteAnchor;

@@ -311,7 +311,9 @@ void ShotWindow::paintEvent(QPaintEvent *)
         }
     }
 
-    if (m_hoveredWindowRect.has_value() && m_mode == Mode::Selecting && m_startupTool == StartupTool::None) {
+    if (m_hoveredWindowRect.has_value()
+        && m_mode == Mode::Selecting
+        && (m_startupTool == StartupTool::None || m_startupTool == StartupTool::CodeScanner)) {
         const QRectF hoverWidget = imageRectToWidget(QRectF(*m_hoveredWindowRect));
         painter.setPen(QPen(QColor(94, 234, 212), 2.0));
         painter.setBrush(QColor(94, 234, 212, 32));
@@ -320,8 +322,11 @@ void ShotWindow::paintEvent(QPaintEvent *)
 
     drawStartupToolOverlay(painter);
 
-    if (!hasUsableSelection() && m_startupTool == StartupTool::None) {
-        const QString hint = MS_TR("Drag to select   C color picker   R ruler   Middle switches   Right/Esc cancels");
+    if (!hasUsableSelection()
+        && (m_startupTool == StartupTool::None || m_startupTool == StartupTool::CodeScanner)) {
+        const QString hint = m_startupTool == StartupTool::CodeScanner
+            ? MS_TR("Code scanner: drag to select a code region   Right/Esc returns")
+            : MS_TR("Drag to select   C color picker   R ruler   Q scan   D display   Middle switches   Right/Esc cancels");
         painter.setFont(markshot::theme::uiFont(15, QFont::DemiBold));
         const QFontMetrics metrics(painter.font());
         const QRectF hintRect((width() - metrics.horizontalAdvance(hint) - 44.0) / 2.0,
@@ -341,6 +346,7 @@ void ShotWindow::paintEvent(QPaintEvent *)
 void ShotWindow::resizeEvent(QResizeEvent *)
 {
     updateFrozenImageRect();
+    updateDisplayCapturePickerGeometry();
     if (m_colorPalette && m_colorPalette->isVisible()) {
         updateColorPaletteGeometry(m_colorPaletteAnchor);
     }
@@ -363,12 +369,24 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
 {
     clearWheelPreview();
 
-    if (m_mode == Mode::Selecting && m_startupTool != StartupTool::None) {
-        if (event->button() == Qt::RightButton) {
-            leaveStartupTool();
-            event->accept();
-            return;
-        }
+    if (m_mode == Mode::Selecting
+        && displayCapturePickerVisible()
+        && !displayCapturePickerContains(event->pos())) {
+        hideDisplayCapturePicker();
+        update();
+    }
+
+    if (m_mode == Mode::Selecting
+        && m_startupTool != StartupTool::None
+        && event->button() == Qt::RightButton) {
+        leaveStartupTool();
+        event->accept();
+        return;
+    }
+
+    const bool startupPointerTool = m_startupTool == StartupTool::ColorPicker
+        || m_startupTool == StartupTool::Ruler;
+    if (m_mode == Mode::Selecting && startupPointerTool) {
         if (event->button() != Qt::LeftButton) {
             event->accept();
             return;

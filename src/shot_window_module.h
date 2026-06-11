@@ -3,6 +3,7 @@
 #include "capture_geometry.h"
 #include "clipboard_image.h"
 #include "config_value.h"
+#include "code_scan_result.h"
 #include "layer_shell_runtime.h"
 #include "line_skeleton_path.h"
 #include "ocr_result.h"

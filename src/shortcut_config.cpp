@@ -102,6 +102,13 @@ void applyStartupShortcutObject(const QJsonObject &object, ShortcutConfig *confi
             config->startupColorPicker = *sequence;
         } else if (key == QStringLiteral("ruler") || key == QStringLiteral("measure")) {
             config->startupRuler = *sequence;
+        } else if (key == QStringLiteral("codescanner") || key == QStringLiteral("scanner")
+                   || key == QStringLiteral("scan") || key == QStringLiteral("barcode")
+                   || key == QStringLiteral("qrcode")) {
+            config->startupCodeScanner = *sequence;
+        } else if (key == QStringLiteral("displaycapture") || key == QStringLiteral("display")
+                   || key == QStringLiteral("screen") || key == QStringLiteral("monitor")) {
+            config->startupDisplayCapture = *sequence;
         }
     }
 }
@@ -243,7 +250,9 @@ ShortcutConfig configuredShortcuts(const QString &configPath)
     ShortcutConfig config{defaultActionShortcuts(),
                           defaultToolShortcuts(),
                           QKeySequence(Qt::Key_C),
-                          QKeySequence(Qt::Key_R)};
+                          QKeySequence(Qt::Key_R),
+                          QKeySequence(Qt::Key_Q),
+                          QKeySequence(Qt::Key_D)};
 
     QFile file(configPath);
     if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
