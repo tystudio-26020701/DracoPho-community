@@ -117,6 +117,14 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
     clearWheelPreview();
 
     if (m_mode == Mode::Selecting
+        && displayCapturePickerVisible()
+        && eventMatchesShortcut(event, Action::Cancel)) {
+        hideDisplayCapturePicker();
+        event->accept();
+        return;
+    }
+
+    if (m_mode == Mode::Selecting
         && m_startupTool != StartupTool::None
         && eventMatchesShortcut(event, Action::Cancel)) {
         leaveStartupTool();
@@ -125,6 +133,11 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
     }
 
     if (m_mode == Mode::Selecting) {
+        if (eventMatchesDisplayCaptureShortcut(event)) {
+            toggleDisplayCapturePicker();
+            event->accept();
+            return;
+        }
         if (eventMatchesStartupShortcut(event, StartupTool::ColorPicker)) {
             setStartupTool(StartupTool::ColorPicker);
             event->accept();
@@ -132,6 +145,11 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
         }
         if (eventMatchesStartupShortcut(event, StartupTool::Ruler)) {
             setStartupTool(StartupTool::Ruler);
+            event->accept();
+            return;
+        }
+        if (eventMatchesStartupShortcut(event, StartupTool::CodeScanner)) {
+            setStartupTool(StartupTool::CodeScanner);
             event->accept();
             return;
         }

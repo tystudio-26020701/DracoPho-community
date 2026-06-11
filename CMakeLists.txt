@@ -67,6 +67,8 @@ qt_add_executable(mark-shot
     src/main.cpp
     src/clipboard_image.cpp
     src/clipboard_image.h
+    src/code_scan_result.cpp
+    src/code_scan_result.h
     src/app_config_store.cpp
     src/app_config_store.h
     src/debug_log.cpp
@@ -77,6 +79,15 @@ qt_add_executable(mark-shot
     src/toolbar_appearance_config.h
     src/capture_cursor_policy.cpp
     src/capture_cursor_policy.h
+    src/display_capture/display_capture_card.cpp
+    src/display_capture/display_capture_card.h
+    src/display_capture/display_capture_picker.cpp
+    src/display_capture/display_capture_picker.h
+    src/display_capture/display_capture_save.cpp
+    src/display_capture/display_capture_save.h
+    src/display_capture/display_capture_snapshot.cpp
+    src/display_capture/display_capture_snapshot.h
+    src/display_capture/display_capture_target.h
     src/capture_cursor_policy_config.cpp
     src/capture_freeze_scope.cpp
     src/capture_freeze_scope.h
@@ -130,6 +141,9 @@ qt_add_executable(mark-shot
     src/shot_window_internal.h
     src/shot_window_module.h
     src/shot_window_ocr_result_window.cpp
+    src/shot_window_code_scan.cpp
+    src/shot_window_code_scan_result_window.cpp
+    src/shot_window_display_capture.cpp
     src/shot_window_actions.cpp
     src/shot_window_annotation_editing.cpp
     src/shot_window_annotation_painting.cpp
@@ -144,6 +158,7 @@ qt_add_executable(mark-shot
     src/shot_window_property_panels.cpp
     src/shot_window_selection_frame.cpp
     src/shot_window_setup.cpp
+    src/shot_window_shortcut_registration.cpp
     src/shot_window_shortcuts.cpp
     src/shot_window_pinned_window.cpp
     src/pinned_window/pinned_image_window.cpp
@@ -423,6 +438,20 @@ if(BUILD_TESTING)
     )
     add_test(NAME ocr-result COMMAND mark-shot-ocr-result-test)
 
+    qt_add_executable(mark-shot-code-scan-result-test
+        tests/code_scan_result_test.cpp
+        src/code_scan_result.cpp
+        src/code_scan_result.h
+    )
+    target_include_directories(mark-shot-code-scan-result-test PRIVATE src)
+    target_link_libraries(mark-shot-code-scan-result-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME code-scan-result COMMAND mark-shot-code-scan-result-test)
+
     qt_add_executable(mark-shot-pinned-resize-controller-test
         tests/pinned_resize_controller_test.cpp
         src/pinned_window/pinned_resize_controller.cpp
@@ -472,6 +501,7 @@ if(MARK_SHOT_LINUX)
 
     install(PROGRAMS
         scripts/mark-shot-ocr
+        scripts/mark-shot-code-scan
         scripts/mark-shot-translate
         scripts/mark-shot-window-detection-niri
         scripts/mark-shot-window-detection-hyprland

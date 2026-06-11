@@ -103,7 +103,20 @@ bool ShotWindow::eventMatchesStartupShortcut(const QKeyEvent *event, StartupTool
     if (tool == StartupTool::Ruler) {
         return shortcutMatchesEvent(m_startupRulerShortcut, event);
     }
+    if (tool == StartupTool::CodeScanner) {
+        return shortcutMatchesEvent(m_startupCodeScannerShortcut, event);
+    }
     return false;
+}
+
+/**
+ * 判断按键事件是否匹配启动阶段显示器快速截取快捷键。
+ * @param event 当前按键事件。
+ * @return 匹配时返回 true，否则返回 false。
+ */
+bool ShotWindow::eventMatchesDisplayCaptureShortcut(const QKeyEvent *event) const
+{
+    return shortcutMatchesEvent(m_startupDisplayCaptureShortcut, event);
 }
 
 /**

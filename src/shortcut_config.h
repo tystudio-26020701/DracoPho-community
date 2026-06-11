@@ -17,6 +17,8 @@ struct ShortcutConfig {
     ToolShortcuts tools;
     QKeySequence startupColorPicker;
     QKeySequence startupRuler;
+    QKeySequence startupCodeScanner;
+    QKeySequence startupDisplayCapture;
 };
 
 int actionIndex(ShotWindow::Action action);

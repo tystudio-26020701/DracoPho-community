@@ -2,12 +2,15 @@
 
 #include "annotation_launch.h"
 #include "capture_geometry.h"
+#include "display_capture/display_capture_snapshot.h"
 #include "screen_capture.h"
 #include "window_detection.h"
 #include "windows_integration.h"
 
 #include <QApplication>
+#include <QEventLoop>
 #include <QGuiApplication>
+#include <QMessageBox>
 #include <QPointer>
 #include <QScreen>
 #include <QTimer>
@@ -30,6 +33,23 @@ QRect virtualScreensGeometry()
         geometry = geometry.isNull() ? screen->geometry() : geometry.united(screen->geometry());
     }
     return geometry;
+}
+
+/// @brief 按显示器名称查找屏幕。
+/// @param screenName 显示器名称。
+/// @return 匹配到的屏幕；未找到时返回 nullptr。
+QScreen *screenByName(const QString &screenName)
+{
+    if (screenName.isEmpty()) {
+        return nullptr;
+    }
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    for (QScreen *screen : screens) {
+        if (screen && screen->name() == screenName) {
+            return screen;
+        }
+    }
+    return nullptr;
 }
 
 /// @brief 根据已经捕获的图像创建并显示截图窗口。
@@ -169,11 +189,73 @@ void closeCaptureWindows(const QVector<QPointer<ShotWindow>> &windows)
     }
 }
 
-/// @brief 为多屏冻结窗口绑定互斥关闭逻辑。
-/// @param app 应用对象。
-/// @param windows 多屏冻结窗口列表。
+/// @brief 显示一组截图窗口。
+/// @param windows 需要显示的截图窗口列表。
 /// @return 无返回值。
-void connectCaptureWindowSession(QApplication *app, const QVector<QPointer<ShotWindow>> &windows)
+void showCaptureWindows(const QVector<QPointer<ShotWindow>> &windows)
+{
+    for (const QPointer<ShotWindow> &window : windows) {
+        if (window) {
+            window->show();
+            window->raise();
+        }
+    }
+}
+
+/// @brief 按显示器快照目标创建并显示全屏标注窗口。
+/// @param target 显示器快照目标。
+/// @param useRegularWindow 是否使用普通窗口。
+/// @param defaultTools 默认工具配置。
+/// @param error 输出错误信息。
+/// @return 创建出的截图窗口。
+ShotWindow *showDisplayCaptureTarget(const markshot::display_capture::Target &target,
+                                     bool useRegularWindow,
+                                     const markshot::DefaultTools &defaultTools,
+                                     QString *error)
+{
+    if (target.image.isNull()) {
+        if (error) {
+            *error = QStringLiteral("display capture image is empty");
+        }
+        return nullptr;
+    }
+
+    QScreen *screen = nullptr;
+    if (!target.allOutputs) {
+        screen = screenByName(target.screenName);
+        if (!screen) {
+            screen = QGuiApplication::screenAt(target.geometry.center());
+        }
+    }
+
+    const bool detectWindows = markshot::windowDetectionEnabled();
+    const QVector<QRect> windowGeometries = detectWindows
+        ? markshot::collectConfiguredWindowGeometries(target.geometry, target.outputName, target.allOutputs)
+        : QVector<QRect>();
+    return showCapturedWindow(screen,
+                              target.image,
+                              target.outputName,
+                              target.geometry,
+                              windowGeometries,
+                              detectWindows,
+                              target.allOutputs,
+                              useRegularWindow,
+                              true,
+                              defaultTools);
+}
+
+/// @brief 为截图冻结窗口绑定互斥关闭和显示器快速截取逻辑。
+/// @param app 应用对象。
+/// @param windows 冻结窗口列表。
+/// @param includeCursor 冻结图是否包含鼠标。
+/// @param useRegularWindow 是否使用普通窗口。
+/// @param defaultTools 默认工具配置。
+/// @return 无返回值。
+void connectCaptureWindowSession(QApplication *app,
+                                 const QVector<QPointer<ShotWindow>> &windows,
+                                 bool includeCursor,
+                                 bool useRegularWindow,
+                                 const markshot::DefaultTools &defaultTools)
 {
     if (!app || windows.isEmpty()) {
         return;
@@ -203,6 +285,70 @@ void connectCaptureWindowSession(QApplication *app, const QVector<QPointer<ShotW
             }
             *closingSession = true;
             closeCaptureWindows(windows);
+            *closingSession = false;
+        });
+        QObject::connect(window,
+                         &ShotWindow::displayCaptureSnapshotRequested,
+                         app,
+                         [windows, closingSession, includeCursor](ShotWindow *activeWindow) {
+            if (*closingSession) {
+                return;
+            }
+            *closingSession = true;
+
+            for (const QPointer<ShotWindow> &peerWindow : std::as_const(windows)) {
+                if (peerWindow) {
+                    peerWindow->hide();
+                }
+            }
+            QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+
+            QString error;
+            const QVector<markshot::display_capture::Target> targets =
+                markshot::display_capture::captureDisplayTargets(includeCursor, &error);
+            showCaptureWindows(windows);
+
+            if (activeWindow && !targets.isEmpty()) {
+                activeWindow->showDisplayCaptureTargets(targets);
+            } else {
+                QMessageBox::warning(nullptr,
+                                     QStringLiteral("Mark Shot"),
+                                     error.isEmpty()
+                                         ? QStringLiteral("Display capture failed")
+                                         : error);
+            }
+
+            *closingSession = false;
+        });
+        QObject::connect(window,
+                         &ShotWindow::displayCaptureEditRequested,
+                         app,
+                         [app, windows, closingSession, includeCursor, useRegularWindow, defaultTools](
+                             ShotWindow *, markshot::display_capture::Target target) {
+            if (*closingSession) {
+                return;
+            }
+            *closingSession = true;
+
+            QString error;
+            ShotWindow *newWindow = showDisplayCaptureTarget(target,
+                                                             useRegularWindow,
+                                                             defaultTools,
+                                                             &error);
+
+            if (newWindow) {
+                QVector<QPointer<ShotWindow>> newWindows{QPointer<ShotWindow>(newWindow)};
+                connectCaptureWindowSession(app, newWindows, includeCursor, useRegularWindow, defaultTools);
+                closeCaptureWindows(windows);
+            } else {
+                showCaptureWindows(windows);
+                QMessageBox::warning(nullptr,
+                                     QStringLiteral("Mark Shot"),
+                                     error.isEmpty()
+                                         ? QStringLiteral("Display capture failed")
+                                         : error);
+            }
+
             *closingSession = false;
         });
     }
@@ -309,7 +455,7 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
                                                     fullscreenAnnotation,
                                                     defaultTools,
                                                     error);
-        connectCaptureWindowSession(app, windows);
+        connectCaptureWindowSession(app, windows, includeCursor, useRegularWindow, defaultTools);
         return windows;
     }
 
@@ -318,6 +464,7 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
     if (window) {
         windows.append(window);
     }
+    connectCaptureWindowSession(app, windows, includeCursor, useRegularWindow, defaultTools);
     return windows;
 }
 

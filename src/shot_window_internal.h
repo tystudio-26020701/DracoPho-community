@@ -37,6 +37,7 @@ inline constexpr qreal kMaxMosaicBlockSize = 48.0;
 inline constexpr qreal kMinLaserWidth = 4.0;
 inline constexpr qreal kMaxLaserWidth = 48.0;
 inline constexpr qint64 kLaserLifetimeMs = 1800;
+inline constexpr int kCodeScanTimeoutMs = 15000;
 inline constexpr qreal kTextBackgroundPaddingX = 6.0;
 inline constexpr qreal kTextBackgroundPaddingY = 4.0;
 inline constexpr qreal kMinImageZoom = 0.25;
@@ -73,6 +74,11 @@ struct PinnedWindowConfig {
     bool borderEnabled = true;
     QColor borderColor = markshot::theme::kAccent;
     qreal borderWidth = 2.0;
+};
+
+struct CodeScanConfig {
+    QString command;
+    int timeoutMs = kCodeScanTimeoutMs;
 };
 
 qreal clampedMagnifierScale(qreal scale);
@@ -126,6 +132,7 @@ void replaceShellPlaceholder(QString *command,
 QStringList expandDesktopExec(const ShotWindow::DesktopApp &app, const QString &imagePath);
 QString helperProgramPath(const QString &programName);
 PinnedWindowConfig pinnedWindowConfig();
+CodeScanConfig codeScanConfig();
 bool ocrOutputReportsMissingBackend(const QByteArray &stdoutData,
                                     const QByteArray &stderrData,
                                     const QString &configuredBackend);
@@ -134,6 +141,7 @@ bool annotationAutoSelectAfterDrawEnabled();
 std::array<bool, static_cast<int>(ShotWindow::Tool::Laser) + 1> annotationAutoSelectAfterDrawTools();
 markshot::scroll::ScrollSessionUiConfig scrollSessionUiConfig();
 QWidget *createOcrResultWindow(QString text);
+QWidget *createCodeScanResultWindow(QString text);
 QWidget *createPinnedImageWindow(QImage image, std::optional<QPoint> initialTopLeft = std::nullopt);
 
 }  // namespace markshot::shot

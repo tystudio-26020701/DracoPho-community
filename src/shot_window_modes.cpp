@@ -495,19 +495,21 @@ void ShotWindow::setStartupTool(StartupTool tool)
     m_startupTool = tool;
     m_dragging = false;
     m_hoveredWindowRect.reset();
+    hideDisplayCapturePicker();
     m_startupHoverValid = false;
     m_startupRulerDragging = false;
     m_startupRulerHasMeasure = false;
     if (m_startupColorPanel) {
         m_startupColorPanel->hide();
     }
-    setCursor(tool == StartupTool::ColorPicker ? captureCrossCursor() : QCursor(Qt::SizeAllCursor));
+    setCursor(tool == StartupTool::Ruler ? QCursor(Qt::SizeAllCursor) : captureCrossCursor());
     update();
 }
 
 void ShotWindow::leaveStartupTool()
 {
     m_startupTool = StartupTool::None;
+    hideDisplayCapturePicker();
     m_startupHoverValid = false;
     m_startupRulerDragging = false;
     m_startupRulerHasMeasure = false;
