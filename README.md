@@ -28,6 +28,8 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **Laser Pointer**: Dedicated presentation tool with pen traces that dissolve smoothly over time.
 - **Auto-Increment Marker**: Click to stamp sequential numbered markers.
 - **Mosaic**: Applies high-fidelity acrylic frost blur to obscure sensitive information.
+- **Startup Code Scan**: Press `Q` before selecting a region, drag around a QR code or barcode, and open the decoded result in a copyable window.
+- **Quick Display Capture**: Press `D` before selecting a region to instantly capture all outputs, crop them by display, and hover a thumbnail to copy, edit, or save that display image.
 
 ### Pinned Window Stickers
 - Pins any cropped region or annotated screenshot as an independent, frameless, and top-level floating window.
@@ -261,7 +263,9 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
     },
     "startup": {
       "colorPicker": "C",
-      "ruler": "R"
+      "ruler": "R",
+      "codeScanner": "Q",
+      "displayCapture": "D"
     }
   },
   "windows": {
@@ -271,6 +275,10 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
     "hotkeys": {
       "capture": "Ctrl+Alt+S"
     }
+  },
+  "codeScan": {
+    "command": "",
+    "timeoutMs": 15000
   },
   "pinnedWindow": {
     "autoOcr": false,
@@ -331,6 +339,8 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | `windows.tray.enabled` | Boolean | `true` on Windows, `false` elsewhere | Starts the Windows system tray controller automatically. Use `mark-shot --tray` to start tray mode without changing config, or `mark-shot --capture` to force one-shot capture when autostart is enabled. |
 | `windows.hotkeys.capture` | String | `"Ctrl+Alt+S"` | Windows global hotkey for region capture while tray mode is running. Aliases include `hotkey`, `captureHotkey`, and `screenshot`. |
 | `windows.hotkeys.fullscreen` | String | `""` | Optional Windows global hotkey for fullscreen annotation capture while tray mode is running. Alias: `fullscreenHotkey`. The generated default config only writes the region capture hotkey. |
+| `codeScan.command` | String | `""` | Custom QR/barcode scanner command. Supports `{image}`, `{imagePath}`, and `{imageUrl}` placeholders; if none is present, Mark Shot appends the temporary PNG path. The command must print the same JSON shape as `mark-shot-code-scan`. Aliases: `codeScanner.command`, `barcodeScanner.command`, `barcode.command`. |
+| `codeScan.timeoutMs` | Number | `15000` | Timeout for the code scanner command. Environment variable `MARK_SHOT_CODE_SCAN_TIMEOUT_MS` can override it. |
 | `pinnedWindow.autoOcr` | Boolean | `false` | Controls whether a pinned sticker window starts OCR text recognition in the background immediately on creation. If disabled, OCR runs on demand when Copy Image Text or Translate is chosen. Alias: `pinned`, `pin`. |
 | `pinnedWindow.alwaysOnTop` | Boolean | `true` | Controls whether pinned sticker windows stay above normal windows. The pinned-window context menu can toggle this value and writes it back to `config.json`. Aliases: `stayOnTop`, `topmost`, `above`. On GNOME Wayland, the bundled helper extension is used when available. |
 | `pinnedWindow.border` | Boolean/Object | `true` | Outer border configuration for pinned sticker windows. Can be a boolean, or an object containing `enabled` (bool), `color` (name/hex/RGBA object), and `width` (float, `1.0` to `12.0`). Also flat configs like `borderEnabled`, `borderColor`, and `borderWidth` are supported. |
@@ -351,7 +361,7 @@ Path values: `{home}` (user home), `{pictures}` (pictures directory), `{desktop}
 The `shortcuts` node supports the following sub-nodes:
 - **`tools`** (alias: `tool`, `toolShortcuts`): Keyboard shortcuts for switching tools (`move`, `select`, `pen`, `line`, `highlighter`, `rectangle`, `ellipse`, `arrow`, `text`, `number`, `mosaic`, `magnifier`, `laser`).
 - **`actions`** (alias: `action`, `actionShortcuts`): Keyboard shortcuts for global actions (`copy`, `save`, `pin`, `undo`, `redo`, `cancel`, `openWith`, `extensions`, `scrollCapture`, `ocrCopy`, `clear`, `toggleCaptureScope`, `toggleToolbarLayout`).
-- **`startup`** (alias: `startupTools`, `selection`): Keyboard shortcuts for selection-phase tools (`colorPicker`, `ruler`).
+- **`startup`** (alias: `startupTools`, `selection`): Keyboard shortcuts for selection-phase tools (`colorPicker`, `ruler`, `codeScanner`, `displayCapture`).
 
 *Shortcut values use Qt key-sequence text (e.g. `Ctrl+C`, `Ctrl+Shift+Z`, or `Alt+R`). Shortcut keys can also be specified directly at the root of `shortcuts`.*
 
@@ -486,7 +496,7 @@ Each element in the array (or the root object itself) can take one of the follow
 
 </details>
 
-When installing manually, install `mark-shot`, `mark-shot-ocr`, and `mark-shot-translate` together. Otherwise the pinned window opens, but image-text copying and translation cannot call the backend helpers.
+When installing manually, install `mark-shot`, `mark-shot-ocr`, `mark-shot-code-scan`, and `mark-shot-translate` together. Otherwise OCR, code scanning, or translation cannot call the backend helpers.
 
 ---
 
@@ -565,6 +575,15 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 ~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
 
+#### Code Scan Backend (Optional)
+
+```bash
+python3 -m venv ~/.local/share/mark-shot/code-scan-venv
+~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+```
+
+The code scanner helper prefers `zxing-cpp` for QR Code, Data Matrix, Aztec, PDF417, EAN, UPC, Code 39, Code 93, Code 128, and other common formats. It can also fall back to `pyzbar` or OpenCV QR detection when those packages are available.
+
 #### Windows
 
 Install Qt 6 for your compiler toolchain, CMake, Ninja, and a C++17 compiler such as MSVC or MinGW. The Windows build does not require Qt DBus, PipeWire, X11/XCB, LayerShellQt, `grim`, `wl-copy`, or `xclip`.
@@ -599,7 +618,7 @@ LayerShellQt is detected automatically. When found, full Wayland layer-shell sup
 cmake --install build --prefix "$HOME/.local"
 ```
 
-This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-translate`), desktop entries, and icons.
+This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-code-scan`, `mark-shot-translate`), desktop entries, and icons.
 
 ### GNOME Wayland Scrolling Capture Extension
 
@@ -673,6 +692,8 @@ The expected result is `('4.2',)`. On GNOME Wayland, restart `mark-shot` after e
 | :---: | :--- | :--- |
 | **C** | Color Picker | Samples a screenshot pixel before selecting a region. Use the mouse wheel to resize the loupe, left click to open a color panel with copyable HEX, RGB, HSL, HSV, and Qt formats. Right click or Esc returns to normal selection. |
 | **R** | Ruler | Measures coordinates before selecting a region. Hover reads the current pixel, and left-drag draws a measured rectangle with pixel ticks, width, height, diagonal, and area. Right click or Esc returns to normal selection. |
+| **Q** | Code Scanner | Enters QR code and barcode scan mode. Select a region to decode codes inside it; the result opens in a copyable window. Right click or Esc returns to normal selection. |
+| **D** | Display Capture | Instantly captures all outputs, crops the snapshot by display, and shows thumbnails with hover actions for copy, edit, and save. |
 
 ### Global Actions
 

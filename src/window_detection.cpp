@@ -149,6 +149,8 @@ QJsonObject defaultAppConfigRoot()
     QJsonObject startupShortcuts;
     startupShortcuts.insert(QStringLiteral("colorPicker"), QStringLiteral("C"));
     startupShortcuts.insert(QStringLiteral("ruler"), QStringLiteral("R"));
+    startupShortcuts.insert(QStringLiteral("codeScanner"), QStringLiteral("Q"));
+    startupShortcuts.insert(QStringLiteral("displayCapture"), QStringLiteral("D"));
 
     QJsonObject shortcuts;
     shortcuts.insert(QStringLiteral("tools"), shortcutTools);
@@ -170,6 +172,11 @@ QJsonObject defaultAppConfigRoot()
     windows.insert(QStringLiteral("tray"), tray);
     windows.insert(QStringLiteral("hotkeys"), hotkeys);
     root.insert(QStringLiteral("windows"), windows);
+
+    QJsonObject codeScan;
+    codeScan.insert(QStringLiteral("command"), QString());
+    codeScan.insert(QStringLiteral("timeoutMs"), 15000);
+    root.insert(QStringLiteral("codeScan"), codeScan);
 
     QJsonObject pinnedWindow;
     pinnedWindow.insert(QStringLiteral("autoOcr"), false);

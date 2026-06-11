@@ -343,6 +343,50 @@ PinnedWindowConfig pinnedWindowConfig()
     return config;
 }
 
+/**
+ * 读取扫码配置。
+ * @return 扫码命令与超时时间配置。
+ */
+CodeScanConfig codeScanConfig()
+{
+    CodeScanConfig config;
+
+    QFile file(appConfigPath());
+    if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QJsonParseError parseError;
+        const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+        if (parseError.error == QJsonParseError::NoError && document.isObject()) {
+            const QJsonObject root = document.object();
+            const QJsonObject codeScan =
+                cfg::firstObjectValue(root,
+                                      {QStringLiteral("codeScan"),
+                                       QStringLiteral("codeScanner"),
+                                       QStringLiteral("barcodeScanner"),
+                                       QStringLiteral("barcode")});
+            config.command = codeScan.value(QStringLiteral("command"))
+                                 .toString(codeScan.value(QStringLiteral("path"))
+                                               .toString(codeScan.value(QStringLiteral("helper")).toString()))
+                                 .trimmed();
+            if (codeScan.value(QStringLiteral("timeoutMs")).isDouble()) {
+                config.timeoutMs = std::max(1000,
+                                            codeScan.value(QStringLiteral("timeoutMs")).toInt(config.timeoutMs));
+            }
+        }
+    }
+
+    const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    const QString envCommand = env.value(QStringLiteral("MARK_SHOT_CODE_SCAN_COMMAND")).trimmed();
+    if (!envCommand.isEmpty()) {
+        config.command = envCommand;
+    }
+    bool timeoutOk = false;
+    const int envTimeout = env.value(QStringLiteral("MARK_SHOT_CODE_SCAN_TIMEOUT_MS")).trimmed().toInt(&timeoutOk);
+    if (timeoutOk) {
+        config.timeoutMs = std::max(1000, envTimeout);
+    }
+    return config;
+}
+
 /// @brief Parses a boolean value from the OCR result panel JSON configuration.
 /// @param value The JSON value to parse.
 /// @return An optional boolean value if parsing was successful, otherwise std::nullopt.

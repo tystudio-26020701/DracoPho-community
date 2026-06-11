@@ -22,7 +22,9 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
     }
 
     const QPointF imagePoint = widgetToImage(event->position());
-    if (m_mode == Mode::Selecting && m_startupTool != StartupTool::None) {
+    const bool startupPointerTool = m_startupTool == StartupTool::ColorPicker
+        || m_startupTool == StartupTool::Ruler;
+    if (m_mode == Mode::Selecting && startupPointerTool) {
         if (m_frozenImageRect.contains(event->position()) || m_startupRulerDragging) {
             m_startupHoverImagePoint = clampImagePoint(imagePoint);
             m_startupHoverValid = true;
@@ -422,6 +424,10 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
                 update();
                 return;
             }
+            if (m_startupTool == StartupTool::CodeScanner) {
+                scanCodeSelection();
+                return;
+            }
             m_mode = Mode::Editing;
             m_fullscreenAnnotation = false;
             m_toolbarUserPlaced = false;
@@ -441,6 +447,10 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         if (!hasUsableSelection()) {
             m_selection = {};
             update();
+            return;
+        }
+        if (m_startupTool == StartupTool::CodeScanner) {
+            scanCodeSelection();
             return;
         }
         m_mode = Mode::Editing;
