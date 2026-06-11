@@ -11,6 +11,7 @@
 #include <QVector>
 #include <QWidget>
 
+#include "toolbar_appearance_config.h"
 #include "ui/theme.h"
 
 #include <array>
@@ -509,6 +510,7 @@ private:
 
     // Current tool defaults and styling. These seed new Annotation records and
     // are updated by tool panels, shortcuts, and config/CLI defaults.
+    markshot::ToolbarAppearanceConfig m_toolbarAppearance;
     QColor m_currentColor = QColor(255, 77, 77);
     qreal m_penWidth = 2.0;
     qreal m_shapeWidth = 3.0;

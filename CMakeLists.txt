@@ -73,6 +73,8 @@ qt_add_executable(mark-shot
     src/debug_log.h
     src/config_value.cpp
     src/config_value.h
+    src/toolbar_appearance_config.cpp
+    src/toolbar_appearance_config.h
     src/capture_cursor_policy.cpp
     src/capture_cursor_policy.h
     src/capture_cursor_policy_config.cpp
@@ -286,6 +288,22 @@ if(BUILD_TESTING)
             Qt6::Test
     )
     add_test(NAME config-value COMMAND mark-shot-config-value-test)
+
+    qt_add_executable(mark-shot-toolbar-appearance-config-test
+        tests/toolbar_appearance_config_test.cpp
+        src/toolbar_appearance_config.cpp
+        src/toolbar_appearance_config.h
+        src/config_value.cpp
+        src/config_value.h
+    )
+    target_include_directories(mark-shot-toolbar-appearance-config-test PRIVATE src)
+    target_link_libraries(mark-shot-toolbar-appearance-config-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME toolbar-appearance-config COMMAND mark-shot-toolbar-appearance-config-test)
 
     qt_add_executable(mark-shot-capture-freeze-scope-test
         tests/capture_freeze_scope_test.cpp
