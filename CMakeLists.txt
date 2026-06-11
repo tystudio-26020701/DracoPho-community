@@ -459,6 +459,7 @@ if(MARK_SHOT_LINUX)
         scripts/mark-shot-window-detection-niri
         scripts/mark-shot-window-detection-hyprland
         scripts/mark-shot-window-detection-gnome
+        scripts/mark-shot-window-detection-kde
         DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
     install(FILES
