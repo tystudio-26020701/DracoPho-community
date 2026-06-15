@@ -61,6 +61,7 @@ sed -i '1s|^#!/usr/bin/env python3$|#!/usr/bin/python3|' \
 %doc README.md README.zh-CN.md
 %{_bindir}/mark-shot
 %{_bindir}/mark-shot-ocr
+%{_bindir}/mark-shot-code-scan
 %{_bindir}/mark-shot-translate
 %{_bindir}/mark-shot-window-detection-niri
 %{_bindir}/mark-shot-window-detection-hyprland
