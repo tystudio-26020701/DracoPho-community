@@ -67,6 +67,8 @@ qt_add_executable(mark-shot
     src/main.cpp
     src/clipboard_image.cpp
     src/clipboard_image.h
+    src/clipboard_image_config.cpp
+    src/clipboard_image_config.h
     src/code_scan_result.cpp
     src/code_scan_result.h
     src/app_config_store.cpp
@@ -153,6 +155,8 @@ qt_add_executable(mark-shot
     src/shot_window_input.cpp
     src/shot_window_input_shortcuts.cpp
     src/shot_window_layout.cpp
+    src/shot_window_line_constraint.cpp
+    src/shot_window_line_constraint.h
     src/shot_window_line_anchors.cpp
     src/shot_window_modes.cpp
     src/shot_window_property_panels.cpp
@@ -336,6 +340,44 @@ if(BUILD_TESTING)
             Qt6::Test
     )
     add_test(NAME toolbar-appearance-config COMMAND mark-shot-toolbar-appearance-config-test)
+
+    qt_add_executable(mark-shot-clipboard-image-config-test
+        tests/clipboard_image_config_test.cpp
+        src/clipboard_image_config.cpp
+        src/clipboard_image_config.h
+        src/app_config_store.cpp
+        src/app_config_store.h
+        src/config_value.cpp
+        src/config_value.h
+        src/debug_log.cpp
+        src/debug_log.h
+        src/shell_command.cpp
+        src/shell_command.h
+        src/window_detection.cpp
+        src/window_detection.h
+    )
+    target_include_directories(mark-shot-clipboard-image-config-test PRIVATE src)
+    target_link_libraries(mark-shot-clipboard-image-config-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME clipboard-image-config COMMAND mark-shot-clipboard-image-config-test)
+
+    qt_add_executable(mark-shot-line-constraint-test
+        tests/shot_window_line_constraint_test.cpp
+        src/shot_window_line_constraint.cpp
+        src/shot_window_line_constraint.h
+    )
+    target_include_directories(mark-shot-line-constraint-test PRIVATE src)
+    target_link_libraries(mark-shot-line-constraint-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME line-constraint COMMAND mark-shot-line-constraint-test)
 
     qt_add_executable(mark-shot-capture-freeze-scope-test
         tests/capture_freeze_scope_test.cpp

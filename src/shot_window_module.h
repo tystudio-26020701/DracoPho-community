@@ -12,6 +12,7 @@
 #include "scroll/stitcher.h"
 #include "shell_command.h"
 #include "shortcut_config.h"
+#include "shot_window_line_constraint.h"
 #include "ui/color_picker.h"
 #include "ui/i18n.h"
 #include "ui/icons.h"

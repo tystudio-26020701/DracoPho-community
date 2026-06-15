@@ -192,6 +192,14 @@ QJsonObject defaultAppConfigRoot()
     scrollCapture.insert(QStringLiteral("hidePreviewDuringCapture"), false);
     root.insert(QStringLiteral("scrollCapture"), scrollCapture);
 
+    QJsonObject clipboardImage;
+    clipboardImage.insert(QStringLiteral("mode"), QStringLiteral("image/png"));
+    clipboardImage.insert(QStringLiteral("thresholdM"), 4);
+
+    QJsonObject clipboard;
+    clipboard.insert(QStringLiteral("image"), clipboardImage);
+    root.insert(QStringLiteral("clipboard"), clipboard);
+
     QJsonObject windowDetection;
     windowDetection.insert(QStringLiteral("enabled"), true);
 #if defined(Q_OS_WIN)
