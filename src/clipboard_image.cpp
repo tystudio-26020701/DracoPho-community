@@ -1,5 +1,7 @@
 #include "clipboard_image.h"
 
+#include "clipboard_image_config.h"
+
 #include <QApplication>
 #include <QBuffer>
 #include <QClipboard>
@@ -35,20 +37,6 @@ enum class ClipboardPayload {
     ImagePng,
     Text,
 };
-
-/// @brief Size limit in bytes for copying images inline into the clipboard rather than via cache files.
-constexpr qsizetype kInlineImageClipboardLimitBytes = 4 * 1024 * 1024;
-
-/// @brief Determines whether large images should be cached in temporary files for the clipboard.
-/// @return True if large images should be cached, false otherwise.
-bool shouldCacheLargeImagesForClipboard()
-{
-#if defined(Q_OS_WIN)
-    return false;
-#else
-    return true;
-#endif
-}
 
 /// @brief Detects the active clipboard backend based on the environment variables.
 /// @param environment The current process environment.
@@ -281,6 +269,17 @@ bool copyUrlToClipboard(const QUrl &url)
     return copied;
 }
 
+/**
+ * 将图片缓存为文件 URL 后复制到剪贴板。
+ * @param png 图片 PNG 字节数据。
+ * @return 复制成功时返回 true，否则返回 false。
+ */
+bool copyImageUrlToClipboard(const QByteArray &png)
+{
+    const std::optional<QUrl> cachedUrl = savePngToClipboardCache(png);
+    return cachedUrl.has_value() && copyUrlToClipboard(*cachedUrl);
+}
+
 } // namespace
 
 bool copyTextToClipboard(const QString &text)
@@ -313,11 +312,19 @@ bool copyImageToClipboard(const QImage &image)
         return false;
     }
 
-    if (shouldCacheLargeImagesForClipboard() && png.size() > kInlineImageClipboardLimitBytes) {
-        const std::optional<QUrl> cachedUrl = savePngToClipboardCache(png);
-        if (cachedUrl.has_value()) {
-            return copyUrlToClipboard(*cachedUrl);
+    const ClipboardImageConfig config = configuredClipboardImageConfig();
+    switch (config.mode) {
+    case ClipboardImageMode::ImagePng:
+        return copyImageDataToClipboard(image, png);
+    case ClipboardImageMode::Url:
+        return copyImageUrlToClipboard(png);
+    case ClipboardImageMode::Threshold:
+        // 1. 图片超过阈值时优先复制文件 URL
+        if (png.size() > clipboardImageThresholdBytes(config) && copyImageUrlToClipboard(png)) {
+            return true;
         }
+        // 2. 未超过阈值或 URL 写入失败时复制 image/png
+        return copyImageDataToClipboard(image, png);
     }
 
     return copyImageDataToClipboard(image, png);

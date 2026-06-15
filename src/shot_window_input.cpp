@@ -233,16 +233,24 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         m_draft->points[0] = clamped;
         m_draft->rect = QRectF(m_dragStart, clamped).normalized();
     } else {
+        const bool straightLineDraft = m_draft->tool == Tool::Line
+            || m_draft->tool == Tool::Arrow
+            || (m_draft->tool == Tool::Highlighter
+                && m_draft->highlighterStyle == HighlighterStyle::StraightLine);
+        const bool constrainLine = straightLineDraft && event->modifiers().testFlag(Qt::ShiftModifier);
+        const QPointF lineEnd = constrainLine
+            ? clampImagePoint(markshot::shot::constrainedLineEnd(m_dragStart, clamped))
+            : clamped;
         if ((m_draft->tool == Tool::Rectangle || m_draft->tool == Tool::Ellipse || m_draft->tool == Tool::Magnifier)
             && event->modifiers().testFlag(Qt::ControlModifier)) {
             m_draft->rect = constrainedRect(m_dragStart, clamped);
         } else {
-            m_draft->rect = normalizedRect(m_dragStart, clamped);
+            m_draft->rect = normalizedRect(m_dragStart, lineEnd);
         }
         if (m_draft->points.size() >= 2) {
             m_draft->points[1] = (m_draft->tool == Tool::Rectangle || m_draft->tool == Tool::Ellipse || m_draft->tool == Tool::Magnifier)
                 ? m_draft->rect.bottomRight()
-                : clamped;
+                : lineEnd;
         }
     }
     update();
