@@ -603,6 +603,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     annotation.filled = m_shapeFilled;
     annotation.cornerRadius = m_tool == Tool::Rectangle ? m_rectangleCornerRadius : 0.0;
     annotation.arrowStyle = m_arrowStyle;
+    annotation.rectangleStyle = m_rectangleStyle;
     annotation.fontFamily = m_textFontFamily;
     annotation.rotationDegrees = 0.0;
     annotation.highlighterStyle = m_tool == Tool::Highlighter ? m_highlighterStyle : HighlighterStyle::Freehand;

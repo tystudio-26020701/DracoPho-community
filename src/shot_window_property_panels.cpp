@@ -109,6 +109,47 @@ void ShotWindow::setSelectedAnnotationArrowStyle(ArrowStyle style)
     update();
 }
 
+void ShotWindow::setSelectedRectangleStyle(RectangleStyle style)
+{
+    // 切换矩形风格(描边/高亮/反色)。多选与单选共用同一逻辑,仅作用于
+    // Tool::Rectangle 标注。无矩形选中时只更新工具默认值。
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        bool changed = false;
+        // 1. 检测是否真的需要修改,避免无意义的历史快照
+        for (int id : selectedIds) {
+            const Annotation *annotation = annotationById(id);
+            if (annotation && annotation->tool == Tool::Rectangle
+                && annotation->rectangleStyle != style) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
+            return;
+        }
+        // 2. 写入快照后批量改风格
+        pushHistorySnapshot();
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id);
+                annotation && annotation->tool == Tool::Rectangle) {
+                annotation->rectangleStyle = style;
+            }
+        }
+    } else {
+        if (m_tool != Tool::Rectangle || m_rectangleStyle == style) {
+            return;
+        }
+        m_rectangleStyle = style;
+    }
+
+    if (m_draft.has_value() && m_draft->tool == Tool::Rectangle) {
+        m_draft->rectangleStyle = style;
+    }
+    updateAnnotationPropertyPanel();
+    update();
+}
+
 void ShotWindow::setSelectedHighlighterStyle(HighlighterStyle style)
 {
     const QVector<int> selectedIds = selectedAnnotationIds();

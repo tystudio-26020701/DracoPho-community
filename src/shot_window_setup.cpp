@@ -223,6 +223,22 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     m_propertyRadiusSlider->setToolTip(MS_TR("Rectangle corner radius"));
     connect(m_propertyRadiusSlider, &QSlider::valueChanged, this, [this](int value) { setSelectedAnnotationCornerRadius(value); });
     propertyLayout->addWidget(m_propertyRadiusSlider);
+    // 矩形风格切换:描边/高亮/反色,仅在 Tool::Rectangle 选中或激活时显示
+    m_propertyRectangleStyleCombo = new QComboBox(m_annotationPropertyPanel);
+    m_propertyRectangleStyleCombo->setFocusPolicy(Qt::NoFocus);
+    m_propertyRectangleStyleCombo->addItem(MS_TR("Stroke"), static_cast<int>(RectangleStyle::Stroke));
+    m_propertyRectangleStyleCombo->addItem(MS_TR("Highlight"), static_cast<int>(RectangleStyle::Highlight));
+    m_propertyRectangleStyleCombo->addItem(MS_TR("Invert"), static_cast<int>(RectangleStyle::Invert));
+    m_propertyRectangleStyleCombo->setToolTip(MS_TR("Rectangle style"));
+    m_propertyRectangleStyleCombo->setAccessibleName(MS_TR("Rectangle style"));
+    connect(m_propertyRectangleStyleCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int index) {
+        if (index < 0 || !m_propertyRectangleStyleCombo) {
+            return;
+        }
+        setSelectedRectangleStyle(
+            static_cast<RectangleStyle>(m_propertyRectangleStyleCombo->itemData(index).toInt()));
+    });
+    propertyLayout->addWidget(m_propertyRectangleStyleCombo);
     m_propertyArrowStyleCombo = new QComboBox(m_annotationPropertyPanel);
     m_propertyArrowStyleCombo->setFocusPolicy(Qt::NoFocus);
     m_propertyArrowStyleCombo->addItem(MS_TR("Fletched"), static_cast<int>(ArrowStyle::Fletched));

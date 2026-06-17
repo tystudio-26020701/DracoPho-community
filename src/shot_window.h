@@ -193,6 +193,14 @@ private:
         Rectangle,
     };
 
+    // 矩形工具的视觉风格。Stroke 即默认描边/填充样式;Highlight 类似荧光笔,
+    // 在矩形区域用半透明色 Multiply 混合;Invert 对矩形覆盖区域做像素反色。
+    enum class RectangleStyle {
+        Stroke,
+        Highlight,
+        Invert,
+    };
+
     // Number badge display styles. Existing annotations keep their own style so
     // changing the active tool default does not rewrite old markers.
     enum class NumberStyle {
@@ -261,6 +269,7 @@ private:
         MagnifierShape magnifierShape = MagnifierShape::Circle;
         NumberStyle numberStyle = NumberStyle::Arabic;
         QString fontFamily = markshot::theme::textFontFamily();
+        RectangleStyle rectangleStyle = RectangleStyle::Stroke;
     };
 
     // Undo/redo captures only the annotation graph and id counters. The frozen
@@ -390,6 +399,7 @@ private:
                    qreal width,
                    ArrowStyle style) const;
     void drawMosaic(QPainter &painter, QRectF imageRect, qreal blockSize, bool widgetCoordinates) const;
+    void drawRectangle(QPainter &painter, const Annotation &annotation, bool widgetCoordinates) const;
     void drawMagnifier(QPainter &painter, const Annotation &annotation, bool widgetCoordinates) const;
     void drawNumber(QPainter &painter,
                     QPointF tipPoint,
@@ -448,6 +458,7 @@ private:
     void setSelectedAnnotationFilled(bool filled);
     void setSelectedAnnotationCornerRadius(int radius);
     void setSelectedAnnotationArrowStyle(ArrowStyle style);
+    void setSelectedRectangleStyle(RectangleStyle style);
     void setSelectedHighlighterStyle(HighlighterStyle style);
     void setSelectedNumberStyle(NumberStyle style);
     void resetNumberSequence();
@@ -581,6 +592,7 @@ private:
     bool m_shapeFilled = false;
     std::array<bool, static_cast<int>(Tool::Laser) + 1> m_autoSelectAfterDrawByTool = {};
     qreal m_rectangleCornerRadius = 0.0;
+    RectangleStyle m_rectangleStyle = RectangleStyle::Stroke;
     ArrowStyle m_arrowStyle = ArrowStyle::Fletched;
     HighlighterStyle m_highlighterStyle = HighlighterStyle::StraightLine;
     NumberStyle m_numberStyle = NumberStyle::Arabic;
@@ -618,6 +630,7 @@ private:
     QComboBox *m_propertyArrowStyleCombo = nullptr;
     QComboBox *m_propertyHighlighterStyleCombo = nullptr;
     QComboBox *m_propertyNumberStyleCombo = nullptr;
+    QComboBox *m_propertyRectangleStyleCombo = nullptr;
     QPushButton *m_propertyResetNumberButton = nullptr;
     QLabel *m_propertyMagnifierScaleGlyphLabel = nullptr;
     QLabel *m_propertyMagnifierScaleLabel = nullptr;
