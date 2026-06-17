@@ -404,6 +404,10 @@ void ShotWindow::updateAnnotationPropertyPanel()
     const int panelOpacity = qRound(panelColor.alphaF() * 100.0);
     const bool panelFilled = annotation ? annotation->filled : m_shapeFilled;
     const qreal panelRadius = annotation ? annotation->cornerRadius : m_rectangleCornerRadius;
+    const RectangleStyle panelRectangleStyle =
+        annotation && annotation->tool == Tool::Rectangle
+            ? annotation->rectangleStyle
+            : m_rectangleStyle;
     const qreal panelMagnifierScale =
         annotation && annotation->tool == Tool::Magnifier
             ? annotation->magnifierScale
@@ -484,23 +488,46 @@ void ShotWindow::updateAnnotationPropertyPanel()
         }
     }
     if (m_propertyFillButton) {
-        const bool supportsFill = !groupSelection && (panelTool == Tool::Rectangle || panelTool == Tool::Ellipse);
+        // Highlight/Invert 风格不使用 filled 字段,隐藏填充开关避免歧义
+        const bool supportsFill = !groupSelection
+            && (panelTool == Tool::Ellipse
+                || (panelTool == Tool::Rectangle && panelRectangleStyle == RectangleStyle::Stroke));
         m_propertyFillButton->setVisible(supportsFill);
         const QSignalBlocker blocker(m_propertyFillButton);
         m_propertyFillButton->setChecked(panelFilled);
         m_propertyFillButton->setIcon(markshot::ui::makeFillIcon(panelFilled));
     }
     if (m_propertyRadiusGlyphLabel) {
-        m_propertyRadiusGlyphLabel->setVisible(!groupSelection && panelTool == Tool::Rectangle);
+        m_propertyRadiusGlyphLabel->setVisible(!groupSelection
+                                               && panelTool == Tool::Rectangle
+                                               && panelRectangleStyle == RectangleStyle::Stroke);
     }
     if (m_propertyRadiusLabel) {
-        m_propertyRadiusLabel->setVisible(!groupSelection && panelTool == Tool::Rectangle);
+        m_propertyRadiusLabel->setVisible(!groupSelection
+                                          && panelTool == Tool::Rectangle
+                                          && panelRectangleStyle == RectangleStyle::Stroke);
         m_propertyRadiusLabel->setText(QString::number(qRound(panelRadius)));
     }
     if (m_propertyRadiusSlider) {
-        m_propertyRadiusSlider->setVisible(!groupSelection && panelTool == Tool::Rectangle);
+        m_propertyRadiusSlider->setVisible(!groupSelection
+                                           && panelTool == Tool::Rectangle
+                                           && panelRectangleStyle == RectangleStyle::Stroke);
         const QSignalBlocker blocker(m_propertyRadiusSlider);
         m_propertyRadiusSlider->setValue(qRound(panelRadius));
+    }
+    if (m_propertyRectangleStyleCombo) {
+        const bool supportsRectangleStyle = !groupSelection && panelTool == Tool::Rectangle;
+        m_propertyRectangleStyleCombo->setVisible(supportsRectangleStyle);
+        if (supportsRectangleStyle) {
+            const QSignalBlocker blocker(m_propertyRectangleStyleCombo);
+            const int styleValue = static_cast<int>(panelRectangleStyle);
+            for (int i = 0; i < m_propertyRectangleStyleCombo->count(); ++i) {
+                if (m_propertyRectangleStyleCombo->itemData(i).toInt() == styleValue) {
+                    m_propertyRectangleStyleCombo->setCurrentIndex(i);
+                    break;
+                }
+            }
+        }
     }
     if (m_propertyArrowStyleCombo) {
         const bool supportsArrowStyle = !groupSelection && panelTool == Tool::Arrow;
