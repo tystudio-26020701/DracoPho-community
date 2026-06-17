@@ -260,6 +260,19 @@ CaptureResult runGrim(const QStringList &arguments, const QString &outputName, Q
         return {{}, QStringLiteral("grim returned invalid PPM data"), outputName, sourceGeometry, false};
     }
 
+    const QRect normalizedSource = sourceGeometry.normalized();
+    const QString argumentText = arguments.join(QLatin1Char(' '));
+    markshot::debugLog("capture",
+                       "【Wayland捕获】【缩放诊断】grim-result output=%s args=%s "
+                       "source=%d,%d %dx%d image=%dx%d scale=%.6fx%.6f cursor=%d",
+                       outputName.toUtf8().constData(),
+                       argumentText.toUtf8().constData(),
+                       normalizedSource.x(), normalizedSource.y(),
+                       normalizedSource.width(), normalizedSource.height(),
+                       image.width(), image.height(),
+                       static_cast<qreal>(image.width()) / std::max(1, normalizedSource.width()),
+                       static_cast<qreal>(image.height()) / std::max(1, normalizedSource.height()),
+                       cursorIncluded ? 1 : 0);
     return {image.convertToFormat(QImage::Format_ARGB32_Premultiplied), {}, outputName, sourceGeometry, cursorIncluded};
 }
 
@@ -308,13 +321,16 @@ CaptureResult cropGrimFrameToRequest(CaptureResult capture, QRect frameGeometry,
     const QSize croppedSize = capture.image.size();
     capture.sourceGeometry = overlap;
     markshot::debugLog("capture",
-                       "grim-local-crop frame=%dx%d frame_geom=%d,%d %dx%d "
-                       "requested=%d,%d %dx%d overlap=%d,%d %dx%d result=%dx%d",
+                       "【Wayland捕获】【缩放诊断】grim-local-crop frame=%dx%d "
+                       "frame_geom=%d,%d %dx%d requested=%d,%d %dx%d overlap=%d,%d %dx%d "
+                       "result=%dx%d scale=%.6fx%.6f",
                        frameSize.width(), frameSize.height(),
                        frameGeometry.x(), frameGeometry.y(),
                        frameGeometry.width(), frameGeometry.height(),
                        requested.x(), requested.y(), requested.width(), requested.height(),
                        overlap.x(), overlap.y(), overlap.width(), overlap.height(),
-                       croppedSize.width(), croppedSize.height());
+                       croppedSize.width(), croppedSize.height(),
+                       static_cast<qreal>(croppedSize.width()) / std::max(1, overlap.width()),
+                       static_cast<qreal>(croppedSize.height()) / std::max(1, overlap.height()));
     return capture;
 }
