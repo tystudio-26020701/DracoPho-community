@@ -98,6 +98,10 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     if (appConfigOk) {
         m_toolbarAppearance = markshot::toolbarAppearanceFromConfigRoot(appConfigRoot);
     }
+    // 在初始化 UI 之前先加载上次会话的工具默认值,使后续 toolbar/属性面板按
+    // 持久化的状态显示;loadAnnotationStateFromDisk 仅修改 m_* 默认值字段,
+    // 不会触碰任何尚未构造完成的控件
+    loadAnnotationStateFromDisk();
 
     setWindowTitle(MS_TR("Mark Shot"));
     setCursor(captureCrossCursor());
