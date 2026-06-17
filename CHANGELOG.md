@@ -12,6 +12,11 @@
   The fill toggle and corner radius slider are hidden when Highlight or Invert is active, since those styles do not consume `filled` or `cornerRadius`.
 - **Persisted Annotation Tool Defaults**: Tool defaults now survive across sessions through a dedicated state file at `~/.config/mark-shot/annotation-state.json`. The persisted snapshot covers active color and opacity, text background color, per-tool widths (pen / shape / number / mosaic block / laser), rectangle fill / corner radius / style, magnifier scale and lens shape, arrow / highlighter / number badge styles, and text font family. Writes go through `QSaveFile` for atomic commits, triggered immediately after every default-changing entry point so a crash never leaves the file half-written. The state is loaded before UI construction so the toolbar reflects the saved defaults from the very first paint.
 
+### Bug Fixes
+
+- **Annotation Width State Consistency**: Unified the standard stroke width used by Pen, Line, Arrow, Laser, Rectangle, and Ellipse tools while keeping Highlighter width, Number size, Text size, and Mosaic granularity independent. Mouse wheel and slider adjustments now flow through the same state update path, selected-object width changes persist correctly, and high-frequency width edits are debounced before writing history or disk state.
+- **Translation Target Language Controls**: Added a target language selector to the OCR result floating panel and the pinned image context menu. The selector now uses a stable custom dropdown affordance, saves `translation.targetLanguage`, and clears stale pinned-window translation overlays when the target language changes.
+
 ## 0.1.28 - 2026-06-16
 
 ### Features & Enhancements
