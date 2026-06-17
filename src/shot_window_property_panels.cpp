@@ -47,6 +47,7 @@ void ShotWindow::setSelectedAnnotationOpacity(int opacity)
     updateColorPalettePreview();
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::setSelectedAnnotationFilled(bool filled)
@@ -69,6 +70,7 @@ void ShotWindow::setSelectedAnnotationFilled(bool filled)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::setSelectedAnnotationCornerRadius(int radius)
@@ -88,6 +90,7 @@ void ShotWindow::setSelectedAnnotationCornerRadius(int radius)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::setSelectedAnnotationArrowStyle(ArrowStyle style)
@@ -107,6 +110,7 @@ void ShotWindow::setSelectedAnnotationArrowStyle(ArrowStyle style)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::setSelectedRectangleStyle(RectangleStyle style)
@@ -148,6 +152,7 @@ void ShotWindow::setSelectedRectangleStyle(RectangleStyle style)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::setSelectedHighlighterStyle(HighlighterStyle style)
@@ -185,6 +190,7 @@ void ShotWindow::setSelectedHighlighterStyle(HighlighterStyle style)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::setSelectedNumberStyle(NumberStyle style)
@@ -222,6 +228,7 @@ void ShotWindow::setSelectedNumberStyle(NumberStyle style)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::resetNumberSequence()
@@ -275,6 +282,7 @@ void ShotWindow::setSelectedMagnifierScale(int scaleValue)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::setSelectedMagnifierShape(MagnifierShape shape)
@@ -312,6 +320,7 @@ void ShotWindow::setSelectedMagnifierShape(MagnifierShape shape)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::toggleMagnifierShape()
@@ -522,6 +531,7 @@ void ShotWindow::applyPropertyColor(QColor color)
     updateColorPalettePreview();
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::clearAnnotations()
@@ -579,6 +589,7 @@ void ShotWindow::setSelectedTextFontFamily(const QString &fontFamily)
     }
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::toggleOpenWithPanel()

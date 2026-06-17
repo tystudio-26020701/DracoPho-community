@@ -831,4 +831,5 @@ void ShotWindow::setSelectedAnnotationWidth(int width)
     updateAnnotationPropertyPanel();
     updateColorPalettePreview();
     update();
+    persistAnnotationState();
 }

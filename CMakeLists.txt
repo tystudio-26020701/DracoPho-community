@@ -159,6 +159,9 @@ qt_add_executable(mark-shot
     src/shot_window_line_constraint.h
     src/shot_window_line_anchors.cpp
     src/shot_window_magnifier_drag.cpp
+    src/shot_window_state.cpp
+    src/annotation_state_store.cpp
+    src/annotation_state_store.h
     src/shot_window_modes.cpp
     src/shot_window_property_panels.cpp
     src/shot_window_selection_frame.cpp
