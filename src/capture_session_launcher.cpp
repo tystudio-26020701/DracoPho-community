@@ -2,6 +2,7 @@
 
 #include "annotation_launch.h"
 #include "capture_geometry.h"
+#include "debug_log.h"
 #include "display_capture/display_capture_snapshot.h"
 #include "screen_capture.h"
 #include "window_detection.h"
@@ -10,15 +11,111 @@
 #include <QApplication>
 #include <QEventLoop>
 #include <QGuiApplication>
+#include <QImage>
 #include <QMessageBox>
 #include <QPointer>
 #include <QScreen>
 #include <QTimer>
 
+#include <cmath>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace {
+
+struct CapturedScreenFrame {
+    QPointer<QScreen> screen;
+    QImage image;
+    QString outputName;
+    QRect sourceGeometry;
+    QVector<QRect> windowGeometries;
+    bool detectWindows = false;
+};
+
+/// @brief 返回冻结范围日志名称。
+/// @param scope 冻结范围枚举值。
+/// @return 日志使用的固定字符串。
+const char *freezeScopeDebugName(markshot::CaptureFreezeScope scope)
+{
+    switch (scope) {
+    case markshot::CaptureFreezeScope::CursorScreen:
+        return "cursor-screen";
+    case markshot::CaptureFreezeScope::AllScreens:
+        return "all-screens";
+    }
+    return "unknown";
+}
+
+/// @brief 判断当前窗口系统是否为 Wayland。
+/// @return 当前 Qt 平台为 Wayland 时返回 true。
+bool isWaylandPlatform()
+{
+    return QGuiApplication::platformName().compare(QStringLiteral("wayland"),
+                                                   Qt::CaseInsensitive) == 0;
+}
+
+/// @brief 判断屏幕列表是否包含不同的设备像素比例。
+/// @param screens 当前屏幕列表。
+/// @return 存在两个以上不同设备像素比例时返回 true。
+bool hasMixedDevicePixelRatios(const QList<QScreen *> &screens)
+{
+    std::optional<qreal> firstRatio;
+    for (QScreen *screen : screens) {
+        if (!screen || screen->geometry().isEmpty()) {
+            continue;
+        }
+
+        const qreal ratio = screen->devicePixelRatio();
+        if (!firstRatio.has_value()) {
+            firstRatio = ratio;
+            continue;
+        }
+        if (std::abs(*firstRatio - ratio) > 0.01) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// @brief 判断多屏冻结是否需要逐屏捕获。
+/// @param screens 当前屏幕列表。
+/// @return Wayland 混合缩放场景返回 true。
+bool shouldCaptureScreensIndividually(const QList<QScreen *> &screens)
+{
+    return isWaylandPlatform() && hasMixedDevicePixelRatios(screens);
+}
+
+/// @brief 记录截图会话中的屏幕缩放诊断信息。
+/// @param screens 当前屏幕列表。
+/// @return 无返回值。
+void logCaptureSessionScreens(const QList<QScreen *> &screens)
+{
+    int index = 0;
+    for (QScreen *screen : screens) {
+        if (!screen) {
+            markshot::debugLog("capture-session",
+                               "【截图会话】【缩放诊断】screen index=%d null=1",
+                               index++);
+            continue;
+        }
+
+        const QRect geometry = screen->geometry();
+        const QRect available = screen->availableGeometry();
+        markshot::debugLog("capture-session",
+                           "【截图会话】【缩放诊断】screen index=%d name=%s geom=%d,%d %dx%d "
+                           "available=%d,%d %dx%d dpr=%.3f logical_dpi=%.3fx%.3f "
+                           "physical_dpi=%.3fx%.3f refresh=%.3f",
+                           index++,
+                           screen->name().toUtf8().constData(),
+                           geometry.x(), geometry.y(), geometry.width(), geometry.height(),
+                           available.x(), available.y(), available.width(), available.height(),
+                           screen->devicePixelRatio(),
+                           screen->logicalDotsPerInchX(), screen->logicalDotsPerInchY(),
+                           screen->physicalDotsPerInchX(), screen->physicalDotsPerInchY(),
+                           screen->refreshRate());
+    }
+}
 
 /// @brief 计算全部显示器组成的虚拟桌面几何。
 /// @return 虚拟桌面几何。
@@ -354,6 +451,121 @@ void connectCaptureWindowSession(QApplication *app,
     }
 }
 
+/// @brief 逐个显示器捕获冻结图,但暂不创建覆盖窗口。
+/// @param screens 当前屏幕列表。
+/// @param includeCursor 冻结图是否包含鼠标。
+/// @param error 输出错误信息。
+/// @return 捕获成功的逐屏冻结帧列表。
+QVector<CapturedScreenFrame> captureScreensIndividually(const QList<QScreen *> &screens,
+                                                        bool includeCursor,
+                                                        QString *error)
+{
+    QVector<CapturedScreenFrame> frames;
+    const bool detectWindows = markshot::windowDetectionEnabled();
+
+    for (QScreen *screen : screens) {
+        if (!screen || screen->geometry().isEmpty()) {
+            continue;
+        }
+
+        const QRect captureGeometry = screen->geometry();
+        const QString outputName = screen->name();
+        const QVector<QRect> windowGeometries = detectWindows
+            ? markshot::collectConfiguredWindowGeometries(captureGeometry, outputName, false)
+            : QVector<QRect>();
+
+        CaptureRequest request;
+        request.preferredOutputName = outputName;
+        request.sourceGeometry = captureGeometry;
+        request.allOutputs = false;
+        request.includeCursor = includeCursor;
+
+        markshot::debugLog("capture-session",
+                           "【截图会话】【缩放诊断】individual-request screen=%s geom=%d,%d %dx%d "
+                           "dpr=%.3f include_cursor=%d",
+                           outputName.toUtf8().constData(),
+                           captureGeometry.x(), captureGeometry.y(),
+                           captureGeometry.width(), captureGeometry.height(),
+                           screen->devicePixelRatio(),
+                           includeCursor ? 1 : 0);
+
+        // 1. 先捕获所有屏幕图像,避免已显示的截图覆盖层进入后续屏幕截图
+        CaptureResult capture = captureScreenFrame(request);
+        if (capture.image.isNull()) {
+            if (error) {
+                *error = capture.error;
+            }
+            return {};
+        }
+
+        CapturedScreenFrame frame;
+        frame.screen = screen;
+        frame.image = std::move(capture.image);
+        frame.outputName = capture.outputName.isEmpty() ? outputName : capture.outputName;
+        frame.sourceGeometry = capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()
+            ? capture.sourceGeometry
+            : captureGeometry;
+        frame.windowGeometries = windowGeometries;
+        frame.detectWindows = detectWindows;
+        markshot::debugLog("capture-session",
+                           "【截图会话】【缩放诊断】individual-result screen=%s output=%s "
+                           "source=%d,%d %dx%d image=%dx%d scale=%.6fx%.6f",
+                           outputName.toUtf8().constData(),
+                           frame.outputName.toUtf8().constData(),
+                           frame.sourceGeometry.x(), frame.sourceGeometry.y(),
+                           frame.sourceGeometry.width(), frame.sourceGeometry.height(),
+                           frame.image.width(), frame.image.height(),
+                           static_cast<qreal>(frame.image.width()) / std::max(1, frame.sourceGeometry.width()),
+                           static_cast<qreal>(frame.image.height()) / std::max(1, frame.sourceGeometry.height()));
+        frames.append(std::move(frame));
+    }
+
+    return frames;
+}
+
+/// @brief 通过逐屏捕获创建多显示器冻结窗口。
+/// @param screens 当前屏幕列表。
+/// @param includeCursor 冻结图是否包含鼠标。
+/// @param useRegularWindow 是否使用普通窗口。
+/// @param fullscreenAnnotation 是否直接进入全屏标注。
+/// @param defaultTools 默认工具配置。
+/// @param error 输出错误信息。
+/// @return 创建出的截图窗口列表。
+QVector<QPointer<ShotWindow>> showCaptureWindowsFromIndividualFrames(const QList<QScreen *> &screens,
+                                                                     bool includeCursor,
+                                                                     bool useRegularWindow,
+                                                                     bool fullscreenAnnotation,
+                                                                     const markshot::DefaultTools &defaultTools,
+                                                                     QString *error)
+{
+    QVector<QPointer<ShotWindow>> windows;
+    QVector<CapturedScreenFrame> frames = captureScreensIndividually(screens, includeCursor, error);
+    if (frames.isEmpty()) {
+        return windows;
+    }
+
+    for (CapturedScreenFrame &frame : frames) {
+        if (!frame.screen) {
+            continue;
+        }
+
+        // 2. 全部捕获完成后再显示窗口,保证冻结图不包含本应用覆盖层
+        ShotWindow *window = showCapturedWindow(frame.screen.data(),
+                                                std::move(frame.image),
+                                                std::move(frame.outputName),
+                                                frame.sourceGeometry,
+                                                std::move(frame.windowGeometries),
+                                                frame.detectWindows,
+                                                false,
+                                                useRegularWindow,
+                                                fullscreenAnnotation,
+                                                defaultTools);
+        windows.append(window);
+    }
+
+    return windows;
+}
+
 /// @brief 使用一次全屏截图为每个屏幕创建冻结窗口。
 /// @param screens 当前屏幕列表。
 /// @param includeCursor 冻结图是否包含鼠标。
@@ -393,6 +605,16 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromSingleFrame(const QList<QScr
     const QRect frameGeometry = capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()
         ? capture.sourceGeometry
         : virtualGeometry;
+    markshot::debugLog("capture-session",
+                       "【截图会话】【缩放诊断】single-frame-result virtual=%d,%d %dx%d "
+                       "frame_geom=%d,%d %dx%d image=%dx%d scale=%.6fx%.6f",
+                       virtualGeometry.x(), virtualGeometry.y(),
+                       virtualGeometry.width(), virtualGeometry.height(),
+                       frameGeometry.x(), frameGeometry.y(),
+                       frameGeometry.width(), frameGeometry.height(),
+                       capture.image.width(), capture.image.height(),
+                       static_cast<qreal>(capture.image.width()) / std::max(1, frameGeometry.width()),
+                       static_cast<qreal>(capture.image.height()) / std::max(1, frameGeometry.height()));
     const bool detectWindows = markshot::windowDetectionEnabled();
     for (QScreen *screen : screens) {
         if (!screen || screen->geometry().isEmpty()) {
@@ -413,6 +635,17 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromSingleFrame(const QList<QScr
             windows.clear();
             return windows;
         }
+
+        markshot::debugLog("capture-session",
+                           "【截图会话】【缩放诊断】single-frame-crop screen=%s geom=%d,%d %dx%d "
+                           "dpr=%.3f image=%dx%d scale=%.6fx%.6f",
+                           screen->name().toUtf8().constData(),
+                           screenGeometry.x(), screenGeometry.y(),
+                           screenGeometry.width(), screenGeometry.height(),
+                           screen->devicePixelRatio(),
+                           screenImage.width(), screenImage.height(),
+                           static_cast<qreal>(screenImage.width()) / std::max(1, screenGeometry.width()),
+                           static_cast<qreal>(screenImage.height()) / std::max(1, screenGeometry.height()));
 
         const QVector<QRect> windowGeometries = detectWindows
             ? markshot::collectConfiguredWindowGeometries(screenGeometry, screen->name(), false)
@@ -448,13 +681,47 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
     QVector<QPointer<ShotWindow>> windows;
     QScreen *screen = markshot::focusedScreen();
     const QList<QScreen *> screens = QGuiApplication::screens();
-    if (shouldFreezeAllScreens(allOutputs, fullscreenAnnotation, freezeScope, screens.size())) {
-        windows = showCaptureWindowsFromSingleFrame(screens,
-                                                    includeCursor,
-                                                    useRegularWindow,
-                                                    fullscreenAnnotation,
-                                                    defaultTools,
-                                                    error);
+    const bool freezeAllScreens = shouldFreezeAllScreens(allOutputs,
+                                                         fullscreenAnnotation,
+                                                         freezeScope,
+                                                         screens.size());
+    const bool waylandPlatform = isWaylandPlatform();
+    const bool mixedDevicePixelRatios = hasMixedDevicePixelRatios(screens);
+    const bool captureIndividually = shouldCaptureScreensIndividually(screens);
+    markshot::debugLog("capture-session",
+                       "【截图会话】【缩放诊断】session all_outputs=%d fullscreen_annotation=%d "
+                       "freeze_scope=%s screen_count=%d focused=%s platform=%s wayland=%d "
+                       "mixed_dpr=%d freeze_all_screens=%d individual=%d include_cursor=%d "
+                       "regular_window=%d",
+                       allOutputs ? 1 : 0,
+                       fullscreenAnnotation ? 1 : 0,
+                       freezeScopeDebugName(freezeScope),
+                       static_cast<int>(screens.size()),
+                       screen ? screen->name().toUtf8().constData() : "(none)",
+                       QGuiApplication::platformName().toUtf8().constData(),
+                       waylandPlatform ? 1 : 0,
+                       mixedDevicePixelRatios ? 1 : 0,
+                       freezeAllScreens ? 1 : 0,
+                       captureIndividually ? 1 : 0,
+                       includeCursor ? 1 : 0,
+                       useRegularWindow ? 1 : 0);
+    logCaptureSessionScreens(screens);
+    if (freezeAllScreens) {
+        if (captureIndividually) {
+            windows = showCaptureWindowsFromIndividualFrames(screens,
+                                                             includeCursor,
+                                                             useRegularWindow,
+                                                             fullscreenAnnotation,
+                                                             defaultTools,
+                                                             error);
+        } else {
+            windows = showCaptureWindowsFromSingleFrame(screens,
+                                                        includeCursor,
+                                                        useRegularWindow,
+                                                        fullscreenAnnotation,
+                                                        defaultTools,
+                                                        error);
+        }
         connectCaptureWindowSession(app, windows, includeCursor, useRegularWindow, defaultTools);
         return windows;
     }

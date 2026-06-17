@@ -1,11 +1,14 @@
 #include "display_capture/display_capture_snapshot.h"
 
 #include "capture_geometry.h"
+#include "debug_log.h"
 #include "screen_capture.h"
 #include "ui/i18n.h"
 
 #include <QGuiApplication>
 #include <QScreen>
+
+#include <algorithm>
 
 namespace markshot::display_capture {
 namespace {
@@ -38,6 +41,39 @@ QImage targetThumbnail(const QImage &image)
         return {};
     }
     return image.scaled(QSize(360, 220), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+}
+
+/**
+ * 记录显示器快照中的屏幕缩放诊断信息。
+ * @param screens 当前屏幕列表。
+ * @return 无返回值。
+ */
+void logDisplayCaptureScreens(const QList<QScreen *> &screens)
+{
+    int index = 0;
+    for (QScreen *screen : screens) {
+        if (!screen) {
+            markshot::debugLog("display-capture",
+                               "【显示器快照】【缩放诊断】screen index=%d null=1",
+                               index++);
+            continue;
+        }
+
+        const QRect geometry = screen->geometry();
+        const QRect available = screen->availableGeometry();
+        markshot::debugLog("display-capture",
+                           "【显示器快照】【缩放诊断】screen index=%d name=%s geom=%d,%d %dx%d "
+                           "available=%d,%d %dx%d dpr=%.3f logical_dpi=%.3fx%.3f "
+                           "physical_dpi=%.3fx%.3f refresh=%.3f",
+                           index++,
+                           screen->name().toUtf8().constData(),
+                           geometry.x(), geometry.y(), geometry.width(), geometry.height(),
+                           available.x(), available.y(), available.width(), available.height(),
+                           screen->devicePixelRatio(),
+                           screen->logicalDotsPerInchX(), screen->logicalDotsPerInchY(),
+                           screen->physicalDotsPerInchX(), screen->physicalDotsPerInchY(),
+                           screen->refreshRate());
+    }
 }
 
 /**
@@ -105,6 +141,16 @@ QVector<Target> captureDisplayTargets(bool includeCursor, QString *error)
         return targets;
     }
 
+    markshot::debugLog("display-capture",
+                       "【显示器快照】【缩放诊断】start include_cursor=%d screen_count=%d "
+                       "platform=%s virtual=%d,%d %dx%d",
+                       includeCursor ? 1 : 0,
+                       static_cast<int>(screens.size()),
+                       QGuiApplication::platformName().toUtf8().constData(),
+                       virtualGeometry.x(), virtualGeometry.y(),
+                       virtualGeometry.width(), virtualGeometry.height());
+    logDisplayCaptureScreens(screens);
+
     CaptureRequest request;
     request.sourceGeometry = virtualGeometry;
     request.allOutputs = true;
@@ -120,6 +166,14 @@ QVector<Target> captureDisplayTargets(bool includeCursor, QString *error)
     const QRect frameGeometry = capture.sourceGeometry.isValid() && !capture.sourceGeometry.isEmpty()
         ? capture.sourceGeometry
         : virtualGeometry;
+    markshot::debugLog("display-capture",
+                       "【显示器快照】【缩放诊断】all-result frame_geom=%d,%d %dx%d "
+                       "image=%dx%d scale=%.6fx%.6f",
+                       frameGeometry.x(), frameGeometry.y(),
+                       frameGeometry.width(), frameGeometry.height(),
+                       capture.image.width(), capture.image.height(),
+                       static_cast<qreal>(capture.image.width()) / std::max(1, frameGeometry.width()),
+                       static_cast<qreal>(capture.image.height()) / std::max(1, frameGeometry.height()));
     if (screens.size() > 1) {
         targets.append(allDisplaysTarget(capture.image, frameGeometry));
     }
@@ -142,6 +196,16 @@ QVector<Target> captureDisplayTargets(bool includeCursor, QString *error)
             targets.clear();
             return targets;
         }
+        markshot::debugLog("display-capture",
+                           "【显示器快照】【缩放诊断】crop screen=%s geom=%d,%d %dx%d "
+                           "dpr=%.3f image=%dx%d scale=%.6fx%.6f",
+                           screen->name().toUtf8().constData(),
+                           screenGeometry.x(), screenGeometry.y(),
+                           screenGeometry.width(), screenGeometry.height(),
+                           screen->devicePixelRatio(),
+                           image.width(), image.height(),
+                           static_cast<qreal>(image.width()) / std::max(1, screenGeometry.width()),
+                           static_cast<qreal>(image.height()) / std::max(1, screenGeometry.height()));
         targets.append(screenTarget(screen, image, screenGeometry));
     }
 
