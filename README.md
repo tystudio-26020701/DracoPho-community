@@ -19,7 +19,10 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 
 ### Advanced Annotation Toolset
 - **Pen & Highlighter**: Smooth freehand drawing and semi-transparent overlay highlighting.
-- **Geometric Shapes**: High-precision Line, Rectangle, and Ellipse paths.
+- **Geometric Shapes**: High-precision Line, Rectangle, and Ellipse paths. Rectangle additionally supports a style selector with three modes:
+  - `Stroke`: outlined or filled rectangle with optional rounded corners.
+  - `Highlight`: marker-pen overlay rendered with `CompositionMode_Multiply` and a semi-transparent fill.
+  - `Invert`: inverts the RGB pixels covered by the rectangle while keeping the outline as a visual cue.
 - **Refined Arrow**: Sharp 6-vertex acute arrow path rendering with anti-aliasing.
 - **Dual-Gesture Text**:
   - Supports dynamic, ultra-large font sizing with fluid adjustment via scroll wheel or property sliders.
@@ -28,6 +31,7 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **Laser Pointer**: Dedicated presentation tool with pen traces that dissolve smoothly over time.
 - **Auto-Increment Marker**: Click to stamp sequential numbered markers.
 - **Mosaic**: Applies high-fidelity acrylic frost blur to obscure sensitive information.
+- **Magnifier with Independent Frames**: The magnifier loupe exposes resize handles on both the inner source viewfinder and the outer lens. Rectangle lenses get 8 corner/edge handles per frame, circular lenses get 4. Resizing either frame keeps the magnification ratio constant by scaling the other frame proportionally; translating one frame leaves the other untouched.
 - **Startup Code Scan**: Press `Q` before selecting a region, drag around a QR code or barcode, and open the decoded result in a copyable window.
 - **Quick Display Capture**: Press `D` before selecting a region to instantly capture all outputs, crop them by display, and hover a thumbnail to copy, edit, or save that display image.
 - **Image Host Upload**: Press `Ctrl+U` or click the toolbar upload button after selecting a region to upload the screenshot to a custom image host (ImgURL, sm.ms, imgbb, litterbox, etc.). The returned URL is automatically copied to the clipboard. Configure the host via `upload.env`, or plug in any custom uploader via `upload.command`.
@@ -383,6 +387,23 @@ The `shortcuts` node supports the following sub-nodes:
 *Shortcut values use Qt key-sequence text (e.g. `Ctrl+C`, `Ctrl+Shift+Z`, or `Alt+R`). Shortcut keys can also be specified directly at the root of `shortcuts`.*
 
 </details>
+
+### Persistent Tool Defaults
+
+Mark Shot remembers the most recently used annotation tool defaults and restores them on the next launch, so the toolbar reflects the saved styles from the very first paint.
+
+State is written to a dedicated file at `~/.config/mark-shot/annotation-state.json` (Linux) or the Qt application config directory on other platforms. The file is independent from `config.json`: it only stores transient tool defaults and can be deleted at any time to reset the editor to its built-in defaults.
+
+The persisted snapshot covers:
+
+- Active drawing color and opacity, plus text background color.
+- Per-tool widths: pen, shape, number, mosaic block size, laser.
+- Rectangle fill, corner radius, and style (`Stroke` / `Highlight` / `Invert`).
+- Magnifier scale and lens shape (`Circle` / `Rectangle`).
+- Arrow style, highlighter style, and number badge style.
+- Text font family.
+
+Writes go through `QSaveFile` for atomic commits and are triggered immediately after every default-changing entry point (slider release, picker confirm, style toggle, font selection, color palette pick, etc.), so a crash never leaves the file half-written. Application-wide settings such as shortcuts, save path templates, OCR, translation, and upload remain in `config.json`.
 
 ### Image Upload Configuration
 
@@ -836,6 +857,12 @@ The expected result is `('4.2',)`. On GNOME Wayland, restart `mark-shot` after e
 ---
 
 ## Release Notes
+
+### 0.1.29
+
+- **Independent Magnifier Frame Resize**: The magnifier annotation now exposes resize handles on both the inner source viewfinder and the outer lens. Rectangle lenses get 8 corner/edge handles per frame, circular lenses get 4. Resizing either frame keeps `magnifierScale` constant by scaling the other frame proportionally, so the loupe ratio stays consistent regardless of which side the user grabs.
+- **Rectangle Highlight & Invert Styles**: The rectangle tool gains a style selector with three modes—`Stroke` (existing outlined / filled rectangle with optional rounded corners), `Highlight` (marker-pen overlay using `CompositionMode_Multiply` with semi-transparent fill), and `Invert` (inverts the RGB pixels covered by the rectangle while keeping the outline as a visual cue). Fill toggle and corner radius are hidden for `Highlight` and `Invert`.
+- **Persistent Tool Defaults**: Annotation tool defaults (color, opacity, per-tool widths, rectangle fill / corner radius / style, magnifier scale and shape, arrow / highlighter / number style, text font, text background color) now survive across sessions through a dedicated `annotation-state.json` file. Writes are atomic via `QSaveFile` and triggered immediately after every default-changing entry point.
 
 ### 0.1.28
 
