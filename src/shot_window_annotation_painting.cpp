@@ -87,14 +87,7 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         }
         break;
     case Tool::Rectangle: {
-        painter.setBrush(annotation.filled ? QBrush(annotation.color) : QBrush(Qt::NoBrush));
-        const QRectF rect = mapRect(annotation.rect);
-        const qreal radius = annotation.cornerRadius * scale;
-        if (radius > 0.0) {
-            painter.drawRoundedRect(rect, radius, radius);
-        } else {
-            painter.drawRect(rect);
-        }
+        drawRectangle(painter, annotation, widgetCoordinates);
         break;
     }
     case Tool::Ellipse:
@@ -160,6 +153,99 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         drawMagnifier(painter, annotation, widgetCoordinates);
         break;
     }
+    painter.restore();
+}
+
+void ShotWindow::drawRectangle(QPainter &painter, const Annotation &annotation, bool widgetCoordinates) const
+{
+    // 矩形工具支持三种风格:
+    //   Stroke    描边/填充矩形(默认行为,沿用 filled+cornerRadius)
+    //   Highlight 类荧光笔的矩形高亮:Multiply 混合 + 半透明色填充
+    //   Invert    矩形覆盖区域内做像素反色
+    auto mapRect = [this, widgetCoordinates](QRectF rect) {
+        return widgetCoordinates ? imageRectToWidget(rect) : rect;
+    };
+
+    const qreal scale = annotationSizeScale(widgetCoordinates);
+    const qreal penWidth = std::max<qreal>(1.5, annotation.width * scale);
+    const QRectF rect = mapRect(annotation.rect);
+    const qreal radius = annotation.cornerRadius * scale;
+
+    // 注:外层 drawAnnotation 已经 setPen(annotation.color) 并 save/restore,这里
+    // 仅在需要时改写 painter 状态,统一用一个 inner save 块隔离副作用。
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    QPainterPath shapePath;
+    if (radius > 0.0) {
+        shapePath.addRoundedRect(rect, radius, radius);
+    } else {
+        shapePath.addRect(rect);
+    }
+
+    switch (annotation.rectangleStyle) {
+    case RectangleStyle::Stroke: {
+        // 1. 与原始 case 行为一致:可填充、可圆角
+        painter.setPen(QPen(annotation.color, penWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.setBrush(annotation.filled ? QBrush(annotation.color) : QBrush(Qt::NoBrush));
+        if (radius > 0.0) {
+            painter.drawRoundedRect(rect, radius, radius);
+        } else {
+            painter.drawRect(rect);
+        }
+        break;
+    }
+    case RectangleStyle::Highlight: {
+        // 1. 用 Multiply 混合 + 半透明色,叠加在底图上模拟荧光笔覆盖
+        QColor highlightColor = annotation.color;
+        highlightColor.setAlpha(qRound(annotation.color.alphaF() * 200.0));
+        painter.setCompositionMode(QPainter::CompositionMode_Multiply);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(highlightColor);
+        painter.drawPath(shapePath);
+        break;
+    }
+    case RectangleStyle::Invert: {
+        // 1. 取出矩形覆盖区域内的源图像
+        // 2. 对图像 RGB 反相后绘制回原位置;对透明像素保持 alpha
+        // 3. 形状外轮廓另以当前颜色描边作为视觉提示
+        if (m_frozenFrame.isNull()) {
+            break;
+        }
+        const QRectF imageRect = annotation.rect.normalized();
+        if (imageRect.isEmpty()) {
+            break;
+        }
+        const QRect intRect = imageRect.toAlignedRect()
+                                  .intersected(QRect(0, 0,
+                                                     m_frozenFrame.width(),
+                                                     m_frozenFrame.height()));
+        if (intRect.isEmpty()) {
+            break;
+        }
+        QImage region = m_frozenFrame.copy(intRect)
+                            .convertToFormat(QImage::Format_ARGB32);
+        region.invertPixels(QImage::InvertRgb);
+        const QRectF destRect = widgetCoordinates ? imageRectToWidget(intRect) : QRectF(intRect);
+        painter.save();
+        painter.setClipPath(shapePath);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+        painter.drawImage(destRect, region);
+        painter.restore();
+        // 4. 描边可选保留;width 极小时省略以避免视觉干扰
+        if (penWidth >= 1.5) {
+            painter.setPen(QPen(annotation.color, penWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter.setBrush(Qt::NoBrush);
+            if (radius > 0.0) {
+                painter.drawRoundedRect(rect, radius, radius);
+            } else {
+                painter.drawRect(rect);
+            }
+        }
+        break;
+    }
+    }
+
     painter.restore();
 }
 
