@@ -80,10 +80,10 @@ bool hasMixedDevicePixelRatios(const QList<QScreen *> &screens)
 
 /// @brief 判断多屏冻结是否需要逐屏捕获。
 /// @param screens 当前屏幕列表。
-/// @return Wayland 混合缩放场景返回 true。
+/// @return Wayland 多屏场景返回 true。
 bool shouldCaptureScreensIndividually(const QList<QScreen *> &screens)
 {
-    return isWaylandPlatform() && hasMixedDevicePixelRatios(screens);
+    return isWaylandPlatform() && screens.size() > 1;
 }
 
 /// @brief 记录截图会话中的屏幕缩放诊断信息。
