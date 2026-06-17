@@ -186,6 +186,13 @@ private:
         StraightLine,
     };
 
+    // Magnifier lens shape. Circle keeps the classic round loupe; Rectangle
+    // draws a box lens that can have independent width/height when resized.
+    enum class MagnifierShape {
+        Circle,
+        Rectangle,
+    };
+
     // Number badge display styles. Existing annotations keep their own style so
     // changing the active tool default does not rewrite old markers.
     enum class NumberStyle {
@@ -241,6 +248,7 @@ private:
         HighlighterStyle highlighterStyle = HighlighterStyle::StraightLine;
         qreal rotationDegrees = 0.0;
         qreal magnifierScale = 2.75;
+        MagnifierShape magnifierShape = MagnifierShape::Circle;
         NumberStyle numberStyle = NumberStyle::Arabic;
         QString fontFamily = markshot::theme::textFontFamily();
     };
@@ -287,7 +295,10 @@ private:
     QRectF imageRectToWidget(QRectF rect) const;
     QPointF clampedMagnifierCircleCenter(QPointF center, qreal diameter) const;
     QRectF magnifierCircleRect(QPointF center, qreal diameter) const;
+    QRectF clampedMagnifierRect(QRectF rect) const;
     QRectF magnifierSourceRect(const Annotation &annotation) const;
+    QPainterPath magnifierLensPath(const Annotation &annotation) const;
+    QPainterPath magnifierSourcePath(const Annotation &annotation) const;
     QRectF textContentRect(const Annotation &annotation, bool widgetCoordinates) const;
     QString defaultSavePath() const;
     Tool defaultEditingTool() const;
@@ -421,6 +432,8 @@ private:
     void setSelectedNumberStyle(NumberStyle style);
     void resetNumberSequence();
     void setSelectedMagnifierScale(int scaleValue);
+    void setSelectedMagnifierShape(MagnifierShape shape);
+    void toggleMagnifierShape();
     void setSelectedTextFontFamily(const QString &fontFamily);
     void applyPropertyColor(QColor color);
     void deleteSelectedAnnotation();
@@ -544,6 +557,7 @@ private:
     qreal m_mosaicBlockSize = 14.0;
     qreal m_laserWidth = 6.0;
     qreal m_magnifierScale = 2.75;
+    MagnifierShape m_magnifierShape = MagnifierShape::Circle;
     bool m_shapeFilled = false;
     std::array<bool, static_cast<int>(Tool::Laser) + 1> m_autoSelectAfterDrawByTool = {};
     qreal m_rectangleCornerRadius = 0.0;
@@ -588,6 +602,7 @@ private:
     QLabel *m_propertyMagnifierScaleGlyphLabel = nullptr;
     QLabel *m_propertyMagnifierScaleLabel = nullptr;
     QSlider *m_propertyMagnifierScaleSlider = nullptr;
+    QPushButton *m_propertyMagnifierShapeButton = nullptr;
     QPushButton *m_propertyFontButton = nullptr;
     QWidget *m_propertyFontPanel = nullptr;
     QListWidget *m_propertyFontList = nullptr;

@@ -236,6 +236,50 @@ void ShotWindow::setSelectedMagnifierScale(int scaleValue)
     update();
 }
 
+void ShotWindow::setSelectedMagnifierShape(MagnifierShape shape)
+{
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        bool changed = false;
+        for (int id : selectedIds) {
+            const Annotation *annotation = annotationById(id);
+            if (annotation && annotation->tool == Tool::Magnifier
+                && annotation->magnifierShape != shape) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
+            return;
+        }
+        pushHistorySnapshot();
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id);
+                annotation && annotation->tool == Tool::Magnifier) {
+                annotation->magnifierShape = shape;
+            }
+        }
+    } else {
+        if (m_tool != Tool::Magnifier || m_magnifierShape == shape) {
+            return;
+        }
+        m_magnifierShape = shape;
+    }
+
+    if (m_draft.has_value() && m_draft->tool == Tool::Magnifier) {
+        m_draft->magnifierShape = shape;
+    }
+    updateAnnotationPropertyPanel();
+    update();
+}
+
+void ShotWindow::toggleMagnifierShape()
+{
+    setSelectedMagnifierShape(m_magnifierShape == MagnifierShape::Circle
+                                  ? MagnifierShape::Rectangle
+                                  : MagnifierShape::Circle);
+}
+
 void ShotWindow::deleteSelectedAnnotation()
 {
     const QVector<int> selectedIds = selectedAnnotationIds();

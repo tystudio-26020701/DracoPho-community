@@ -241,6 +241,11 @@ WindowsTrayController::~WindowsTrayController()
 
 bool WindowsTrayController::isSupported()
 {
+    return QSystemTrayIcon::isSystemTrayAvailable();
+}
+
+bool WindowsTrayController::hotkeysSupported()
+{
 #if defined(Q_OS_WIN)
     return true;
 #else
@@ -278,7 +283,6 @@ void WindowsTrayController::setCaptureCallbacks(Callback capture, Callback fulls
 
 bool WindowsTrayController::start()
 {
-#if defined(Q_OS_WIN)
     if (!m_application) {
         m_errorString = QStringLiteral("QApplication is not available");
         return false;
@@ -315,14 +319,22 @@ bool WindowsTrayController::start()
     });
     m_tray->show();
 
+#if defined(Q_OS_WIN)
     if (m_config.hotkeysEnabled) {
         registerHotkeys();
     }
-    return true;
 #else
-    m_errorString = QStringLiteral("Windows tray mode is not supported on this platform");
-    return false;
+    if (m_config.hotkeysEnabled) {
+        m_errorString = MS_TR("Global hotkeys are not supported on this platform. "
+                              "Use the tray menu or bind a desktop shortcut instead.");
+        markshot::debugLog("tray", "%s", m_errorString.toUtf8().constData());
+        if (m_tray) {
+            m_tray->showMessage(QStringLiteral("Mark Shot"), m_errorString,
+                                QSystemTrayIcon::Information, 4000);
+        }
+    }
 #endif
+    return true;
 }
 
 QString WindowsTrayController::errorString() const

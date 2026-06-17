@@ -402,9 +402,14 @@ void ShotWindow::drawMagnifier(QPainter &painter, const Annotation &annotation, 
     const qreal scale = annotationSizeScale(widgetCoordinates);
     const qreal borderWidth = std::clamp(annotation.width * scale, 1.5, 18.0);
     const QColor borderColor = annotation.color;
+    const bool rectangular = annotation.magnifierShape == MagnifierShape::Rectangle;
 
     QPainterPath lensPath;
-    lensPath.addEllipse(lensRect);
+    if (rectangular) {
+        lensPath.addRect(lensRect);
+    } else {
+        lensPath.addEllipse(lensRect);
+    }
 
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing, true);
@@ -451,14 +456,25 @@ void ShotWindow::drawMagnifier(QPainter &painter, const Annotation &annotation, 
 
     painter.setPen(QPen(borderColor, borderWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter.setBrush(Qt::NoBrush);
-    painter.drawEllipse(lensRect.adjusted(borderWidth / 2.0,
-                                          borderWidth / 2.0,
-                                          -borderWidth / 2.0,
-                                          -borderWidth / 2.0));
-    painter.drawEllipse(sourceRect.adjusted(borderWidth / 2.0,
-                                            borderWidth / 2.0,
-                                            -borderWidth / 2.0,
-                                            -borderWidth / 2.0));
+    if (rectangular) {
+        painter.drawRect(lensRect.adjusted(borderWidth / 2.0,
+                                           borderWidth / 2.0,
+                                           -borderWidth / 2.0,
+                                           -borderWidth / 2.0));
+        painter.drawRect(sourceRect.adjusted(borderWidth / 2.0,
+                                             borderWidth / 2.0,
+                                             -borderWidth / 2.0,
+                                             -borderWidth / 2.0));
+    } else {
+        painter.drawEllipse(lensRect.adjusted(borderWidth / 2.0,
+                                              borderWidth / 2.0,
+                                              -borderWidth / 2.0,
+                                              -borderWidth / 2.0));
+        painter.drawEllipse(sourceRect.adjusted(borderWidth / 2.0,
+                                                borderWidth / 2.0,
+                                                -borderWidth / 2.0,
+                                                -borderWidth / 2.0));
+    }
     painter.restore();
 }
 

@@ -293,6 +293,15 @@ ShotWindow::ShotWindow(QImage frozenFrame,
         setSelectedMagnifierScale(value);
     });
     propertyLayout->addWidget(m_propertyMagnifierScaleSlider);
+    m_propertyMagnifierShapeButton = new QPushButton(m_annotationPropertyPanel);
+    m_propertyMagnifierShapeButton->setFocusPolicy(Qt::NoFocus);
+    m_propertyMagnifierShapeButton->setIcon(markshot::ui::makePropertyIcon(markshot::ui::PropertyIcon::MagnifierShape));
+    m_propertyMagnifierShapeButton->setIconSize(QSize(propertyButtonIconSize, propertyButtonIconSize));
+    m_propertyMagnifierShapeButton->setToolTip(MS_TR("Toggle magnifier shape (circle/rectangle)"));
+    m_propertyMagnifierShapeButton->setAccessibleName(MS_TR("Toggle magnifier shape"));
+    m_propertyMagnifierShapeButton->setCheckable(true);
+    connect(m_propertyMagnifierShapeButton, &QPushButton::clicked, this, [this] { toggleMagnifierShape(); });
+    propertyLayout->addWidget(m_propertyMagnifierShapeButton);
     m_propertyFontButton = new QPushButton(m_annotationPropertyPanel);
     m_propertyFontButton->setFocusPolicy(Qt::NoFocus);
     m_propertyFontButton->setIcon(markshot::ui::makePropertyIcon(markshot::ui::PropertyIcon::Font));

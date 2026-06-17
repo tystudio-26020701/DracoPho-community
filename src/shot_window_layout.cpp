@@ -550,6 +550,14 @@ void ShotWindow::updateAnnotationPropertyPanel()
         const QSignalBlocker blocker(m_propertyMagnifierScaleSlider);
         m_propertyMagnifierScaleSlider->setValue(magnifierScaleSliderValue(panelMagnifierScale));
     }
+    if (m_propertyMagnifierShapeButton) {
+        m_propertyMagnifierShapeButton->setVisible(supportsMagnifierScale);
+        const MagnifierShape panelShape = annotation && annotation->tool == Tool::Magnifier
+            ? annotation->magnifierShape
+            : m_magnifierShape;
+        const QSignalBlocker blocker(m_propertyMagnifierShapeButton);
+        m_propertyMagnifierShapeButton->setChecked(panelShape == MagnifierShape::Rectangle);
+    }
     if (m_propertyWidthLabel) {
         m_propertyWidthLabel->setText(QString::number(qRound(panelWidth)));
     }
