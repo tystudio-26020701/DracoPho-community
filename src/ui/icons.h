@@ -26,6 +26,7 @@ enum class PropertyIcon {
     TextBackground,
     CornerRadius,
     MagnifierScale,
+    MagnifierShape,
     Font,
     EditText,
     ResetNumber,

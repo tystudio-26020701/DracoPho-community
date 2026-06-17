@@ -221,9 +221,16 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         const qreal diameter = std::clamp(dragDistance * kMagnifierDragScale,
                                           minDiameter,
                                           maxDiameter);
-        const QRectF lensRect = magnifierCircleRect(clamped, diameter);
-        m_draft->rect = lensRect;
-        m_draft->points[1] = lensRect.center();
+        if (m_draft->magnifierShape == MagnifierShape::Rectangle) {
+            const QRectF lensRect = clampedMagnifierRect(
+                QRectF(clamped.x() - diameter / 2.0, clamped.y() - diameter / 2.0, diameter, diameter));
+            m_draft->rect = lensRect;
+            m_draft->points[1] = lensRect.center();
+        } else {
+            const QRectF lensRect = magnifierCircleRect(clamped, diameter);
+            m_draft->rect = lensRect;
+            m_draft->points[1] = lensRect.center();
+        }
     } else if (m_draft->tool == Tool::Number) {
         if (m_draft->points.size() < 2) {
             m_draft->points.append(m_dragStart);

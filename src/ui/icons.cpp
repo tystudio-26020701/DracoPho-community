@@ -639,6 +639,14 @@ QIcon makePropertyIcon(PropertyIcon icon, QColor ink)
         p.drawText(QRectF(18.0, 6.5, 7.5, 9.5), Qt::AlignCenter, QStringLiteral("x"));
         break;
     }
+    case PropertyIcon::MagnifierShape: {
+        p.setPen(makePen(iconInk, 1.7));
+        p.drawEllipse(QRectF(5.0, 5.0, 13.0, 13.0));
+        p.setBrush(iconInk);
+        p.setPen(Qt::NoPen);
+        p.drawRect(QRectF(15.5, 15.5, 10.0, 10.0));
+        break;
+    }
     case PropertyIcon::Font: {
         p.setPen(makePen(iconInk, 1.7));
         p.drawLine(QPointF(8.0, 8.5), QPointF(24.0, 8.5));

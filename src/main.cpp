@@ -23,10 +23,8 @@
 #include <QJsonParseError>
 #include <QJsonValue>
 #include <QIODevice>
-#if defined(Q_OS_WIN)
 #include <QLocalServer>
 #include <QLocalSocket>
-#endif
 #include <QMessageBox>
 #include <QPointer>
 #include <QScreen>
@@ -41,8 +39,6 @@
 #include <utility>
 
 namespace {
-
-#if defined(Q_OS_WIN)
 
 struct SingleInstanceCommand {
     bool capture = false;
@@ -173,8 +169,6 @@ void installSingleInstanceCommandHandler(
         }
     });
 }
-
-#endif
 
 } // namespace
 
@@ -398,7 +392,6 @@ int main(int argc, char *argv[])
         parser.isSet(captureOption) || parser.isSet(allOutputsOption) || parser.isSet(fullscreenAnnotationOption);
     const bool trayMode = !explicitCaptureRequest && (parser.isSet(trayOption) || trayConfig.autoStart);
 
-#if defined(Q_OS_WIN)
     const bool explicitTrayOnly = parser.isSet(trayOption)
         && !parser.isSet(captureOption)
         && !parser.isSet(allOutputsOption)
@@ -410,17 +403,15 @@ int main(int argc, char *argv[])
     if (forwardSingleInstanceCommand(duplicateCommand, nullptr)) {
         return 0;
     }
-#endif
 
     if (trayMode) {
         if (!markshot::WindowsTrayController::isSupported()) {
             QMessageBox::critical(nullptr,
                                   QStringLiteral("Mark Shot"),
-                                  MS_TR("Windows tray mode is not supported on this platform."));
+                                  MS_TR("System tray is not available on this platform."));
             return 1;
         }
 
-#if defined(Q_OS_WIN)
         QString singleInstanceError;
         std::unique_ptr<QLocalServer> singleInstanceServer =
             listenForSingleInstanceCommands(&singleInstanceError);
@@ -437,7 +428,6 @@ int main(int argc, char *argv[])
                                   MS_TR("Failed to start single-instance guard: %1").arg(singleInstanceError));
             return 1;
         }
-#endif
 
         auto *trayController = new markshot::WindowsTrayController(&app, trayConfig, &app);
         bool captureActive = false;
@@ -485,7 +475,6 @@ int main(int argc, char *argv[])
 
         trayController->setCaptureCallbacks([launchCapture, allOutputs] { launchCapture(false, allOutputs); },
                                             [launchCapture, allOutputs] { launchCapture(true, allOutputs); });
-#if defined(Q_OS_WIN)
         installSingleInstanceCommandHandler(singleInstanceServer.get(), &app, [&app, launchCapture](const SingleInstanceCommand &command) {
             if (!command.capture) {
                 return;
@@ -494,7 +483,6 @@ int main(int argc, char *argv[])
                 launchCapture(command.fullscreen, command.allOutputs);
             });
         });
-#endif
         if (!trayController->start()) {
             QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), trayController->errorString());
             return 1;

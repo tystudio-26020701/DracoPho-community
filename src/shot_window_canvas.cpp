@@ -581,6 +581,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         annotation.color = m_currentColor;
         annotation.width = currentToolWidth();
         annotation.magnifierScale = m_magnifierScale;
+        annotation.magnifierShape = m_magnifierShape;
         m_dragging = true;
         m_dragStart = sourceCenter;
         m_draft = annotation;
