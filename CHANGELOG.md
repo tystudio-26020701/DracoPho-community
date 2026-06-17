@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.29 - 2026-06-18
+
+### Features & Enhancements
+
+- **Independent Magnifier Frame Resize**: The magnifier annotation now exposes resize handles on both the inner source viewfinder and the outer lens. Rectangle lenses get 8 corner/edge handles per frame; circular lenses get 4. Resizing either frame keeps `magnifierScale` constant by scaling the other frame proportionally, so the loupe ratio is preserved no matter which side the user grabs. The drag/translate logic moves into a dedicated `shot_window_magnifier_drag.cpp` to keep the annotation editing pass small and the resize flow self-contained.
+- **Rectangle Highlight & Invert Styles**: The rectangle tool gains a style selector with three modes:
+  - `Stroke`: existing outlined or filled rectangle with optional rounded corners.
+  - `Highlight`: marker-pen overlay using `CompositionMode_Multiply` with a semi-transparent fill, mirroring the highlighter look but bound to a rectangle.
+  - `Invert`: inverts the RGB pixels covered by the rectangle, with the outline stroke kept as a visual cue.
+  The fill toggle and corner radius slider are hidden when Highlight or Invert is active, since those styles do not consume `filled` or `cornerRadius`.
+- **Persisted Annotation Tool Defaults**: Tool defaults now survive across sessions through a dedicated state file at `~/.config/mark-shot/annotation-state.json`. The persisted snapshot covers active color and opacity, text background color, per-tool widths (pen / shape / number / mosaic block / laser), rectangle fill / corner radius / style, magnifier scale and lens shape, arrow / highlighter / number badge styles, and text font family. Writes go through `QSaveFile` for atomic commits, triggered immediately after every default-changing entry point so a crash never leaves the file half-written. The state is loaded before UI construction so the toolbar reflects the saved defaults from the very first paint.
+
 ## 0.1.28 - 2026-06-16
 
 ### Features & Enhancements
