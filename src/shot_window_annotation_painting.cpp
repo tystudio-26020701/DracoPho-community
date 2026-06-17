@@ -669,6 +669,7 @@ void ShotWindow::commitTextEditor()
 
     m_committingText = false;
     update();
+    persistAnnotationState();
 }
 
 QString ShotWindow::saveSelectionToTempFile() const

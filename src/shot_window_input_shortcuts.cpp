@@ -105,6 +105,7 @@ void ShotWindow::wheelEvent(QWheelEvent *event)
     updateAnnotationPropertyPanel();
     event->accept();
     update();
+    persistAnnotationState();
 }
 
 /**

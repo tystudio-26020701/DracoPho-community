@@ -403,6 +403,7 @@ void ShotWindow::setCurrentColor(QColor color)
     updateColorPalettePreview();
     updateAnnotationPropertyPanel();
     update();
+    persistAnnotationState();
 }
 
 void ShotWindow::revealSelectionInfo()

@@ -170,6 +170,7 @@ private:
         CodeScanner,
     };
 
+public:
     // Arrow renderer variants. The default uses a filled tapered shaft; KDE uses
     // a constant-width open arrow to match Spectacle-style annotations.
     enum class ArrowStyle {
@@ -212,6 +213,8 @@ private:
         HeavenlyStem,
         Chinese,
     };
+
+private:
 
     // Active drag target for selected annotations. Line and magnifier controls
     // live beside the usual resize/move handles.
@@ -363,6 +366,8 @@ private:
                                                 QPointF point,
                                                 qreal minSize,
                                                 bool keepSquare);
+    void loadAnnotationStateFromDisk();
+    void persistAnnotationState();
     QRectF resizedBounds(QRectF start, SelectionDrag drag, QPointF imagePoint, bool keepAspectRatio) const;
     QVector<QPointF> selectionHandlePoints(QRectF rect) const;
     QRectF selectedAnnotationDeleteButtonRect() const;
