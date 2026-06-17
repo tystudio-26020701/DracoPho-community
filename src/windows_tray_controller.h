@@ -32,6 +32,7 @@ public:
     ~WindowsTrayController() override;
 
     static bool isSupported();
+    static bool hotkeysSupported();
     static Config readConfig();
 
     void setCaptureCallbacks(Callback capture, Callback fullscreen);

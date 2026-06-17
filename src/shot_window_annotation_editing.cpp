@@ -173,7 +173,16 @@ void ShotWindow::updateAnnotationDrag(QPointF imagePoint, bool keepAspectRatio)
         }
     } else if (selectedIds.size() == 1
         && (m_annotationDrag == SelectionDrag::MagnifierSource
-            || m_annotationDrag == SelectionDrag::MagnifierLens)) {
+            || m_annotationDrag == SelectionDrag::MagnifierLens
+            || (m_annotationBeforeDrag.tool == Tool::Magnifier
+                && (m_annotationDrag == SelectionDrag::Left
+                    || m_annotationDrag == SelectionDrag::Right
+                    || m_annotationDrag == SelectionDrag::Top
+                    || m_annotationDrag == SelectionDrag::Bottom
+                    || m_annotationDrag == SelectionDrag::TopLeft
+                    || m_annotationDrag == SelectionDrag::TopRight
+                    || m_annotationDrag == SelectionDrag::BottomLeft
+                    || m_annotationDrag == SelectionDrag::BottomRight)))) {
         Annotation *annotation = annotationById(selectedIds.first());
         if (!annotation || annotation->tool != Tool::Magnifier
             || m_annotationBeforeDrag.tool != Tool::Magnifier) {
@@ -185,23 +194,84 @@ void ShotWindow::updateAnnotationDrag(QPointF imagePoint, bool keepAspectRatio)
             return;
         }
 
-        const qreal lensDiameter = std::min(beforeLensRect.width(), beforeLensRect.height());
         const QRectF beforeSourceRect = magnifierSourceRect(m_annotationBeforeDrag);
         const qreal magnifierScale = clampedMagnifierScale(m_annotationBeforeDrag.magnifierScale);
         const QPointF delta = clampImagePoint(imagePoint) - m_dragStart;
-        if (m_annotationDrag == SelectionDrag::MagnifierSource) {
-            const qreal sourceDiameter = lensDiameter / magnifierScale;
-            const QPointF sourceCenter =
-                clampedMagnifierCircleCenter(beforeSourceRect.center() + delta, sourceDiameter);
-            if (annotation->points.isEmpty()) {
-                annotation->points.append(sourceCenter);
-            } else {
-                annotation->points[0] = sourceCenter;
+
+        if (annotation->magnifierShape == MagnifierShape::Rectangle
+            && m_annotationDrag != SelectionDrag::MagnifierSource
+            && m_annotationDrag != SelectionDrag::MagnifierLens) {
+            QRectF newRect = beforeLensRect;
+            const qreal minSize = kMinMagnifierDiameter;
+            switch (m_annotationDrag) {
+            case SelectionDrag::Left:
+                newRect.setLeft(std::min(clampImagePoint(imagePoint).x(), newRect.right() - minSize));
+                break;
+            case SelectionDrag::Right:
+                newRect.setRight(std::max(clampImagePoint(imagePoint).x(), newRect.left() + minSize));
+                break;
+            case SelectionDrag::Top:
+                newRect.setTop(std::min(clampImagePoint(imagePoint).y(), newRect.bottom() - minSize));
+                break;
+            case SelectionDrag::Bottom:
+                newRect.setBottom(std::max(clampImagePoint(imagePoint).y(), newRect.top() + minSize));
+                break;
+            case SelectionDrag::TopLeft:
+                newRect.setLeft(std::min(clampImagePoint(imagePoint).x(), newRect.right() - minSize));
+                newRect.setTop(std::min(clampImagePoint(imagePoint).y(), newRect.bottom() - minSize));
+                break;
+            case SelectionDrag::TopRight:
+                newRect.setRight(std::max(clampImagePoint(imagePoint).x(), newRect.left() + minSize));
+                newRect.setTop(std::min(clampImagePoint(imagePoint).y(), newRect.bottom() - minSize));
+                break;
+            case SelectionDrag::BottomLeft:
+                newRect.setLeft(std::min(clampImagePoint(imagePoint).x(), newRect.right() - minSize));
+                newRect.setBottom(std::max(clampImagePoint(imagePoint).y(), newRect.top() + minSize));
+                break;
+            case SelectionDrag::BottomRight:
+                newRect.setRight(std::max(clampImagePoint(imagePoint).x(), newRect.left() + minSize));
+                newRect.setBottom(std::max(clampImagePoint(imagePoint).y(), newRect.top() + minSize));
+                break;
+            default:
+                break;
             }
+            annotation->rect = clampedMagnifierRect(newRect.normalized());
             if (annotation->points.size() < 2) {
-                annotation->points.append(beforeLensRect.center());
+                annotation->points.append(annotation->rect.center());
+            } else {
+                annotation->points[1] = annotation->rect.center();
+            }
+        } else if (m_annotationDrag == SelectionDrag::MagnifierSource) {
+            if (annotation->magnifierShape == MagnifierShape::Rectangle) {
+                const qreal sourceWidth = beforeLensRect.width() / magnifierScale;
+                const qreal sourceHeight = beforeLensRect.height() / magnifierScale;
+                const QPointF sourceCenter =
+                    clampedMagnifierRect(QRectF(beforeSourceRect.center() + delta,
+                                                QSizeF(sourceWidth, sourceHeight))).center();
+                if (annotation->points.isEmpty()) {
+                    annotation->points.append(sourceCenter);
+                } else {
+                    annotation->points[0] = sourceCenter;
+                }
+                if (annotation->points.size() < 2) {
+                    annotation->points.append(beforeLensRect.center());
+                }
+            } else {
+                const qreal lensDiameter = std::min(beforeLensRect.width(), beforeLensRect.height());
+                const qreal sourceDiameter = lensDiameter / magnifierScale;
+                const QPointF sourceCenter =
+                    clampedMagnifierCircleCenter(beforeSourceRect.center() + delta, sourceDiameter);
+                if (annotation->points.isEmpty()) {
+                    annotation->points.append(sourceCenter);
+                } else {
+                    annotation->points[0] = sourceCenter;
+                }
+                if (annotation->points.size() < 2) {
+                    annotation->points.append(beforeLensRect.center());
+                }
             }
         } else {
+            const qreal lensDiameter = std::min(beforeLensRect.width(), beforeLensRect.height());
             const QRectF lensRect = magnifierCircleRect(beforeLensRect.center() + delta,
                                                        lensDiameter);
             annotation->rect = lensRect;
@@ -668,10 +738,77 @@ QRectF ShotWindow::magnifierSourceRect(const Annotation &annotation) const
         return {};
     }
 
-    const qreal diameter = std::min(lensRect.width(), lensRect.height())
-        / clampedMagnifierScale(annotation.magnifierScale);
+    const qreal scale = clampedMagnifierScale(annotation.magnifierScale);
     const QPointF requestedCenter = annotation.points.isEmpty()
         ? lensRect.center()
         : annotation.points.first();
+
+    if (annotation.magnifierShape == MagnifierShape::Rectangle) {
+        const qreal sourceWidth = lensRect.width() / scale;
+        const qreal sourceHeight = lensRect.height() / scale;
+        QRectF sourceRect(requestedCenter.x() - sourceWidth / 2.0,
+                          requestedCenter.y() - sourceHeight / 2.0,
+                          sourceWidth,
+                          sourceHeight);
+        return clampedMagnifierRect(sourceRect);
+    }
+
+    const qreal diameter = std::min(lensRect.width(), lensRect.height()) / scale;
     return magnifierCircleRect(requestedCenter, diameter);
+}
+
+QRectF ShotWindow::clampedMagnifierRect(QRectF rect) const
+{
+    if (rect.isEmpty()) {
+        return rect;
+    }
+    const qreal frameWidth = m_frozenFrame.width();
+    const qreal frameHeight = m_frozenFrame.height();
+    qreal x = rect.x();
+    qreal y = rect.y();
+    qreal w = rect.width();
+    qreal h = rect.height();
+    if (w >= frameWidth) {
+        x = 0.0;
+        w = frameWidth;
+    } else {
+        x = std::clamp(x, 0.0, std::max<qreal>(0.0, frameWidth - w));
+    }
+    if (h >= frameHeight) {
+        y = 0.0;
+        h = frameHeight;
+    } else {
+        y = std::clamp(y, 0.0, std::max<qreal>(0.0, frameHeight - h));
+    }
+    return QRectF(x, y, w, h);
+}
+
+QPainterPath ShotWindow::magnifierLensPath(const Annotation &annotation) const
+{
+    QPainterPath path;
+    const QRectF lensRect = annotation.rect.normalized();
+    if (lensRect.isEmpty()) {
+        return path;
+    }
+    if (annotation.magnifierShape == MagnifierShape::Rectangle) {
+        path.addRect(lensRect);
+    } else {
+        path.addEllipse(lensRect);
+    }
+    return path;
+}
+
+QPainterPath ShotWindow::magnifierSourcePath(const Annotation &annotation) const
+{
+    QPainterPath path;
+    const QRectF sourceRect = magnifierSourceRect(annotation);
+    if (sourceRect.isEmpty()) {
+        return path;
+    }
+    if (annotation.magnifierShape == MagnifierShape::Rectangle) {
+        path.addRect(sourceRect);
+    } else {
+        path.addEllipse(sourceRect);
+    }
+    return path;
 }

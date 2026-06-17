@@ -164,8 +164,13 @@ void ShotWindow::drawSelectedAnnotationFrame(QPainter &painter) const
             const QRectF lensRect = imageRectToWidget(annotation->rect.normalized());
             painter.setPen(QPen(QColor(251, 146, 60), 2.0, Qt::DashLine));
             painter.setBrush(Qt::NoBrush);
-            painter.drawEllipse(sourceRect);
-            painter.drawEllipse(lensRect);
+            if (annotation->magnifierShape == MagnifierShape::Rectangle) {
+                painter.drawRect(sourceRect);
+                painter.drawRect(lensRect);
+            } else {
+                painter.drawEllipse(sourceRect);
+                painter.drawEllipse(lensRect);
+            }
             painter.setPen(Qt::NoPen);
             painter.setBrush(QColor(251, 146, 60));
             for (const QPointF &center : {sourceRect.center(), lensRect.center()}) {
@@ -173,6 +178,22 @@ void ShotWindow::drawSelectedAnnotationFrame(QPainter &painter) const
                                            center.y() - 5.0,
                                            10.0,
                                            10.0));
+            }
+            if (annotation->magnifierShape == MagnifierShape::Rectangle) {
+                painter.setBrush(QColor(251, 146, 60));
+                painter.setPen(QPen(QColor(255, 255, 255), 1.5));
+                const qreal handleSize = 8.0;
+                for (const QPointF &corner : {lensRect.topLeft(), lensRect.topRight(),
+                                              lensRect.bottomLeft(), lensRect.bottomRight(),
+                                              QPointF(lensRect.center().x(), lensRect.top()),
+                                              QPointF(lensRect.center().x(), lensRect.bottom()),
+                                              QPointF(lensRect.left(), lensRect.center().y()),
+                                              QPointF(lensRect.right(), lensRect.center().y())}) {
+                    painter.drawRect(QRectF(corner.x() - handleSize / 2.0,
+                                            corner.y() - handleSize / 2.0,
+                                            handleSize,
+                                            handleSize));
+                }
             }
         } else if (annotation && annotation->tool == Tool::Number) {
             drawNumberPointHandles(*annotation, {}, 0.0, false);
@@ -217,6 +238,29 @@ ShotWindow::SelectionDrag ShotWindow::magnifierDragAt(const Annotation &annotati
     }
 
     const qreal imageTolerance = 8.0 * m_frozenFrame.width() / std::max<qreal>(1.0, m_frozenImageRect.width());
+
+    if (annotation.magnifierShape == MagnifierShape::Rectangle) {
+        const qreal handleTolerance = imageTolerance * 1.2;
+        const auto cornerHit = [imagePoint, handleTolerance](QPointF handle) {
+            return QLineF(imagePoint, handle).length() <= handleTolerance;
+        };
+        if (cornerHit(lensRect.topLeft())) return SelectionDrag::TopLeft;
+        if (cornerHit(lensRect.topRight())) return SelectionDrag::TopRight;
+        if (cornerHit(lensRect.bottomLeft())) return SelectionDrag::BottomLeft;
+        if (cornerHit(lensRect.bottomRight())) return SelectionDrag::BottomRight;
+        if (cornerHit(QPointF(lensRect.center().x(), lensRect.top()))) return SelectionDrag::Top;
+        if (cornerHit(QPointF(lensRect.center().x(), lensRect.bottom()))) return SelectionDrag::Bottom;
+        if (cornerHit(QPointF(lensRect.left(), lensRect.center().y()))) return SelectionDrag::Left;
+        if (cornerHit(QPointF(lensRect.right(), lensRect.center().y()))) return SelectionDrag::Right;
+        if (sourceRect.contains(imagePoint)) {
+            return SelectionDrag::MagnifierSource;
+        }
+        if (lensRect.contains(imagePoint)) {
+            return SelectionDrag::MagnifierLens;
+        }
+        return SelectionDrag::None;
+    }
+
     if (ellipseContainsPoint(sourceRect, imagePoint, imageTolerance)) {
         return SelectionDrag::MagnifierSource;
     }

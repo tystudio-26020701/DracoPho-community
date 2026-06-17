@@ -22,6 +22,7 @@ ActionShortcuts defaultActionShortcuts()
     shortcuts[actionIndex(ShotWindow::Action::Pin)] = QKeySequence(Qt::CTRL | Qt::Key_P);
     shortcuts[actionIndex(ShotWindow::Action::Copy)] = QKeySequence(Qt::CTRL | Qt::Key_C);
     shortcuts[actionIndex(ShotWindow::Action::Save)] = QKeySequence(Qt::CTRL | Qt::Key_S);
+    shortcuts[actionIndex(ShotWindow::Action::Upload)] = QKeySequence(Qt::CTRL | Qt::Key_U);
     shortcuts[actionIndex(ShotWindow::Action::Cancel)] = QKeySequence(Qt::Key_Escape);
     shortcuts[actionIndex(ShotWindow::Action::Undo)] = QKeySequence(Qt::CTRL | Qt::Key_Z);
     shortcuts[actionIndex(ShotWindow::Action::Redo)] = QKeySequence(Qt::CTRL | Qt::Key_Y);
@@ -44,6 +45,7 @@ ToolShortcuts defaultToolShortcuts()
     shortcuts[toolIndex(ShotWindow::Tool::Text)] = QKeySequence(Qt::Key_T);
     shortcuts[toolIndex(ShotWindow::Tool::Number)] = QKeySequence(Qt::Key_N);
     shortcuts[toolIndex(ShotWindow::Tool::Mosaic)] = QKeySequence(Qt::Key_M);
+    shortcuts[toolIndex(ShotWindow::Tool::Magnifier)] = QKeySequence(Qt::Key_Z);
     shortcuts[toolIndex(ShotWindow::Tool::Laser)] = QKeySequence(Qt::Key_G);
     return shortcuts;
 }
