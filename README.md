@@ -1,4 +1,15 @@
-# Mark Shot
+<div align="center">
+  <img src="data/icons/hicolor/scalable/apps/mark-shot.svg" alt="Mark Shot Logo" width="128" />
+  <h1>Mark Shot</h1>
+  <p>
+    <a href="https://github.com/jswysnemc/mark-shot/releases">
+      <img src="https://img.shields.io/github/v/release/jswysnemc/mark-shot?color=blue&label=release" alt="Release" />
+    </a>
+    <a href="https://gitter.im/mark-shot/community">
+      <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99" alt="Gitter" />
+    </a>
+  </p>
+</div>
 
 [中文说明](README.zh-CN.md)
 
