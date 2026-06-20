@@ -136,8 +136,12 @@ qt_add_executable(mark-shot
     src/settings/settings_config.h
     src/settings/settings_config_read.cpp
     src/settings/settings_config_write.cpp
+    src/settings/settings_design_tokens.cpp
+    src/settings/settings_design_tokens.h
     src/settings/settings_dialog.cpp
     src/settings/settings_dialog.h
+    src/settings/settings_navigation.cpp
+    src/settings/settings_navigation.h
     src/settings/settings_page_advanced.cpp
     src/settings/settings_page_advanced.h
     src/settings/settings_page_annotation.cpp

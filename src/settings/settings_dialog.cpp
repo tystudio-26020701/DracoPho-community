@@ -1,5 +1,7 @@
 #include "settings/settings_dialog.h"
 
+#include "settings/settings_design_tokens.h"
+#include "settings/settings_navigation.h"
 #include "settings/settings_page_advanced.h"
 #include "settings/settings_page_annotation.h"
 #include "settings/settings_page_capture.h"
@@ -11,14 +13,11 @@
 #include "settings/settings_page_storage.h"
 #include "ui/i18n.h"
 #include "ui/icons.h"
-#include "ui/theme.h"
 
-#include <QApplication>
 #include <QDialogButtonBox>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QListWidget>
 #include <QMessageBox>
 #include <QPointer>
 #include <QPushButton>
@@ -30,72 +29,6 @@
 
 namespace markshot::settings {
 namespace {
-
-/// @brief 返回设置窗口样式表。
-/// @return Qt 样式表文本。
-QString settingsStyleSheet()
-{
-    return QStringLiteral(
-        "QDialog#settingsDialog { background: #F8FAFC; color: #020617; }"
-        "QLabel#settingsHeroTitle { color: #F8FAFC; font-size: 22px; font-weight: 800; }"
-        "QLabel#settingsHeroText { color: #CBD5E1; font-size: 12px; }"
-        "QLabel#settingsStatus { color: #475569; }"
-        "QListWidget#settingsNavigation {"
-        " background: #0F172A;"
-        " border: 0;"
-        " padding: 10px;"
-        " outline: 0;"
-        "}"
-        "QListWidget#settingsNavigation::item {"
-        " color: #CBD5E1;"
-        " border-radius: 10px;"
-        " padding: 10px 12px;"
-        " margin: 3px 0;"
-        "}"
-        "QListWidget#settingsNavigation::item:hover { background: #1E293B; color: #F8FAFC; }"
-        "QListWidget#settingsNavigation::item:selected { background: #0369A1; color: #FFFFFF; }"
-        "QFrame#settingsCard {"
-        " background: #FFFFFF;"
-        " border: 1px solid #E2E8F0;"
-        " border-radius: 14px;"
-        "}"
-        "QLabel#settingsCardTitle { color: #0F172A; font-size: 15px; font-weight: 800; }"
-        "QLabel#settingsCardDescription { color: #64748B; font-size: 12px; }"
-        "QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QKeySequenceEdit, QPlainTextEdit {"
-        " min-height: 30px;"
-        " border: 1px solid #CBD5E1;"
-        " border-radius: 8px;"
-        " padding: 2px 8px;"
-        " background: #FFFFFF;"
-        " color: #0F172A;"
-        "}"
-        "QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus, QKeySequenceEdit:focus, QPlainTextEdit:focus {"
-        " border-color: #0369A1;"
-        "}"
-        "QCheckBox { color: #334155; spacing: 8px; }"
-        "QCheckBox::indicator { width: 18px; height: 18px; }"
-        "QPushButton {"
-        " min-height: 32px;"
-        " border-radius: 9px;"
-        " border: 1px solid #CBD5E1;"
-        " padding: 4px 14px;"
-        " background: #FFFFFF;"
-        " color: #0F172A;"
-        " font-weight: 700;"
-        "}"
-        "QPushButton:hover { border-color: #0369A1; }"
-        "QPushButton[role=\"primary\"] { background: #0369A1; border-color: #0369A1; color: #FFFFFF; }"
-        "QPushButton[role=\"primary\"]:hover { background: #075985; }");
-}
-
-/// @brief 添加设置分类导航项。
-/// @param list 导航列表。
-/// @param text 显示文本。
-void addNavigationItem(QListWidget *list, const QString &text)
-{
-    auto *item = new QListWidgetItem(text, list);
-    item->setSizeHint(QSize(148, 40));
-}
 
 /// @brief 将设置页包装成可滚动页面。
 /// @param stack 目标堆叠控件。
@@ -119,7 +52,7 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     setWindowIcon(markshot::ui::applicationIcon());
     setMinimumSize(820, 600);
     resize(900, 640);
-    setStyleSheet(settingsStyleSheet());
+    setStyleSheet(tokens::settingsStyleSheet());
 
     auto *rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(0, 0, 0, 0);
@@ -130,37 +63,11 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     bodyLayout->setContentsMargins(0, 0, 0, 0);
     bodyLayout->setSpacing(0);
 
-    auto *sidebar = new QWidget(body);
-    sidebar->setFixedWidth(210);
-    sidebar->setStyleSheet(QStringLiteral("background: #0F172A;"));
-    auto *sidebarLayout = new QVBoxLayout(sidebar);
-    sidebarLayout->setContentsMargins(18, 20, 18, 18);
-    sidebarLayout->setSpacing(14);
+    // 侧栏导航：标题区 + 分组分类列表
+    m_navigation = new SettingsNavigation(body);
+    bodyLayout->addWidget(m_navigation);
 
-    auto *title = new QLabel(QStringLiteral("Mark Shot"), sidebar);
-    title->setObjectName(QStringLiteral("settingsHeroTitle"));
-    sidebarLayout->addWidget(title);
-    auto *subtitle = new QLabel(MS_TR("Settings Center"), sidebar);
-    subtitle->setObjectName(QStringLiteral("settingsHeroText"));
-    subtitle->setWordWrap(true);
-    sidebarLayout->addWidget(subtitle);
-
-    m_navigation = new QListWidget(sidebar);
-    m_navigation->setObjectName(QStringLiteral("settingsNavigation"));
-    m_navigation->setFrameShape(QFrame::NoFrame);
-    m_navigation->setFocusPolicy(Qt::NoFocus);
-    addNavigationItem(m_navigation, MS_TR("General"));
-    addNavigationItem(m_navigation, MS_TR("Capture"));
-    addNavigationItem(m_navigation, MS_TR("Shortcuts"));
-    addNavigationItem(m_navigation, MS_TR("Annotation"));
-    addNavigationItem(m_navigation, MS_TR("Pinned Image"));
-    addNavigationItem(m_navigation, MS_TR("Integrations"));
-    addNavigationItem(m_navigation, MS_TR("Scroll Capture"));
-    addNavigationItem(m_navigation, MS_TR("Storage"));
-    addNavigationItem(m_navigation, MS_TR("Advanced"));
-    sidebarLayout->addWidget(m_navigation, 1);
-    bodyLayout->addWidget(sidebar);
-
+    // 内容栈：9 个可滚动设置页
     m_stack = new QStackedWidget(body);
     m_generalPage = new SettingsPageGeneral(m_stack);
     m_capturePage = new SettingsPageCapture(m_stack);
@@ -183,8 +90,8 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     bodyLayout->addWidget(m_stack, 1);
     rootLayout->addWidget(body, 1);
 
-    auto *footer = new QWidget(this);
-    footer->setStyleSheet(QStringLiteral("background: #FFFFFF; border-top: 1px solid #E2E8F0;"));
+    auto *footer = new QFrame(this);
+    footer->setObjectName(QStringLiteral("settingsFooter"));
     auto *footerLayout = new QHBoxLayout(footer);
     footerLayout->setContentsMargins(18, 10, 18, 10);
     m_statusLabel = new QLabel(MS_TR("Some changes take effect after restarting Mark Shot."), footer);
@@ -198,12 +105,14 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     footerLayout->addWidget(buttons);
     rootLayout->addWidget(footer);
 
-    connect(m_navigation, &QListWidget::currentRowChanged, m_stack, &QStackedWidget::setCurrentIndex);
+    // 1. 导航切换驱动内容栈翻页
+    connect(m_navigation, &SettingsNavigation::navigationChanged, m_stack, &QStackedWidget::setCurrentIndex);
+    // 2. 底部按钮：应用 / 保存 / 取消
     connect(applyButton, &QPushButton::clicked, this, [this] { saveConfig(false); });
     connect(saveButton, &QPushButton::clicked, this, [this] { saveConfig(true); });
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::close);
 
-    m_navigation->setCurrentRow(0);
+    m_navigation->setCurrentLogicalRow(0);
     loadConfig();
 }
 
