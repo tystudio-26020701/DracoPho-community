@@ -109,6 +109,8 @@ QString actionName(ShotWindow::Action action)
         return QStringLiteral("Save As");
     case ShotWindow::Action::Upload:
         return QStringLiteral("Upload");
+    case ShotWindow::Action::Settings:
+        return QStringLiteral("Settings");
     case ShotWindow::Action::Cancel:
         return QStringLiteral("Cancel");
     }
@@ -528,6 +530,19 @@ QIcon makeToolIcon(ShotWindow::Action action)
         head.lineTo(16.0, 8.0);
         head.lineTo(21.0, 13.0);
         p.drawPath(head);
+        break;
+    }
+    case ShotWindow::Action::Settings: {
+        p.setPen(makePen(kInk, 1.6));
+        p.drawEllipse(QPointF(16.0, 16.0), 3.2, 3.2);
+        p.drawEllipse(QPointF(16.0, 16.0), 8.0, 8.0);
+        for (int i = 0; i < 8; ++i) {
+            p.save();
+            p.translate(16.0, 16.0);
+            p.rotate(i * 45.0);
+            p.drawLine(QPointF(0.0, -11.5), QPointF(0.0, -14.0));
+            p.restore();
+        }
         break;
     }
     case ShotWindow::Action::Cancel: {

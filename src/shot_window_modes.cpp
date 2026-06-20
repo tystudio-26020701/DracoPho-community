@@ -1,5 +1,7 @@
 #include "shot_window_module.h"
 
+#include "settings/settings_dialog.h"
+
 namespace cfg = markshot::config;
 namespace shortcuts = markshot::shortcut;
 using namespace markshot::shot;
@@ -199,7 +201,7 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
         button->setProperty("role", QStringLiteral("primary"));
     } else if (action == Action::Cancel) {
         button->setProperty("role", QStringLiteral("danger"));
-    } else if (action == Action::OpenWith || action == Action::Extensions || action == Action::Pin || action == Action::OcrCopy || action == Action::Copy || action == Action::ScrollCapture || action == Action::Upload) {
+    } else if (action == Action::OpenWith || action == Action::Extensions || action == Action::Pin || action == Action::OcrCopy || action == Action::Copy || action == Action::ScrollCapture || action == Action::Upload || action == Action::Settings) {
         button->setProperty("role", QStringLiteral("secondary"));
     }
 
@@ -255,6 +257,8 @@ QPushButton *ShotWindow::addToolbarButton(Action action, const QString &shortcut
         connect(button, &QPushButton::clicked, this, [this] { saveSelectionAs(); });
     } else if (action == Action::Upload) {
         connect(button, &QPushButton::clicked, this, [this] { uploadSelection(); });
+    } else if (action == Action::Settings) {
+        connect(button, &QPushButton::clicked, this, [this] { markshot::settings::showSettingsDialog(this); });
     } else if (action == Action::Cancel) {
         connect(button, &QPushButton::clicked, this, [this] { close(); });
     }

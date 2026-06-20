@@ -1,5 +1,7 @@
 #include "shot_window_module.h"
 
+#include "settings/settings_dialog.h"
+
 namespace shortcuts = markshot::shortcut;
 using namespace markshot::shot;
 
@@ -179,6 +181,10 @@ bool ShotWindow::handleConfiguredActionShortcut(QKeyEvent *event)
     }
     if (eventMatchesShortcut(event, Action::Upload)) {
         uploadSelection();
+        return true;
+    }
+    if (eventMatchesShortcut(event, Action::Settings)) {
+        markshot::settings::showSettingsDialog(this);
         return true;
     }
     if (eventMatchesShortcut(event, Action::Clear)) {

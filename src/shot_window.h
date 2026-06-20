@@ -81,6 +81,7 @@ public:
         Copy,
         Save,
         Upload,
+        Settings,
         Cancel,
     };
 
