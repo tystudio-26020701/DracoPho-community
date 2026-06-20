@@ -132,6 +132,32 @@ qt_add_executable(mark-shot
     src/screen_capture_x11.cpp
     src/shell_command.cpp
     src/shell_command.h
+    src/settings/settings_config.cpp
+    src/settings/settings_config.h
+    src/settings/settings_config_read.cpp
+    src/settings/settings_config_write.cpp
+    src/settings/settings_dialog.cpp
+    src/settings/settings_dialog.h
+    src/settings/settings_page_advanced.cpp
+    src/settings/settings_page_advanced.h
+    src/settings/settings_page_annotation.cpp
+    src/settings/settings_page_annotation.h
+    src/settings/settings_page_capture.cpp
+    src/settings/settings_page_capture.h
+    src/settings/settings_page_general.cpp
+    src/settings/settings_page_general.h
+    src/settings/settings_page_integrations.cpp
+    src/settings/settings_page_integrations.h
+    src/settings/settings_page_pinned.cpp
+    src/settings/settings_page_pinned.h
+    src/settings/settings_page_scroll.cpp
+    src/settings/settings_page_scroll.h
+    src/settings/settings_page_shortcuts.cpp
+    src/settings/settings_page_shortcuts.h
+    src/settings/settings_page_storage.cpp
+    src/settings/settings_page_storage.h
+    src/settings/settings_ui_helpers.cpp
+    src/settings/settings_ui_helpers.h
     src/ocr_result.cpp
     src/ocr_result.h
     src/save_path_config.cpp

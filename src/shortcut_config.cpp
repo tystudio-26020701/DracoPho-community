@@ -50,6 +50,17 @@ ToolShortcuts defaultToolShortcuts()
     return shortcuts;
 }
 
+/// @brief 读取快捷键配置值，空字符串表示显式禁用该快捷键。
+/// @param value JSON 快捷键字段。
+/// @return 解析后的快捷键，字段非法时返回空值。
+std::optional<QKeySequence> shortcutSequenceValue(const QJsonValue &value)
+{
+    if (value.isString() && value.toString().trimmed().isEmpty()) {
+        return QKeySequence();
+    }
+    return cfg::keySequenceValue(value);
+}
+
 /// @brief Applies tool-specific shortcuts from a JSON object to a ToolShortcuts map.
 /// @param object The JSON object containing tool shortcut mappings.
 /// @param shortcuts Pointer to the ToolShortcuts map to be updated.
@@ -60,7 +71,7 @@ void applyToolShortcutObject(const QJsonObject &object, ToolShortcuts *shortcuts
     }
     for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
         const std::optional<ShotWindow::Tool> tool = toolFromConfigName(it.key());
-        const std::optional<QKeySequence> sequence = cfg::keySequenceValue(it.value());
+        const std::optional<QKeySequence> sequence = shortcutSequenceValue(it.value());
         if (tool.has_value() && sequence.has_value()) {
             (*shortcuts)[toolIndex(*tool)] = *sequence;
         }
@@ -77,7 +88,7 @@ void applyActionShortcutObject(const QJsonObject &object, ActionShortcuts *short
     }
     for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
         const std::optional<ShotWindow::Action> action = actionFromConfigName(it.key());
-        const std::optional<QKeySequence> sequence = cfg::keySequenceValue(it.value());
+        const std::optional<QKeySequence> sequence = shortcutSequenceValue(it.value());
         if (action.has_value() && sequence.has_value()) {
             (*shortcuts)[actionIndex(*action)] = *sequence;
         }
@@ -95,7 +106,7 @@ void applyStartupShortcutObject(const QJsonObject &object, ShortcutConfig *confi
 
     for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
         const QString key = cfg::normalizedKey(it.key());
-        const std::optional<QKeySequence> sequence = cfg::keySequenceValue(it.value());
+        const std::optional<QKeySequence> sequence = shortcutSequenceValue(it.value());
         if (!sequence.has_value()) {
             continue;
         }
@@ -141,7 +152,7 @@ void applyShortcutObject(const QJsonObject &object, ShortcutConfig *config)
         if (it.value().isObject()) {
             continue;
         }
-        const std::optional<QKeySequence> sequence = cfg::keySequenceValue(it.value());
+        const std::optional<QKeySequence> sequence = shortcutSequenceValue(it.value());
         if (!sequence.has_value()) {
             continue;
         }
@@ -180,6 +191,9 @@ std::optional<ShotWindow::Action> actionFromConfigName(QString name)
     }
     if (key == QStringLiteral("layout") || key == QStringLiteral("toggletoolbarlayout")) {
         return ShotWindow::Action::ToggleToolbarLayout;
+    }
+    if (key == QStringLiteral("settings") || key == QStringLiteral("setting") || key == QStringLiteral("preferences")) {
+        return ShotWindow::Action::Settings;
     }
     if (key == QStringLiteral("clear")) return ShotWindow::Action::Clear;
     if (key == QStringLiteral("undo")) return ShotWindow::Action::Undo;
