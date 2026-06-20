@@ -128,12 +128,12 @@ QString colorButtonStyleSheet(const QColor &color)
                "QPushButton {"
                " min-height: 30px;"
                " border-radius: 8px;"
-               " border: 1px solid #CBD5E1;"
+               " border: 1px solid #334155;"
                " background: %1;"
                " color: #0F172A;"
                " font-weight: 700;"
                "}"
-               "QPushButton:hover { border-color: #0369A1; }")
+               "QPushButton:hover { border-color: #5EEAD4; }")
         .arg(name);
 }
 

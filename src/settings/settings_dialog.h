@@ -5,12 +5,12 @@
 #include <QDialog>
 
 class QLabel;
-class QListWidget;
 class QStackedWidget;
 class QWidget;
 
 namespace markshot::settings {
 
+class SettingsNavigation;
 class SettingsPageAnnotation;
 class SettingsPageAdvanced;
 class SettingsPageCapture;
@@ -39,7 +39,7 @@ private:
     /// @param closeAfterSave 保存成功后是否关闭窗口。
     void saveConfig(bool closeAfterSave);
 
-    QListWidget *m_navigation = nullptr;
+    SettingsNavigation *m_navigation = nullptr;
     QStackedWidget *m_stack = nullptr;
     QLabel *m_statusLabel = nullptr;
     SettingsConfig m_config;

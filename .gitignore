@@ -30,6 +30,11 @@ build.ninja
 *.tar
 *.tar.*
 *.zip
+
+packaging/aur/pkg/
+packaging/aur/src/
+packaging/aur/mark-shot-*/
+
 .ace-tool/
 __pycache__/
 *.py[cod]
