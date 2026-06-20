@@ -5,6 +5,7 @@
 #if defined(MARK_SHOT_WITH_DBUS)
 #include "global_shortcut_portal.h"
 #endif
+#include "settings/settings_dialog.h"
 #include "shot_window.h"
 #include "ui/i18n.h"
 #include "ui/icons.h"
@@ -305,6 +306,7 @@ bool WindowsTrayController::start()
     m_menu = new QMenu;
     m_menu->addAction(MS_TR("Capture"), this, [this] { triggerCapture(); });
     m_menu->addAction(MS_TR("Fullscreen Capture"), this, [this] { triggerFullscreenCapture(); });
+    m_menu->addAction(MS_TR("Settings"), this, [] { settings::showSettingsDialog(); });
     m_menu->addSeparator();
     m_menu->addAction(MS_TR("Quit"), m_application, [this] {
         unregisterHotkeys();
