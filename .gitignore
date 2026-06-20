@@ -36,5 +36,6 @@ packaging/aur/src/
 packaging/aur/mark-shot-*/
 
 .ace-tool/
+.doc/
 __pycache__/
 *.py[cod]
