@@ -1,7 +1,9 @@
 #include "ui/i18n.h"
 
+#include "app_config_store.h"
+#include "ui/interface_language_config.h"
+
 #include <QHash>
-#include <QLocale>
 #include <QProcessEnvironment>
 
 namespace markshot::i18n {
@@ -34,10 +36,12 @@ Language detectLanguage()
         return languageFromString(override);
     }
 
-    if (QLocale::system().language() == QLocale::Chinese) {
-        return Language::Chinese;
-    }
-    return Language::English;
+    bool ok = false;
+    const QJsonObject root = readAppConfigRoot(&ok);
+    const markshot::ui::UiLanguageMode mode = ok
+        ? markshot::ui::uiLanguageModeFromConfigRoot(root)
+        : markshot::ui::UiLanguageMode::System;
+    return markshot::ui::languageForUiLanguageMode(mode);
 }
 
 // English source string -> Simplified Chinese. Keys must match the source text
@@ -222,6 +226,8 @@ const QHash<QString, QString> &chineseTable()
         {QStringLiteral("Settings"), QStringLiteral("设置")},
         {QStringLiteral("Settings Center"), QStringLiteral("设置中心")},
         {QStringLiteral("General"), QStringLiteral("通用")},
+        {QStringLiteral("Interface Language"), QStringLiteral("界面语言")},
+        {QStringLiteral("Follow System"), QStringLiteral("跟随系统")},
         {QStringLiteral("Shortcuts"), QStringLiteral("快捷键")},
         {QStringLiteral("Annotation"), QStringLiteral("标注")},
         {QStringLiteral("Integrations"), QStringLiteral("集成")},
@@ -237,6 +243,8 @@ const QHash<QString, QString> &chineseTable()
         {QStringLiteral("Cannot save annotation state"), QStringLiteral("无法保存标注状态。")},
         {QStringLiteral("Configure tray startup and global shortcuts."),
          QStringLiteral("配置托盘启动和全局快捷键。")},
+        {QStringLiteral("Configure interface language, tray startup, and global shortcuts."),
+         QStringLiteral("配置界面语言、托盘启动和全局快捷键。")},
         {QStringLiteral("Start in Tray"), QStringLiteral("启动到托盘")},
         {QStringLiteral("Launch Mark Shot directly into the system tray."),
          QStringLiteral("启动 Mark Shot 时直接进入系统托盘。")},
