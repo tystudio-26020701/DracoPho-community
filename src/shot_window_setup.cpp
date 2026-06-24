@@ -639,10 +639,13 @@ void ShotWindow::updateLayerShellForIme()
         this, imeActive ? markshot::layershell::Layer::Top : markshot::layershell::Layer::Overlay);
     if (imeActive) {
         // Layer change triggers an async wl_surface::configure roundtrip from
-        // KWin. singleShot(0) defers the cursor-rectangle republish to the next
-        // event-loop tick, which is empirically sufficient on KWin 6.x: the
-        // compositor applies the layer switch synchronously in its event source
-        // before processing the text-input-v3 enable request that follows.
+        // the compositor. singleShot(0) defers the cursor-rectangle republish
+        // to the next event-loop tick. This is sufficient across mainstream
+        // compositors (KWin, wlroots, Smithay) because set_layer and
+        // set_cursor_rectangle share the same ordered wl_display connection,
+        // and compositors apply layer changes synchronously in their event
+        // source rather than deferring to render frame. Fallback if needed:
+        // hook LayerShellQt::Window::layerChanged signal.
         QTimer::singleShot(0, this, [this]() {
             if (m_textEditor && m_textEditor->isVisible()) {
                 if (QInputMethod *im = QGuiApplication::inputMethod()) {
