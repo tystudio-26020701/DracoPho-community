@@ -9,6 +9,7 @@
 #include "startup_config.h"
 #include "toolbar_appearance_config.h"
 #include "ui/i18n.h"
+#include "ui/interface_language_config.h"
 #include "ui/theme.h"
 #include "window_detection.h"
 #include "windows_tray_controller.h"
@@ -527,6 +528,7 @@ SettingsConfig readSettingsConfig(QString *error)
     }
 
     SettingsConfig settings;
+    settings.general.uiLanguageMode = markshot::ui::uiLanguageModeFromConfigRoot(root);
     const WindowsTrayController::Config tray = WindowsTrayController::readConfig();
     settings.general.trayEnabled = tray.autoStart;
     settings.general.launchOnStartup = autostart::isEnabled();

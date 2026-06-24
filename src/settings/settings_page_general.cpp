@@ -5,6 +5,7 @@
 #include "ui/i18n.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QFormLayout>
 #include <QFrame>
 #include <QKeySequenceEdit>
@@ -18,9 +19,16 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
     auto *layout = createSettingsPageLayout(this);
 
     QFrame *startupCard = createSettingsCard(MS_TR("General"),
-                                             MS_TR("Configure tray startup and global shortcuts."),
+                                             MS_TR("Configure interface language, tray startup, and global shortcuts."),
                                              this);
     QFormLayout *startupForm = settingsCardForm(startupCard);
+    m_uiLanguage = addComboRow(startupForm, MS_TR("Interface Language"));
+    m_uiLanguage->addItem(MS_TR("Follow System"),
+                          QVariant::fromValue(static_cast<int>(markshot::ui::UiLanguageMode::System)));
+    m_uiLanguage->addItem(MS_TR("English"),
+                          QVariant::fromValue(static_cast<int>(markshot::ui::UiLanguageMode::English)));
+    m_uiLanguage->addItem(MS_TR("Simplified Chinese"),
+                          QVariant::fromValue(static_cast<int>(markshot::ui::UiLanguageMode::Chinese)));
     m_trayEnabled = addSwitchRow(startupForm,
                                  MS_TR("Start in Tray"),
                                  MS_TR("Launch Mark Shot directly into the system tray."));
@@ -44,6 +52,9 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
 
 void SettingsPageGeneral::setConfig(const SettingsConfig &config)
 {
+    const int languageIndex =
+        m_uiLanguage->findData(QVariant::fromValue(static_cast<int>(config.general.uiLanguageMode)));
+    m_uiLanguage->setCurrentIndex(languageIndex >= 0 ? languageIndex : 0);
     m_trayEnabled->setChecked(config.general.trayEnabled);
     m_launchOnStartup->setEnabled(autostart::isSupported());
     m_launchOnStartup->setChecked(m_launchOnStartup->isEnabled() && config.general.launchOnStartup);
@@ -59,6 +70,8 @@ void SettingsPageGeneral::updateConfig(SettingsConfig *config) const
     }
 
     config->general.trayEnabled = m_trayEnabled->isChecked();
+    config->general.uiLanguageMode =
+        static_cast<markshot::ui::UiLanguageMode>(m_uiLanguage->currentData().toInt());
     config->general.launchOnStartup = m_launchOnStartup->isEnabled() && m_launchOnStartup->isChecked();
     config->general.hotkeysEnabled = m_hotkeysEnabled->isChecked();
     config->general.captureHotkey = m_captureHotkey->keySequence();

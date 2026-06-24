@@ -5,6 +5,7 @@
 #include <QWidget>
 
 class QCheckBox;
+class QComboBox;
 class QKeySequenceEdit;
 
 namespace markshot::settings {
@@ -24,6 +25,7 @@ public:
     void updateConfig(SettingsConfig *config) const;
 
 private:
+    QComboBox *m_uiLanguage = nullptr;
     QCheckBox *m_trayEnabled = nullptr;
     QCheckBox *m_launchOnStartup = nullptr;
     QCheckBox *m_hotkeysEnabled = nullptr;

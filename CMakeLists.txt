@@ -246,6 +246,8 @@ qt_add_executable(mark-shot
     src/ui/icons.h
     src/ui/i18n.cpp
     src/ui/i18n.h
+    src/ui/interface_language_config.cpp
+    src/ui/interface_language_config.h
     src/ui/theme.cpp
     src/ui/theme.h
 )
@@ -562,6 +564,19 @@ if(BUILD_TESTING)
             Qt6::Test
     )
     add_test(NAME code-scan-result COMMAND mark-shot-code-scan-result-test)
+
+    qt_add_executable(mark-shot-ui-language-config-test
+        tests/ui_language_config_test.cpp
+        src/ui/interface_language_config.cpp
+        src/ui/interface_language_config.h
+    )
+    target_include_directories(mark-shot-ui-language-config-test PRIVATE src)
+    target_link_libraries(mark-shot-ui-language-config-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Test
+    )
+    add_test(NAME ui-language-config COMMAND mark-shot-ui-language-config-test)
 
     qt_add_executable(mark-shot-pinned-window-config-test
         tests/pinned_window_config_test.cpp

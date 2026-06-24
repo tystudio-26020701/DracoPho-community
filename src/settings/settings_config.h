@@ -4,6 +4,7 @@
 #include "clipboard_image_config.h"
 #include "shortcut_config.h"
 #include "shot_window.h"
+#include "ui/interface_language_config.h"
 
 #include <QColor>
 #include <QKeySequence>
@@ -13,6 +14,7 @@
 namespace markshot::settings {
 
 struct GeneralSettings {
+    markshot::ui::UiLanguageMode uiLanguageMode = markshot::ui::UiLanguageMode::System;
     bool trayEnabled = false;
     bool launchOnStartup = false;
     bool hotkeysEnabled = true;

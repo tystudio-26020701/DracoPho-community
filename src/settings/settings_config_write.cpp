@@ -6,6 +6,7 @@
 #include "capture_cursor_policy.h"
 #include "config_value.h"
 #include "ui/i18n.h"
+#include "ui/interface_language_config.h"
 
 #include <QJsonObject>
 #include <QJsonValue>
@@ -116,6 +117,8 @@ std::array<ShotWindow::Action, 15> configurableActions()
 /// @param settings 通用设置。
 void writeGeneralSettings(QJsonObject *root, const GeneralSettings &settings)
 {
+    setNestedValue(root, {QStringLiteral("ui"), QStringLiteral("language")},
+                   markshot::ui::uiLanguageModeName(settings.uiLanguageMode));
     setNestedValue(root, {QStringLiteral("windows"), QStringLiteral("tray"), QStringLiteral("enabled")},
                    settings.trayEnabled);
     setNestedValue(root, {QStringLiteral("windows"), QStringLiteral("tray"), QStringLiteral("autoStart")},
