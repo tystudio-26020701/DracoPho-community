@@ -374,7 +374,29 @@ def visible_position(layout):
     return pair(layout.get("tile_pos_in_workspace_view"))
 
 
-def window_rect(window, outputs, workspace_outputs):
+def workspace_area_for_window(outputs, layers, layout_config, workspace_outputs, workspace_id, columns):
+    """获取窗口所在工作区的可用区域。
+    参数 outputs: 输出信息字典; layers: layer-shell 列表; layout_config: niri 布局配置;
+        workspace_outputs: 目标工作区信息; workspace_id: 工作区 id; columns: 当前工作区列分组
+    返回: 可用区域矩形，无法推算时返回输出原点和零尺寸"""
+    workspace_info = workspace_outputs.get(workspace_id)
+    if not isinstance(workspace_info, dict):
+        return 0, 0, 0, 0
+    output_name = workspace_info["output"]
+    area = working_area_for_output(outputs, output_name, layers, layout_config, columns)
+    if area is not None:
+        return area
+    origin_x, origin_y = output_origin(outputs, output_name)
+    output_width, output_height = output_size(outputs, output_name)
+    return origin_x, origin_y, output_width, output_height
+
+
+def window_rect(window, outputs, layers, layout_config, workspace_outputs, workspace_columns):
+    """读取 niri 直接上报的窗口矩形。
+    参数 window: niri 窗口对象; outputs: 输出信息字典; layers: layer-shell 列表;
+        layout_config: niri 布局配置; workspace_outputs: 目标工作区信息;
+        workspace_columns: 工作区列分组
+    返回: 全局逻辑坐标矩形，缺少必要字段时返回 None"""
     workspace_id = window.get("workspace_id")
     if workspace_id not in workspace_outputs:
         return None
@@ -389,9 +411,11 @@ def window_rect(window, outputs, workspace_outputs):
         return None
 
     offset = pair(layout.get("window_offset_in_tile")) or (0.0, 0.0)
-    origin_x, origin_y = output_origin(outputs, workspace_outputs[workspace_id]["output"])
-    x = int(round(origin_x + tile_pos[0] + offset[0]))
-    y = int(round(origin_y + tile_pos[1] + offset[1]))
+    columns = workspace_columns.get(workspace_id, {})
+    work_x, work_y, _work_width, _work_height = workspace_area_for_window(
+        outputs, layers, layout_config, workspace_outputs, workspace_id, columns)
+    x = int(round(work_x + tile_pos[0] + offset[0]))
+    y = int(round(work_y + tile_pos[1] + offset[1]))
     width = int(round(window_size[0]))
     height = int(round(window_size[1]))
     if width <= 1 or height <= 1:
@@ -433,6 +457,19 @@ def tiled_windows(windows, workspace_id):
             "window_size": window_size,
             "tile_size": tile_size,
         })
+    return result
+
+
+def workspace_columns(windows, workspace_ids):
+    """按工作区分组平铺窗口列。
+    参数 windows: 全部窗口列表; workspace_ids: 需要处理的工作区 id 集合
+    返回: {workspace_id: {column: [entry, ...]}} 分组结果"""
+    result = {}
+    for workspace_id in workspace_ids:
+        columns = {}
+        for entry in tiled_windows(windows, workspace_id):
+            columns.setdefault(entry["column"], []).append(entry)
+        result[workspace_id] = columns
     return result
 
 
@@ -603,10 +640,11 @@ def main():
     result = []
     seen = set()
     emitted_ids = set()
+    columns_by_workspace = workspace_columns(windows, workspace_outputs.keys())
 
     # 1. 优先使用 niri 直接上报的可见坐标（浮动窗口及支持该字段的平铺窗口）
     for window in windows:
-        rect = window_rect(window, outputs, workspace_outputs)
+        rect = window_rect(window, outputs, layers, layout_config, workspace_outputs, columns_by_workspace)
         if rect is None:
             continue
         emitted_ids.add(window.get("id"))
