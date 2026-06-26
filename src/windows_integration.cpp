@@ -230,6 +230,31 @@ QVector<QRect> enumerateWindowGeometries()
     return windows;
 }
 
+/// @brief Enumerates the info of all visible windows with z-order.
+/// @return A vector of WindowInfo with z-order based on GetTopWindow chain (bottom-to-top, higher = topmost).
+QVector<markshot::WindowInfo> enumerateWindowInfos()
+{
+    QVector<markshot::WindowInfo> results;
+#if defined(Q_OS_WIN)
+    // GetTopWindow + GW_HWNDNEXT gives deterministic top-to-bottom z-order,
+    // unlike EnumWindows which does not guarantee any specific order.
+    int zOrder = 0;
+    for (HWND hwnd = GetTopWindow(nullptr); hwnd != nullptr; hwnd = GetWindow(hwnd, GW_HWNDNEXT)) {
+        QRect geometry;
+        if (isWindowCandidate(hwnd, &geometry) &&
+            !std::any_of(results.begin(), results.end(),
+                         [&](const markshot::WindowInfo &info) { return info.rect == geometry; })) {
+            results.append(markshot::WindowInfo{geometry, zOrder++});
+        }
+    }
+    // Reverse z-order to match Linux convention (higher = topmost)
+    for (auto &info : results) {
+        info.zOrder = zOrder - 1 - *info.zOrder;
+    }
+#endif
+    return results;
+}
+
 void setExcludedFromCapture(QWidget *widget, bool excluded)
 {
 #if defined(Q_OS_WIN)
