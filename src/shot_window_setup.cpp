@@ -632,6 +632,30 @@ bool ShotWindow::configureLayerShell(QScreen *screen)
          true});
 }
 
+void ShotWindow::updateLayerShellForIme()
+{
+    const bool imeActive = m_textEditor && m_textEditor->isVisible();
+    markshot::layershell::setLayer(
+        this, imeActive ? markshot::layershell::Layer::Top : markshot::layershell::Layer::Overlay);
+    if (imeActive) {
+        // Layer change triggers an async wl_surface::configure roundtrip from
+        // the compositor. singleShot(0) defers the cursor-rectangle republish
+        // to the next event-loop tick. This is sufficient across mainstream
+        // compositors (KWin, wlroots, Smithay) because set_layer and
+        // set_cursor_rectangle share the same ordered wl_display connection,
+        // and compositors apply layer changes synchronously in their event
+        // source rather than deferring to render frame. Fallback if needed:
+        // hook LayerShellQt::Window::layerChanged signal.
+        QTimer::singleShot(0, this, [this]() {
+            if (m_textEditor && m_textEditor->isVisible()) {
+                if (QInputMethod *im = QGuiApplication::inputMethod()) {
+                    im->update(Qt::ImCursorRectangle);
+                }
+            }
+        });
+    }
+}
+
 void ShotWindow::startFullscreenAnnotation()
 {
     enterFullscreenAnnotation(true);
