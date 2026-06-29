@@ -740,10 +740,78 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 
 #### OCR Backend (Optional)
 
+Mark Shot delegates text recognition to the bundled `mark-shot-ocr` Python script. It supports **RapidOCR** (primary, based on PaddleOCR PP-OCR models) and **Tesseract** (fallback). On Linux the script is installed automatically; on Windows it must be configured manually.
+
+<details>
+<summary><b>Linux</b></summary>
+
 ```bash
 python3 -m venv ~/.local/share/mark-shot/ocr-venv
 ~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
+
+The installed `mark-shot-ocr` helper is discovered automatically—no config changes needed.
+
+**Environment variables** (optional):
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MARK_SHOT_OCR_VERSION` | PaddleOCR version (`PP-OCRv5`, `PP-OCRv4`, …) | `PP-OCRv5` |
+| `MARK_SHOT_OCR_MODEL_TYPE` | Model size: `mobile` or `server` | `mobile` |
+| `MARK_SHOT_OCR_MODEL_DIR` | Custom model storage directory | `~/.local/share/mark-shot/models` |
+| `MARK_SHOT_OCR_NO_VENV` | Set to `1` to disable automatic venv re-exec | — |
+| `MARK_SHOT_OCR_PYTHON` | Override the Python interpreter used for re-exec | `~/.local/share/mark-shot/ocr-venv/bin/python` |
+
+</details>
+
+<details>
+<summary><b>Windows</b></summary>
+
+The bundled helper scripts are not installed on Windows. Complete the following steps to enable OCR:
+
+**1. Install Python 3**
+
+Download and install Python 3.10 or later from [python.org](https://www.python.org/downloads/). Make sure to check **Add python.exe to PATH** during installation.
+
+**2. Copy the OCR helper script**
+
+Copy `scripts/mark-shot-ocr` from the [Mark Shot repository](https://github.com/jswysnemc/mark-shot) to a local directory, for example `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
+
+```powershell
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jswysnemc/mark-shot/main/scripts/mark-shot-ocr" `
+  -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
+```
+
+**3. Create a virtual environment and install dependencies**
+
+```powershell
+python -m venv "$env:LOCALAPPDATA\mark-shot\ocr-venv"
+& "$env:LOCALAPPDATA\mark-shot\ocr-venv\Scripts\pip.exe" install -U pip rapidocr onnxruntime
+```
+
+> `onnxruntime` provides CPU-based inference. If you have a compatible GPU, you can install `onnxruntime-directml` or `onnxruntime-gpu` instead for faster recognition.
+
+**4. Configure `ocr.command` in `config.json`**
+
+Open `%LOCALAPPDATA%\mark-shot\config.json` (create it if it does not exist) and set `ocr.command`:
+
+```json
+{
+  "ocr": {
+    "enabled": true,
+    "backend": "rapidocr",
+    "command": "\"%LOCALAPPDATA%\\mark-shot\\ocr-venv\\Scripts\\python.exe\" \"%LOCALAPPDATA%\\mark-shot\\mark-shot-ocr.py\" --format json --backend rapidocr {image}",
+    "timeoutMs": 30000
+  }
+}
+```
+
+Replace `%LOCALAPPDATA%` with the actual expanded path (e.g. `C:\Users\YourName\AppData\Local`). The `{image}` placeholder is replaced with the temporary screenshot path at runtime; if omitted, Mark Shot appends it automatically.
+
+> **Tip**: Set the environment variable `MARK_SHOT_OCR_NO_VENV=1` to skip the script's built-in venv auto-detection, since the venv Python is already invoked directly.
+
+</details>
 
 #### Code Scan Backend (Optional)
 
@@ -770,7 +838,7 @@ cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
 cmake --build build-windows
 ```
 
-Windows support currently targets normal screenshots and image annotation. Scrolling capture, compositor-specific window detection, Linux desktop entries, and bundled Linux helper scripts are not installed on Windows.
+Windows support currently targets normal screenshots and image annotation. Scrolling capture, compositor-specific window detection, and Linux desktop entries are not available on Windows. The bundled Python helper scripts (`mark-shot-ocr`, `mark-shot-code-scan`, `mark-shot-translate`) are not installed automatically—see the [OCR Backend](#ocr-backend-optional), [Code Scan Backend](#code-scan-backend-optional), and translation sections above for manual Windows setup instructions.
 
 ### Build Steps
 

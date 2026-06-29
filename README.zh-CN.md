@@ -654,10 +654,78 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 
 #### OCR 后端（可选）
 
+Mark Shot 的文字识别功能依赖内置的 `mark-shot-ocr` Python 脚本。该脚本支持 **RapidOCR**（首选，基于 PaddleOCR PP-OCR 模型）和 **Tesseract**（回退）。Linux 上会自动安装该脚本；Windows 上需要手动配置。
+
+<details>
+<summary><b>Linux</b></summary>
+
 ```bash
 python3 -m venv ~/.local/share/mark-shot/ocr-venv
 ~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
+
+安装完成后 `mark-shot-ocr` 会被自动发现，无需额外配置。
+
+**环境变量**（可选）：
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `MARK_SHOT_OCR_VERSION` | PaddleOCR 版本（`PP-OCRv5`、`PP-OCRv4` 等） | `PP-OCRv5` |
+| `MARK_SHOT_OCR_MODEL_TYPE` | 模型大小：`mobile` 或 `server` | `mobile` |
+| `MARK_SHOT_OCR_MODEL_DIR` | 自定义模型存储目录 | `~/.local/share/mark-shot/models` |
+| `MARK_SHOT_OCR_NO_VENV` | 设为 `1` 禁用自动切换虚拟环境 | — |
+| `MARK_SHOT_OCR_PYTHON` | 指定用于 re-exec 的 Python 解释器路径 | `~/.local/share/mark-shot/ocr-venv/bin/python` |
+
+</details>
+
+<details>
+<summary><b>Windows</b></summary>
+
+内置的辅助脚本不会在 Windows 上自动安装，需要手动完成以下步骤：
+
+**1. 安装 Python 3**
+
+从 [python.org](https://www.python.org/downloads/) 下载安装 Python 3.10 或更高版本。安装时请勾选 **Add python.exe to PATH**。
+
+**2. 复制 OCR 辅助脚本**
+
+将 [Mark Shot 仓库](https://github.com/jswysnemc/mark-shot) 中的 `scripts/mark-shot-ocr` 复制到本地目录，例如 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`。
+
+```powershell
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jswysnemc/mark-shot/main/scripts/mark-shot-ocr" `
+  -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
+```
+
+**3. 创建虚拟环境并安装依赖**
+
+```powershell
+python -m venv "$env:LOCALAPPDATA\mark-shot\ocr-venv"
+& "$env:LOCALAPPDATA\mark-shot\ocr-venv\Scripts\pip.exe" install -U pip rapidocr onnxruntime
+```
+
+> `onnxruntime` 提供 CPU 推理。如果有兼容的 GPU，可以安装 `onnxruntime-directml` 或 `onnxruntime-gpu` 以加速识别。
+
+**4. 在 `config.json` 中配置 `ocr.command`**
+
+打开 `%LOCALAPPDATA%\mark-shot\config.json`（不存在则新建），设置 `ocr.command`：
+
+```json
+{
+  "ocr": {
+    "enabled": true,
+    "backend": "rapidocr",
+    "command": "\"%LOCALAPPDATA%\\mark-shot\\ocr-venv\\Scripts\\python.exe\" \"%LOCALAPPDATA%\\mark-shot\\mark-shot-ocr.py\" --format json --backend rapidocr {image}",
+    "timeoutMs": 30000
+  }
+}
+```
+
+将 `%LOCALAPPDATA%` 替换为实际展开后的路径（如 `C:\Users\你的用户名\AppData\Local`）。`{image}` 占位符在运行时会被替换为临时截图路径；如果省略，Mark Shot 会自动追加。
+
+> **提示**：设置环境变量 `MARK_SHOT_OCR_NO_VENV=1` 可以跳过脚本内置的虚拟环境自动检测，因为已经直接使用了虚拟环境中的 Python。
+
+</details>
 
 #### 扫码后端（可选）
 
@@ -792,7 +860,7 @@ cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
 cmake --build build-windows
 ```
 
-当前 Windows 支持范围是普通截图与图片标注。滚动截图、合成器专用窗口检测、Linux 桌面快捷方式和内置 Linux helper 脚本不会在 Windows 上安装。
+当前 Windows 支持范围是普通截图与图片标注。滚动截图、合成器专用窗口检测和 Linux 桌面快捷方式在 Windows 上不可用。内置的 Python 辅助脚本（`mark-shot-ocr`、`mark-shot-code-scan`、`mark-shot-translate`）不会自动安装，请参考上方的 [OCR 后端](#ocr-后端可选)、[扫码后端](#扫码后端可选)和翻译章节进行手动配置。
 
 ### 构建与编译
 
