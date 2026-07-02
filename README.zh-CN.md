@@ -54,6 +54,7 @@
 - **启动阶段扫码**：选区前按 `Q` 进入扫码模式，框选二维码或条形码区域后，会打开可复制的识别结果窗口。
 - **快速截取显示器**：选区前按 `D` 会立刻截取全部输出屏幕，再按显示器裁切成缩略图；悬浮到缩略图上可复制、编辑或保存该显示器截图。
 - **图床上传**：选区后按 `Ctrl+U` 或点击工具栏上传按钮，将当前截图上传到自定义图床（如 ImgURL、sm.ms、imgbb、litterbox 等），上传成功后 URL 自动复制到剪贴板。支持通过 `upload.env` 配置图床参数，或通过 `upload.command` 接入任意自定义上传脚本。
+- **Mac 风格导出外框**：为保存、复制、上传、打开方式和扩展命令图片添加透明边距、圆角和柔和阴影。
 
 ### 贴图悬浮固定（Pin）
 - 支持将截图或标注区域作为一个独立、无边框且置顶的悬浮贴图窗口固定在屏幕上。
@@ -269,6 +270,16 @@ Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置�
   "save": {
     "pathTemplate": "{pictures}/mark-shot/mark-shot-{datetime}.png"
   },
+  "export": {
+    "imageFrame": {
+      "enabled": true,
+      "padding": 112,
+      "cornerRadius": 18,
+      "shadowRadius": 72,
+      "shadowOffsetY": 28,
+      "shadowOpacity": 0.32
+    }
+  },
   "capture": {
     "wayland": {
       "kde": {
@@ -376,6 +387,7 @@ Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置�
 | `annotation.defaultColor` | 字符串 | `"#FF4D4D"` | 初始标注颜色。支持不透明的十六进制格式 `#RRGGBB` 或包含透明度的 `#RRGGBBAA`。命令行参数 `--default-color` 会覆盖此项。 |
 | `save.pathTemplate` | 字符串 | `"{pictures}/mark-shot/mark-shot-{datetime}.png"` | 保存截图文件的路径模板（包括保存动作和另存为的初始文件名）。父级目录在保存时若不存在会自动创建。别名包括：`save.path`、`save.location`、最外层的 `savePathTemplate` 以及 `save.directory`（目录模板）。 |
 | `save.directoryTemplate` | 字符串 | `""` | 仅指定保存目录模板。指定后，文件名会自动采用默认的 `mark-shot-{datetime}.png`。别名包括：`save.directory`、`save.dir`、`save.folder`。 |
+| `export.imageFrame` | 布尔值/对象 | `true` | 用户分享类导出的 Mac 风格外框。对象形式支持 `enabled`、`padding` (`0`-`256`，默认 `112`)、`cornerRadius` (`0`-`128`，默认 `18`)、`shadowRadius` (`0`-`128`，默认 `72`)、`shadowOffsetY` (`0`-`128`，默认 `28`) 和 `shadowOpacity` (`0.0`-`1.0`，默认 `0.32`)。作用于保存、另存为、复制、上传、打开方式和扩展命令图片；OCR、扫码、贴图、快速显示器截图和滚动截图保持原始图片。设置 `enabled` 为 `false` 可导出原始选区尺寸。 |
 | `shortcuts` | 对象 | - | 自定义快捷键配置。别名：`hotkeys`（或在 `annotation.shortcuts` / `annotation.hotkeys` 下）。详细子节点见折叠说明。 |
 | `windows.tray.enabled` | 布尔值 | Windows 为 `true`，其他平台为 `false` | 自动启动托盘模式。键名出于兼容性保留。可以用 `mark-shot --tray` 在不修改配置时启动托盘模式，也可以用 `mark-shot --capture` 在自动启动托盘时强制执行单次截图。 |
 | `windows.hotkeys.capture` | 字符串 | `"Ctrl+Alt+S"` | 托盘模式运行时触发区域截图的全局快捷键。Windows 使用 RegisterHotKey，支持的 Linux 桌面使用 desktop portal。别名包括 `hotkey`、`captureHotkey` 和 `screenshot` |
@@ -597,6 +609,22 @@ yay -S mark-shot-bin
 ```
 
 `mark-shot` 从源码编译；`mark-shot-bin` 从 GitHub Releases 下载预编译 pacman 包安装。
+
+##### NixOS
+NixOS 用户可以通过添加 Flake input 来进行安装
+```nix
+# flake.nix
+mark-shot = {
+  url = "github:tystudio-26020701/mark-shot-community";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+
+# home-manager
+home.packages = with pkgs; [
+  # 其他用户应用
+  inputs.mark-shot.packages.${pkgs.stdenv.hostPlatform.system}.default
+]
+```
 
 ##### 其他发行版 (预编译安装包)
 对于其他发行版（如 Ubuntu, Debian, Fedora），请在 Releases 页面下载编译好的安装包并运行以下命令安装：
@@ -874,6 +902,12 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
 
 # 执行编译
 cmake --build build
+```
+
+或者使用 nix
+
+```bash
+nix build
 ```
 
 LayerShellQt 会被自动检测。找到时启用完整 Wayland layer-shell 支持；未找到时编译照常成功，运行时自动降级为标准全屏窗口。
