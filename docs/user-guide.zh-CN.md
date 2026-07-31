@@ -254,6 +254,114 @@ mark-shot --list-displays
 
 所有 headless 选项与位置参数（图片文件）互斥。完整参数表见 README。
 
+### 7.1 无头窗口 / 组件截图
+
+Mark Shot 可以**不打开任何界面**，从脚本、构建流水线或智能体直接截取**指定
+窗口——或窗口内的组件（子区域）**。进程在写出或返回图片后立即退出，从不创建
+窗口、从不弹对话框、从不抢占焦点，因此用户可继续正常操作桌面，捕获在后台
+无感完成。
+
+先列出窗口看看有哪些可选：
+
+```bash
+mark-shot --list-windows
+```
+
+示例输出（GNOME Wayland）：
+
+```json
+{"count":2,"platform":"wayland","source":"compositor-script","windows":[
+  {"index":0,"id":"0x3c00007","title":"Mark Shot - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
+  {"index":1,"title":"Terminal","class":"org.gnome.Terminal","x":67,"y":32,"width":800,"height":600}
+]}
+```
+
+每条记录都带有选择器可匹配的字段：`index`、`id`（X11 窗口 id / 后端 id）、
+`title`、`class`、`instance`，以及 `x`/`y`/`width`/`height` 和可选的 `zOrder`。
+
+#### 7.1.1 选择窗口（单选 / 任意多选）
+
+`--window` 可重复传入，**一次调用截取任意数量的窗口**。每个选择器默认自动
+解释（`--window-by auto`）：
+
+| 选择器值               | 匹配规则                                             |
+| :---                  | :---                                                |
+| `0`、`1`、…           | 列表 `index`                                        |
+| `0x3c00007`           | 窗口 `id`                                           |
+| `VSCodium`            | `class` 或 `instance`，再按 `title`（精确 → 子串）     |
+| `Mark Shot - VSCodium`| `title`                                             |
+
+可用 `--window-by id|title|class|index` 强制指定某一种匹配规则。一个选择器
+命中多个窗口时会**全部**截取。
+
+在窗口选择器后追加 `@x,y,width,height` 即可截取窗口内的组件子区域（偏移量
+相对窗口左上角，自动裁剪到窗口范围内）：
+
+```bash
+# 窗口 0 的顶部 100px 条带
+mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
+```
+
+#### 7.1.2 选择图片去向
+
+`--capture-destination` 决定输出方式，可搭配任意数量的 `--window` 选择器与
+组件子区域：
+
+| 去向 | 行为 |
+| :--- | :--- |
+| `inline`（默认） | 在 JSON 输出中直接内嵌 Base64 PNG。**不写任何文件，也绝不触碰剪贴板。** 只想拿到像素的智能体最安全的选择。 |
+| `file` | 把 PNG 写入 `--capture-to <目录>`；需要提供该参数。 |
+| `stage` | 把 PNG 写入临时暂存目录（`$TMPDIR/mark-shot-staging`），适合"先存着稍后取用"。 |
+| `clipboard` | 图片进入系统剪贴板；多张图片时**最后一张生效**。内容在 CLI 退出后依然可用（会拉起持久的 `wl-copy` / `xclip` 所有者进程）。 |
+
+示例：
+
+```bash
+# 多个窗口，保存到目录（每个窗口一张 PNG）
+mark-shot --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
+
+# 一个窗口 + 另一个窗口的组件，暂存待用
+mark-shot --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
+
+# 多选，直接以 base64 返回，不写文件、不动剪贴板
+mark-shot --window 0 --window "Terminal" --capture-destination inline
+
+# 把窗口复制到剪贴板
+mark-shot --window 0 --capture-destination clipboard
+```
+
+**剪贴板策略。** 交互式编辑器刻意把选区放入系统剪贴板（`Copy` 动作 /
+`Ctrl+C`），因为这是截图工具最核心的使用方式。无头模式（CLI 与商业版 MCP
+服务）遵循相反的规则：**除非显式选择 `clipboard` 作为目标，否则绝不改动
+剪贴板**——`inline`（默认）与 `stage` 都不会触碰用户当前剪贴板内容，这样
+定时任务或 Agent 发起的截图不会覆盖用户正在别处使用的文本或图片。
+
+输出是一个 JSON 对象 `{"captures":[...]}`，每个被截窗口对应一条记录；每条
+记录都会回显选择器、窗口身份与最终截取矩形，并带有 `path`（file/stage）或
+`data`（inline）或两者皆无（clipboard）。只有当所有选择器都命中且全部截取
+成功时退出码才为 `0`；某个选择器未命中或截取失败时退出码为 `1`，并在
+`"error"` 字段给出原因，而不是静默返回成功。
+
+#### 7.1.3 无窗口无弹窗保证
+
+所有无头模式都保证全程无感、不干扰：
+
+- **绝不创建任何窗口**——包括图片编辑窗口、截屏覆盖层与托盘；捕获复用无头
+  捕获路径；
+- **绝不弹出任何对话框**——包括错误对话框：错误一律走 stderr；即使是畸形
+  命令（例如 `--window-by` 没有配 `--window`、未知的 `--capture-destination`、
+  多余的图片文件位置参数）也会立即以非零退出码结束并在 stderr 给出原因，
+  而不会弹出 `QMessageBox`，更不会落入交互式界面；
+- 绝不弹出交互式 portal 授权框（`allowInteractivePortal` 已禁用）；
+- 写出输出后进程立即退出；
+- 捕获前后窗口列表完全一致；
+- `--capture-destination inline` 额外保证系统剪贴板原封不动。
+
+如果检测不到任何窗口（例如合成器辅助扩展未启用，或 X11 会话无法枚举窗口），
+命令会在 stderr 打印明确错误并以退出码 `1` 结束，而不是静默截取到空结果。
+
+同一捕获流水线也能程序化产出带标注的图片——见商业版的 MCP server 章节；也可把保存下来的 PNG 交回交互编辑器继续加工。
+
 ---
 
 ## 8. 桌面快捷键与托盘
@@ -307,8 +415,12 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 5. **复制 / 保存 / 钉住 / 上传** — `Ctrl+C`、`Ctrl+S`、`Ctrl+P`、`Ctrl+U`。
 6. **启动工具** — `C` 取色器、`R` 标尺、`Q` 扫码、`D` 显示器快照。
 7. **Headless** — `--capture-to`、`--region`、`--display`、`--list-displays`。
-8. **托盘与快捷键** — `mark-shot --tray`，按 `Ctrl+Alt+S`。
-9. **便携版细节** — 包内自带 Qt 库 / 插件 / 脚本可被找到。
+8. **无头窗口截图** — `--list-windows` 列出桌面窗口；重复 `--window` 一次截取
+   多个窗口；逐一验证 `--capture-destination` 的四种模式（inline / file /
+   stage / clipboard）；测试组件选择器（`--window "0@0,0,400,300"`）；确认
+   捕获前后窗口列表不变（无干扰）。
+9. **托盘与快捷键** — `mark-shot --tray`，按 `Ctrl+Alt+S`。
+10. **便携版细节** — 包内自带 Qt 库 / 插件 / 脚本可被找到。
 
 ---
 
