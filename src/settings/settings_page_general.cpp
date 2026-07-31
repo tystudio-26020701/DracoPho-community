@@ -49,7 +49,7 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
     layout->addWidget(startupCard);
 
     QFrame *hotkeyCard = createSettingsCard(MS_TR("Hotkeys"),
-                                            MS_TR("Use the desktop portal on supported Linux desktops and RegisterHotKey on Windows."),
+                                            MS_TR("Uses native grabs on X11 and the desktop portal on Wayland Linux desktops, and RegisterHotKey on Windows."),
                                             this);
     QFormLayout *hotkeyForm = settingsCardForm(hotkeyCard);
     m_captureHotkey = addShortcutRow(hotkeyForm, MS_TR("Capture Hotkey"));

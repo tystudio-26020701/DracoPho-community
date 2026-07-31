@@ -163,6 +163,8 @@ qt_add_executable(mark-shot
     src/windows_integration.h
     src/windows_tray_controller.cpp
     src/windows_tray_controller.h
+    src/x11_global_shortcut.cpp
+    src/x11_global_shortcut.h
     src/screen_capture.cpp
     src/screen_capture.h
     src/screen_capture_api.cpp
@@ -184,6 +186,8 @@ qt_add_executable(mark-shot
     src/save_path_config.h
     src/shortcut_config.cpp
     src/shortcut_config.h
+    src/shortcut_key_name.cpp
+    src/shortcut_key_name.h
     src/pinned_window_config.cpp
     src/pinned_window/pinned_image_window.cpp
     src/pinned_window/pinned_image_window.h
@@ -277,7 +281,7 @@ if(MARK_SHOT_LINUX)
 endif()
 
 if(MARK_SHOT_LINUX AND X11_xcb_FOUND)
-    target_link_libraries(mark-shot PRIVATE X11::xcb)
+    target_link_libraries(mark-shot PRIVATE X11::xcb X11::X11)
     target_compile_definitions(mark-shot PRIVATE HAVE_XCB)
 endif()
 
