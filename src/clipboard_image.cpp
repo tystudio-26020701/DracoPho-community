@@ -214,12 +214,20 @@ bool copyToPersistentClipboardOwner(const QByteArray &payload, const QString &su
     const QString tempPath = tempFile.fileName();
     tempFile.close();
 
-    const bool started = QProcess::startDetached(QStringLiteral("sh"),
-                                                 {QStringLiteral("-c"),
-                                                  owner.shellCommand,
-                                                  QStringLiteral("mark-shot-clipboard"),
-                                                  tempPath,
-                                                  owner.executable});
+    // Redirect the detached owner's standard streams to the null device so it
+    // does not inherit this process's stdout/stderr. A caller that reads our
+    // output from a pipe would otherwise never see EOF until the persistent
+    // clipboard owner exits (wl-copy --foreground can linger for a long time).
+    QProcess ownerProcess;
+    ownerProcess.setProgram(QStringLiteral("sh"));
+    ownerProcess.setArguments({QStringLiteral("-c"),
+                               owner.shellCommand,
+                               QStringLiteral("mark-shot-clipboard"),
+                               tempPath,
+                               owner.executable});
+    ownerProcess.setStandardOutputFile(QProcess::nullDevice());
+    ownerProcess.setStandardErrorFile(QProcess::nullDevice());
+    const bool started = ownerProcess.startDetached();
     if (!started) {
         QFile::remove(tempPath);
     }
@@ -327,6 +335,31 @@ bool copyImageToClipboard(const QImage &image)
         return copyImageDataToClipboard(image, png);
     }
 
+    return copyImageDataToClipboard(image, png);
+}
+
+bool copyImageToClipboardHeadless(const QImage &image)
+{
+    if (image.isNull()) {
+        return false;
+    }
+
+    const QByteArray png = encodePng(image);
+    if (png.isEmpty()) {
+        return false;
+    }
+
+    // Prefer a detached persistent owner (wl-copy / xclip). This avoids the
+    // Wayland compositor round-trip that QClipboard::setImage performs, which
+    // can stall a short-lived headless process, and keeps the content alive
+    // after the CLI exits.
+    const std::optional<ClipboardOwnerCommand> owner = clipboardOwnerCommand(ClipboardPayload::ImagePng);
+    if (owner.has_value()) {
+        return copyToPersistentClipboardOwner(png, QStringLiteral(".png"), *owner);
+    }
+
+    // No persistent-owner tool available (e.g. Windows): fall back to the
+    // synchronous clipboard API, which is non-blocking on those platforms.
     return copyImageDataToClipboard(image, png);
 }
 

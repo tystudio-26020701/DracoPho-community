@@ -6,6 +6,7 @@
 #include "cli/headless_capture.h"
 #include "cli/image_pin_launch.h"
 #include "cli/recording_cli.h"
+#include "cli/window_capture_cli.h"
 #include "debug_log.h"
 #include "ipc/single_instance_ipc.h"
 #include "recording/recording_session_manager.h"
@@ -131,6 +132,7 @@ int main(int argc, char *argv[])
     parser.addOption(noDebugOption);
     parser.addOption(debugLogOption);
     markshot::cli::addHeadlessCaptureOptions(&parser);
+    markshot::cli::addWindowCaptureOptions(&parser);
     parser.process(app);
 
     if (parser.isSet(stopRecordingOption)) {
@@ -140,20 +142,9 @@ int main(int argc, char *argv[])
         return markshot::cli::printRecordingStatus();
     }
 
-    const QStringList positionalArguments = parser.positionalArguments();
-    if (positionalArguments.size() > 1) {
-        QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), MS_TR("Only one image file can be opened at a time."));
-        return 1;
-    }
-
+    // 无头模式必须绝不弹窗、绝不创建任何窗口（包括图片编辑窗口）。在进入
+    // 任何可能弹出 QMessageBox 或创建窗口的代码之前，先完成无头分发并退出。
     markshot::ensureAppConfigFile();
-
-    if (parser.isSet(debugOption) && parser.isSet(noDebugOption)) {
-        QMessageBox::critical(nullptr,
-                              QStringLiteral("Mark Shot"),
-                              MS_TR("--debug and --no-debug cannot be used together."));
-        return 1;
-    }
 
     markshot::DebugRuntimeConfig debugConfig = markshot::configuredDebugRuntimeConfig();
     if (parser.isSet(debugOption)) {
@@ -175,9 +166,29 @@ int main(int argc, char *argv[])
     markshot::debugLog("config",
                        "debug enabled path=%s",
                        markshot::debugLogPath().toUtf8().constData());
+
+    // 无头分发：返回 >=0 表示已处理并应立即退出；-1 表示继续交互式启动。
+    const int windowExitCode = markshot::cli::runWindowCaptureIfRequested(parser);
+    if (windowExitCode >= 0) {
+        return windowExitCode;
+    }
     const int headlessExitCode = markshot::cli::runHeadlessCaptureIfRequested(parser);
     if (headlessExitCode >= 0) {
         return headlessExitCode;
+    }
+
+    // 从这里开始才允许交互式 UI 与对话框。
+    const QStringList positionalArguments = parser.positionalArguments();
+    if (positionalArguments.size() > 1) {
+        QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), MS_TR("Only one image file can be opened at a time."));
+        return 1;
+    }
+
+    if (parser.isSet(debugOption) && parser.isSet(noDebugOption)) {
+        QMessageBox::critical(nullptr,
+                              QStringLiteral("Mark Shot"),
+                              MS_TR("--debug and --no-debug cannot be used together."));
+        return 1;
     }
 
     QString configDefaultToolWarning;

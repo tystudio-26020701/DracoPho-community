@@ -27,6 +27,9 @@ X11WindowAtoms readX11WindowAtoms(xcb_connection_t *connection)
     atoms.netWmStateHidden = internX11Atom(connection, "_NET_WM_STATE_HIDDEN");
     atoms.netFrameExtents = internX11Atom(connection, "_NET_FRAME_EXTENTS");
     atoms.wmState = internX11Atom(connection, "WM_STATE");
+    atoms.netWmName = internX11Atom(connection, "_NET_WM_NAME");
+    atoms.wmName = internX11Atom(connection, "WM_NAME");
+    atoms.wmClass = internX11Atom(connection, "WM_CLASS");
     return atoms;
 }
 
@@ -206,18 +209,81 @@ std::optional<QRect> x11WindowFrameGeometry(xcb_connection_t *connection,
     return rect.normalized();
 }
 
-void appendUniqueWindowRect(QVector<QRect> *results, const QRect &screenRect, QRect rect)
+QString x11WindowTitle(xcb_connection_t *connection,
+                       xcb_window_t window,
+                       const X11WindowAtoms &atoms)
 {
-    if (!results) {
+    if (!connection || window == XCB_WINDOW_NONE) {
+        return {};
+    }
+
+    auto readText = [&](xcb_atom_t property) {
+        if (property == XCB_ATOM_NONE) {
+            return QString();
+        }
+        xcb_get_property_cookie_t cookie =
+            xcb_get_property(connection, 0, window, property, XCB_ATOM_ANY, 0, 4096);
+        xcb_get_property_reply_t *reply = xcb_get_property_reply(connection, cookie, nullptr);
+        if (!reply) {
+            return QString();
+        }
+        QString text;
+        if (reply->format == 8) {
+            const char *raw = static_cast<const char *>(xcb_get_property_value(reply));
+            const int length = xcb_get_property_value_length(reply);
+            if (raw && length > 0) {
+                text = QString::fromUtf8(raw, length).trimmed();
+            }
+        }
+        std::free(reply);
+        return text;
+    };
+
+    QString title = readText(atoms.netWmName);
+    if (title.isEmpty()) {
+        title = readText(atoms.wmName);
+    }
+    return title;
+}
+
+void x11WindowClass(xcb_connection_t *connection,
+                    xcb_window_t window,
+                    const X11WindowAtoms &atoms,
+                    QString *instance,
+                    QString *className)
+{
+    if (instance) {
+        instance->clear();
+    }
+    if (className) {
+        className->clear();
+    }
+    if (!connection || window == XCB_WINDOW_NONE || atoms.wmClass == XCB_ATOM_NONE) {
         return;
     }
-    rect = rect.normalized();
-    if (rect.width() <= 1 || rect.height() <= 1 || !rect.intersects(screenRect)) {
+
+    xcb_get_property_cookie_t cookie =
+        xcb_get_property(connection, 0, window, atoms.wmClass, XCB_ATOM_ANY, 0, 4096);
+    xcb_get_property_reply_t *reply = xcb_get_property_reply(connection, cookie, nullptr);
+    if (!reply) {
         return;
     }
-    if (!results->contains(rect)) {
-        results->append(rect);
+
+    if (reply->format == 8) {
+        const char *raw = static_cast<const char *>(xcb_get_property_value(reply));
+        const int length = xcb_get_property_value_length(reply);
+        const QByteArray bytes(raw, length);
+        // WM_CLASS holds two NUL-terminated strings: instance and class.
+        const QList<QByteArray> parts = bytes.split('\0');
+        if (instance && parts.size() > 0) {
+            *instance = QString::fromUtf8(parts.at(0)).trimmed();
+        }
+        if (className && parts.size() > 1) {
+            *className = QString::fromUtf8(parts.at(1)).trimmed();
+        }
     }
+
+    std::free(reply);
 }
 
 #endif

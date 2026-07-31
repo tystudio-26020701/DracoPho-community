@@ -160,6 +160,9 @@ struct X11WindowAtoms {
     xcb_atom_t netWmStateHidden = XCB_ATOM_NONE;
     xcb_atom_t netFrameExtents = XCB_ATOM_NONE;
     xcb_atom_t wmState = XCB_ATOM_NONE;
+    xcb_atom_t netWmName = XCB_ATOM_NONE;
+    xcb_atom_t wmName = XCB_ATOM_NONE;
+    xcb_atom_t wmClass = XCB_ATOM_NONE;
 };
 
 xcb_atom_t internX11Atom(xcb_connection_t *connection, const char *name);
@@ -188,7 +191,16 @@ std::optional<QRect> x11WindowFrameGeometry(xcb_connection_t *connection,
                                             xcb_window_t root,
                                             xcb_window_t window,
                                             const X11WindowAtoms &atoms);
-void appendUniqueWindowRect(QVector<QRect> *results, const QRect &screenRect, QRect rect);
+// Reads a window's title (_NET_WM_NAME, falling back to WM_NAME) and WM_CLASS
+// (instance + class) for the window enumeration/listing features.
+QString x11WindowTitle(xcb_connection_t *connection,
+                       xcb_window_t window,
+                       const X11WindowAtoms &atoms);
+void x11WindowClass(xcb_connection_t *connection,
+                    xcb_window_t window,
+                    const X11WindowAtoms &atoms,
+                    QString *instance,
+                    QString *className);
 
 #endif
 

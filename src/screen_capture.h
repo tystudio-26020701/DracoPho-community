@@ -44,9 +44,10 @@ struct CaptureRequest {
 CaptureResult captureScreenFrame(const CaptureRequest &request);
 // Stops a reusable screencast session when scrolling capture pauses or fails.
 void stopActiveScreencastCapture();
-// Returns visible X11 window frames for selection snapping/highlighting.
-QVector<QRect> enumerateX11WindowGeometries();
-QVector<markshot::WindowInfo> enumerateX11WindowInfos();
+// Returns visible X11 window info for selection snapping/highlighting.
+// When includeIdentity is false the title/class/instance fields are skipped,
+// which avoids extra blocking X11 property round trips for geometry-only users.
+QVector<markshot::WindowInfo> enumerateX11WindowInfos(bool includeIdentity = true);
 bool isGnomeWaylandSession();
 bool hasGnomeScrollHelper();
 bool hasGnomeScrollPreviewHelper();

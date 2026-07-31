@@ -1,12 +1,17 @@
 #include "screen_capture_internal.h"
 
-/// @brief Enumerates the geometries of all open X11 windows.
-/// @return A vector of rectangles representing the window geometries.
-QVector<QRect> enumerateX11WindowGeometries()
+/// @brief Enumerates the info of all open X11 windows.
+/// @param includeIdentity 是否读取 title/class/instance（需要额外 X11 属性往返）。
+/// @return A vector of WindowInfo with z-order based on _NET_CLIENT_LIST_STACKING order (bottom-to-top).
+QVector<markshot::WindowInfo> enumerateX11WindowInfos(bool includeIdentity)
 {
-    QVector<QRect> results;
+    QVector<markshot::WindowInfo> results;
 
-#ifdef HAVE_XCB
+#ifndef HAVE_XCB
+    Q_UNUSED(includeIdentity);
+#endif
+
+#if defined(HAVE_XCB) && defined(Q_OS_LINUX)
     xcb_connection_t *connection = xcb_connect(nullptr, nullptr);
     if (!connection || xcb_connection_has_error(connection)) {
         if (connection) {
@@ -28,8 +33,28 @@ QVector<QRect> enumerateX11WindowGeometries()
     }
 
     xcb_window_t root = screenIter.data->root;
-    const QRect rootRect(0, 0, screenIter.data->width_in_pixels, screenIter.data->height_in_pixels);
     const X11WindowAtoms atoms = readX11WindowAtoms(connection);
+
+    auto appendInfo = [&](xcb_window_t window, int zOrder) {
+        const std::optional<QRect> rect = x11WindowFrameGeometry(connection, root, window, atoms);
+        if (!rect.has_value()) {
+            return;
+        }
+        for (const markshot::WindowInfo &existing : std::as_const(results)) {
+            if (existing.rect == *rect) {
+                return;
+            }
+        }
+        markshot::WindowInfo info;
+        info.rect = *rect;
+        info.zOrder = zOrder;
+        info.id = QStringLiteral("0x%1").arg(static_cast<qulonglong>(window), 0, 16);
+        if (includeIdentity) {
+            info.title = x11WindowTitle(connection, window, atoms);
+            x11WindowClass(connection, window, atoms, &info.instance, &info.className);
+        }
+        results.append(info);
+    };
 
     QVector<xcb_window_t> managedWindows =
         readX11WindowListProperty(connection, root, atoms.netClientListStacking);
@@ -37,19 +62,17 @@ QVector<QRect> enumerateX11WindowGeometries()
         managedWindows = readX11WindowListProperty(connection, root, atoms.netClientList);
     }
     if (!managedWindows.isEmpty()) {
-        for (xcb_window_t window : std::as_const(managedWindows)) {
-            if (const std::optional<QRect> rect =
-                    x11WindowFrameGeometry(connection, root, window, atoms)) {
-                appendUniqueWindowRect(&results, rootRect, *rect);
-            }
+        for (int i = 0; i < managedWindows.size(); ++i) {
+            appendInfo(managedWindows.at(i), i);
         }
         xcb_disconnect(connection);
         return results;
     }
 
+    // Fallback: walk the window tree when no _NET_CLIENT_LIST is present.
     QVector<xcb_window_t> stack;
     stack.append(root);
-
+    int zOrder = 0;
     while (!stack.isEmpty()) {
         xcb_window_t parent = stack.takeLast();
         xcb_query_tree_cookie_t treeCookie = xcb_query_tree(connection, parent);
@@ -60,66 +83,20 @@ QVector<QRect> enumerateX11WindowGeometries()
 
         int childCount = xcb_query_tree_children_length(treeReply);
         xcb_window_t *children = xcb_query_tree_children(treeReply);
-
         for (int i = 0; i < childCount; ++i) {
-            xcb_window_t child = children[i];
-
-            xcb_get_window_attributes_cookie_t attrCookie = xcb_get_window_attributes(connection, child);
-            xcb_get_window_attributes_reply_t *attrReply = xcb_get_window_attributes_reply(connection, attrCookie, nullptr);
-            if (!attrReply) {
-                continue;
-            }
-
-            const bool isViewable = (attrReply->map_state == XCB_MAP_STATE_VIEWABLE);
-            const bool isOverrideRedirect = attrReply->override_redirect != 0;
-            std::free(attrReply);
-
-            if (!isViewable || isOverrideRedirect || x11WindowIsHiddenOrIconic(connection, child, atoms)) {
-                continue;
-            }
-
-            xcb_get_geometry_cookie_t geoCookie = xcb_get_geometry(connection, child);
-            xcb_get_geometry_reply_t *geoReply = xcb_get_geometry_reply(connection, geoCookie, nullptr);
-            if (!geoReply) {
-                continue;
-            }
-
-            xcb_translate_coordinates_cookie_t transCookie = xcb_translate_coordinates(connection, child, root, 0, 0);
-            xcb_translate_coordinates_reply_t *transReply = xcb_translate_coordinates_reply(connection, transCookie, nullptr);
-
-            if (transReply) {
-                int x = transReply->dst_x;
-                int y = transReply->dst_y;
-                int w = geoReply->width;
-                int h = geoReply->height;
-                std::free(transReply);
-
-                appendUniqueWindowRect(&results, rootRect, QRect(x, y, w, h));
-            }
-
-            std::free(geoReply);
-            stack.append(child);
+            stack.append(children[i]);
         }
-
         std::free(treeReply);
+
+        if (parent != root) {
+            appendInfo(parent, zOrder);
+            ++zOrder;
+        }
     }
 
     xcb_disconnect(connection);
 #endif
 
-    return results;
-}
-
-/// @brief Enumerates the info of all open X11 windows.
-/// @return A vector of WindowInfo with z-order based on _NET_CLIENT_LIST_STACKING order (bottom-to-top).
-QVector<markshot::WindowInfo> enumerateX11WindowInfos()
-{
-    QVector<markshot::WindowInfo> results;
-    const QVector<QRect> geometries = enumerateX11WindowGeometries();
-    results.reserve(geometries.size());
-    for (int i = 0; i < geometries.size(); ++i) {
-        results.append(markshot::WindowInfo{geometries[i], i});
-    }
     return results;
 }
 
