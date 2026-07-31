@@ -18,6 +18,7 @@ class QTimer;
 namespace markshot {
 
 class GlobalShortcutPortal;
+class X11GlobalShortcut;
 
 class WindowsTrayController final : public QObject, public QAbstractNativeEventFilter {
 public:
@@ -88,6 +89,7 @@ private:
     bool m_captureHotkeyRegistered = false;
     bool m_fullscreenHotkeyRegistered = false;
     GlobalShortcutPortal *m_globalShortcutPortal = nullptr;
+    X11GlobalShortcut *m_x11GlobalShortcut = nullptr;
 };
 
 }  // namespace markshot

@@ -13,6 +13,7 @@
 #include "ui/i18n.h"
 #include "ui/icons.h"
 #include "window_detection.h"
+#include "x11_global_shortcut.h"
 
 #include <QAction>
 #include <QApplication>
@@ -301,6 +302,11 @@ bool WindowsTrayController::hotkeysSupported()
 #if defined(Q_OS_WIN)
     return true;
 #elif defined(MARK_SHOT_WITH_DBUS)
+    // X11/Xorg 会话优先使用原生 XGrabKey，不依赖 xdg-desktop-portal 的实现
+    // （Ubuntu/GNOME 下 portal GlobalShortcuts 经常缺失或不可用）。
+    if (X11GlobalShortcut::isAvailable()) {
+        return true;
+    }
     return GlobalShortcutPortal::isAvailable();
 #else
     return false;
@@ -582,6 +588,28 @@ void WindowsTrayController::registerHotkeys()
                           [this] { triggerFullscreenCapture(); }});
     }
 
+    // X11/Xorg 会话优先使用原生 XGrabKey，只有非 X11（例如 Wayland）才走 portal。
+    if (X11GlobalShortcut::isAvailable()) {
+        if (!m_x11GlobalShortcut) {
+            m_x11GlobalShortcut = new X11GlobalShortcut(this);
+        }
+        QList<X11GlobalShortcut::Shortcut> x11Shortcuts;
+        for (const GlobalShortcutPortal::Shortcut &shortcut : shortcuts) {
+            x11Shortcuts.append({shortcut.id,
+                                 shortcut.description,
+                                 shortcut.sequence,
+                                 shortcut.callback});
+        }
+        if (m_x11GlobalShortcut->registerShortcuts(x11Shortcuts)) {
+            markshot::debugLog("tray", "【托盘】【全局快捷键】registered through X11 XGrabKey");
+            return;
+        }
+        markshot::debugLog("tray",
+                           "【托盘】【全局快捷键】X11 grab registration failed: %s",
+                           m_x11GlobalShortcut->errorString().toUtf8().constData());
+        // XGrabKey 失败时继续尝试 portal，避免快捷键在混合/异常环境下完全失效。
+    }
+
     if (!m_globalShortcutPortal) {
         m_globalShortcutPortal = new GlobalShortcutPortal(this);
     }
@@ -629,6 +657,9 @@ void WindowsTrayController::unregisterHotkeys()
         m_nativeEventFilterInstalled = false;
     }
 #elif defined(MARK_SHOT_WITH_DBUS)
+    if (m_x11GlobalShortcut) {
+        m_x11GlobalShortcut->unregisterShortcuts();
+    }
     if (m_globalShortcutPortal) {
         m_globalShortcutPortal->unregisterShortcuts();
     }
