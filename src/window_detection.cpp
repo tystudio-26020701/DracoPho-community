@@ -352,6 +352,24 @@ std::optional<QRect> rectFromWindowObject(const QJsonObject &object)
     return QRect(*x, *y, *width, *height);
 }
 
+/// @brief Extracts the first present string value from a list of alternative keys.
+/// @param object The JSON object.
+/// @param keys List of key names to check in order.
+/// @return The string value if found, otherwise an empty string.
+QString namedStringValue(const QJsonObject &object, const QStringList &keys)
+{
+    for (const QString &key : keys) {
+        const QJsonValue value = object.value(key);
+        if (value.isString()) {
+            const QString text = value.toString().trimmed();
+            if (!text.isEmpty()) {
+                return text;
+            }
+        }
+    }
+    return {};
+}
+
 /// @brief Attempts to extract a WindowInfo from a JSON window object.
 /// @param object The JSON object representing a window's metadata.
 /// @return A WindowInfo if a geometry was successfully extracted, std::nullopt otherwise.
@@ -369,6 +387,22 @@ std::optional<WindowInfo> windowInfoFromWindowObject(const QJsonObject &object)
     if (zOrderValue.isDouble()) {
         info.zOrder = static_cast<int>(zOrderValue.toDouble());
     }
+
+    info.id = namedStringValue(object, {QStringLiteral("id"),
+                                        QStringLiteral("windowId"),
+                                        QStringLiteral("window_id")});
+    info.title = namedStringValue(object, {QStringLiteral("title"),
+                                           QStringLiteral("name")});
+    info.className = namedStringValue(object, {QStringLiteral("class"),
+                                               QStringLiteral("wmClass"),
+                                               QStringLiteral("app_id")});
+    info.instance = namedStringValue(object, {QStringLiteral("instance"),
+                                              QStringLiteral("wmInstance"),
+                                              QStringLiteral("app_name")});
+    info.monitor = namedStringValue(object, {QStringLiteral("monitor"),
+                                             QStringLiteral("output")});
+    info.workspace = namedStringValue(object, {QStringLiteral("workspace"),
+                                               QStringLiteral("desktop")});
 
     return info;
 }
