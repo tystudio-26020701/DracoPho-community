@@ -438,7 +438,7 @@ QString colorPaletteStyleSheet()
         "}");
 }
 
-QString textEditorStyleSheet(const QColor &color, const QColor &backgroundColor, int pointSize)
+QString textEditorStyleSheet(const QColor &color, const QColor &backgroundColor, qreal pointSize)
 {
     const QString foreground = QStringLiteral("rgba(%1, %2, %3, %4)")
                                    .arg(color.red())
@@ -466,7 +466,7 @@ QString textEditorStyleSheet(const QColor &color, const QColor &backgroundColor,
                "QTextEdit#textEditor QWidget { background: %2; }")
         .arg(foreground)
         .arg(background)
-        .arg(pointSize);
+        .arg(QString::number(pointSize, 'f', 1));
 }
 
 QString propertyColorButtonStyleSheet(const QColor &fillColor)

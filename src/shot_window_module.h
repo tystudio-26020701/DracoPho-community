@@ -58,6 +58,7 @@
 #include <QLayout>
 #include <QLineF>
 #include <QListWidget>
+#include <QDoubleValidator>
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
@@ -75,7 +76,6 @@
 #include <QShowEvent>
 #include <QSignalBlocker>
 #include <QSlider>
-#include <QSpinBox>
 #include <QStandardPaths>
 #include <QStyle>
 #include <QTemporaryFile>

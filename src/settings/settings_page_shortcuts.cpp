@@ -6,6 +6,7 @@
 #include <QFormLayout>
 #include <QFrame>
 #include <QKeySequenceEdit>
+#include <QToolTip>
 #include <QVBoxLayout>
 
 namespace markshot::settings {
@@ -131,6 +132,8 @@ SettingsPageShortcuts::SettingsPageShortcuts(QWidget *parent)
     m_startupVideoRecorder = addShortcutRow(startupForm, MS_TR("Video Recording"));
     layout->addWidget(startupCard);
     layout->addStretch();
+
+    connectShortcutConflictChecks();
 }
 
 void SettingsPageShortcuts::setConfig(const SettingsConfig &config)
@@ -200,6 +203,58 @@ void SettingsPageShortcuts::addActionShortcutRows(QFormLayout *form)
 
     for (ShotWindow::Action action : shortcutActions()) {
         m_actionEdits[shortcut::actionIndex(action)] = addShortcutRow(form, actionLabel(action));
+    }
+}
+
+QList<QKeySequenceEdit *> SettingsPageShortcuts::allShortcutEdits() const
+{
+    QList<QKeySequenceEdit *> edits;
+    for (QKeySequenceEdit *edit : m_toolEdits) {
+        if (edit) {
+            edits.append(edit);
+        }
+    }
+    for (QKeySequenceEdit *edit : m_actionEdits) {
+        if (edit) {
+            edits.append(edit);
+        }
+    }
+    for (QKeySequenceEdit *edit : {m_startupColorPicker,
+                                   m_startupRuler,
+                                   m_startupCodeScanner,
+                                   m_startupDisplayCapture,
+                                   m_startupGifRecorder,
+                                   m_startupVideoRecorder}) {
+        if (edit) {
+            edits.append(edit);
+        }
+    }
+    return edits;
+}
+
+void SettingsPageShortcuts::connectShortcutConflictChecks()
+{
+    const QList<QKeySequenceEdit *> edits = allShortcutEdits();
+    for (QKeySequenceEdit *edit : edits) {
+        connect(edit, &QKeySequenceEdit::keySequenceChanged, this, [this, edits, edit] {
+            const QKeySequence current = edit->keySequence();
+            if (current.isEmpty()) {
+                return;
+            }
+            for (QKeySequenceEdit *other : edits) {
+                if (other == edit || other->keySequence().isEmpty()) {
+                    continue;
+                }
+                if (other->keySequence() == current) {
+                    edit->setToolTip(MS_TR("This shortcut is already assigned to another action."));
+                    QToolTip::showText(edit->mapToGlobal(edit->rect().bottomLeft()),
+                                       MS_TR("This shortcut is already assigned to another action."),
+                                       edit);
+                    return;
+                }
+            }
+            edit->setToolTip({});
+        });
     }
 }
 

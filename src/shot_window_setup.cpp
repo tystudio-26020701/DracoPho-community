@@ -407,17 +407,18 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     });
     fontPanelLayout->addWidget(m_propertyFontList);
 
-    // 字号精确输入（最终渲染点大小 = 19 + 文本宽度偏移）
-    m_propertyFontSizeSpin = new QSpinBox(m_propertyFontPanel);
-    m_propertyFontSizeSpin->setRange(20, 300);
-    m_propertyFontSizeSpin->setSingleStep(1);
-    m_propertyFontSizeSpin->setSuffix(QStringLiteral(" pt"));
-    m_propertyFontSizeSpin->setFocusPolicy(Qt::NoFocus);
-    m_propertyFontSizeSpin->setToolTip(MS_TR("Text font size in points"));
-    connect(m_propertyFontSizeSpin, &QSpinBox::valueChanged, this, [this](int value) {
-        setSelectedTextFontSize(value);
+    // 字号精确输入（最终渲染点大小 = 19 + 文本宽度偏移），支持浮点数
+    m_propertyFontSizeEdit = new QLineEdit(m_propertyFontPanel);
+    m_propertyFontSizeEdit->setAlignment(Qt::AlignCenter);
+    m_propertyFontSizeEdit->setPlaceholderText(QStringLiteral("20"));
+    m_propertyFontSizeEdit->setToolTip(MS_TR("Text font size in points"));
+    auto *fontSizeValidator = new QDoubleValidator(20.0, 300.0, 1, m_propertyFontSizeEdit);
+    fontSizeValidator->setNotation(QDoubleValidator::StandardNotation);
+    m_propertyFontSizeEdit->setValidator(fontSizeValidator);
+    connect(m_propertyFontSizeEdit, &QLineEdit::editingFinished, this, [this] {
+        applyTextFontSizeFromEdit();
     });
-    fontPanelLayout->addWidget(m_propertyFontSizeSpin);
+    fontPanelLayout->addWidget(m_propertyFontSizeEdit);
 
     auto *fontStyleLayout = new QHBoxLayout;
     fontStyleLayout->setContentsMargins(0, 4, 0, 0);
@@ -692,7 +693,9 @@ void ShotWindow::initializeWindowDetection(QVector<markshot::WindowInfo> windowI
 #if defined(Q_OS_WIN)
         windowInfos = markshot::windows::enumerateWindowInfos();
 #else
-        windowInfos = enumerateX11WindowInfos();
+        // 交互式覆盖层只需要几何与 z 序做吸附/高亮，跳过 title/class 的
+        // 额外 X11 属性往返。
+        windowInfos = enumerateX11WindowInfos(false);
 #endif
     }
     for (const markshot::WindowInfo &info : std::as_const(windowInfos)) {

@@ -108,9 +108,10 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         }
         break;
     case Tool::Text: {
-        QFont font = markshot::theme::textFont(qRound((19.0 + annotation.width) * scale),
+        QFont font = markshot::theme::textFont(0,
                                                annotation.fontWeight,
                                                annotation.fontFamily);
+        font.setPointSizeF(textFontSizeForWidth(annotation.width) * scale);
         font.setItalic(annotation.textItalic);
         QRectF backgroundRect = textContentRect(annotation, widgetCoordinates);
         QRectF textRect = backgroundRect.adjusted(kTextBackgroundPaddingX * scale,
@@ -572,10 +573,11 @@ void ShotWindow::beginTextAnnotation(QPointF imagePoint)
     m_textEditorImagePoint = imagePoint;
     m_draft.reset();
     m_textEditor->clear();
-    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, qRound(20.0 + m_textSize)));
-    QFont editorFont = markshot::theme::textFont(qRound(20.0 + m_textSize),
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, textEditorFontSizeForWidth(m_textSize)));
+    QFont editorFont = markshot::theme::textFont(0,
                                                  m_textWeight,
                                                  m_textFontFamily);
+    editorFont.setPointSizeF(textEditorFontSizeForWidth(m_textSize));
     editorFont.setItalic(m_textItalic);
     m_textEditor->setFont(editorFont);
     m_textEditor->show();
@@ -600,10 +602,11 @@ void ShotWindow::beginEditingSelectedTextAnnotation()
     m_textEditorImagePoint = annotation->rect.normalized().topLeft();
     m_draft.reset();
     m_textEditor->setPlainText(annotation->text);
-    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(annotation->color, annotation->backgroundColor, qRound(20.0 + annotation->width)));
-    QFont editorFont = markshot::theme::textFont(qRound(20.0 + annotation->width),
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(annotation->color, annotation->backgroundColor, textEditorFontSizeForWidth(annotation->width)));
+    QFont editorFont = markshot::theme::textFont(0,
                                                  annotation->fontWeight,
                                                  annotation->fontFamily);
+    editorFont.setPointSizeF(textEditorFontSizeForWidth(annotation->width));
     editorFont.setItalic(annotation->textItalic);
     m_textEditor->setFont(editorFont);
     if (m_annotationPropertyPanel) {

@@ -530,7 +530,7 @@ void ShotWindow::applyPropertyColor(QColor color)
                 editorItalic = annotation->textItalic;
             }
         }
-        m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(editorColor, editorBackgroundColor, qRound(20.0 + editorWidth)));
+        m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(editorColor, editorBackgroundColor, textEditorFontSizeForWidth(editorWidth)));
         QFont editorFont = m_textEditor->font();
         editorFont.setWeight(editorWeight);
         editorFont.setItalic(editorItalic);
@@ -600,21 +600,42 @@ void ShotWindow::setSelectedTextFontFamily(const QString &fontFamily)
     persistAnnotationState();
 }
 
-void ShotWindow::setSelectedTextFontSize(int pointSize)
+void ShotWindow::applyTextFontSizeFromEdit()
 {
-    // Rendered font size = 19 + annotation.width, so the spin box value maps
-    // directly to the final output size. The minimum width of 1.0 therefore
-    // corresponds to 20 pt; anything smaller is not representable.
-    pointSize = std::clamp(pointSize, 20, 300);
-    if (m_propertyFontSizeSpin) {
-        const QSignalBlocker blocker(m_propertyFontSizeSpin);
-        m_propertyFontSizeSpin->setValue(pointSize);
+    if (!m_propertyFontSizeEdit) {
+        return;
     }
-    const qreal targetWidth = static_cast<qreal>(pointSize) - 19.0;
+    bool ok = false;
+    const qreal value = m_propertyFontSizeEdit->text().toDouble(&ok);
+    if (!ok || value <= 0.0) {
+        const qreal fallback = m_selectedAnnotationId.has_value()
+            ? [this]() {
+                  const Annotation *annotation = annotationById(*m_selectedAnnotationId);
+                  return annotation ? textFontSizeForWidth(annotation->width)
+                                    : textFontSizeForWidth(currentToolWidth());
+              }()
+            : textFontSizeForWidth(currentToolWidth());
+        const QSignalBlocker blocker(m_propertyFontSizeEdit);
+        m_propertyFontSizeEdit->setText(QString::number(fallback, 'f', 1));
+        return;
+    }
+    setSelectedTextFontSize(value);
+}
+
+void ShotWindow::setSelectedTextFontSize(qreal pointSize)
+{
+    // 渲染字号 = textFontSizeForWidth(annotation.width)，输入框数值直接对应
+    // 最终输出大小。宽度下限 1.0 对应 20 pt，更小不可表示。
+    pointSize = std::clamp(pointSize, 20.0, 300.0);
+    if (m_propertyFontSizeEdit) {
+        const QSignalBlocker blocker(m_propertyFontSizeEdit);
+        m_propertyFontSizeEdit->setText(QString::number(pointSize, 'f', 1));
+    }
+    const qreal targetWidth = textWidthForFontSize(pointSize);
     setSelectedAnnotationWidth(qRound(targetWidth));
     if (m_textEditor && m_textEditor->isVisible()) {
         QFont font = m_textEditor->font();
-        font.setPointSize(pointSize);
+        font.setPointSizeF(pointSize);
         m_textEditor->setFont(font);
     }
     update();
