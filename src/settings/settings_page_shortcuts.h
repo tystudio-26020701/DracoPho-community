@@ -2,13 +2,13 @@
 
 #include "settings/settings_config.h"
 
+#include <QList>
 #include <QWidget>
 
 #include <array>
 
 class QFormLayout;
 class QKeySequenceEdit;
-
 namespace markshot::settings {
 
 class SettingsPageShortcuts final : public QWidget {
@@ -33,6 +33,14 @@ private:
     /// @brief 初始化动作快捷键输入项。
     /// @param form 目标表单布局。
     void addActionShortcutRows(QFormLayout *form);
+
+    /// @brief 连接所有快捷键输入项的冲突检测。
+    /// @return 无返回值。
+    void connectShortcutConflictChecks();
+
+    /// @brief 收集页面内所有快捷键输入控件。
+    /// @return 快捷键输入控件列表。
+    QList<QKeySequenceEdit *> allShortcutEdits() const;
 
     std::array<QKeySequenceEdit *, static_cast<int>(ShotWindow::Tool::Laser) + 1> m_toolEdits = {};
     std::array<QKeySequenceEdit *, static_cast<int>(ShotWindow::Action::Cancel) + 1> m_actionEdits = {};

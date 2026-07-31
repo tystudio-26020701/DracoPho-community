@@ -65,7 +65,7 @@ QString colorPaletteStyleSheet();
 
 // Stylesheet for the inline text annotation editor. The foreground,
 // background, and point size depend on the active annotation.
-QString textEditorStyleSheet(const QColor &color, const QColor &backgroundColor, int pointSize);
+QString textEditorStyleSheet(const QColor &color, const QColor &backgroundColor, qreal pointSize);
 
 // Stylesheet for the small color preview button inside the property panel.
 // The button is filled with the annotation color, so the rule has to be

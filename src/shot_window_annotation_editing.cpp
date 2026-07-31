@@ -55,7 +55,7 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
             m_annotationDrag == SelectionDrag::BottomRight ||
             m_annotationDrag == SelectionDrag::TopRight ||
             m_annotationDrag == SelectionDrag::BottomLeft) {
-            annotation.width = std::clamp((19.0 + annotation.width) * scaleFactor - 19.0, 1.0, 1000.0);
+            annotation.width = std::clamp(textWidthForFontSize(textFontSizeForWidth(annotation.width) * scaleFactor), 1.0, 1000.0);
             if (!annotation.points.isEmpty()) {
                 annotation.points[0] = annotation.rect.topLeft();
             }
@@ -406,7 +406,7 @@ void ShotWindow::setCurrentColor(QColor color)
         m_colorPalette->hide();
     }
     if (m_textEditor && m_textEditor->isVisible() && !m_editingTextAnnotationId.has_value()) {
-        m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, qRound(20.0 + m_textSize)));
+        m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, textEditorFontSizeForWidth(m_textSize)));
     }
     updateColorPalettePreview();
     updateAnnotationPropertyPanel();

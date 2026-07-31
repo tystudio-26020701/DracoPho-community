@@ -40,6 +40,30 @@ inline constexpr int kCodeScanTimeoutMs = 15000;
 inline constexpr int kUploadTimeoutMs = 60000;
 inline constexpr qreal kTextBackgroundPaddingX = 6.0;
 inline constexpr qreal kTextBackgroundPaddingY = 4.0;
+
+/// @brief 文本标注的"字号↔宽度"换算：最终渲染字号 = 19.0 + annotation.width。
+/// @param annotationWidth 标注宽度。
+/// @return 渲染字号（点）。
+inline qreal textFontSizeForWidth(qreal annotationWidth)
+{
+    return 19.0 + annotationWidth;
+}
+
+/// @brief 由渲染字号反推标注宽度。
+/// @param fontSize 渲染字号（点）。
+/// @return 标注宽度。
+inline qreal textWidthForFontSize(qreal fontSize)
+{
+    return fontSize - 19.0;
+}
+
+/// @brief 文本编辑器的"字号↔宽度"换算（编辑器基线比渲染字号大一档）。
+/// @param annotationWidth 标注宽度。
+/// @return 编辑器字号（点）。
+inline qreal textEditorFontSizeForWidth(qreal annotationWidth)
+{
+    return 20.0 + annotationWidth;
+}
 inline constexpr qreal kMinImageZoom = 0.25;
 inline constexpr qreal kMaxImageZoom = 64.0;
 inline constexpr qint64 kCtrlDoubleTapMs = 360;

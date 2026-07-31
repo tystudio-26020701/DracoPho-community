@@ -13,9 +13,10 @@ QRectF ShotWindow::textContentRect(const Annotation &annotation, bool widgetCoor
     const QPointF topLeft = widgetCoordinates ? imageToWidget(baseRect.topLeft()) : baseRect.topLeft();
     const qreal wrapWidth = std::max<qreal>(16.0, baseRect.width() * scale - kTextBackgroundPaddingX * 2.0 * scale);
 
-    QFont font = markshot::theme::textFont(qRound((19.0 + annotation.width) * scale),
+    QFont font = markshot::theme::textFont(0,
                                            annotation.fontWeight,
                                            annotation.fontFamily);
+    font.setPointSizeF(textFontSizeForWidth(annotation.width) * scale);
     font.setItalic(annotation.textItalic);
     QTextOption option;
     option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
@@ -598,29 +599,37 @@ void ShotWindow::updateAnnotationPropertyPanel()
         const QSignalBlocker blocker(m_propertyMagnifierShapeButton);
         m_propertyMagnifierShapeButton->setChecked(panelShape == MagnifierShape::Rectangle);
     }
+    const bool isTextPanel = !groupSelection && panelTool == Tool::Text;
     if (m_propertyWidthLabel) {
-        m_propertyWidthLabel->setText(QString::number(qRound(panelWidth)));
+        m_propertyWidthLabel->setVisible(!isTextPanel);
+        if (!isTextPanel) {
+            m_propertyWidthLabel->setText(QString::number(qRound(panelWidth)));
+        }
     }
     if (m_propertyWidthSlider) {
         const QSignalBlocker blocker(m_propertyWidthSlider);
-        if (panelTool == Tool::Mosaic) {
+        m_propertyWidthSlider->setVisible(!isTextPanel);
+        if (isTextPanel) {
+            m_propertyWidthSlider->setRange(1, 1000);
+            m_propertyWidthSlider->setValue(qRound(panelWidth));
+        } else if (panelTool == Tool::Mosaic) {
             m_propertyWidthSlider->setRange(qRound(kMinMosaicBlockSize), qRound(kMaxMosaicBlockSize));
+            m_propertyWidthSlider->setValue(qRound(panelWidth));
         } else if (panelTool == Tool::Number) {
             m_propertyWidthSlider->setRange(qRound(kMinNumberWidth), qRound(kMaxNumberWidth));
-        } else if (panelTool == Tool::Text) {
-            m_propertyWidthSlider->setRange(1, 1000);
+            m_propertyWidthSlider->setValue(qRound(panelWidth));
         } else if (panelTool == Tool::Highlighter) {
             m_propertyWidthSlider->setRange(qRound(kMinStrokeWidth), qRound(kMaxHighlighterWidth));
+            m_propertyWidthSlider->setValue(qRound(panelWidth));
         } else {
             m_propertyWidthSlider->setRange(qRound(kMinStrokeWidth), qRound(kMaxStrokeWidth));
+            m_propertyWidthSlider->setValue(qRound(panelWidth));
         }
-        m_propertyWidthSlider->setValue(qRound(panelWidth));
     }
-    const bool isTextPanel = !groupSelection && panelTool == Tool::Text;
-    if (m_propertyFontSizeSpin) {
-        const QSignalBlocker blocker(m_propertyFontSizeSpin);
-        m_propertyFontSizeSpin->setVisible(isTextPanel);
-        m_propertyFontSizeSpin->setValue(qRound(19.0 + panelWidth));
+    if (m_propertyFontSizeEdit) {
+        const QSignalBlocker blocker(m_propertyFontSizeEdit);
+        m_propertyFontSizeEdit->setVisible(isTextPanel);
+        m_propertyFontSizeEdit->setText(QString::number(textFontSizeForWidth(panelWidth), 'f', 1));
     }
     if (m_propertyFontBoldButton) {
         const QSignalBlocker blocker(m_propertyFontBoldButton);
@@ -747,7 +756,9 @@ void ShotWindow::updatePropertyFontPanelGeometry()
 
     const int visibleRows = std::min(10, m_propertyFontList ? std::max(1, m_propertyFontList->count()) : 1);
     const int rowHeight = m_propertyFontList ? std::max(24, m_propertyFontList->sizeHintForRow(0)) : 28;
-    QSize panelSize(260, std::min(280, visibleRows * rowHeight + 18));
+    // 额外为字号输入框与粗体/斜体按钮行预留高度。
+    const int extraRowsHeight = 76;
+    QSize panelSize(260, std::min(360, visibleRows * rowHeight + extraRowsHeight));
     panelSize.setWidth(std::min(panelSize.width(), std::max(180, width() - 16)));
     panelSize.setHeight(std::min(panelSize.height(), std::max(120, height() - 16)));
 
@@ -762,7 +773,7 @@ void ShotWindow::updatePropertyFontPanelGeometry()
     x = std::clamp(x, 8, std::max(8, width() - panelSize.width() - 8));
     y = std::clamp(y, 8, std::max(8, height() - panelSize.height() - 8));
     if (m_propertyFontList) {
-        m_propertyFontList->setFixedHeight(std::max(80, panelSize.height() - 16));
+        m_propertyFontList->setFixedHeight(std::max(80, panelSize.height() - extraRowsHeight));
     }
     m_propertyFontPanel->setFixedSize(panelSize);
     m_propertyFontPanel->setGeometry(x, y, panelSize.width(), panelSize.height());

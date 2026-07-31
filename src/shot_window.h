@@ -19,8 +19,8 @@
 #include "ui/theme.h"
 #include "window_detection.h"
 
+class QLineEdit;
 class QListWidget;
-class QSpinBox;
 class QToolButton;
 
 #include <array>
@@ -503,7 +503,8 @@ private:
     void setSelectedMagnifierShape(MagnifierShape shape);
     void toggleMagnifierShape();
     void setSelectedTextFontFamily(const QString &fontFamily);
-    void setSelectedTextFontSize(int pointSize);
+    void setSelectedTextFontSize(qreal pointSize);
+    void applyTextFontSizeFromEdit();
     void setSelectedTextBold(bool bold);
     void setSelectedTextItalic(bool italic);
     void applyPropertyColor(QColor color);
@@ -708,7 +709,7 @@ private:
     QPushButton *m_propertyFontButton = nullptr;
     QWidget *m_propertyFontPanel = nullptr;
     QListWidget *m_propertyFontList = nullptr;
-    QSpinBox *m_propertyFontSizeSpin = nullptr;
+    QLineEdit *m_propertyFontSizeEdit = nullptr;
     QToolButton *m_propertyFontBoldButton = nullptr;
     QToolButton *m_propertyFontItalicButton = nullptr;
     QPushButton *m_propertyEditTextButton = nullptr;
