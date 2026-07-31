@@ -278,6 +278,126 @@ mark-shot --list-displays
 All headless options are mutually exclusive with a positional image file.
 See the README for the full argument table.
 
+### 7.1 Headless window / component capture
+
+Mark Shot can capture **specific windows — or a component (sub-region) inside
+a window — without opening any UI**, from a script, a build pipeline, or an
+agent. The process exits as soon as the images are written or returned, and it
+never creates a window, never pops a dialog, and never steals focus, so the
+user can keep working while a tool captures the desktop.
+
+First list the windows to see what is available:
+
+```bash
+mark-shot --list-windows
+```
+
+Example output (GNOME Wayland):
+
+```json
+{"count":2,"platform":"wayland","source":"compositor-script","windows":[
+  {"index":0,"id":"0x3c00007","title":"Mark Shot - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
+  {"index":1,"title":"Terminal","class":"org.gnome.Terminal","x":67,"y":32,"width":800,"height":600}
+]}
+```
+
+Each entry carries the fields that selectors match against: `index`, `id`
+(X11 window id / backend-provided id), `title`, `class` and `instance`, plus
+`x`/`y`/`width`/`height` and an optional `zOrder`.
+
+#### 7.1.1 Selecting windows (single or multiple)
+
+`--window` can be repeated to capture **any number of windows in one call**.
+Each selector is interpreted automatically (`--window-by auto`):
+
+| Selector value            | Matches                                             |
+| :---                      | :---                                                |
+| `0`, `1`, …               | list `index`                                        |
+| `0x3c00007`               | window `id`                                         |
+| `VSCodium`                | `class` or `instance`, then `title` (exact, then substring) |
+| `Mark Shot - VSCodium`    | `title`                                             |
+
+Force one matching rule with `--window-by id|title|class|index`. A selector
+that matches several windows captures **all of them**.
+
+Capture a component (a sub-region inside a window) by appending
+`@x,y,width,height` to the selector — the offset is relative to the window's
+top-left corner and is clamped to the window bounds:
+
+```bash
+# the top 100px strip of window 0
+mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
+```
+
+#### 7.1.2 Choosing where the images go
+
+`--capture-destination` decides the output; it may be combined with any number
+of `--window` selectors and a component sub-region:
+
+| Destination | Behaviour |
+| :--- | :--- |
+| `inline` (default) | Base64 PNGs embedded in the JSON output. **No files are written and the clipboard is never touched.** The safest choice for agents that only want the pixels. |
+| `file` | PNG files written to `--capture-to <directory>`; requires that option. |
+| `stage` | PNG files written to a temporary staging directory (`$TMPDIR/mark-shot-staging`). Good for a "keep for later" workflow. |
+| `clipboard` | Images copied to the system clipboard; with several images the **last one wins**. The content survives the CLI exiting (a persistent `wl-copy` / `xclip` owner is spawned). |
+
+Examples:
+
+```bash
+# several windows, saved to a directory (one PNG per window)
+mark-shot --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
+
+# a window plus a component of another window, staged for later
+mark-shot --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
+
+# multi-select, returned as base64 without touching files or clipboard
+mark-shot --window 0 --window "Terminal" --capture-destination inline
+
+# copy a window to the clipboard
+mark-shot --window 0 --capture-destination clipboard
+```
+
+**Clipboard policy.** The interactive editor deliberately places your selection
+on the system clipboard (the `Copy` action / `Ctrl+C`), because that is the
+primary workflow of a screenshot tool. Headless modes (the CLI and the
+enterprise MCP server) follow the opposite rule: **the clipboard is never
+modified unless `clipboard` is explicitly chosen as the destination** —
+`inline` (default) and `stage` leave the user's current clipboard content
+untouched, so a scheduled or agent-driven capture cannot overwrite text or
+images the user is working with elsewhere.
+
+Output is a JSON object `{"captures":[...]}` with one entry per captured
+window; every entry repeats the selector, the window identity and the final
+capture rectangle, plus a `path` (file/stage) or `data` (inline) or neither
+(clipboard). The exit code is `0` only when every selector matched and every
+capture succeeded; a missing match or a failed capture yields exit code `1`
+with an `"error"` field instead of a silent success.
+
+The same capture pipeline can produce annotated output programmatically — see
+the enterprise edition's MCP server chapter, or combine the saved PNG with the
+interactive editor. 
+
+#### 7.1.3 No-window interference guarantee
+
+Every headless mode is guaranteed to be invisible and non-disruptive:
+
+- **no window is ever created** — including the annotation editor, the capture
+  overlay, and the tray; the capture reuses the headless capture path;
+- **no dialog is ever shown** — including error dialogs: errors go to stderr;
+  even malformed command lines (for example `--window-by` without `--window`,
+  an unknown `--capture-destination`, or extra positional files) exit
+  immediately with a non-zero code and a stderr message instead of popping a
+  `QMessageBox` or falling through to the interactive UI;
+- no interactive portal prompt appears (`allowInteractivePortal` is disabled);
+- the process exits immediately after writing the output;
+- the window list captured before and after a headless operation is identical;
+- `--capture-destination inline` additionally guarantees the system clipboard
+  is left untouched.
+
+If no windows are detected (for example a compositor helper that is disabled,
+or an X11 session without window enumeration), the command prints a clear
+error on stderr and exits with code `1` instead of silently capturing nothing.
+
 ---
 
 ## 8. Desktop Hotkeys & Tray
@@ -331,8 +451,13 @@ Use this to verify a build end-to-end:
 6. **Startup tools** — `C` color picker, `R` ruler, `Q` code scan, `D` display
    capture.
 7. **Headless** — `--capture-to`, `--region`, `--display`, `--list-displays`.
-8. **Tray + hotkey** — `mark-shot --tray`, press `Ctrl+Alt+S`.
-9. **Portable specifics** — bundle finds its own Qt libs/plugins/scripts.
+8. **Headless window capture** — `--list-windows` lists the desktop; repeat
+   `--window` to capture several windows; test `--capture-destination` in all
+   four modes (inline, file, stage, clipboard); verify a component selector
+   (`--window "0@0,0,400,300"`); confirm the window list before and after is
+   unchanged (no-window interference).
+9. **Tray + hotkey** — `mark-shot --tray`, press `Ctrl+Alt+S`.
+10. **Portable specifics** — bundle finds its own Qt libs/plugins/scripts.
 
 ---
 
