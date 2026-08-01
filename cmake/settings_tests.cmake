@@ -13,3 +13,19 @@ target_link_libraries(mark-shot-provider-preference-config-test
         Qt6::Test
 )
 add_test(NAME provider-preference-config COMMAND mark-shot-provider-preference-config-test)
+
+qt_add_executable(mark-shot-headless-capture-config-test
+    tests/headless_capture_config_test.cpp
+    src/headless_capture_config.cpp
+    src/headless_capture_config.h
+    src/config_value.cpp
+    src/config_value.h
+)
+target_include_directories(mark-shot-headless-capture-config-test PRIVATE src)
+target_link_libraries(mark-shot-headless-capture-config-test
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+add_test(NAME headless-capture-config COMMAND mark-shot-headless-capture-config-test)

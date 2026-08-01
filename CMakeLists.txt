@@ -114,6 +114,8 @@ qt_add_executable(mark-shot
     src/debug_log.h
     src/export_image_effect.cpp
     src/export_image_effect.h
+    src/headless_capture_config.cpp
+    src/headless_capture_config.h
     src/config_value.cpp
     src/config_value.h
     src/toolbar_appearance_config.cpp

@@ -3,6 +3,7 @@
 #include "capture_freeze_scope.h"
 #include "clipboard_image_config.h"
 #include "export_image_effect.h"
+#include "headless_capture_config.h"
 #include "shortcut_config.h"
 #include "shot_window.h"
 #include "ui/interface_language_config.h"
@@ -78,6 +79,8 @@ struct StorageSettings {
     ClipboardImageMode clipboardImageMode = ClipboardImageMode::ImagePng;
     int clipboardThresholdM = 4;
     ExportImageEffectConfig exportImageEffect;
+    HeadlessCaptureDestination headlessDefaultDestination = HeadlessCaptureDestination::Inline;
+    bool headlessClipboardAllowed = false;
 };
 
 struct ScrollSettings {
@@ -136,6 +139,11 @@ SettingsConfig readSettingsConfig(QString *error = nullptr);
 /// @param error 保存失败时输出错误信息。
 /// @return 保存成功返回 true，否则返回 false。
 bool writeSettingsConfig(const SettingsConfig &config, QString *error = nullptr);
+
+/// @brief 将应用配置还原为出厂默认值。
+/// @param error 还原失败时输出错误信息。
+/// @return 还原成功返回 true，否则返回 false。
+bool resetSettingsToDefaults(QString *error = nullptr);
 
 /// @brief 返回工具枚举的规范配置名称。
 /// @param tool 标注工具。
