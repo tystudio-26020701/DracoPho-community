@@ -1,5 +1,19 @@
 # Release Notes
 
+### 26.8.1.0
+
+- **Multilingual Interface**: The interface now supports 12 languages — English, Simplified/Traditional Chinese, Japanese, Korean, Russian, Italian, Arabic (with right-to-left layout), French, German, Spanish and Portuguese. It follows the system locale or the `MARK_SHOT_LANG` environment variable, and can be switched instantly from Settings → General.
+- **Live Language Switching**: Changing the interface language in Settings re-translates the window immediately; no restart is required.
+- **Unsaved-Changes Protection**: Settings categories show an unsaved-changes indicator, the footer and title warn about pending edits, and closing asks to Save and Close / Discard and Close / Keep Editing (Escape included).
+- **About Page**: A new About entry below Advanced shows the company logo, version, open-source links and acknowledgment of the original upstream project and its contributors.
+- **Settings Scroll Guard**: Scrolling with the mouse wheel over combo boxes, spin boxes and sliders in Settings now scrolls the page instead of mutating values; focused controls keep wheel adjustment.
+- **Headless Capture Settings**: The Storage page controls the default headless capture destination (inline base64 or staged temporary files) and gates clipboard writes behind a passphrase confirmation, off by default.
+- **Per-Section Restore**: Every Settings section and page has a Restore button that reverts to the last saved configuration; the Advanced page also offers a confirmed factory reset.
+- **Shortcut Input Safeguards**: Shortcut fields reject modifier-only and dangerous keys, global hotkeys require a modifier or function key, and duplicate shortcuts are flagged across the page.
+- **Precise Wheel Scrolling in Settings**: High-resolution mice and trackpads now scroll proportionally (fractional deltas accumulate like native Qt), and Ctrl/Shift + wheel scrolls by page.
+- **X11 Global Shortcut Layout Robustness**: Global hotkeys resolve Alt/Super/NumLock masks from the live keyboard map (fixes swapped Alt/Super layouts) and re-grab after mapping changes; F25-F35 function keys are now supported.
+- **User Guide in 12 Languages**: The operation manual is now available in all supported languages.
+
 ### 0.1.41
 
 - **Windows Build Compatibility**: PipeWire SPA buffer helpers and their dedicated tests now compile only on Linux, restoring Windows builds and release packages while preserving Linux PipeWire capture behavior.

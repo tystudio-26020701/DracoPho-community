@@ -12,7 +12,7 @@ QString qtKeyToShortcutKeyName(int key)
         const QChar digit(QLatin1Char(static_cast<char>('0' + key - Qt::Key_0)));
         return QString(digit);
     }
-    if (key >= Qt::Key_F1 && key <= Qt::Key_F24) {
+    if (key >= Qt::Key_F1 && key <= Qt::Key_F35) {
         return QStringLiteral("F%1").arg(key - Qt::Key_F1 + 1);
     }
 

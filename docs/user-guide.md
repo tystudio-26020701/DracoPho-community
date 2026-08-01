@@ -381,7 +381,7 @@ with an `"error"` field instead of a silent success.
 
 The same capture pipeline can produce annotated output programmatically — see
 the enterprise edition's MCP server chapter, or combine the saved PNG with the
-interactive editor. 
+interactive editor.
 
 #### 7.1.3 No-window interference guarantee
 

@@ -1,5 +1,32 @@
 # Changelog
 
+## 26.8.1.0 - 2026-08-01
+
+### Features & Enhancements
+
+- **Multilingual Interface**: Added Simplified/Traditional Chinese, Japanese, Korean, Russian, Italian, Arabic (right-to-left layout), French, German, Spanish and Portuguese alongside English. The language follows the system locale or the `MARK_SHOT_LANG` environment variable and can be changed instantly from Settings → General.
+- **Live Language Switching**: Changing the interface language in Settings rebuilds the window immediately without restarting.
+- **Unsaved-Changes Protection**: Settings pages now mark categories with an unsaved-changes indicator, show a warning in the footer and window title, and ask before closing (Save and Close / Discard and Close / Keep Editing), including the Escape key path.
+- **About Page**: Added an About entry below Advanced in Settings, showing the company logo, version, the open-source community edition links, and acknowledgment of the original upstream project and its contributors.
+- **Settings Scroll Guard**: Hover-scrolling over combo boxes, spin boxes and sliders in Settings no longer mutates their values; the page scrolls instead. Focused controls keep wheel adjustment.
+- **Headless Capture Settings**: The Storage page now controls where headless window captures go (inline base64 or staged temporary files) and gates clipboard writes behind a passphrase confirmation, off by default.
+- **Per-Section Restore**: Every Settings section and page has a Restore button that reverts to the last saved configuration; the Advanced page also offers a confirmed factory reset.
+- **Shortcut Input Safeguards**: Shortcut fields reject modifier-only and dangerous keys, global hotkeys require a modifier or function key, and duplicate shortcuts are flagged across the page.
+- **Precise Wheel Scrolling in Settings**: The scroll guard now accumulates fractional wheel deltas across events (matching Qt's native accumulator), so high-resolution mice and trackpads scroll proportionally instead of truncating; Ctrl/Shift + wheel scrolls by page, and momentum phases reset cleanly.
+
+### Bug Fixes
+
+- **Window Scroll Tampering**: Unfocused numeric boxes, dropdowns and sliders in Settings were silently changed by mouse-wheel scrolling while navigating the page.
+- **Language Override Preservation**: Opening Settings no longer overrides the `MARK_SHOT_LANG` session override.
+- **Save-Failure Safety**: Choosing "Save and Close" no longer closes the window when saving fails, preventing data loss.
+- **Default Cancel Shortcut**: The default Escape cancel shortcut is no longer silently cleared when the settings are reloaded.
+- **X11 Global Shortcuts on Swapped-Modifier Layouts**: Alt/Super/NumLock masks are now resolved from the live X11 modifier map instead of assuming Alt=Mod1/Super=Mod4, so global hotkeys keep working with `altwin:swap_alt_win` and custom xmodmap layouts; hotkeys re-grab after keyboard mapping changes.
+- **F25-F35 Shortcut Keys**: Function-key shortcuts now support F25-F35 consistently across the settings UI, X11 keysym lookup and portal triggers.
+
+### Documentation
+
+- The user guide is now available in 12 languages (English, Simplified/Traditional Chinese, Japanese, Korean, Russian, Italian, Arabic, French, German, Spanish, Portuguese).
+
 ## 0.1.41 - 2026-07-16
 
 ### Bug Fixes

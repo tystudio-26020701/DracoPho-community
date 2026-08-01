@@ -63,9 +63,24 @@ private:
     };
 
 #if defined(Q_OS_LINUX) && defined(HAVE_XCB)
+    /// @brief 键盘映射变更（MappingNotify）后重新解析掩码并重新抓取。
+    /// @return 无返回值。
+    void remapShortcuts();
+
+    /// @brief 抓取单个快捷键的 4 种锁键变体。
+    /// @param entry 快捷键条目。
+    /// @return 全部抓取成功时返回 true。
+    bool grabShortcutVariants(const RegisteredShortcut &entry);
+
     Display *m_display = nullptr;
     xcb_connection_t *m_connection = nullptr;
     xcb_window_t m_rootWindow = 0;
+    /// @brief 按实际布局解析的 Alt 掩码。
+    unsigned int m_altMask = 0;
+    /// @brief 按实际布局解析的 Meta/Super 掩码。
+    unsigned int m_metaMask = 0;
+    /// @brief 按实际布局解析的 NumLock 掩码。
+    unsigned int m_numLockMask = 0;
 #endif
     QList<RegisteredShortcut> m_shortcuts;
     bool m_installed = false;

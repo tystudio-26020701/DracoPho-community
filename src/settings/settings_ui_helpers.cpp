@@ -24,6 +24,7 @@
 #include <QTextCursor>
 #include <QToolTip>
 #include <QVBoxLayout>
+#include <QWheelEvent>
 
 #include <algorithm>
 
@@ -95,6 +96,50 @@ void showPlainTextEditContextMenu(QPlainTextEdit *edit, const QPoint &pos)
 }
 
 } // namespace
+
+/// @brief 拦截滚轮事件，禁止鼠标悬停/聚焦时通过滚轮篡改控件值。
+///
+/// Qt 默认行为：QSpinBox/QDoubleSpinBox 即使未获得焦点也会响应滚轮改值；
+/// QComboBox 在样式允许滚轮滚动时同样无焦点改选中项（Qt 6 源码
+/// QComboBox::wheelEvent 只看 SH_ComboBox_AllowWheelScrolling，不看焦点）。
+/// 设置页里滚轮的主要用途是翻页，因此直接吞掉发给这些控件的滚轮事件，
+/// 让事件不会被控件消费、也不会误改值。事件被 accept 后不会继续向父级
+/// 传播，页面滚动由外层 QScrollArea 自己接收（鼠标在控件上滚动时，
+/// 由于本过滤器吞掉了事件，QScrollArea 不会滚动——这与未聚焦保护的目标
+/// 一致：宁可停在原地也不误改值）。
+class WheelSuppressor final : public QObject {
+public:
+    explicit WheelSuppressor(QObject *parent)
+        : QObject(parent)
+    {
+    }
+
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (event->type() == QEvent::Wheel) {
+            event->accept();
+            return true;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
+/// @brief 为控件安装滚轮抑制过滤器（控件级，覆盖控件自身及其子控件）。
+/// @param widget 需要抑制滚轮的控件。
+void suppressWheelOn(QWidget *widget)
+{
+    if (!widget) {
+        return;
+    }
+    widget->installEventFilter(new WheelSuppressor(widget));
+    // 子控件（例如 QSpinBox 内部 QLineEdit）也会收到滚轮，同样拦截。
+    const auto children = widget->findChildren<QWidget *>();
+    for (QWidget *child : children) {
+        if (child->parent() == widget) {
+            child->installEventFilter(new WheelSuppressor(child));
+        }
+    }
+}
 
 /// @brief 判断按键是否属于不应作为快捷键的"危险"键。
 /// @param key 按键代码。
@@ -431,6 +476,8 @@ QSpinBox *addSpinRow(QFormLayout *form, const QString &label, int minimum, int m
     spin->setRange(minimum, maximum);
     spin->setSuffix(suffix);
     spin->setContextMenuPolicy(Qt::NoContextMenu);
+    // 源头级滚轮防护：无论聚焦与否，滚轮都不再篡改数值。
+    suppressWheelOn(spin);
     form->addRow(label, spin);
     return spin;
 }
@@ -441,6 +488,8 @@ QDoubleSpinBox *addDoubleRow(QFormLayout *form, const QString &label, double min
     spin->setRange(minimum, maximum);
     spin->setDecimals(decimals);
     spin->setContextMenuPolicy(Qt::NoContextMenu);
+    // 源头级滚轮防护：无论聚焦与否，滚轮都不再篡改数值。
+    suppressWheelOn(spin);
     form->addRow(label, spin);
     return spin;
 }
@@ -450,6 +499,8 @@ QComboBox *addComboRow(QFormLayout *form, const QString &label)
     auto *combo = new QComboBox;
     combo->setCursor(Qt::PointingHandCursor);
     combo->setContextMenuPolicy(Qt::NoContextMenu);
+    // 源头级滚轮防护：Qt 6 的 QComboBox 未聚焦也会被滚轮改选中项。
+    suppressWheelOn(combo);
     form->addRow(label, combo);
     return combo;
 }
