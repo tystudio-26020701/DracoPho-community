@@ -31,12 +31,21 @@ SettingsPageCapture::SettingsPageCapture(QWidget *parent)
     m_hideOwnWindows = addSwitchRow(form,
                                     MS_TR("Hide Mark Shot Windows While Capturing"),
                                     MS_TR("Hide own windows from screenshots. Turn off to include them."));
+    addCardRestoreButton(captureCard, [this] {
+        m_includeCursor->setChecked(m_saved.capture.includeCursor);
+        const int index = m_freezeScope->findData(static_cast<int>(m_saved.capture.freezeScope));
+        m_freezeScope->setCurrentIndex(index >= 0 ? index : 0);
+        m_kdeKwinScreenshot->setChecked(m_saved.capture.kdeKwinScreenshotEnabled);
+        m_hideOwnWindows->setChecked(m_saved.capture.hideOwnWindows);
+    });
     layout->addWidget(captureCard);
+    addPageRestoreButton(layout, [this] { setConfig(m_saved); });
     layout->addStretch();
 }
 
 void SettingsPageCapture::setConfig(const SettingsConfig &config)
 {
+    m_saved = config;
     m_includeCursor->setChecked(config.capture.includeCursor);
     const int index = m_freezeScope->findData(static_cast<int>(config.capture.freezeScope));
     m_freezeScope->setCurrentIndex(index >= 0 ? index : 0);

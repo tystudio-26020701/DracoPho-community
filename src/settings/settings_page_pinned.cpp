@@ -46,6 +46,14 @@ SettingsPagePinned::SettingsPagePinned(QWidget *parent)
     });
     m_borderWidth = addDoubleRow(windowForm, MS_TR("Border Width"), 1.0, 12.0, 1);
     m_borderWidth->setSuffix(QStringLiteral(" px"));
+    addCardRestoreButton(windowCard, [this] {
+        m_alwaysOnTop->setChecked(m_saved.pinned.alwaysOnTop);
+        m_textSelectionCopy->setChecked(m_saved.pinned.textSelectionCopyEnabled);
+        m_borderEnabled->setChecked(m_saved.pinned.borderEnabled);
+        m_borderColorValue = m_saved.pinned.borderColor;
+        updateBorderColorButton();
+        m_borderWidth->setValue(m_saved.pinned.borderWidth);
+    });
     layout->addWidget(windowCard);
 
     QFrame *ocrCard = createSettingsCard(MS_TR("OCR and Translation"),
@@ -63,12 +71,25 @@ SettingsPagePinned::SettingsPagePinned(QWidget *parent)
     m_targetLanguage = addTextRow(ocrForm, MS_TR("Target Language"), MS_TR("Simplified Chinese"));
     m_translationCommand = addTextRow(ocrForm, MS_TR("Translation Command"), QStringLiteral("mark-shot-translate {input}"));
     m_translationTimeoutMs = addSpinRow(ocrForm, MS_TR("Translation Timeout"), 1000, 300000, QStringLiteral(" ms"));
+    addCardRestoreButton(ocrCard, [this] {
+        m_ocrEnabled->setChecked(m_saved.pinned.ocrEnabled);
+        m_autoOcr->setChecked(m_saved.pinned.autoOcr);
+        m_ocrBackend->setText(m_saved.pinned.ocrBackend);
+        m_ocrCommand->setText(m_saved.pinned.ocrCommand);
+        m_ocrTimeoutMs->setValue(m_saved.pinned.ocrTimeoutMs);
+        m_autoTranslate->setChecked(m_saved.pinned.autoTranslateAfterOcr);
+        m_targetLanguage->setText(m_saved.pinned.translationTargetLanguage);
+        m_translationCommand->setText(m_saved.pinned.translationCommand);
+        m_translationTimeoutMs->setValue(m_saved.pinned.translationTimeoutMs);
+    });
     layout->addWidget(ocrCard);
+    addPageRestoreButton(layout, [this] { setConfig(m_saved); });
     layout->addStretch();
 }
 
 void SettingsPagePinned::setConfig(const SettingsConfig &config)
 {
+    m_saved = config;
     m_alwaysOnTop->setChecked(config.pinned.alwaysOnTop);
     m_textSelectionCopy->setChecked(config.pinned.textSelectionCopyEnabled);
     m_borderEnabled->setChecked(config.pinned.borderEnabled);

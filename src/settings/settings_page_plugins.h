@@ -49,6 +49,7 @@ private:
     QPushButton *m_openUserDirectory = nullptr;
     QWidget *m_diagnosticsContainer = nullptr;
     QVBoxLayout *m_diagnosticsLayout = nullptr;
+    SettingsConfig m_saved;
 };
 
 }  // namespace markshot::settings

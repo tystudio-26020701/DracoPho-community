@@ -65,6 +65,13 @@ SettingsPageAnnotation::SettingsPageAnnotation(QWidget *parent)
         m_defaultColor = selected;
         updateColorButton();
     });
+    addCardRestoreButton(defaultsCard, [this] {
+        setToolComboValue(m_normalTool, m_saved.annotation.normalTool);
+        setToolComboValue(m_fullscreenTool, m_saved.annotation.fullscreenTool);
+        setToolComboValue(m_fileTool, m_saved.annotation.fileTool);
+        m_defaultColor = m_saved.annotation.defaultColor;
+        updateColorButton();
+    });
     layout->addWidget(defaultsCard);
 
     QFrame *toolbarCard = createSettingsCard(MS_TR("Toolbar Appearance"),
@@ -73,12 +80,18 @@ SettingsPageAnnotation::SettingsPageAnnotation(QWidget *parent)
     QFormLayout *toolbarForm = settingsCardForm(toolbarCard);
     m_toolbarIconSize = addSpinRow(toolbarForm, MS_TR("Icon Size"), 12, 48, QStringLiteral(" px"));
     m_toolbarFontSize = addSpinRow(toolbarForm, MS_TR("Font Size"), 8, 24, QStringLiteral(" px"));
+    addCardRestoreButton(toolbarCard, [this] {
+        m_toolbarIconSize->setValue(m_saved.annotation.toolbarIconSize);
+        m_toolbarFontSize->setValue(m_saved.annotation.toolbarFontSize);
+    });
     layout->addWidget(toolbarCard);
+    addPageRestoreButton(layout, [this] { setConfig(m_saved); });
     layout->addStretch();
 }
 
 void SettingsPageAnnotation::setConfig(const SettingsConfig &config)
 {
+    m_saved = config;
     setToolComboValue(m_normalTool, config.annotation.normalTool);
     setToolComboValue(m_fullscreenTool, config.annotation.fullscreenTool);
     setToolComboValue(m_fileTool, config.annotation.fileTool);

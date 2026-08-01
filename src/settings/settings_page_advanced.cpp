@@ -6,8 +6,11 @@
 #include <QCheckBox>
 #include <QFormLayout>
 #include <QFrame>
+#include <QHBoxLayout>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QPushButton>
 #include <QSpinBox>
 #include <QVBoxLayout>
 
@@ -24,6 +27,10 @@ SettingsPageAdvanced::SettingsPageAdvanced(QWidget *parent)
     QFormLayout *debugForm = settingsCardForm(debugCard);
     m_debugEnabled = addSwitchRow(debugForm, MS_TR("Debug Logging"), MS_TR("Enable debug log output."));
     m_debugLogPath = addTextRow(debugForm, MS_TR("Debug Log Path"), QStringLiteral("~/mark-shot-debug.log"));
+    addCardRestoreButton(debugCard, [this] {
+        m_debugEnabled->setChecked(m_saved.advanced.debugEnabled);
+        m_debugLogPath->setText(m_saved.advanced.debugLogPath);
+    });
     layout->addWidget(debugCard);
 
     QFrame *windowCard = createSettingsCard(MS_TR("Window Detection"),
@@ -41,6 +48,13 @@ SettingsPageAdvanced::SettingsPageAdvanced(QWidget *parent)
     m_windowDetectionEnv = addPlainTextRow(windowForm,
                                            MS_TR("Window Detection Environment"),
                                            QStringLiteral("KEY=value"));
+    addCardRestoreButton(windowCard, [this] {
+        m_windowDetectionEnabled->setChecked(m_saved.advanced.windowDetectionEnabled);
+        m_windowDetectionCommand->setText(m_saved.advanced.windowDetectionCommand);
+        m_windowDetectionWorkingDirectory->setText(m_saved.advanced.windowDetectionWorkingDirectory);
+        m_windowDetectionTimeoutMs->setValue(m_saved.advanced.windowDetectionTimeoutMs);
+        m_windowDetectionEnv->setPlainText(envMapToText(m_saved.advanced.windowDetectionEnv));
+    });
     layout->addWidget(windowCard);
 
     QFrame *envCard = createSettingsCard(MS_TR("Application Environment"),
@@ -48,12 +62,31 @@ SettingsPageAdvanced::SettingsPageAdvanced(QWidget *parent)
                                          this);
     QFormLayout *envForm = settingsCardForm(envCard);
     m_appEnv = addPlainTextRow(envForm, MS_TR("Application Environment"), QStringLiteral("KEY=value"));
+    addCardRestoreButton(envCard, [this] {
+        m_appEnv->setPlainText(envMapToText(m_saved.advanced.appEnv));
+    });
     layout->addWidget(envCard);
+
+    addPageRestoreButton(layout, [this] { setConfig(m_saved); });
+
+    auto *resetRow = new QWidget(this);
+    auto *resetLayout = new QHBoxLayout(resetRow);
+    resetLayout->setContentsMargins(0, 0, 0, 0);
+    resetLayout->addStretch();
+    auto *resetButton = new QPushButton(MS_TR("Restore Original Settings"), resetRow);
+    resetButton->setObjectName(QStringLiteral("settingsDanger"));
+    resetButton->setCursor(Qt::PointingHandCursor);
+    resetButton->setToolTip(MS_TR("Reset every setting back to the factory defaults. This cannot be undone."));
+    resetLayout->addWidget(resetButton);
+    layout->addWidget(resetRow);
+    connect(resetButton, &QPushButton::clicked, this, &SettingsPageAdvanced::restoreOriginalSettings);
+
     layout->addStretch();
 }
 
 void SettingsPageAdvanced::setConfig(const SettingsConfig &config)
 {
+    m_saved = config;
     m_debugEnabled->setChecked(config.advanced.debugEnabled);
     m_debugLogPath->setText(config.advanced.debugLogPath);
     m_windowDetectionEnabled->setChecked(config.advanced.windowDetectionEnabled);
@@ -78,6 +111,35 @@ void SettingsPageAdvanced::updateConfig(SettingsConfig *config) const
     config->advanced.windowDetectionTimeoutMs = m_windowDetectionTimeoutMs->value();
     config->advanced.windowDetectionEnv = envMapFromText(m_windowDetectionEnv->toPlainText());
     config->advanced.appEnv = envMapFromText(m_appEnv->toPlainText());
+}
+
+void SettingsPageAdvanced::setRestoreOriginalHandler(const std::function<void()> &handler)
+{
+    m_onRestoreOriginal = handler;
+}
+
+void SettingsPageAdvanced::restoreOriginalSettings()
+{
+    const auto answer = QMessageBox::question(
+        this,
+        MS_TR("Restore Original Settings"),
+        MS_TR("Reset every setting to its factory default? This cannot be undone, and "
+              "any unsaved changes will be lost."),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
+    QString error;
+    if (!resetSettingsToDefaults(&error)) {
+        QMessageBox::critical(this, MS_TR("Restore Original Settings"), MS_TR("Failed to reset settings: %1").arg(error));
+        return;
+    }
+
+    if (m_onRestoreOriginal) {
+        m_onRestoreOriginal();
+    }
 }
 
 }  // namespace markshot::settings

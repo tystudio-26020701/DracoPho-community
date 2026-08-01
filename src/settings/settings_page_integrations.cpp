@@ -43,6 +43,10 @@ SettingsPageIntegrations::SettingsPageIntegrations(QWidget *parent)
     QFormLayout *codeForm = settingsCardForm(codeCard);
     m_codeScanCommand = addTextRow(codeForm, MS_TR("Scan Command"), QStringLiteral("mark-shot-code-scan {image}"));
     m_codeScanTimeoutMs = addSpinRow(codeForm, MS_TR("Scan Timeout"), 1000, 300000, QStringLiteral(" ms"));
+    addCardRestoreButton(codeCard, [this] {
+        m_codeScanCommand->setText(m_saved.integrations.codeScanCommand);
+        m_codeScanTimeoutMs->setValue(m_saved.integrations.codeScanTimeoutMs);
+    });
     layout->addWidget(codeCard);
 
     QFrame *uploadCard = createSettingsCard(MS_TR("Image Upload"),
@@ -54,6 +58,11 @@ SettingsPageIntegrations::SettingsPageIntegrations(QWidget *parent)
     m_uploadEnv = addPlainTextRow(uploadForm,
                                   MS_TR("Upload Environment"),
                                   QStringLiteral("TOKEN=example"));
+    addCardRestoreButton(uploadCard, [this] {
+        m_uploadCommand->setText(m_saved.integrations.uploadCommand);
+        m_uploadTimeoutMs->setValue(m_saved.integrations.uploadTimeoutMs);
+        m_uploadEnv->setPlainText(envMapToText(m_saved.integrations.uploadEnv));
+    });
     layout->addWidget(uploadCard);
 
     QFrame *translationCard = createSettingsCard(MS_TR("OCR and Translation Integration"),
@@ -76,12 +85,23 @@ SettingsPageIntegrations::SettingsPageIntegrations(QWidget *parent)
     m_translationSystemPrompt = addPlainTextRow(translationForm,
                                                 MS_TR("System Prompt"),
                                                 MS_TR("Optional translation system prompt."));
+    addCardRestoreButton(translationCard, [this] {
+        m_ocrResultPanel->setChecked(m_saved.integrations.ocrResultPanelEnabled);
+        m_translationApiBase->setText(m_saved.integrations.translationApiBase);
+        m_translationApiKeyEnv->setText(m_saved.integrations.translationApiKeyEnv);
+        m_translationApiKey->setText(m_saved.integrations.translationApiKey);
+        m_translationModel->setText(m_saved.integrations.translationModel);
+        m_translationTemperature->setValue(m_saved.integrations.translationTemperature);
+        m_translationSystemPrompt->setPlainText(m_saved.integrations.translationSystemPrompt);
+    });
     layout->addWidget(translationCard);
+    addPageRestoreButton(layout, [this] { setConfig(m_saved); });
     layout->addStretch();
 }
 
 void SettingsPageIntegrations::setConfig(const SettingsConfig &config)
 {
+    m_saved = config;
     m_codeScanCommand->setText(config.integrations.codeScanCommand);
     m_codeScanTimeoutMs->setValue(config.integrations.codeScanTimeoutMs);
     m_uploadCommand->setText(config.integrations.uploadCommand);
