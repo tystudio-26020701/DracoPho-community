@@ -129,6 +129,13 @@ void SettingsPagePinned::updateConfig(SettingsConfig *config) const
     config->pinned.translationTimeoutMs = m_translationTimeoutMs->value();
 }
 
+bool SettingsPagePinned::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.pinned == m_saved.pinned);
+}
+
 void SettingsPagePinned::updateBorderColorButton()
 {
     const QString colorName = m_borderColorValue.isValid()

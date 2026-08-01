@@ -26,6 +26,10 @@ public:
     /// @param config 需要更新的设置配置。
     void updateConfig(SettingsConfig *config) const;
 
+    /// @brief 判断页面是否有未保存的修改。
+    /// @return 有未保存修改时返回 true。
+    bool isModified() const;
+
 private:
     QLineEdit *m_savePathTemplate = nullptr;
     QLineEdit *m_recordingVideoDirectory = nullptr;

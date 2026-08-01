@@ -273,4 +273,12 @@ void SettingsPageStorage::updateConfig(SettingsConfig *config) const
     config->storage.exportImageEffect.shadowOpacity = m_exportShadowOpacity->value();
 }
 
+
+bool SettingsPageStorage::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.storage == m_saved.storage);
+}
+
 }  // namespace markshot::settings

@@ -13,6 +13,8 @@ set(MARK_SHOT_SETTINGS_SOURCES
     src/settings/settings_navigation.h
     src/settings/settings_page_advanced.cpp
     src/settings/settings_page_advanced.h
+    src/settings/settings_page_about.cpp
+    src/settings/settings_page_about.h
     src/settings/settings_page_annotation.cpp
     src/settings/settings_page_annotation.h
     src/settings/settings_page_capture.cpp

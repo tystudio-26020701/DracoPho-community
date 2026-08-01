@@ -1,13 +1,15 @@
 #pragma once
 
 #include <QListWidget>
+#include <QStringList>
 #include <QVector>
 
 namespace markshot::settings {
 
 /// @brief 设置界面侧栏导航组件。
-///        封装标题区与分类列表，10 个分类按组排列，组间留白分隔。
-///        对外暴露逻辑索引（0..9），与内容栈一一对应；分隔项不占用逻辑索引。
+///        封装标题区与分类列表，分类按组排列，组间留白分隔。
+///        对外暴露逻辑索引，与内容栈一一对应；分隔项不占用逻辑索引。
+///        支持为存在未保存修改的分类显示标记。
 class SettingsNavigation final : public QWidget {
     Q_OBJECT
 
@@ -17,8 +19,12 @@ public:
     explicit SettingsNavigation(QWidget *parent = nullptr);
 
     /// @brief 设置当前激活的逻辑页索引。
-    /// @param index 逻辑索引，范围 0..9。
+    /// @param index 逻辑索引。
     void setCurrentLogicalRow(int index);
+
+    /// @brief 更新各逻辑页的"未保存修改"标记。
+    /// @param dirty 与逻辑页一一对应的标记数组。
+    void setDirtyFlags(const QVector<bool> &dirty);
 
 signals:
     /// @brief 用户切换导航项时触发。
@@ -43,6 +49,8 @@ private:
     QListWidget *m_list = nullptr;
     /// 逻辑索引到实际列表行的映射
     QVector<int> m_logicalRows;
+    /// 每个逻辑项的英文源文本（用于在脏标记之间切换时恢复）
+    QStringList m_baseTexts;
 };
 
 }  // namespace markshot::settings

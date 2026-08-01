@@ -129,6 +129,99 @@ struct SettingsConfig {
     AdvancedSettings advanced;
 };
 
+inline bool operator==(const GeneralSettings &a, const GeneralSettings &b)
+{
+    return a.uiLanguageMode == b.uiLanguageMode && a.uiThemeMode == b.uiThemeMode
+        && a.trayEnabled == b.trayEnabled && a.launchOnStartup == b.launchOnStartup
+        && a.hotkeysEnabled == b.hotkeysEnabled && a.captureHotkey == b.captureHotkey
+        && a.fullscreenHotkey == b.fullscreenHotkey;
+}
+
+inline bool operator==(const CaptureSettings &a, const CaptureSettings &b)
+{
+    return a.includeCursor == b.includeCursor && a.freezeScope == b.freezeScope
+        && a.kdeKwinScreenshotEnabled == b.kdeKwinScreenshotEnabled
+        && a.hideOwnWindows == b.hideOwnWindows;
+}
+
+inline bool operator==(const ShortcutSettings &a, const ShortcutSettings &b)
+{
+    return a.actions == b.actions && a.tools == b.tools
+        && a.startupColorPicker == b.startupColorPicker && a.startupRuler == b.startupRuler
+        && a.startupCodeScanner == b.startupCodeScanner
+        && a.startupDisplayCapture == b.startupDisplayCapture
+        && a.startupGifRecorder == b.startupGifRecorder
+        && a.startupVideoRecorder == b.startupVideoRecorder;
+}
+
+inline bool operator==(const AnnotationSettings &a, const AnnotationSettings &b)
+{
+    return a.normalTool == b.normalTool && a.fullscreenTool == b.fullscreenTool
+        && a.fileTool == b.fileTool && a.defaultColor == b.defaultColor
+        && a.toolbarIconSize == b.toolbarIconSize && a.toolbarFontSize == b.toolbarFontSize;
+}
+
+inline bool operator==(const PinnedSettings &a, const PinnedSettings &b)
+{
+    return a.alwaysOnTop == b.alwaysOnTop
+        && a.textSelectionCopyEnabled == b.textSelectionCopyEnabled
+        && a.ocrEnabled == b.ocrEnabled && a.autoOcr == b.autoOcr
+        && a.ocrBackend == b.ocrBackend && a.ocrProvider == b.ocrProvider
+        && a.ocrCommand == b.ocrCommand && a.ocrTimeoutMs == b.ocrTimeoutMs
+        && a.autoTranslateAfterOcr == b.autoTranslateAfterOcr
+        && a.translationCommand == b.translationCommand
+        && a.translationProvider == b.translationProvider
+        && a.translationTargetLanguage == b.translationTargetLanguage
+        && a.translationTimeoutMs == b.translationTimeoutMs
+        && a.borderEnabled == b.borderEnabled && a.borderColor == b.borderColor
+        && a.borderWidth == b.borderWidth;
+}
+
+inline bool operator==(const StorageSettings &a, const StorageSettings &b)
+{
+    return a.savePathTemplate == b.savePathTemplate
+        && a.recordingVideoDirectory == b.recordingVideoDirectory
+        && a.recordingGifDirectory == b.recordingGifDirectory
+        && a.clipboardImageMode == b.clipboardImageMode
+        && a.clipboardThresholdM == b.clipboardThresholdM
+        && a.exportImageEffect == b.exportImageEffect
+        && a.headlessDefaultDestination == b.headlessDefaultDestination
+        && a.headlessClipboardAllowed == b.headlessClipboardAllowed;
+}
+
+inline bool operator==(const ScrollSettings &a, const ScrollSettings &b)
+{
+    return a.frameEnabled == b.frameEnabled
+        && a.hidePreviewDuringCapture == b.hidePreviewDuringCapture
+        && a.frameGap == b.frameGap && a.previewGap == b.previewGap;
+}
+
+inline bool operator==(const IntegrationSettings &a, const IntegrationSettings &b)
+{
+    return a.codeScanCommand == b.codeScanCommand
+        && a.codeScanProvider == b.codeScanProvider
+        && a.codeScanTimeoutMs == b.codeScanTimeoutMs
+        && a.uploadCommand == b.uploadCommand
+        && a.uploadTimeoutMs == b.uploadTimeoutMs && a.uploadEnv == b.uploadEnv
+        && a.ocrResultPanelEnabled == b.ocrResultPanelEnabled
+        && a.translationApiBase == b.translationApiBase
+        && a.translationApiKeyEnv == b.translationApiKeyEnv
+        && a.translationApiKey == b.translationApiKey
+        && a.translationModel == b.translationModel
+        && a.translationTemperature == b.translationTemperature
+        && a.translationSystemPrompt == b.translationSystemPrompt;
+}
+
+inline bool operator==(const AdvancedSettings &a, const AdvancedSettings &b)
+{
+    return a.debugEnabled == b.debugEnabled && a.debugLogPath == b.debugLogPath
+        && a.windowDetectionEnabled == b.windowDetectionEnabled
+        && a.windowDetectionCommand == b.windowDetectionCommand
+        && a.windowDetectionWorkingDirectory == b.windowDetectionWorkingDirectory
+        && a.windowDetectionTimeoutMs == b.windowDetectionTimeoutMs
+        && a.windowDetectionEnv == b.windowDetectionEnv && a.appEnv == b.appEnv;
+}
+
 /// @brief 读取设置界面使用的应用配置。
 /// @param error 读取失败时输出错误信息。
 /// @return 当前配置与默认值合并后的设置结构。

@@ -159,4 +159,11 @@ void SettingsPageIntegrations::updateConfig(SettingsConfig *config) const
     config->integrations.translationSystemPrompt = m_translationSystemPrompt->toPlainText();
 }
 
+bool SettingsPageIntegrations::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.integrations == m_saved.integrations);
+}
+
 }  // namespace markshot::settings

@@ -28,6 +28,10 @@ public:
     /// @param config 需要更新的设置配置。
     void updateConfig(SettingsConfig *config) const;
 
+    /// @brief 判断页面是否有未保存的修改。
+    /// @return 有未保存修改时返回 true。
+    bool isModified() const;
+
     /// @brief 注册"还原原始设置"成功后的重载回调。
     /// @param handler 回调，通常用于让设置对话框重新读取配置。
     void setRestoreOriginalHandler(const std::function<void()> &handler);

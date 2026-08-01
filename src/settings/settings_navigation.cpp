@@ -29,6 +29,7 @@ enum class NavIcon {
     Scroll,
     Storage,
     Advanced,
+    About,
 };
 
 /// @brief 构造圆角连接的标准画笔。
@@ -174,6 +175,20 @@ void drawTerminal(QPainter &p, const QColor &ink)
     p.drawLine(QPointF(10, 12), QPointF(14, 12));
 }
 
+/// @brief 绘制信息圆圈图标（About）。
+void drawInfo(QPainter &p, const QColor &ink)
+{
+    p.setPen(navPen(ink, 1.7));
+    p.setBrush(Qt::NoBrush);
+    p.drawEllipse(QPointF(9, 9), 7.0, 7.0);
+    p.setBrush(ink);
+    p.setPen(Qt::NoPen);
+    p.drawEllipse(QPointF(9, 5.8), 1.1, 1.1);
+    p.setPen(navPen(ink, 1.9));
+    p.setBrush(Qt::NoBrush);
+    p.drawLine(QPointF(9, 8.6), QPointF(9, 12.6));
+}
+
 /// @brief 按图标种类分派绘制。
 void drawNavGlyph(QPainter &p, NavIcon icon, const QColor &ink)
 {
@@ -207,6 +222,9 @@ void drawNavGlyph(QPainter &p, NavIcon icon, const QColor &ink)
         break;
     case NavIcon::Advanced:
         drawTerminal(p, ink);
+        break;
+    case NavIcon::About:
+        drawInfo(p, ink);
         break;
     }
 }
@@ -284,6 +302,7 @@ void SettingsNavigation::buildList()
     addSeparator();
     // 组3：其他
     addCategory(MS_TR("Advanced"), makeNavIcon(NavIcon::Advanced));
+    addCategory(MS_TR("About"), makeNavIcon(NavIcon::About));
 
     static_cast<QVBoxLayout *>(layout())->addWidget(m_list, 1);
 
@@ -303,6 +322,29 @@ void SettingsNavigation::addCategory(const QString &text, const QIcon &icon)
     item->setIcon(icon);
     item->setSizeHint(QSize(0, 38));
     m_logicalRows.append(m_list->row(item));
+    m_baseTexts.append(text);
+}
+
+void SettingsNavigation::setDirtyFlags(const QVector<bool> &dirty)
+{
+    const QString marker = QStringLiteral("\u25CF  ");  // ●
+    const QString unsavedTip = MS_TR("Unsaved Changes");
+    for (int logical = 0; logical < m_logicalRows.size(); ++logical) {
+        const int row = m_logicalRows.value(logical, -1);
+        if (row < 0 || row >= m_list->count()) {
+            continue;
+        }
+        const bool isDirty = logical < dirty.size() && dirty.at(logical);
+        QListWidgetItem *item = m_list->item(row);
+        const QString base = logical < m_baseTexts.size() ? m_baseTexts.at(logical) : item->text();
+        if (base.startsWith(marker)) {
+            // 幂等：基础文本不应带标记。
+            m_baseTexts[logical] = base.mid(marker.size());
+        }
+        item->setText(isDirty ? marker + (logical < m_baseTexts.size() ? m_baseTexts.at(logical) : base)
+                              : (logical < m_baseTexts.size() ? m_baseTexts.at(logical) : base));
+        item->setToolTip(isDirty ? unsavedTip : QString());
+    }
 }
 
 void SettingsNavigation::addSeparator()
