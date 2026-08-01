@@ -22,6 +22,9 @@ QVector<TranslationLanguageOption> translationLanguageOptions()
         {QStringLiteral("German"), MS_TR("German")},
         {QStringLiteral("Spanish"), MS_TR("Spanish")},
         {QStringLiteral("Russian"), MS_TR("Russian")},
+        {QStringLiteral("Italian"), MS_TR("Italian")},
+        {QStringLiteral("Arabic"), MS_TR("Arabic")},
+        {QStringLiteral("Portuguese"), MS_TR("Portuguese")},
     };
 }
 
