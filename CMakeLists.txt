@@ -230,6 +230,18 @@ qt_add_executable(mark-shot
     src/ui/icons.h
     src/ui/i18n.cpp
     src/ui/i18n.h
+    src/ui/i18n_tables.h
+    src/ui/i18n_zh_cn.cpp
+    src/ui/i18n_zh_tw.cpp
+    src/ui/i18n_ja.cpp
+    src/ui/i18n_ko.cpp
+    src/ui/i18n_ru.cpp
+    src/ui/i18n_it.cpp
+    src/ui/i18n_ar.cpp
+    src/ui/i18n_fr.cpp
+    src/ui/i18n_de.cpp
+    src/ui/i18n_es.cpp
+    src/ui/i18n_pt.cpp
     src/ui/interface_language_config.cpp
     src/ui/interface_language_config.h
     src/ui/interface_theme_config.cpp
@@ -242,6 +254,11 @@ include(cmake/capture_session_sources.cmake)
 
 target_include_directories(mark-shot PRIVATE src plugin-sdk)
 target_compile_definitions(mark-shot PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    # i18n 翻译表源文件均为无 BOM 的 UTF-8，MSVC 默认按系统代码页解析，
+    # 需显式指定 UTF-8 源字符集，避免中文/日文/俄文等字面量乱码或编译失败。
+    target_compile_options(mark-shot PRIVATE /utf-8)
+endif()
 if(WIN32)
     set_property(TARGET mark-shot PROPERTY CXX_STANDARD 20)
     set(MARK_SHOT_WINDOWS_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/mark-shot.ico")
