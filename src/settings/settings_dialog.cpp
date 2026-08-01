@@ -13,6 +13,7 @@
 #include "settings/settings_page_scroll.h"
 #include "settings/settings_page_shortcuts.h"
 #include "settings/settings_page_storage.h"
+#include "settings/settings_wheel_guard.h"
 #include "ui/i18n.h"
 #include "ui/icons.h"
 #include "ui/interface_theme_config.h"
@@ -71,6 +72,9 @@ SettingsDialog::SettingsDialog(QWidget *parent)
 
     applyTheme(configuredSettingsThemeMode());
 
+    // 滚轮防护：未聚焦的下拉框/数值框不再被滚轮误改内容，页面照常滚动。
+    installSettingsWheelGuard(this);
+
     auto *rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(0, 0, 0, 0);
     rootLayout->setSpacing(0);
@@ -96,6 +100,8 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     m_scrollPage = new SettingsPageScroll(m_stack);
     m_storagePage = new SettingsPageStorage(m_stack);
     m_advancedPage = new SettingsPageAdvanced(m_stack);
+    // 高级页"还原原始设置"成功后，重新读取配置并刷新全部页面。
+    m_advancedPage->setRestoreOriginalHandler([this] { loadConfig(); });
     addScrollablePage(m_stack, m_generalPage);
     addScrollablePage(m_stack, m_capturePage);
     addScrollablePage(m_stack, m_shortcutsPage);
@@ -139,20 +145,25 @@ void SettingsDialog::loadConfig()
 {
     QString error;
     m_config = readSettingsConfig(&error);
-    m_generalPage->setConfig(m_config);
-    m_capturePage->setConfig(m_config);
-    m_shortcutsPage->setConfig(m_config);
-    m_annotationPage->setConfig(m_config);
-    m_pinnedPage->setConfig(m_config);
-    m_integrationsPage->setConfig(m_config);
-    m_pluginsPage->setConfig(m_config);
-    m_scrollPage->setConfig(m_config);
-    m_storagePage->setConfig(m_config);
-    m_advancedPage->setConfig(m_config);
+    applyConfigToPages(m_config);
     if (!error.isEmpty()) {
         m_statusLabel->setText(error);
     }
     applyTheme(m_config.general.uiThemeMode);
+}
+
+void SettingsDialog::applyConfigToPages(const SettingsConfig &config)
+{
+    m_generalPage->setConfig(config);
+    m_capturePage->setConfig(config);
+    m_shortcutsPage->setConfig(config);
+    m_annotationPage->setConfig(config);
+    m_pinnedPage->setConfig(config);
+    m_integrationsPage->setConfig(config);
+    m_pluginsPage->setConfig(config);
+    m_scrollPage->setConfig(config);
+    m_storagePage->setConfig(config);
+    m_advancedPage->setConfig(config);
 }
 
 SettingsConfig SettingsDialog::collectConfig() const
@@ -181,6 +192,8 @@ void SettingsDialog::saveConfig(bool closeAfterSave)
     }
 
     m_config = nextConfig;
+    // 刷新各页"已保存"基线，保证 Apply 后"还原配置"还原的是刚保存的值。
+    applyConfigToPages(nextConfig);
     applyTheme(m_config.general.uiThemeMode);
     m_statusLabel->setText(MS_TR("Settings saved. Some changes take effect after restarting Mark Shot."));
     if (closeAfterSave) {
