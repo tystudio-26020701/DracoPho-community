@@ -14,7 +14,7 @@ namespace markshot::settings {
 namespace {
 
 /// @brief 开源社区版仓库地址。
-constexpr const char *kCommunityRepository = "https://github.com/tystudio-26020701/mark-shot";
+constexpr const char *kCommunityRepository = "https://github.com/tystudio-26020701/mark-shot-community";
 
 /// @brief 原上游项目仓库地址。
 constexpr const char *kUpstreamRepository = "https://github.com/jswysnemc/mark-shot";

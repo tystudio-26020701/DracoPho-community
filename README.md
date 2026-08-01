@@ -694,4 +694,4 @@ Mark Shot is built on the shoulders of the open-source community. We would like 
 - **[serendipitywgy](https://github.com/serendipitywgy)** for contributions from `serendipitywgy/mark-shot`, including cross-desktop compatibility improvements, the OCR copy toolbar action, and smart rectangle preselection.
 - **All the open-source projects that Mark Shot depends on**, including Qt 6, PipeWire, xdg-desktop-portal, layer-shell-qt, wl-clipboard, xclip, grim, RapidOCR, onnxruntime, Tesseract, and ZXing-C++, among others.
 
-This community edition is maintained by [Beijing Taiyin Zhaowu Technology Co., Ltd.](https://github.com/tystudio-26020701/mark-shot) and its contributors, under the **MIT License**.
+This community edition is maintained by [Beijing Taiyin Zhaowu Technology Co., Ltd.](https://github.com/tystudio-26020701/mark-shot-community) and its contributors, under the **MIT License**.

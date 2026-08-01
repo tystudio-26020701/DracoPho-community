@@ -795,4 +795,4 @@ Mark Shot 站在开源社区的肩膀上，我们在此致以诚挚的谢意：
 - **[serendipitywgy](https://github.com/serendipitywgy)**：感谢通过 `serendipitywgy/mark-shot` 贡献跨桌面兼容性改进、OCR 复制工具栏动作和智能矩形框预选功能。
 - **Mark Shot 所依赖的全部开源项目**，包括 Qt 6、PipeWire、xdg-desktop-portal、layer-shell-qt、wl-clipboard、xclip、grim、RapidOCR、onnxruntime、Tesseract、ZXing-C++ 等。
 
-本社区版由 [北京太殷造物科技有限公司](https://github.com/tystudio-26020701/mark-shot) 及贡献者维护，基于 **MIT 许可证** 开源。
+本社区版由 [北京太殷造物科技有限公司](https://github.com/tystudio-26020701/mark-shot-community) 及贡献者维护，基于 **MIT 许可证** 开源。
