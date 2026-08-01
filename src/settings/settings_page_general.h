@@ -1,12 +1,12 @@
 #pragma once
 
 #include "settings/settings_config.h"
+#include "settings/settings_ui_helpers.h"
 
 #include <QWidget>
 
 class QCheckBox;
 class QComboBox;
-class QKeySequenceEdit;
 
 namespace markshot::settings {
 
@@ -25,13 +25,19 @@ public:
     void updateConfig(SettingsConfig *config) const;
 
 private:
+    /// @brief 检测两个全局快捷键之间的冲突并给出提示。
+    /// @param primary 刚发生变化的快捷键控件。
+    /// @param other 另一个全局快捷键控件。
+    void checkGlobalHotkeyConflict(QKeySequenceEdit *primary, QKeySequenceEdit *other);
+
     QComboBox *m_uiLanguage = nullptr;
     QComboBox *m_uiTheme = nullptr;
     QCheckBox *m_trayEnabled = nullptr;
     QCheckBox *m_launchOnStartup = nullptr;
     QCheckBox *m_hotkeysEnabled = nullptr;
-    QKeySequenceEdit *m_captureHotkey = nullptr;
-    QKeySequenceEdit *m_fullscreenHotkey = nullptr;
+    ShortcutKeySequenceEdit *m_captureHotkey = nullptr;
+    ShortcutKeySequenceEdit *m_fullscreenHotkey = nullptr;
+    SettingsConfig m_saved;
 };
 
 }  // namespace markshot::settings

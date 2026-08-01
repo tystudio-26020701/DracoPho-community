@@ -112,12 +112,30 @@ SettingsPageShortcuts::SettingsPageShortcuts(QWidget *parent)
                                           MS_TR("Configure shortcuts used while editing a selected screenshot."),
                                           this);
     addToolShortcutRows(settingsCardForm(toolCard));
+    addCardRestoreButton(toolCard, [this] {
+        for (ShotWindow::Tool tool : shortcutTools()) {
+            ShortcutKeySequenceEdit *edit = m_toolEdits.at(shortcut::toolIndex(tool));
+            if (edit) {
+                edit->setKeySequence(m_saved.shortcuts.tools.at(shortcut::toolIndex(tool)));
+            }
+        }
+        refreshShortcutConflicts();
+    });
     layout->addWidget(toolCard);
 
     QFrame *actionCard = createSettingsCard(MS_TR("Action Shortcuts"),
                                             MS_TR("Configure screenshot action shortcuts."),
                                             this);
     addActionShortcutRows(settingsCardForm(actionCard));
+    addCardRestoreButton(actionCard, [this] {
+        for (ShotWindow::Action action : shortcutActions()) {
+            ShortcutKeySequenceEdit *edit = m_actionEdits.at(shortcut::actionIndex(action));
+            if (edit) {
+                edit->setKeySequence(m_saved.shortcuts.actions.at(shortcut::actionIndex(action)));
+            }
+        }
+        refreshShortcutConflicts();
+    });
     layout->addWidget(actionCard);
 
     QFrame *startupCard = createSettingsCard(MS_TR("Startup Tool Shortcuts"),
@@ -130,7 +148,17 @@ SettingsPageShortcuts::SettingsPageShortcuts(QWidget *parent)
     m_startupDisplayCapture = addShortcutRow(startupForm, MS_TR("Display Capture"));
     m_startupGifRecorder = addShortcutRow(startupForm, MS_TR("GIF Recording"));
     m_startupVideoRecorder = addShortcutRow(startupForm, MS_TR("Video Recording"));
+    addCardRestoreButton(startupCard, [this] {
+        m_startupColorPicker->setKeySequence(m_saved.shortcuts.startupColorPicker);
+        m_startupRuler->setKeySequence(m_saved.shortcuts.startupRuler);
+        m_startupCodeScanner->setKeySequence(m_saved.shortcuts.startupCodeScanner);
+        m_startupDisplayCapture->setKeySequence(m_saved.shortcuts.startupDisplayCapture);
+        m_startupGifRecorder->setKeySequence(m_saved.shortcuts.startupGifRecorder);
+        m_startupVideoRecorder->setKeySequence(m_saved.shortcuts.startupVideoRecorder);
+        refreshShortcutConflicts();
+    });
     layout->addWidget(startupCard);
+    addPageRestoreButton(layout, [this] { setConfig(m_saved); });
     layout->addStretch();
 
     connectShortcutConflictChecks();
@@ -138,14 +166,15 @@ SettingsPageShortcuts::SettingsPageShortcuts(QWidget *parent)
 
 void SettingsPageShortcuts::setConfig(const SettingsConfig &config)
 {
+    m_saved = config;
     for (ShotWindow::Tool tool : shortcutTools()) {
-        QKeySequenceEdit *edit = m_toolEdits.at(shortcut::toolIndex(tool));
+        ShortcutKeySequenceEdit *edit = m_toolEdits.at(shortcut::toolIndex(tool));
         if (edit) {
             edit->setKeySequence(config.shortcuts.tools.at(shortcut::toolIndex(tool)));
         }
     }
     for (ShotWindow::Action action : shortcutActions()) {
-        QKeySequenceEdit *edit = m_actionEdits.at(shortcut::actionIndex(action));
+        ShortcutKeySequenceEdit *edit = m_actionEdits.at(shortcut::actionIndex(action));
         if (edit) {
             edit->setKeySequence(config.shortcuts.actions.at(shortcut::actionIndex(action)));
         }
@@ -156,6 +185,7 @@ void SettingsPageShortcuts::setConfig(const SettingsConfig &config)
     m_startupDisplayCapture->setKeySequence(config.shortcuts.startupDisplayCapture);
     m_startupGifRecorder->setKeySequence(config.shortcuts.startupGifRecorder);
     m_startupVideoRecorder->setKeySequence(config.shortcuts.startupVideoRecorder);
+    refreshShortcutConflicts();
 }
 
 void SettingsPageShortcuts::updateConfig(SettingsConfig *config) const
@@ -165,13 +195,13 @@ void SettingsPageShortcuts::updateConfig(SettingsConfig *config) const
     }
 
     for (ShotWindow::Tool tool : shortcutTools()) {
-        QKeySequenceEdit *edit = m_toolEdits.at(shortcut::toolIndex(tool));
+        ShortcutKeySequenceEdit *edit = m_toolEdits.at(shortcut::toolIndex(tool));
         if (edit) {
             config->shortcuts.tools[shortcut::toolIndex(tool)] = edit->keySequence();
         }
     }
     for (ShotWindow::Action action : shortcutActions()) {
-        QKeySequenceEdit *edit = m_actionEdits.at(shortcut::actionIndex(action));
+        ShortcutKeySequenceEdit *edit = m_actionEdits.at(shortcut::actionIndex(action));
         if (edit) {
             config->shortcuts.actions[shortcut::actionIndex(action)] = edit->keySequence();
         }
@@ -206,25 +236,25 @@ void SettingsPageShortcuts::addActionShortcutRows(QFormLayout *form)
     }
 }
 
-QList<QKeySequenceEdit *> SettingsPageShortcuts::allShortcutEdits() const
+QList<ShortcutKeySequenceEdit *> SettingsPageShortcuts::allShortcutEdits() const
 {
-    QList<QKeySequenceEdit *> edits;
-    for (QKeySequenceEdit *edit : m_toolEdits) {
+    QList<ShortcutKeySequenceEdit *> edits;
+    for (ShortcutKeySequenceEdit *edit : m_toolEdits) {
         if (edit) {
             edits.append(edit);
         }
     }
-    for (QKeySequenceEdit *edit : m_actionEdits) {
+    for (ShortcutKeySequenceEdit *edit : m_actionEdits) {
         if (edit) {
             edits.append(edit);
         }
     }
-    for (QKeySequenceEdit *edit : {m_startupColorPicker,
-                                   m_startupRuler,
-                                   m_startupCodeScanner,
-                                   m_startupDisplayCapture,
-                                   m_startupGifRecorder,
-                                   m_startupVideoRecorder}) {
+    for (ShortcutKeySequenceEdit *edit : {m_startupColorPicker,
+                                          m_startupRuler,
+                                          m_startupCodeScanner,
+                                          m_startupDisplayCapture,
+                                          m_startupGifRecorder,
+                                          m_startupVideoRecorder}) {
         if (edit) {
             edits.append(edit);
         }
@@ -234,27 +264,42 @@ QList<QKeySequenceEdit *> SettingsPageShortcuts::allShortcutEdits() const
 
 void SettingsPageShortcuts::connectShortcutConflictChecks()
 {
-    const QList<QKeySequenceEdit *> edits = allShortcutEdits();
-    for (QKeySequenceEdit *edit : edits) {
-        connect(edit, &QKeySequenceEdit::keySequenceChanged, this, [this, edits, edit] {
-            const QKeySequence current = edit->keySequence();
-            if (current.isEmpty()) {
-                return;
+    for (ShortcutKeySequenceEdit *edit : allShortcutEdits()) {
+        connect(edit, &QKeySequenceEdit::keySequenceChanged, this, &SettingsPageShortcuts::refreshShortcutConflicts);
+    }
+}
+
+void SettingsPageShortcuts::refreshShortcutConflicts()
+{
+    const QList<ShortcutKeySequenceEdit *> edits = allShortcutEdits();
+    const QString conflictMessage = MS_TR("This shortcut is already assigned to another action.");
+
+    // 全量重扫：任何一项变化后，同时刷新所有项，避免改动某项后
+    // 其他项残留过期的"已分配"提示。
+    QList<ShortcutKeySequenceEdit *> conflicted;
+    for (ShortcutKeySequenceEdit *edit : edits) {
+        const QKeySequence current = edit->keySequence();
+        if (current.isEmpty()) {
+            continue;
+        }
+        for (QKeySequenceEdit *other : edits) {
+            if (other == edit || other->keySequence().isEmpty()) {
+                continue;
             }
-            for (QKeySequenceEdit *other : edits) {
-                if (other == edit || other->keySequence().isEmpty()) {
-                    continue;
-                }
-                if (other->keySequence() == current) {
-                    edit->setToolTip(MS_TR("This shortcut is already assigned to another action."));
-                    QToolTip::showText(edit->mapToGlobal(edit->rect().bottomLeft()),
-                                       MS_TR("This shortcut is already assigned to another action."),
-                                       edit);
-                    return;
-                }
+            if (other->keySequence() == current) {
+                conflicted.append(edit);
+                break;
             }
-            edit->setToolTip({});
-        });
+        }
+    }
+    for (ShortcutKeySequenceEdit *edit : edits) {
+        const bool hasConflict = conflicted.contains(edit);
+        edit->setToolTip(hasConflict ? conflictMessage : QString());
+        if (hasConflict && edit->hasFocus()) {
+            QToolTip::showText(edit->mapToGlobal(edit->rect().bottomLeft()),
+                               conflictMessage,
+                               edit);
+        }
     }
 }
 
