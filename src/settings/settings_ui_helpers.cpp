@@ -251,9 +251,9 @@ ShortcutKeySequenceEdit::ShortcutKeySequenceEdit(bool globalHotkey, QWidget *par
     : QKeySequenceEdit(parent)
     , m_globalHotkey(globalHotkey)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-    // 仅允许单键组合；旧版 Qt（< 6.4，如 Ubuntu 22.04 的 Qt 6.2）没有这两个
-    // API，靠 isValidShortcutSequence 的校验逻辑兜底。
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    // 仅允许单键组合；旧版 Qt（< 6.5，如 Debian 12 的 Qt 6.4 与 Ubuntu 22.04
+    // 的 Qt 6.2）没有这两个 API，靠 isValidShortcutSequence 的校验逻辑兜底。
     setMaximumSequenceLength(1);
     setClearButtonEnabled(true);
 #endif
