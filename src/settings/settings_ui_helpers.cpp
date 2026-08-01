@@ -10,6 +10,7 @@
 #include <QComboBox>
 #include <QFormLayout>
 #include <QFrame>
+#include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QKeySequenceEdit>
@@ -103,8 +104,8 @@ bool isForbiddenShortcutKey(int key)
     switch (key) {
     case Qt::Key_Delete:
     case Qt::Key_Backspace:
-    case Qt::Key_Escape:
     case Qt::Key_Tab:
+    case Qt::Key_Backtab:
     case Qt::Key_Return:
     case Qt::Key_Enter:
     case Qt::Key_Insert:
@@ -129,10 +130,39 @@ bool isForbiddenShortcutKey(int key)
     }
 }
 
+/// @brief 判断按键是否为功能键（F1-F35）。
+/// @param key 按键代码。
+/// @return 是功能键时返回 true。
+bool isFunctionKey(int key)
+{
+    return key >= Qt::Key_F1 && key <= Qt::Key_F35;
+}
+
+/// @brief 判断快捷键序列是否仍处于组合键录入中的中间状态。
+/// @param sequence 快捷键序列。
+/// @return 处于录入中间状态时返回 true。
+bool isModifierOnlySequence(const QKeySequence &sequence)
+{
+    if (sequence.isEmpty() || sequence.count() != 1) {
+        return false;
+    }
+    switch (sequence[0].key()) {
+    case Qt::Key_Control:
+    case Qt::Key_Shift:
+    case Qt::Key_Alt:
+    case Qt::Key_Meta:
+    case Qt::Key_AltGr:
+        return true;
+    default:
+        return false;
+    }
+}
+
 /// @brief 判断一个快捷键序列是否合法。
 /// @param sequence 快捷键序列。
+/// @param globalHotkey 是否属于全局快捷键（需要修饰键或功能键）。
 /// @return 合法时返回 true。
-bool isValidShortcutSequence(const QKeySequence &sequence)
+bool isValidShortcutSequence(const QKeySequence &sequence, bool globalHotkey)
 {
     if (sequence.isEmpty()) {
         return true;
@@ -157,7 +187,13 @@ bool isValidShortcutSequence(const QKeySequence &sequence)
         break;
     }
 
-    // 无修饰键的危险键（Delete/Backspace/Escape/Tab/Enter/方向键等）会被拒绝，
+    // 全局快捷键若为无修饰键的普通键（字母/数字/符号），会在全局抢走该键，
+    // 属于明显误操作，要求至少一个修饰键或使用功能键。
+    if (globalHotkey && modifiers == Qt::NoModifier && !isFunctionKey(key)) {
+        return false;
+    }
+
+    // 无修饰键的危险键（Delete/Backspace/Tab/Enter/方向键等）会被拒绝，
     // 避免破坏编辑操作或窗口导航；带修饰键时允许（例如 Ctrl+Delete）。
     if (modifiers == Qt::NoModifier && isForbiddenShortcutKey(key)) {
         return false;
@@ -166,70 +202,93 @@ bool isValidShortcutSequence(const QKeySequence &sequence)
     return true;
 }
 
-/// @brief 提供合法快捷键校验与即时反馈的 QKeySequenceEdit。
-class ShortcutKeySequenceEdit final : public QKeySequenceEdit {
-public:
-    explicit ShortcutKeySequenceEdit(QWidget *parent = nullptr)
-        : QKeySequenceEdit(parent)
-    {
-        setMaximumSequenceLength(1);
-        setClearButtonEnabled(true);
-        connect(this, &QKeySequenceEdit::keySequenceChanged, this, [this](const QKeySequence &sequence) {
-            if (isValidShortcutSequence(sequence)) {
-                m_lastValid = sequence;
-                setToolTip({});
-                return;
-            }
-            const QSignalBlocker blocker(this);
-            setKeySequence(m_lastValid);
-            setToolTip(MS_TR("This key combination is not allowed as a shortcut."));
-            if (hasFocus()) {
-                QToolTip::showText(mapToGlobal(rect().bottomLeft()),
-                                   MS_TR("This key combination is not allowed as a shortcut."),
-                                   this);
-            }
-        });
+ShortcutKeySequenceEdit::ShortcutKeySequenceEdit(bool globalHotkey, QWidget *parent)
+    : QKeySequenceEdit(parent)
+    , m_globalHotkey(globalHotkey)
+{
+    setMaximumSequenceLength(1);
+    setClearButtonEnabled(true);
+    connect(this, &QKeySequenceEdit::keySequenceChanged, this, [this](const QKeySequence &sequence) {
+        // 组合键录入中的中间状态（例如按住 Ctrl 再按 Shift）不打断录入。
+        if (isModifierOnlySequence(sequence)) {
+            return;
+        }
+        if (isValidShortcutSequence(sequence, m_globalHotkey)) {
+            m_lastValid = sequence;
+            setToolTip({});
+            return;
+        }
+        const QSignalBlocker blocker(this);
+        QKeySequenceEdit::setKeySequence(m_lastValid);
+        setToolTip(invalidToolTip());
+        if (hasFocus()) {
+            QToolTip::showText(mapToGlobal(rect().bottomLeft()), invalidToolTip(), this);
+        }
+    });
+}
+
+void ShortcutKeySequenceEdit::setKeySequence(const QKeySequence &sequence)
+{
+    // 程序化加载：跳过录入校验，保证已保存配置（例如默认的 Escape 取消
+    // 快捷键）能原样显示，且不触发冲突检测提示。
+    const QSignalBlocker blocker(this);
+    QKeySequenceEdit::setKeySequence(sequence);
+    m_lastValid = sequence;
+    setToolTip({});
+}
+
+void ShortcutKeySequenceEdit::keyPressEvent(QKeyEvent *event)
+{
+    const int key = event->key();
+    const Qt::KeyboardModifiers modifiers = event->modifiers();
+
+    // 单独按下修饰键时忽略，避免记录成"只有修饰键"的无效快捷键。
+    if (key == Qt::Key_Control || key == Qt::Key_Shift || key == Qt::Key_Alt
+        || key == Qt::Key_Meta || key == Qt::Key_AltGr) {
+        event->accept();
+        return;
     }
 
-protected:
-    void keyPressEvent(QKeyEvent *event) override
-    {
-        const int key = event->key();
-        const Qt::KeyboardModifiers modifiers = event->modifiers();
-
-        // 单独按下修饰键时忽略，避免记录成"只有修饰键"的无效快捷键。
-        if (key == Qt::Key_Control || key == Qt::Key_Shift || key == Qt::Key_Alt
-            || key == Qt::Key_Meta || key == Qt::Key_AltGr) {
-            event->accept();
-            return;
-        }
-
-        // Delete/Backspace 无修饰键时用于清空当前快捷键（而不是把 Delete
-        // 本身记录成快捷键），同时给出明确反馈。
-        if (modifiers == Qt::NoModifier
-            && (key == Qt::Key_Delete || key == Qt::Key_Backspace)) {
-            clear();
-            event->accept();
-            setToolTip(MS_TR("Press a key combination to assign, or leave empty to disable."));
-            return;
-        }
-
-        // 无修饰键的其他危险键（Escape/Tab/Enter/方向键等）直接拒绝。
-        if (modifiers == Qt::NoModifier && isForbiddenShortcutKey(key)) {
-            event->accept();
-            setToolTip(MS_TR("This key combination is not allowed as a shortcut."));
-            QToolTip::showText(mapToGlobal(rect().bottomLeft()),
-                               MS_TR("This key combination is not allowed as a shortcut."),
-                               this);
-            return;
-        }
-
-        QKeySequenceEdit::keyPressEvent(event);
+    // Delete/Backspace 无修饰键时用于清空当前快捷键（而不是把 Delete
+    // 本身记录成快捷键），同时给出明确反馈。
+    if (modifiers == Qt::NoModifier
+        && (key == Qt::Key_Delete || key == Qt::Key_Backspace)) {
+        clear();
+        event->accept();
+        setToolTip(MS_TR("Press a key combination to assign, or leave empty to disable."));
+        return;
     }
 
-private:
-    QKeySequence m_lastValid;
-};
+    // 无修饰键的其他危险键（Tab/Enter/方向键等）直接拒绝。
+    if (modifiers == Qt::NoModifier && isForbiddenShortcutKey(key)) {
+        event->accept();
+        showInvalidFeedback();
+        return;
+    }
+
+    // 全局快捷键：无修饰键的普通键直接拒绝（必须带修饰键或功能键）。
+    if (m_globalHotkey && modifiers == Qt::NoModifier && !isFunctionKey(key)) {
+        event->accept();
+        showInvalidFeedback();
+        return;
+    }
+
+    QKeySequenceEdit::keyPressEvent(event);
+}
+
+QString ShortcutKeySequenceEdit::invalidToolTip() const
+{
+    if (m_globalHotkey) {
+        return MS_TR("Global shortcuts need at least one modifier key or a function key.");
+    }
+    return MS_TR("This key combination is not allowed as a shortcut.");
+}
+
+void ShortcutKeySequenceEdit::showInvalidFeedback()
+{
+    setToolTip(invalidToolTip());
+    QToolTip::showText(mapToGlobal(rect().bottomLeft()), invalidToolTip(), this);
+}
 
 QVBoxLayout *createSettingsPageLayout(QWidget *parent)
 {
@@ -247,9 +306,18 @@ QFrame *createSettingsCard(const QString &title, const QString &description, QWi
     layout->setContentsMargins(16, 14, 16, 16);
     layout->setSpacing(8);
 
-    auto *titleLabel = new QLabel(title, card);
+    // 标题行：标题 + 右侧拉伸区（供"还原配置"按钮等头部操作使用）。
+    auto *header = new QWidget(card);
+    header->setObjectName(QStringLiteral("settingsCardHeader"));
+    auto *headerLayout = new QHBoxLayout(header);
+    headerLayout->setContentsMargins(0, 0, 0, 0);
+    headerLayout->setSpacing(8);
+
+    auto *titleLabel = new QLabel(title, header);
     titleLabel->setObjectName(QStringLiteral("settingsCardTitle"));
-    layout->addWidget(titleLabel);
+    headerLayout->addWidget(titleLabel);
+    headerLayout->addStretch();
+    layout->addWidget(header);
 
     if (!description.isEmpty()) {
         auto *descriptionLabel = new QLabel(description, card);
@@ -271,6 +339,57 @@ QFrame *createSettingsCard(const QString &title, const QString &description, QWi
 QFormLayout *settingsCardForm(QFrame *card)
 {
     return card ? card->findChild<QFormLayout *>(QStringLiteral("settingsCardForm")) : nullptr;
+}
+
+QPushButton *addCardRestoreButton(QFrame *card, const std::function<void()> &restore)
+{
+    if (!card) {
+        return nullptr;
+    }
+
+    auto *button = new QPushButton(MS_TR("Restore"), card);
+    button->setObjectName(QStringLiteral("settingsCardRestore"));
+    button->setCursor(Qt::PointingHandCursor);
+    button->setFocusPolicy(Qt::NoFocus);
+    button->setToolTip(MS_TR("Restore this section to the currently saved configuration."));
+
+    if (QWidget *header = card->findChild<QWidget *>(QStringLiteral("settingsCardHeader"))) {
+        if (auto *headerLayout = qobject_cast<QHBoxLayout *>(header->layout())) {
+            // 插到标题行末尾的拉伸项之前。
+            headerLayout->insertWidget(headerLayout->count() - 1, button);
+        }
+    }
+
+    if (restore) {
+        QObject::connect(button, &QPushButton::clicked, card, [restore] { restore(); });
+    }
+    return button;
+}
+
+QPushButton *addPageRestoreButton(QVBoxLayout *layout, const std::function<void()> &restore)
+{
+    if (!layout) {
+        return nullptr;
+    }
+
+    auto *row = new QWidget;
+    auto *rowLayout = new QHBoxLayout(row);
+    rowLayout->setContentsMargins(0, 0, 0, 0);
+    rowLayout->setSpacing(8);
+    rowLayout->addStretch();
+
+    auto *button = new QPushButton(MS_TR("Restore Page"), row);
+    button->setObjectName(QStringLiteral("settingsCardRestore"));
+    button->setCursor(Qt::PointingHandCursor);
+    button->setFocusPolicy(Qt::NoFocus);
+    button->setToolTip(MS_TR("Restore this page to the currently saved configuration."));
+    rowLayout->addWidget(button);
+
+    layout->addWidget(row);
+    if (restore) {
+        QObject::connect(button, &QPushButton::clicked, row, [restore] { restore(); });
+    }
+    return button;
 }
 
 QCheckBox *addSwitchRow(QFormLayout *form, const QString &label, const QString &description)
@@ -335,9 +454,9 @@ QComboBox *addComboRow(QFormLayout *form, const QString &label)
     return combo;
 }
 
-QKeySequenceEdit *addShortcutRow(QFormLayout *form, const QString &label)
+ShortcutKeySequenceEdit *addShortcutRow(QFormLayout *form, const QString &label, bool globalHotkey)
 {
-    auto *edit = new ShortcutKeySequenceEdit;
+    auto *edit = new ShortcutKeySequenceEdit(globalHotkey);
     edit->setContextMenuPolicy(Qt::NoContextMenu);
     if (auto *le = edit->findChild<QLineEdit *>()) {
         le->setContextMenuPolicy(Qt::NoContextMenu);

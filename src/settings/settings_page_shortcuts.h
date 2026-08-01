@@ -1,6 +1,7 @@
 #pragma once
 
 #include "settings/settings_config.h"
+#include "settings/settings_ui_helpers.h"
 
 #include <QList>
 #include <QWidget>
@@ -8,7 +9,7 @@
 #include <array>
 
 class QFormLayout;
-class QKeySequenceEdit;
+
 namespace markshot::settings {
 
 class SettingsPageShortcuts final : public QWidget {
@@ -38,18 +39,24 @@ private:
     /// @return 无返回值。
     void connectShortcutConflictChecks();
 
+    /// @brief 全量重扫所有快捷键项的重复冲突并刷新提示。
+    /// 程序化 setKeySequence（加载/还原）不触发 keySequenceChanged，
+    /// 因此需要在此类路径结束时显式调用。
+    void refreshShortcutConflicts();
+
     /// @brief 收集页面内所有快捷键输入控件。
     /// @return 快捷键输入控件列表。
-    QList<QKeySequenceEdit *> allShortcutEdits() const;
+    QList<ShortcutKeySequenceEdit *> allShortcutEdits() const;
 
-    std::array<QKeySequenceEdit *, static_cast<int>(ShotWindow::Tool::Laser) + 1> m_toolEdits = {};
-    std::array<QKeySequenceEdit *, static_cast<int>(ShotWindow::Action::Cancel) + 1> m_actionEdits = {};
-    QKeySequenceEdit *m_startupColorPicker = nullptr;
-    QKeySequenceEdit *m_startupRuler = nullptr;
-    QKeySequenceEdit *m_startupCodeScanner = nullptr;
-    QKeySequenceEdit *m_startupDisplayCapture = nullptr;
-    QKeySequenceEdit *m_startupGifRecorder = nullptr;
-    QKeySequenceEdit *m_startupVideoRecorder = nullptr;
+    std::array<ShortcutKeySequenceEdit *, static_cast<int>(ShotWindow::Tool::Laser) + 1> m_toolEdits = {};
+    std::array<ShortcutKeySequenceEdit *, static_cast<int>(ShotWindow::Action::Cancel) + 1> m_actionEdits = {};
+    ShortcutKeySequenceEdit *m_startupColorPicker = nullptr;
+    ShortcutKeySequenceEdit *m_startupRuler = nullptr;
+    ShortcutKeySequenceEdit *m_startupCodeScanner = nullptr;
+    ShortcutKeySequenceEdit *m_startupDisplayCapture = nullptr;
+    ShortcutKeySequenceEdit *m_startupGifRecorder = nullptr;
+    ShortcutKeySequenceEdit *m_startupVideoRecorder = nullptr;
+    SettingsConfig m_saved;
 };
 
 }  // namespace markshot::settings
