@@ -28,12 +28,20 @@ SettingsPageScroll::SettingsPageScroll(QWidget *parent)
     m_hidePreviewDuringCapture = addSwitchRow(form,
                                               MS_TR("Hide Preview During Capture"),
                                               MS_TR("Hide the preview panel while each frame is captured."));
+    addCardRestoreButton(scrollCard, [this] {
+        m_frameEnabled->setChecked(m_saved.scroll.frameEnabled);
+        m_frameGap->setValue(m_saved.scroll.frameGap);
+        m_previewGap->setValue(m_saved.scroll.previewGap);
+        m_hidePreviewDuringCapture->setChecked(m_saved.scroll.hidePreviewDuringCapture);
+    });
     layout->addWidget(scrollCard);
+    addPageRestoreButton(layout, [this] { setConfig(m_saved); });
     layout->addStretch();
 }
 
 void SettingsPageScroll::setConfig(const SettingsConfig &config)
 {
+    m_saved = config;
     m_frameEnabled->setChecked(config.scroll.frameEnabled);
     m_frameGap->setValue(config.scroll.frameGap);
     m_previewGap->setValue(config.scroll.previewGap);

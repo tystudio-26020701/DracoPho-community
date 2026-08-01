@@ -28,6 +28,7 @@ private:
     QSpinBox *m_frameGap = nullptr;
     QSpinBox *m_previewGap = nullptr;
     QCheckBox *m_hidePreviewDuringCapture = nullptr;
+    SettingsConfig m_saved;
 };
 
 }  // namespace markshot::settings

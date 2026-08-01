@@ -50,6 +50,7 @@ private:
     QSpinBox *m_toolbarIconSize = nullptr;
     QSpinBox *m_toolbarFontSize = nullptr;
     QColor m_defaultColor;
+    SettingsConfig m_saved;
 };
 
 }  // namespace markshot::settings

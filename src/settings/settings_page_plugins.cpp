@@ -220,11 +220,13 @@ SettingsPagePlugins::SettingsPagePlugins(QWidget *parent)
     buildProviderCard(layout);
     buildDirectoriesCard(layout);
     buildDiagnosticsCard(layout);
+    addPageRestoreButton(layout, [this] { setConfig(m_saved); });
     layout->addStretch();
 }
 
 void SettingsPagePlugins::setConfig(const SettingsConfig &config)
 {
+    m_saved = config;
     setProviderComboValue(m_ocrProvider, config.pinned.ocrProvider);
     setProviderComboValue(m_translationProvider, config.pinned.translationProvider);
     setProviderComboValue(m_codeScanProvider, config.integrations.codeScanProvider);
@@ -254,6 +256,11 @@ void SettingsPagePlugins::buildProviderCard(QVBoxLayout *layout)
     populateProviderCombo(m_ocrProvider, providers::ProviderPluginCapability::Ocr);
     populateProviderCombo(m_translationProvider, providers::ProviderPluginCapability::Translation);
     populateProviderCombo(m_codeScanProvider, providers::ProviderPluginCapability::CodeScan);
+    addCardRestoreButton(card, [this] {
+        setProviderComboValue(m_ocrProvider, m_saved.pinned.ocrProvider);
+        setProviderComboValue(m_translationProvider, m_saved.pinned.translationProvider);
+        setProviderComboValue(m_codeScanProvider, m_saved.integrations.codeScanProvider);
+    });
     layout->addWidget(card);
 }
 

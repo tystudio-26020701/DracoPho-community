@@ -47,6 +47,7 @@ private:
     QLineEdit *m_translationModel = nullptr;
     QDoubleSpinBox *m_translationTemperature = nullptr;
     QPlainTextEdit *m_translationSystemPrompt = nullptr;
+    SettingsConfig m_saved;
 };
 
 }  // namespace markshot::settings

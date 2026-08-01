@@ -46,6 +46,7 @@ private:
     QLineEdit *m_translationCommand = nullptr;
     QSpinBox *m_translationTimeoutMs = nullptr;
     QColor m_borderColorValue;
+    SettingsConfig m_saved;
 };
 
 }  // namespace markshot::settings
