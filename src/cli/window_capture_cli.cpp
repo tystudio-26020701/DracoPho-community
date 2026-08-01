@@ -1,7 +1,9 @@
 #include "cli/window_capture_cli.h"
 
+#include "app_config_store.h"
 #include "capture_session_screen_utils.h"
 #include "clipboard_image.h"
+#include "headless_capture_config.h"
 #include "screen_capture.h"
 #include "window_detection.h"
 
@@ -466,6 +468,34 @@ bool parseDestination(const QString &name, CaptureDestination *destination)
     return false;
 }
 
+/// @brief 将配置中的无头默认去向转换为本地去向枚举。
+/// @param destination 配置枚举。
+/// @return 本地去向枚举。
+CaptureDestination captureDestinationForConfig(HeadlessCaptureDestination destination)
+{
+    return destination == HeadlessCaptureDestination::Stage
+        ? CaptureDestination::Stage
+        : CaptureDestination::Inline;
+}
+
+/// @brief 返回去向的展示名称。
+/// @param destination 去向枚举。
+/// @return 展示名称。
+QString captureDestinationName(CaptureDestination destination)
+{
+    switch (destination) {
+    case CaptureDestination::Inline:
+        return QStringLiteral("inline");
+    case CaptureDestination::File:
+        return QStringLiteral("file");
+    case CaptureDestination::Stage:
+        return QStringLiteral("stage");
+    case CaptureDestination::Clipboard:
+        return QStringLiteral("clipboard");
+    }
+    return QStringLiteral("inline");
+}
+
 } // namespace
 
 void addWindowCaptureOptions(QCommandLineParser *parser)
@@ -482,8 +512,11 @@ void addWindowCaptureOptions(QCommandLineParser *parser)
     QCommandLineOption destinationOption(QStringLiteral("capture-destination"),
                                          QStringLiteral("Where captured window images go: inline (base64 in the JSON output, no files, clipboard untouched), "
                                                         "file (PNG files into --capture-to), stage (PNG files into a temporary staging directory) or "
-                                                        "clipboard (system clipboard; the last image wins). Default: inline. The clipboard is never "
-                                                        "modified unless \"clipboard\" is explicitly selected."),
+                                                        "clipboard (system clipboard; the last image wins). Default: the value configured in "
+                                                        "Settings > Storage > Headless Mode (inline unless changed). The clipboard is never "
+                                                        "modified unless \"clipboard\" is explicitly selected AND clipboard writes are enabled "
+                                                        "in Settings > Storage > Headless Mode; a blocked clipboard request falls back to the "
+                                                        "configured default destination and exits with code 1 so scripts can detect it."),
                                          QStringLiteral("mode"));
     parser->addOption(listWindowsOption);
     parser->addOption(windowOption);
@@ -573,7 +606,10 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
         return 0;
     }
 
-    CaptureDestination destination = CaptureDestination::Inline;
+    // 默认去向取自设置页"存储 > 无头模式"；未显式指定时绝不写入剪贴板。
+    const HeadlessCaptureConfig headless =
+        headlessCaptureConfigFromRoot(readAppConfigRoot());
+    CaptureDestination destination = captureDestinationForConfig(headless.defaultDestination);
     if (hasDestination && !parseDestination(parser.value(QStringLiteral("capture-destination")), &destination)) {
         err << "invalid --capture-destination \"" << parser.value(QStringLiteral("capture-destination"))
             << "\" (expected inline, file, stage or clipboard).\n";
@@ -582,6 +618,19 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
     if (destination == CaptureDestination::File && captureTo.isEmpty()) {
         err << "--capture-destination file requires --capture-to <directory>.\n";
         return 1;
+    }
+
+    // 防呆：无头模式下剪贴板写权限默认关闭（设置页需输入口令才可开启）。
+    // 显式请求 clipboard 但未获授权时，降级为配置的默认去向并给出警告；
+    // 降级后退出码保持非零，让依赖剪贴板的脚本/Agent 能检测到并自行处理。
+    bool clipboardBlocked = false;
+    if (destination == CaptureDestination::Clipboard && !headless.clipboardAllowed) {
+        clipboardBlocked = true;
+        destination = captureDestinationForConfig(headless.defaultDestination);
+        err << "warning: clipboard writes are disabled for headless mode. "
+               "Enable them in Settings > Storage > Headless Mode if needed. "
+               "Falling back to \""
+            << captureDestinationName(destination) << "\".\n";
     }
 
     QVector<WindowSelection> selections;
@@ -627,15 +676,17 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
 
     QJsonObject root;
     root.insert(QStringLiteral("platform"), platformName());
-    root.insert(QStringLiteral("destination"),
-                destination == CaptureDestination::Inline ? QStringLiteral("inline")
-                : destination == CaptureDestination::File ? QStringLiteral("file")
-                : destination == CaptureDestination::Stage ? QStringLiteral("stage")
-                                                           : QStringLiteral("clipboard"));
+    root.insert(QStringLiteral("destination"), captureDestinationName(destination));
+    if (clipboardBlocked) {
+        root.insert(QStringLiteral("warning"),
+                    QStringLiteral("clipboard writes are disabled for headless mode; "
+                                   "destination downgraded to %1")
+                        .arg(captureDestinationName(destination)));
+    }
     root.insert(QStringLiteral("captures"), captures);
     out << QJsonDocument(root).toJson(QJsonDocument::Compact) << '\n';
     out.flush();
-    return anyFailed ? 1 : 0;
+    return (anyFailed || clipboardBlocked) ? 1 : 0;
 }
 
 } // namespace markshot::cli

@@ -5,12 +5,16 @@
 #include "autostart/autostart_manager.h"
 #include "capture_cursor_policy.h"
 #include "config_value.h"
+#include "headless_capture_config.h"
 #include "recording/recording_storage_config.h"
 #include "settings/provider_preference_config.h"
 #include "ui/i18n.h"
 #include "ui/interface_language_config.h"
 #include "ui/interface_theme_config.h"
+#include "ui/color_history_store.h"
+#include "window_detection.h"
 
+#include <QFile>
 #include <QJsonObject>
 #include <QJsonValue>
 
@@ -275,6 +279,9 @@ void writeStorageSettings(QJsonObject *root, const StorageSettings &settings)
                    std::clamp(settings.exportImageEffect.shadowOffsetY, 0, 128));
     setNestedValue(root, {QStringLiteral("export"), QStringLiteral("imageFrame"), QStringLiteral("shadowOpacity")},
                    std::clamp(settings.exportImageEffect.shadowOpacity, 0.0, 1.0));
+    writeHeadlessCaptureConfig(root,
+                               HeadlessCaptureConfig{settings.headlessDefaultDestination,
+                                                     settings.headlessClipboardAllowed});
 }
 
 /// @brief 写入滚动截图设置。
@@ -395,6 +402,51 @@ bool writeSettingsConfig(const SettingsConfig &config, QString *error)
             *error = MS_TR("Cannot save annotation state");
         }
         return false;
+    }
+    return true;
+}
+
+bool resetSettingsToDefaults(QString *error)
+{
+    if (error) {
+        error->clear();
+    }
+
+    // 纯用户数据（取色历史）不属于"设置"，还原原始设置时予以保留。
+    bool ok = false;
+    const QJsonObject existing = readAppConfigRoot(&ok);
+    const QVector<QColor> savedHistory =
+        ok ? markshot::ui::colorHistoryFromConfigRoot(existing) : QVector<QColor>{};
+
+    // 1. 删除现有配置并以出厂默认值重建（与全新安装生成的默认一致）。
+    //    删除失败必须报错，否则旧配置（含剪贴板权限、API Key）原样保留，
+    //    用户会误以为还原成功。
+    const QString configPath = appConfigPath();
+    if (!configPath.isEmpty()) {
+        QFile configFile(configPath);
+        if (configFile.exists() && !configFile.remove()) {
+            if (error) {
+                *error = MS_TR("Cannot reset application config");
+            }
+            return false;
+        }
+    }
+    if (!ensureAppConfigFile()) {
+        if (error) {
+            *error = MS_TR("Cannot reset application config");
+        }
+        return false;
+    }
+
+    // 2. 取消开机自启（尽力而为，平台不支持时忽略失败）。
+    autostart::setEnabled(false);
+
+    // 3. 重置标注状态（当前颜色等回到默认值）。
+    saveAnnotationState(AnnotationState{});
+
+    // 4. 恢复取色历史。
+    if (!savedHistory.isEmpty()) {
+        markshot::ui::writeColorHistory(savedHistory);
     }
     return true;
 }

@@ -5,6 +5,7 @@
 #include "capture_cursor_policy.h"
 #include "capture_own_windows_policy.h"
 #include "config_value.h"
+#include "headless_capture_config.h"
 #include "kde_capture_config.h"
 #include "recording/recording_storage_config.h"
 #include "save_path_config.h"
@@ -291,6 +292,10 @@ StorageSettings readStorageSettings(const QJsonObject &root)
     settings.clipboardImageMode = clipboard.mode;
     settings.clipboardThresholdM = clipboard.thresholdM;
     settings.exportImageEffect = exportImageEffectConfigFromRoot(root);
+
+    const HeadlessCaptureConfig headless = headlessCaptureConfigFromRoot(root);
+    settings.headlessDefaultDestination = headless.defaultDestination;
+    settings.headlessClipboardAllowed = headless.clipboardAllowed;
     return settings;
 }
 

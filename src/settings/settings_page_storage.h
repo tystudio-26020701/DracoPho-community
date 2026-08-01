@@ -32,12 +32,15 @@ private:
     QLineEdit *m_recordingGifDirectory = nullptr;
     QComboBox *m_clipboardMode = nullptr;
     QSpinBox *m_clipboardThresholdM = nullptr;
+    QComboBox *m_headlessDestination = nullptr;
+    QCheckBox *m_headlessClipboardAllowed = nullptr;
     QCheckBox *m_exportImageFrameEnabled = nullptr;
     QSpinBox *m_exportPadding = nullptr;
     QSpinBox *m_exportCornerRadius = nullptr;
     QSpinBox *m_exportShadowRadius = nullptr;
     QSpinBox *m_exportShadowOffsetY = nullptr;
     QDoubleSpinBox *m_exportShadowOpacity = nullptr;
+    SettingsConfig m_saved;
 };
 
 }  // namespace markshot::settings
