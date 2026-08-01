@@ -101,8 +101,12 @@ function(markshot_link_core_test_libraries target)
     # pipewire_capture_target.cmake 链接这两个库；复用主目标对象文件的测试
     # 目标若不链接，Arch 等容器内链接会报 "libEGL.so.1: DSO missing from
     # command line"（--no-copy-dt-needed-entries 下不会透传传递依赖）。
-    if(MARK_SHOT_LINUX AND PipeWire_FOUND AND EGLPkg_FOUND AND GLESv2Pkg_FOUND)
-        target_link_libraries(${target} PRIVATE PkgConfig::EGLPkg PkgConfig::GLESv2Pkg)
+    if(MARK_SHOT_LINUX AND PipeWire_FOUND)
+        target_link_libraries(${target} PRIVATE PkgConfig::PipeWire)
+        target_compile_definitions(${target} PRIVATE HAVE_PIPEWIRE)
+        if(EGLPkg_FOUND AND GLESv2Pkg_FOUND)
+            target_link_libraries(${target} PRIVATE PkgConfig::EGLPkg PkgConfig::GLESv2Pkg)
+        endif()
     endif()
     # 与主目标保持一致：可选功能库（内置扫码 / FFmpeg 录制 / PulseAudio 采集）。
     if(ZXing_FOUND)
