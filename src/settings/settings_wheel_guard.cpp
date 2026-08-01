@@ -1,5 +1,6 @@
 #include "settings/settings_wheel_guard.h"
 
+#include <QAbstractSlider>
 #include <QAbstractSpinBox>
 #include <QApplication>
 #include <QComboBox>
@@ -17,7 +18,9 @@ namespace {
 /// Qt 默认行为下，滚轮事件会送达鼠标下的控件；QComboBox 与 QAbstractSpinBox
 /// 即使未获得键盘焦点也会响应滚轮并修改内容（选中项/数值），用户在设置页
 /// 上下滚动翻页时极易误改配置。本过滤器把这类"未聚焦"控件的滚轮事件转发
-/// 给最近的 QScrollArea 视口，让页面按用户意图滚动。
+/// 给最近的 QScrollArea 视口，让页面按用户意图滚动；找不到滚动区域时直接
+/// 吞掉事件，保证控件的值绝不会被悬停滚动篡改。控件聚焦时仍保留滚轮调整
+/// 值的能力。
 class WheelGuard final : public QObject {
 public:
     explicit WheelGuard(QWidget *dialog)
@@ -50,11 +53,13 @@ public:
             return QObject::eventFilter(watched, event);
         }
 
-        // 转发给外层滚动区域，保证设置页仍可滚动翻页。
-        if (redirectToScrollArea(control, static_cast<QWheelEvent *>(event))) {
-            return true;
+        auto *wheelEvent = static_cast<QWheelEvent *>(event);
+        // 转发给外层滚动区域，保证设置页仍可滚动翻页；找不到滚动区域时
+        // 也吞掉事件，杜绝悬停滚动篡改控件值。
+        if (!redirectToScrollArea(control, wheelEvent)) {
+            event->accept();
         }
-        return QObject::eventFilter(watched, event);
+        return true;
     }
 
 private:
@@ -69,11 +74,12 @@ private:
 
     /// @brief 从事件目标向上查找应受防护的控件。
     /// @param widget 事件目标控件。
-    /// @return 找到的下拉框/数值框，未找到时返回空指针。
+    /// @return 找到的下拉框/数值框/滑块，未找到时返回空指针。
     static QWidget *guardedControl(QWidget *widget)
     {
         for (QWidget *current = widget; current; current = current->parentWidget()) {
-            if (qobject_cast<QAbstractSpinBox *>(current) || qobject_cast<QComboBox *>(current)) {
+            if (qobject_cast<QAbstractSpinBox *>(current) || qobject_cast<QComboBox *>(current)
+                || qobject_cast<QAbstractSlider *>(current)) {
                 return current;
             }
             // 到达滚动区域仍未命中，说明悬停在普通控件上，无需防护。
