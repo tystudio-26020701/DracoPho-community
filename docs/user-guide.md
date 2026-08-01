@@ -361,10 +361,16 @@ mark-shot --window 0 --capture-destination clipboard
 on the system clipboard (the `Copy` action / `Ctrl+C`), because that is the
 primary workflow of a screenshot tool. Headless modes (the CLI and the
 enterprise MCP server) follow the opposite rule: **the clipboard is never
-modified unless `clipboard` is explicitly chosen as the destination** —
+modified unless `clipboard` is explicitly chosen as the destination AND
+clipboard writes are enabled in Settings > Storage > Headless Mode** —
 `inline` (default) and `stage` leave the user's current clipboard content
 untouched, so a scheduled or agent-driven capture cannot overwrite text or
-images the user is working with elsewhere.
+images the user is working with elsewhere. When a `clipboard` request is
+rejected because headless clipboard writes are disabled, the capture falls
+back to the configured headless default destination, the JSON output
+(`"warning"`) and stderr tell you so, and the process exits with a non-zero
+code so automation can detect it. Enabling headless clipboard writes in the
+settings requires typing a confirmation passphrase.
 
 Output is a JSON object `{"captures":[...]}` with one entry per captured
 window; every entry repeats the selector, the window identity and the final
@@ -391,8 +397,9 @@ Every headless mode is guaranteed to be invisible and non-disruptive:
 - no interactive portal prompt appears (`allowInteractivePortal` is disabled);
 - the process exits immediately after writing the output;
 - the window list captured before and after a headless operation is identical;
-- `--capture-destination inline` additionally guarantees the system clipboard
-  is left untouched.
+- headless modes never touch the system clipboard unless `clipboard` was
+  explicitly requested **and** clipboard writes are enabled in
+  Settings > Storage > Headless Mode.
 
 If no windows are detected (for example a compositor helper that is disabled,
 or an X11 session without window enumeration), the command prints a clear
