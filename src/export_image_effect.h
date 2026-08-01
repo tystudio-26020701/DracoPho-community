@@ -16,6 +16,14 @@ struct ExportImageEffectConfig {
     QColor shadowColor = QColor(0, 0, 0);
 };
 
+inline bool operator==(const ExportImageEffectConfig &a, const ExportImageEffectConfig &b)
+{
+    return a.enabled == b.enabled && a.padding == b.padding
+        && a.cornerRadius == b.cornerRadius && a.shadowRadius == b.shadowRadius
+        && a.shadowOffsetY == b.shadowOffsetY && a.shadowOpacity == b.shadowOpacity
+        && a.shadowColor == b.shadowColor;
+}
+
 ExportImageEffectConfig exportImageEffectConfigFromRoot(const QJsonObject &root);
 QImage applyExportImageEffect(const QImage &source, const ExportImageEffectConfig &config);
 

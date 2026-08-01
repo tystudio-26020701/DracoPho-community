@@ -142,4 +142,12 @@ void SettingsPageAdvanced::restoreOriginalSettings()
     }
 }
 
+
+bool SettingsPageAdvanced::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.advanced == m_saved.advanced);
+}
+
 }  // namespace markshot::settings

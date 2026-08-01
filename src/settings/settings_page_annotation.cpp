@@ -115,6 +115,13 @@ void SettingsPageAnnotation::updateConfig(SettingsConfig *config) const
     config->annotation.toolbarFontSize = m_toolbarFontSize->value();
 }
 
+bool SettingsPageAnnotation::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.annotation == m_saved.annotation);
+}
+
 void SettingsPageAnnotation::populateToolCombo(QComboBox *combo)
 {
     if (!combo) {

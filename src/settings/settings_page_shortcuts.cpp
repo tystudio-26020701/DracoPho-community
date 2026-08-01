@@ -303,4 +303,11 @@ void SettingsPageShortcuts::refreshShortcutConflicts()
     }
 }
 
+bool SettingsPageShortcuts::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.shortcuts == m_saved.shortcuts);
+}
+
 }  // namespace markshot::settings

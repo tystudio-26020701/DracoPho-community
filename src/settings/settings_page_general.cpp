@@ -14,6 +14,21 @@
 #include <QVBoxLayout>
 
 namespace markshot::settings {
+namespace {
+
+/// @brief 向语言下拉框添加一个语言选项。
+/// @param combo 语言下拉框。
+/// @param mode 语言模式。
+void addLanguageOption(QComboBox *combo, markshot::ui::UiLanguageMode mode)
+{
+    // "跟随系统"使用独立文案，避免与显式语言条目重复显示。
+    const QString text = (mode == markshot::ui::UiLanguageMode::System)
+        ? MS_TR("Follow System")
+        : markshot::i18n::languageDisplayName(markshot::ui::languageForUiLanguageMode(mode));
+    combo->addItem(text, QVariant::fromValue(static_cast<int>(mode)));
+}
+
+}  // namespace
 
 SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
     : QWidget(parent)
@@ -25,12 +40,20 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
                                              this);
     QFormLayout *startupForm = settingsCardForm(startupCard);
     m_uiLanguage = addComboRow(startupForm, MS_TR("Interface Language"));
-    m_uiLanguage->addItem(MS_TR("Follow System"),
-                          QVariant::fromValue(static_cast<int>(markshot::ui::UiLanguageMode::System)));
-    m_uiLanguage->addItem(MS_TR("English"),
-                          QVariant::fromValue(static_cast<int>(markshot::ui::UiLanguageMode::English)));
-    m_uiLanguage->addItem(MS_TR("Simplified Chinese"),
-                          QVariant::fromValue(static_cast<int>(markshot::ui::UiLanguageMode::Chinese)));
+    m_uiLanguage->setObjectName(QStringLiteral("settingsLanguageCombo"));
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::System);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::English);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::Chinese);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::TraditionalChinese);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::Japanese);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::Korean);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::Russian);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::Italian);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::Arabic);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::French);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::German);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::Spanish);
+    addLanguageOption(m_uiLanguage, markshot::ui::UiLanguageMode::Portuguese);
     m_uiTheme = addComboRow(startupForm, MS_TR("Interface Theme"));
     m_uiTheme->addItem(MS_TR("Follow System"),
                        QVariant::fromValue(static_cast<int>(markshot::ui::UiThemeMode::System)));
@@ -82,6 +105,24 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
     connect(m_fullscreenHotkey, &QKeySequenceEdit::keySequenceChanged, this, [this] {
         checkGlobalHotkeyConflict(m_fullscreenHotkey, m_captureHotkey);
     });
+    connect(m_uiLanguage, &QComboBox::currentIndexChanged, this, [this] {
+        notifyLanguageModeChanged();
+    });
+}
+
+void SettingsPageGeneral::notifyLanguageModeChanged()
+{
+    if (m_onLanguageModeChanged) {
+        const markshot::ui::UiLanguageMode mode =
+            static_cast<markshot::ui::UiLanguageMode>(m_uiLanguage->currentData().toInt());
+        m_onLanguageModeChanged(mode);
+    }
+}
+
+void SettingsPageGeneral::setLanguageModeHandler(
+    const std::function<void(markshot::ui::UiLanguageMode)> &handler)
+{
+    m_onLanguageModeChanged = handler;
 }
 
 void SettingsPageGeneral::checkGlobalHotkeyConflict(QKeySequenceEdit *primary, QKeySequenceEdit *other)
@@ -139,6 +180,13 @@ void SettingsPageGeneral::updateConfig(SettingsConfig *config) const
     config->general.hotkeysEnabled = m_hotkeysEnabled->isChecked();
     config->general.captureHotkey = m_captureHotkey->keySequence();
     config->general.fullscreenHotkey = m_fullscreenHotkey->keySequence();
+}
+
+bool SettingsPageGeneral::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.general == m_saved.general);
 }
 
 }  // namespace markshot::settings

@@ -66,4 +66,11 @@ void SettingsPageCapture::updateConfig(SettingsConfig *config) const
     config->capture.hideOwnWindows = m_hideOwnWindows->isChecked();
 }
 
+bool SettingsPageCapture::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.capture == m_saved.capture);
+}
+
 }  // namespace markshot::settings

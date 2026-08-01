@@ -25,6 +25,10 @@ public:
     /// @param config 需要更新的设置配置。
     void updateConfig(SettingsConfig *config) const;
 
+    /// @brief 判断页面是否有未保存的修改。
+    /// @return 有未保存修改时返回 true。
+    bool isModified() const;
+
 private:
     /// @brief 初始化工具下拉框的选项。
     /// @param combo 目标下拉框。

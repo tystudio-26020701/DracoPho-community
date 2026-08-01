@@ -4,5 +4,6 @@
     <file alias="mark-shot.svg">data/icons/hicolor/scalable/apps/mark-shot.svg</file>
     <file alias="chevron-down.svg">data/icons/chevron-down.svg</file>
     <file alias="chevron-up.svg">data/icons/chevron-up.svg</file>
+    <file alias="company-logo.png">data/icons/company-logo.png</file>
   </qresource>
 </RCC>

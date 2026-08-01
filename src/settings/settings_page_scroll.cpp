@@ -60,4 +60,12 @@ void SettingsPageScroll::updateConfig(SettingsConfig *config) const
     config->scroll.hidePreviewDuringCapture = m_hidePreviewDuringCapture->isChecked();
 }
 
+
+bool SettingsPageScroll::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.scroll == m_saved.scroll);
+}
+
 }  // namespace markshot::settings

@@ -27,6 +27,10 @@ public:
     /// @param config 需要更新的设置配置。
     void updateConfig(SettingsConfig *config) const;
 
+    /// @brief 判断页面是否有未保存的修改。
+    /// @return 有未保存修改时返回 true。
+    bool isModified() const;
+
 private:
     /// @brief 刷新置顶图片边框颜色按钮。
     void updateBorderColorButton();

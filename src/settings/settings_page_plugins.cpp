@@ -337,4 +337,11 @@ void SettingsPagePlugins::refreshDiagnostics()
     m_diagnosticsLayout->addStretch();
 }
 
+bool SettingsPagePlugins::isModified() const
+{
+    SettingsConfig current = m_saved;
+    updateConfig(&current);
+    return !(current.pinned == m_saved.pinned) || !(current.integrations == m_saved.integrations);
+}
+
 }  // namespace markshot::settings
