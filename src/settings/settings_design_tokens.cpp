@@ -26,16 +26,8 @@ QString lightSettingsStyleSheet()
 "QLabel#settingsStatus[state=\"warning\"] { color: #FBBF24; font-weight: 800; }"
 
         // 关于页
-        "QLabel#settingsAboutLogo { margin-top: 8px; }"
-        "QLabel#settingsAboutTitle { color: #F1F5F9; font-size: 22px; font-weight: 800; }"
-        "QLabel#settingsAboutEdition { color: #5EEAD4; font-size: 13px; font-weight: 700; }"
-        "QLabel#settingsAboutSectionTitle { color: #F1F5F9; font-size: 14px; font-weight: 800; }"
-        "QLabel#settingsAboutText { color: #94A3B8; font-size: 13px; }"
-        "QLabel#settingsAboutText a { color: #5EEAD4; text-decoration: none; }"
-"QLabel#settingsStatus[state=\"warning\"] { color: #B45309; font-weight: 800; }"
-
-        // 关于页
-        "QLabel#settingsAboutLogo { margin-top: 8px; }"
+        "QLabel#settingsAboutAppIcon { margin-top: 8px; }"
+        "QLabel#settingsAboutCompanyLogo { margin-top: 12px; }"
         "QLabel#settingsAboutTitle { color: #0F172A; font-size: 22px; font-weight: 800; }"
         "QLabel#settingsAboutEdition { color: #0D9488; font-size: 13px; font-weight: 700; }"
         "QLabel#settingsAboutSectionTitle { color: #0F172A; font-size: 14px; font-weight: 800; }"
@@ -246,6 +238,15 @@ QString settingsStyleSheet()
 
         // 状态标签
         "QLabel#settingsStatus { color: #64748B; }"
+
+        // 关于页
+        "QLabel#settingsAboutAppIcon { margin-top: 8px; }"
+        "QLabel#settingsAboutCompanyLogo { margin-top: 12px; }"
+        "QLabel#settingsAboutTitle { color: #F1F5F9; font-size: 22px; font-weight: 800; }"
+        "QLabel#settingsAboutEdition { color: #5EEAD4; font-size: 13px; font-weight: 700; }"
+        "QLabel#settingsAboutSectionTitle { color: #F1F5F9; font-size: 14px; font-weight: 800; }"
+        "QLabel#settingsAboutText { color: #94A3B8; font-size: 13px; }"
+        "QLabel#settingsAboutText a { color: #5EEAD4; text-decoration: none; }"
 
         // 侧栏导航列表
         "QListWidget#settingsNavigation {"

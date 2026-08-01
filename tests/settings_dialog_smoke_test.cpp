@@ -2,11 +2,16 @@
 #include "ui/i18n.h"
 #include "ui/interface_language_config.h"
 
+#include <QAbstractSpinBox>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDoubleSpinBox>
 #include <QListWidget>
 #include <QScrollArea>
+#include <QSlider>
+#include <QSpinBox>
 #include <QStackedWidget>
+#include <QWheelEvent>
 #include <QtTest/QtTest>
 
 namespace {
@@ -25,6 +30,36 @@ QComboBox *findLanguageCombo(QWidget *dialog)
 QListWidget *findNavigationList(QWidget *dialog)
 {
     return dialog->findChild<QListWidget *>(QStringLiteral("settingsNavigation"));
+}
+
+/// @brief 向控件发送一次滚轮事件。
+/// @param target 接收滚轮事件的控件。
+void sendWheelTo(QWidget *target, int angleDeltaY = 120)
+{
+    const QPointF globalPos = target->mapToGlobal(target->rect().center());
+    QWheelEvent event(QPointF(target->rect().center()),
+                      globalPos,
+                      QPoint(0, 0),
+                      QPoint(0, angleDeltaY),
+                      Qt::NoButton,
+                      Qt::NoModifier,
+                      Qt::NoScrollPhase,
+                      false);
+    QApplication::sendEvent(target, &event);
+}
+
+/// @brief 读取数值输入框的当前整数值。
+/// @param spin 数值输入框。
+/// @return 当前值。
+int spinValue(QAbstractSpinBox *spin)
+{
+    if (auto *intSpin = qobject_cast<QSpinBox *>(spin)) {
+        return intSpin->value();
+    }
+    if (auto *doubleSpin = qobject_cast<QDoubleSpinBox *>(spin)) {
+        return static_cast<int>(doubleSpin->value());
+    }
+    return 0;
 }
 
 }  // namespace
@@ -118,6 +153,70 @@ private slots:
         QVERIFY(rebuiltNav != nullptr);
         const QString after = rebuiltNav->item(0)->text();
         QVERIFY(!after.contains(QStringLiteral("\u25CF")));
+    }
+
+    /**
+     * 验证滚轮防护在真实设置对话框中生效：悬停在未聚焦的
+     * QSpinBox / QDoubleSpinBox / QComboBox / QSlider 上滚动滚轮
+     * 不会篡改任何控件内容（Qt 组件自带的滚轮响应必须被拦截）。
+     */
+    void wheelScrollDoesNotTamperAnyControl()
+    {
+        markshot::settings::SettingsDialog dialog;
+        dialog.show();
+        QTest::qWaitForWindowExposed(&dialog);
+        QTest::qWait(100);
+
+        // 遍历所有页面里的受防护控件。
+        auto *stack = dialog.findChild<QStackedWidget *>();
+        QVERIFY(stack != nullptr);
+        for (int pageIndex = 0; pageIndex < stack->count(); ++pageIndex) {
+            auto *area = qobject_cast<QScrollArea *>(stack->widget(pageIndex));
+            if (!area) {
+                continue;
+            }
+            QWidget *page = area->widget();
+            if (!page) {
+                continue;
+            }
+            // 数值框：QSpinBox / QDoubleSpinBox
+            const auto spins = page->findChildren<QAbstractSpinBox *>();
+            for (QAbstractSpinBox *spin : spins) {
+                if (!spin->isEnabled()) {
+                    continue;
+                }
+                spin->clearFocus();
+                const int before = spinValue(spin);
+                sendWheelTo(spin, 120);
+                QTest::qWait(20);
+                QCOMPARE(spinValue(spin), before);
+            }
+            // 下拉框：QComboBox（跳过语言下拉框，避免触发语言重建干扰页面）
+            const auto combos = page->findChildren<QComboBox *>();
+            for (QComboBox *combo : combos) {
+                if (!combo->isEnabled()
+                    || combo->objectName() == QStringLiteral("settingsLanguageCombo")) {
+                    continue;
+                }
+                combo->clearFocus();
+                const int before = combo->currentIndex();
+                sendWheelTo(combo, 120);
+                QTest::qWait(20);
+                QCOMPARE(combo->currentIndex(), before);
+            }
+            // 滑块：QSlider
+            const auto sliders = page->findChildren<QSlider *>();
+            for (QSlider *slider : sliders) {
+                if (!slider->isEnabled()) {
+                    continue;
+                }
+                slider->clearFocus();
+                const int before = slider->value();
+                sendWheelTo(slider, 120);
+                QTest::qWait(20);
+                QCOMPARE(slider->value(), before);
+            }
+        }
     }
 };
 
