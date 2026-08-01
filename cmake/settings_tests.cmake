@@ -97,6 +97,13 @@ function(markshot_link_core_test_libraries target)
     if(MARK_SHOT_LINUX AND WaylandClient_FOUND)
         target_link_libraries(${target} PRIVATE PkgConfig::WaylandClient)
     endif()
+    # 与主目标保持一致：PipeWire DMA-BUF 导入依赖 EGL/GLESv2。主目标通过
+    # pipewire_capture_target.cmake 链接这两个库；复用主目标对象文件的测试
+    # 目标若不链接，Arch 等容器内链接会报 "libEGL.so.1: DSO missing from
+    # command line"（--no-copy-dt-needed-entries 下不会透传传递依赖）。
+    if(MARK_SHOT_LINUX AND PipeWire_FOUND AND EGLPkg_FOUND AND GLESv2Pkg_FOUND)
+        target_link_libraries(${target} PRIVATE PkgConfig::EGLPkg PkgConfig::GLESv2Pkg)
+    endif()
     # 与主目标保持一致：可选功能库（内置扫码 / FFmpeg 录制 / PulseAudio 采集）。
     if(ZXing_FOUND)
         target_link_libraries(${target} PRIVATE ZXing::ZXing)
