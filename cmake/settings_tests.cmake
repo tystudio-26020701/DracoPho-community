@@ -186,3 +186,15 @@ target_link_libraries(mark-shot-settings-source-wheel-test
         Qt6::Widgets
 )
 add_test(NAME settings-source-wheel COMMAND mark-shot-settings-source-wheel-test)
+
+qt_add_executable(mark-shot-capture-overlay-flags-test
+    tests/capture_overlay_flags_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-capture-overlay-flags-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-capture-overlay-flags-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-capture-overlay-flags-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-capture-overlay-flags-test)
+add_test(NAME capture-overlay-flags COMMAND mark-shot-capture-overlay-flags-test)

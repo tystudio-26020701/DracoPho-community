@@ -24,7 +24,8 @@ ScrollSessionWindow::ScrollSessionWindow(QRect globalGeometry,
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
-    setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint
+                   | Qt::NoDropShadowWindowHint);
     markshot::windows::setExcludedFromCapture(this);
     setObjectName(QStringLiteral("scrollSessionWindow"));
     setMouseTracking(true);
