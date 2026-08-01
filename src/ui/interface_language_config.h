@@ -10,7 +10,17 @@ namespace markshot::ui {
 enum class UiLanguageMode {
     System,
     English,
-    Chinese,
+    Chinese,            // 简体中文
+    TraditionalChinese, // 繁體中文
+    Japanese,           // 日本語
+    Korean,             // 한국어
+    Russian,            // Русский
+    Italian,            // Italiano
+    Arabic,             // العربية (RTL)
+    French,             // Français
+    German,             // Deutsch
+    Spanish,            // Español
+    Portuguese,         // Português
 };
 
 /// @brief 从字符串解析界面语言模式。
