@@ -2,17 +2,61 @@
 
 ### 26.8.1.0
 
-- **Multilingual Interface**: The interface now supports 12 languages — English, Simplified/Traditional Chinese, Japanese, Korean, Russian, Italian, Arabic (with right-to-left layout), French, German, Spanish and Portuguese. It follows the system locale or the `MARK_SHOT_LANG` environment variable, and can be switched instantly from Settings → General.
-- **Live Language Switching**: Changing the interface language in Settings re-translates the window immediately; no restart is required.
-- **Unsaved-Changes Protection**: Settings categories show an unsaved-changes indicator, the footer and title warn about pending edits, and closing asks to Save and Close / Discard and Close / Keep Editing (Escape included).
-- **About Page**: A new About entry below Advanced shows the company logo, version, open-source links and acknowledgment of the original upstream project and its contributors.
-- **Settings Scroll Guard**: Scrolling with the mouse wheel over combo boxes, spin boxes and sliders in Settings now scrolls the page instead of mutating values; focused controls keep wheel adjustment.
-- **Headless Capture Settings**: The Storage page controls the default headless capture destination (inline base64 or staged temporary files) and gates clipboard writes behind a passphrase confirmation, off by default.
-- **Per-Section Restore**: Every Settings section and page has a Restore button that reverts to the last saved configuration; the Advanced page also offers a confirmed factory reset.
-- **Shortcut Input Safeguards**: Shortcut fields reject modifier-only and dangerous keys, global hotkeys require a modifier or function key, and duplicate shortcuts are flagged across the page.
-- **Precise Wheel Scrolling in Settings**: High-resolution mice and trackpads now scroll proportionally (fractional deltas accumulate like native Qt), and Ctrl/Shift + wheel scrolls by page.
-- **X11 Global Shortcut Layout Robustness**: Global hotkeys resolve Alt/Super/NumLock masks from the live keyboard map (fixes swapped Alt/Super layouts) and re-grab after mapping changes; F25-F35 function keys are now supported.
-- **User Guide in 12 Languages**: The operation manual is now available in all supported languages.
+> **Mark Shot Community Edition** — the first release under the new
+> `年.月.版.微调` versioning scheme, built on top of the original upstream
+> project `jswysnemc/mark-shot`. Release packages: Linux `.tar.gz` / `.deb` /
+> `.rpm` / `.AppImage` / `.flatpak`, Windows `.zip`, and Arch packages.
+
+#### New Features
+
+**Headless Capture CLI**
+- `--capture-to <path>` captures the screen without opening the annotation UI and writes a PNG with a compact JSON summary. It reuses all interactive capture backends (QScreen, xdg-desktop-portal, PipeWire, grim, KWin/GNOME helpers, Windows Graphics Capture).
+- `--region x,y,w,h` captures a logical screen region; `--display <name>` selects a monitor and may be repeated to capture several monitors at once; `--include-cursor` draws the cursor; `--output-name` sets the generated file name; `--list-displays` prints outputs as JSON.
+- `--list-windows` enumerates visible windows (index/id/title/class/instance/geometry, optional z-order) on Wayland (GNOME/KDE/Hyprland/niri) and X11; `--window <selector>` (repeatable, `auto/id/title/class/index` matching, with `<selector>@x,y,w,h` for window-internal component sub-regions) captures windows.
+- `--capture-destination inline|file|stage|clipboard`: inline returns base64 without touching the filesystem or clipboard, file writes to `--capture-to`, stage writes to `$TMPDIR/mark-shot-staging`, clipboard enters the system clipboard only when explicitly requested. Defaults and the clipboard permission are configurable in Settings → Storage (passphrase-gated, off by default).
+- Headless mode opens no window, shows no interactive portal dialog, and exits immediately; the window list is unchanged before and after capture.
+
+**Annotation Text Control**
+- The text font panel provides an exact point-size input (20–300 pt with floating-point precision), a font family list, and Bold / Italic toggles. They apply to new text, the inline editor and existing annotations, and persist across sessions.
+- New annotations now default to a normal 20 pt instead of 63 pt.
+
+**Settings & UI**
+- **Multilingual interface**: 12 UI languages — English, Simplified/Traditional Chinese, Japanese, Korean, Russian, Italian, Arabic (RTL), French, German, Spanish, Portuguese — following the system locale or `MARK_SHOT_LANG`, switchable instantly from Settings → General.
+- **Unsaved-changes protection**: categories show an unsaved-changes indicator, the footer and title warn about pending edits, and closing asks Save and Close / Discard and Close / Keep Editing (including Escape).
+- **About page**: below Advanced, showing the software icon, version, community-edition repository link, company logo and an acknowledgment of the original upstream project and its contributors.
+- **Settings scroll guard**: hover-scrolling over combo boxes, spin boxes and sliders scrolls the page instead of mutating values; a source-level wheel suppressor makes this robust regardless of focus.
+- **Precise wheel scrolling**: fractional wheel deltas accumulate like Qt's native accumulator; Ctrl/Shift + wheel scrolls by page; momentum phases reset cleanly.
+- **Per-section restore**: every Settings section and page has a Restore button; the Advanced page also offers a confirmed factory reset.
+- **Shortcut input safeguards**: modifier-only and dangerous keys are rejected, global hotkeys require a modifier or function key, duplicates are flagged, and the default Escape cancel shortcut is preserved.
+
+**System Integration**
+- **Native X11 global shortcuts**: `xcb_grab_key` registration (NumLock/CapsLock variants, native event dispatch) on X11, portal backend on Wayland; modifier masks resolved from the live X11 map so swapped Alt/Super layouts and xmodmap work, with re-grab on mapping changes.
+- **F25–F35 function keys** supported consistently across the UI, X11 keysym lookup and portal triggers.
+- Capture overlays are excluded from the taskbar/Alt-Tab on Windows and X11.
+- Region selection freezes all screens by default and supports cross-monitor selections on X11/Windows.
+
+#### Bug Fixes
+
+- **Full-screen flicker / temporary screen corruption after capturing on Linux**: the capture overlay no longer performs a delayed 1 px resize round-trip on Wayland (that delta made the compositor alternate between fullscreen scan-out and regular composition, flickering the whole desktop on dual-monitor / fractional-scaling setups); the overlay is placed at the exact screen geometry once.
+- **Focus-fight flicker on Wayland**: `raise()`/`activateWindow()` right after showing the fullscreen overlay are skipped on Wayland and the overlay sets `WA_ShowWithoutActivating`, avoiding the "focus repeatedly granted/removed" loop with GNOME.
+- **Overlay paint churn / drop-shadow artifacts**: the capture overlay sets `WA_OpaquePaintEvent` + `WA_NoSystemBackground` (no double-draw flashes on expose/resize) and `NoDropShadowWindowHint` (no shadow composition for a full-screen overlay); the scroll-capture overlay gets the same drop-shadow flag.
+- Settings window wheel-scroll tampering of unfocused spin boxes, dropdowns and sliders.
+- Settings wheel-guard segfault caused by re-entrant event dispatch (Qt 6.11 gesture manager).
+- About page literal `%1` placeholders and a non-scrollable, truncated layout.
+- `MARK_SHOT_LANG` session override no longer overridden when Settings opens.
+- Default Escape cancel shortcut no longer silently cleared on reload.
+- Text size mapping and default (63 pt → 20 pt).
+- Window hover-selection z-order and compositor script selection on unknown Wayland sessions; custom detection commands are respected.
+- Headless capture edge cases (output naming, geometry handling).
+- Clipboard persistence hang in headless mode (detached owner process with redirected stdio; skip the Wayland `QClipboard::setImage` ownership round-trip).
+- PipeWire buffer helpers compile without PipeWire headers (`HAVE_PIPEWIRE` guard).
+
+#### Documentation
+
+- User guide in 12 languages.
+- Headless CLI chapters (screen/multi-monitor/window/component capture, destinations, clipboard policy) and window hover-selection guidance.
+- Ubuntu 26.04 LTS support declared and multi-display capture documented.
+- README now acknowledges the original upstream project, its contributors, and the open-source dependencies.
 
 ### 0.1.41
 

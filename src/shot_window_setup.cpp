@@ -125,7 +125,20 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_DeleteOnClose);
-    setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    // 覆盖层无闪烁优化（与贴纸/滚动截图窗口一致的属性组合）：
+    // - WA_ShowWithoutActivating：show() 时不主动抢占焦点。Wayland 下反复
+    //   请求激活会与合成器形成"焦点反复得失"循环（GNOME mutter #1897、
+    //   yukigram#8），表现为整屏闪烁抖动；X11 下仍由显式 activateWindow()
+    //   在映射后授予键盘焦点。
+    // - WA_OpaquePaintEvent + WA_NoSystemBackground：合成器不再"先清背景
+    //   再画内容"，避免 expose/重排时的双重绘制闪烁（paintEvent 每次全量
+    //   绘制黑色底 + 冻结帧，满足不透明绘制契约）。
+    // - NoDropShadowWindowHint：阻止全屏覆盖层进入阴影合成路径。
+    setAttribute(Qt::WA_ShowWithoutActivating, true);
+    setAttribute(Qt::WA_OpaquePaintEvent, true);
+    setAttribute(Qt::WA_NoSystemBackground, true);
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint
+                   | Qt::NoDropShadowWindowHint);
     markshot::windows::setExcludedFromCapture(this);
     if (m_frozenFrame.format() != QImage::Format_ARGB32_Premultiplied) {
         m_frozenFrame = m_frozenFrame.convertToFormat(QImage::Format_ARGB32_Premultiplied);

@@ -688,4 +688,10 @@ This project is licensed under the **MIT License**. For details, please refer to
 
 ## Acknowledgements
 
-Thanks to [serendipitywgy](https://github.com/serendipitywgy) for contributions from `serendipitywgy/mark-shot`, including cross-desktop compatibility improvements, the OCR copy toolbar action, and smart rectangle preselection.
+Mark Shot is built on the shoulders of the open-source community. We would like to express our sincere gratitude to:
+
+- **The original upstream project [jswysnemc/mark-shot](https://github.com/jswysnemc/mark-shot) and its author and all contributors.** This community edition is developed on top of the original upstream project, whose outstanding design and sustained contributions made everything here possible. We sincerely thank them for their great work.
+- **[serendipitywgy](https://github.com/serendipitywgy)** for contributions from `serendipitywgy/mark-shot`, including cross-desktop compatibility improvements, the OCR copy toolbar action, and smart rectangle preselection.
+- **All the open-source projects that Mark Shot depends on**, including Qt 6, PipeWire, xdg-desktop-portal, layer-shell-qt, wl-clipboard, xclip, grim, RapidOCR, onnxruntime, Tesseract, and ZXing-C++, among others.
+
+This community edition is maintained by [Beijing Taiyin Zhaowu Technology Co., Ltd.](https://github.com/tystudio-26020701/mark-shot) and its contributors, under the **MIT License**.

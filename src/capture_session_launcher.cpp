@@ -71,6 +71,7 @@ ShotWindow *showCapturedWindow(QScreen *screen,
     }
 
     const bool layerShellReady = !allOutputs && !useRegularWindow && window->configureLayerShell(screen);
+    const bool waylandPlatform = markshot::capture_session::isWaylandPlatform();
     if (layerShellReady) {
         window->show();
     } else {
@@ -82,8 +83,15 @@ ShotWindow *showCapturedWindow(QScreen *screen,
         } else {
             markshot::windows::showFullScreenOnScreen(window, screen);
         }
-        window->raise();
-        window->activateWindow();
+        // Wayland 下跳过 raise()/activateWindow()：合成器决定层叠顺序，raise()
+        // 是空操作；而无 xdg-activation 激活令牌时 activateWindow() 会被 GNOME
+        // 拒绝，反复请求会与合成器形成"焦点反复得失"循环（GNOME mutter #1897、
+        // yukigram#8），表现为整屏闪烁抖动。键盘焦点在用户首次点击覆盖层时由
+        // 合成器自然授予（构造时已设 WA_ShowWithoutActivating，不会抢占焦点）。
+        if (!waylandPlatform) {
+            window->raise();
+            window->activateWindow();
+        }
     }
 
     QScreen *actualScreen = window->windowHandle() ? window->windowHandle()->screen() : window->screen();
@@ -99,14 +107,21 @@ ShotWindow *showCapturedWindow(QScreen *screen,
                        actualScreen ? actualScreen->name().toUtf8().constData() : "(none)",
                        actualScreen ? actualScreen->devicePixelRatio() : 0.0);
 
-    if (!layerShellReady && !allOutputs && markshot::capture_session::isWaylandPlatform()) {
+    // Wayland 下的"无抖动"延迟重排：旧实现用 setGeometry + 1px 尺寸往返
+    // （resize(w-1) 再 resize(w)）强制刷新 backing store，但 1px 的尺寸差会
+    // 让合成器在全屏直扫与常规合成之间反复切换——正是双屏/分数缩放下整屏
+    // "花屏闪烁抖动"的来源（GNOME mutter #4585 最大化窗口闪烁、flameshot
+    // #3069 双屏按截屏键后两块屏疯狂闪烁）。改为仅在合成器未按目标屏幕尺寸
+    // 配置窗口时做一次精确 setGeometry；尺寸已匹配则不再做任何尺寸改动。
+    if (!layerShellReady && !allOutputs && waylandPlatform) {
         QTimer::singleShot(0, window, [window, screen]() {
             const QSize before = window->size();
             if (screen) {
                 const QRect g = screen->geometry();
-                window->setGeometry(g);
-                window->resize(g.width() - 1, g.height());
-                window->resize(g.width(), g.height());
+                if (window->size() != g.size()) {
+                    window->setGeometry(g);
+                    window->update();
+                }
             }
             markshot::debugLog("capture-session",
                                "【截图会话】【延迟重排】before=%dx%d after=%dx%d screen=%s",
