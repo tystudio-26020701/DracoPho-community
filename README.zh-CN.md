@@ -310,6 +310,14 @@ mark-shot --tray
 以及功能自测清单）请参见[用户操作手册](docs/user-guide.zh-CN.md)
 （[English](docs/user-guide.md)）。
 
+其他语言版本：
+[简体中文](docs/user-guide.zh-CN.md) · [繁體中文](docs/user-guide.zh-TW.md) ·
+[日本語](docs/user-guide.ja.md) · [한국어](docs/user-guide.ko.md) ·
+[Русский](docs/user-guide.ru.md) · [Italiano](docs/user-guide.it.md) ·
+[العربية](docs/user-guide.ar.md) · [Français](docs/user-guide.fr.md) ·
+[Deutsch](docs/user-guide.de.md) · [Español](docs/user-guide.es.md) ·
+[Português](docs/user-guide.pt.md)
+
 ## 编译与安装
 
 ### 安装指南
