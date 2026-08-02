@@ -520,6 +520,6 @@ Utilisez-la pour vérifier une compilation de bout en bout :
 ## 11. Retour d'information
 
 Signalez les problèmes avec `gh issue create` en utilisant le
-[guide de soumission de problèmes](../../.doc/submit-issue-via-gh.md) inclus.
+[guide de soumission de problèmes](../.doc/submit-issue-via-gh.md) inclus.
 Joignez un journal de débogage capturé avec
 `mark-shot --debug --debug-log /tmp/mark-shot.log`.

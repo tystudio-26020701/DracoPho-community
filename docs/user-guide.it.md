@@ -502,5 +502,5 @@ Usa questa checklist per verificare una build da cima a fondo:
 ## 11. Feedback
 
 Segnala i problemi con `gh issue create` usando la [guida all'invio dei
-problemi](../../.doc/submit-issue-via-gh.md) inclusa nel bundle. Allega un log
+problemi](../.doc/submit-issue-via-gh.md) inclusa nel bundle. Allega un log
 di debug catturato con `mark-shot --debug --debug-log /tmp/mark-shot.log`.

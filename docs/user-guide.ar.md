@@ -466,5 +466,5 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 ## 11. الملاحظات والاقتراحات
 
 أبلغ عن المشكلات عبر `gh issue create` مستخدمًا
-[دليل إرسال المشكلات](../../.doc/submit-issue-via-gh.md) المرفق. أرفق سجل
+[دليل إرسال المشكلات](../.doc/submit-issue-via-gh.md) المرفق. أرفق سجل
 تصحيح مأخوذًا عبر `mark-shot --debug --debug-log /tmp/mark-shot.log`.
