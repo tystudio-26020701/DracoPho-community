@@ -248,6 +248,11 @@ void SettingsPageStorage::setConfig(const SettingsConfig &config)
     m_exportShadowRadius->setValue(config.storage.exportImageEffect.shadowRadius);
     m_exportShadowOffsetY->setValue(config.storage.exportImageEffect.shadowOffsetY);
     m_exportShadowOpacity->setValue(config.storage.exportImageEffect.shadowOpacity);
+    // 归一化"已保存"基线到控件可表达精度：角半径以整数显示、透明度保留两位，
+    // 配置若手写了无法在控件中还原的小数（如 cornerRadius 18.5），直接以控件
+    // 显示值作为基线，避免"打开即未保存"/改回后仍显示未保存。
+    m_saved.storage.exportImageEffect.cornerRadius = m_exportCornerRadius->value();
+    m_saved.storage.exportImageEffect.shadowOpacity = m_exportShadowOpacity->value();
 }
 
 void SettingsPageStorage::updateConfig(SettingsConfig *config) const

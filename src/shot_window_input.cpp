@@ -6,6 +6,10 @@ using namespace markshot::shot;
 
 void ShotWindow::mouseMoveEvent(QMouseEvent *event)
 {
+    if (m_frozenBackdrop) {
+        event->accept();
+        return;
+    }
     if (m_imagePanning) {
         panImageTo(event->position());
         event->accept();
@@ -280,6 +284,10 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
 
 void ShotWindow::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    if (m_frozenBackdrop) {
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::RightButton && m_mode == Mode::Editing) {
         toggleColorPalette(event->pos());
         event->accept();
@@ -378,6 +386,10 @@ void ShotWindow::mouseDoubleClickEvent(QMouseEvent *event)
 
 void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (m_frozenBackdrop) {
+        event->accept();
+        return;
+    }
     if (m_mode == Mode::Selecting
         && m_startupTool == StartupTool::Ruler
         && event->button() == Qt::LeftButton

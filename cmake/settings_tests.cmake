@@ -209,3 +209,28 @@ if(MSVC)
 endif()
 markshot_link_core_test_libraries(mark-shot-capture-overlay-flags-test)
 add_test(NAME capture-overlay-flags COMMAND mark-shot-capture-overlay-flags-test)
+
+qt_add_executable(mark-shot-shot-window-backdrop-test
+    tests/shot_window_frozen_backdrop_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-shot-window-backdrop-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-shot-window-backdrop-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-shot-window-backdrop-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-shot-window-backdrop-test)
+add_test(NAME shot-window-backdrop COMMAND mark-shot-shot-window-backdrop-test)
+
+
+qt_add_executable(mark-shot-settings-dirty-roundtrip-test
+    tests/settings_dirty_roundtrip_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-settings-dirty-roundtrip-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-settings-dirty-roundtrip-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-settings-dirty-roundtrip-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-settings-dirty-roundtrip-test)
+add_test(NAME settings-dirty-roundtrip COMMAND mark-shot-settings-dirty-roundtrip-test)
