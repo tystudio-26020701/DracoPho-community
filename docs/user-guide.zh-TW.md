@@ -369,4 +369,4 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 
 ## 11. 意見回饋
 
-請使用隨附的 [issue submission guide](../../.doc/submit-issue-via-gh.md)，以 `gh issue create` 回報問題。並附上用 `mark-shot --debug --debug-log /tmp/mark-shot.log` 擷取的偵錯日誌。
+請使用隨附的 [issue submission guide](../.doc/submit-issue-via-gh.md)，以 `gh issue create` 回報問題。並附上用 `mark-shot --debug --debug-log /tmp/mark-shot.log` 擷取的偵錯日誌。

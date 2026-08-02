@@ -471,5 +471,5 @@ Use this to verify a build end-to-end:
 ## 11. Feedback
 
 Report issues with `gh issue create` using the bundled
-[issue submission guide](../../.doc/submit-issue-via-gh.md). Attach a debug log
+[issue submission guide](../.doc/submit-issue-via-gh.md). Attach a debug log
 captured with `mark-shot --debug --debug-log /tmp/mark-shot.log`.

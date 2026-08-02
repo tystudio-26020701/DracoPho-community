@@ -432,6 +432,6 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 
 ## 11. 反馈
 
-使用内置的[问题提交指南](../../.doc/submit-issue-via-gh.md)，通过 `gh issue
+使用内置的[问题提交指南](../.doc/submit-issue-via-gh.md)，通过 `gh issue
 create` 提交问题，并附上 `mark-shot --debug --debug-log /tmp/mark-shot.log`
 抓取的调试日志。

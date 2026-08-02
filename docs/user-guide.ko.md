@@ -369,4 +369,4 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 
 ## 11. 피드백
 
-번들에 포함된 [이슈 제출 가이드](../../.doc/submit-issue-via-gh.md)를 사용하여 `gh issue create`로 문제를 보고하세요. `mark-shot --debug --debug-log /tmp/mark-shot.log`로 캡처한 디버그 로그를 첨부하세요.
+번들에 포함된 [이슈 제출 가이드](../.doc/submit-issue-via-gh.md)를 사용하여 `gh issue create`로 문제를 보고하세요. `mark-shot --debug --debug-log /tmp/mark-shot.log`로 캡처한 디버그 로그를 첨부하세요.

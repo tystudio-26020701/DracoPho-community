@@ -492,6 +492,6 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 ## 11. Обратная связь
 
 Сообщайте об ошибках с помощью `gh issue create`, используя встроенное
-[руководство по отправке ошибок](../../.doc/submit-issue-via-gh.md). Приложите
+[руководство по отправке ошибок](../.doc/submit-issue-via-gh.md). Приложите
 журнал отладки, записанный с помощью
 `mark-shot --debug --debug-log /tmp/mark-shot.log`.

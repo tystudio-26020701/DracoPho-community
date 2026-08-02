@@ -506,5 +506,5 @@ Use isto para verificar um build de ponta a ponta:
 ## 11. Feedback
 
 Relate problemas com `gh issue create` usando o
-[guia de envio de issues](../../.doc/submit-issue-via-gh.md) incluído. Anexe um
+[guia de envio de issues](../.doc/submit-issue-via-gh.md) incluído. Anexe um
 log de depuração capturado com `mark-shot --debug --debug-log /tmp/mark-shot.log`.

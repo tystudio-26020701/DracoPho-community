@@ -510,6 +510,6 @@ Damit einen Build Ende-zu-Ende verifizieren:
 ## 11. Feedback
 
 Probleme mit `gh issue create` unter Verwendung des gebündelten
-[Leitfadens zum Einreichen von Issues](../../.doc/submit-issue-via-gh.md)
+[Leitfadens zum Einreichen von Issues](../.doc/submit-issue-via-gh.md)
 melden. Ein Debug-Log anhängen, das mit
 `mark-shot --debug --debug-log /tmp/mark-shot.log` erfasst wurde.
