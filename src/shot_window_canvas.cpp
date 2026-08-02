@@ -460,6 +460,10 @@ void ShotWindow::showEvent(QShowEvent *event)
 
 void ShotWindow::mousePressEvent(QMouseEvent *event)
 {
+    if (m_frozenBackdrop) {
+        event->accept();
+        return;
+    }
     clearWheelPreview();
 
     if (m_mode == Mode::Selecting

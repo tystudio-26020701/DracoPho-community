@@ -319,18 +319,46 @@ void connectCaptureWindowSession(QApplication *app,
     }
 
     auto closingSession = std::make_shared<bool>(false);
+    // 记录完成选区的主选区窗口：只有它的销毁才结束整场会话。
+    auto activeWindow = std::make_shared<QPointer<ShotWindow>>();
     for (const QPointer<ShotWindow> &candidateWindow : windows) {
         ShotWindow *window = candidateWindow.data();
         if (!window) {
             continue;
         }
-        QObject::connect(window, &ShotWindow::selectionActivated, app, [windows, closingSession](ShotWindow *activeWindow) {
+        QObject::connect(window, &ShotWindow::selectionActivated, app, [windows, closingSession, activeWindow](ShotWindow *activeSelectionWindow) {
             if (*closingSession) {
+                return;
+            }
+            *activeWindow = activeSelectionWindow;
+            *closingSession = true;
+            for (const QPointer<ShotWindow> &peerWindow : std::as_const(windows)) {
+                if (peerWindow && peerWindow.data() != activeSelectionWindow) {
+                    // "冻结全部屏幕"会话中，用户在某台显示器完成选区后，
+                    // 其余显示器的冻结覆盖层保持为不可操作的背景，而不是
+                    // 直接关闭——否则另一块屏幕立即变为可操作，违背
+                    // 冻结范围=全部屏幕的配置语义。
+                    peerWindow->enterFrozenBackdrop();
+                }
+            }
+            *closingSession = false;
+        });
+        // 主选区窗口销毁（复制/保存/放弃等路径自行 close()）时关闭其余
+        // 覆盖层，保证整场截图会话随主窗口结束而结束。冻结背景被独立销毁
+        // （窗口管理器关闭/显示器拔出等）时不得打断仍在编辑的选区窗口。
+        const QPointer<ShotWindow> thisWindow = window;
+        QObject::connect(window, &QObject::destroyed, app, [windows, closingSession, activeWindow, thisWindow] {
+            if (*closingSession) {
+                return;
+            }
+            // 已存在主选区窗口时，只有该主选区窗口的销毁才关闭其余覆盖层；
+            // 尚未完成选区（activeWindow 为空）时保持原有"任一窗口销毁即结束"。
+            if (*activeWindow && thisWindow != *activeWindow) {
                 return;
             }
             *closingSession = true;
             for (const QPointer<ShotWindow> &peerWindow : std::as_const(windows)) {
-                if (peerWindow && peerWindow.data() != activeWindow) {
+                if (peerWindow && peerWindow != thisWindow) {
                     peerWindow->close();
                 }
             }

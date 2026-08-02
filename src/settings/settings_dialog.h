@@ -46,6 +46,10 @@ public:
     /// @brief 复用窗口重新打开时刷新：重读配置并按当前语言重建页面。
     void reloadForDisplay();
 
+    /// @brief 请求刷新"未保存修改"标记（供设置页在无值信号路径——
+    /// 如取色对话框改变颜色——完成后通知对话框刷新脏状态）。
+    void notifyConfigChanged();
+
     /// @brief 处理 Escape 键（QDialog::reject），同样走未保存修改确认。
     void reject() override;
 
@@ -100,6 +104,14 @@ private:
 
     /// @brief 刷新各页"未保存修改"标记、页脚提示与窗口标题。
     void refreshDirtyState();
+
+    /// @brief 延迟调度一次脏状态刷新（合并同一轮内的多次输入）。
+    void scheduleDirtyRefresh();
+
+    /// @brief 连接全部设置控件的值变更信号到脏状态刷新。
+    /// 覆盖下拉框/开关/数值框/文本框/快捷键框等控件，保证任何输入方式
+    /// （含下拉框弹出层选择）都会触发脏状态刷新，避免状态栏滞后。
+    void connectDirtyRefreshSignals();
 
     /// @brief 放弃所有未保存修改（含语言预览）并恢复已保存语言。
     void discardUnsavedChanges();

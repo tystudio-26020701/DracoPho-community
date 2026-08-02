@@ -2,6 +2,8 @@
 
 #include "settings/settings_dialog.h"
 
+#include <QShortcut>
+
 namespace cfg = markshot::config;
 namespace shortcuts = markshot::shortcut;
 using namespace markshot::shot;
@@ -144,6 +146,47 @@ void ShotWindow::leaveFullscreenAnnotation()
     updateAnnotationPropertyPanelGeometry();
     updateToolbarState();
     update();
+}
+
+void ShotWindow::enterFrozenBackdrop()
+{
+    m_frozenBackdrop = true;
+    // 隐藏全部交互控件：工具栏、动作栏、属性面板、临时面板与文本编辑器，
+    // 只保留整屏冻结画面作为不可操作的背景，直到截图会话结束被关闭。
+    if (m_toolbar) {
+        m_toolbar->hide();
+    }
+    if (m_actionToolbar) {
+        m_actionToolbar->hide();
+    }
+    hideTransientPanels();
+    if (m_annotationPropertyPanel) {
+        m_annotationPropertyPanel->hide();
+    }
+    if (m_propertyColorDialogPanel) {
+        m_propertyColorDialogPanel->hide();
+    }
+    if (m_textEditor) {
+        m_textEditor->hide();
+    }
+    if (QWidget *picker = findChild<QWidget *>(QStringLiteral("displayCapturePicker"))) {
+        picker->hide();
+    }
+    // Qt 的 WindowShortcut 快捷键在 keyPressEvent/事件过滤器之前由
+    // QShortcutMap 直接触发，mouse/key 防护无法拦截；若该冻结背景窗口被
+    // 窗口管理器授予焦点（X11 点击聚焦/Alt+Tab），Esc/复制/保存/工具快捷键
+    // 仍会生效并可能取消整场会话。进入冻结背景时统一禁用全部子 QShortcut。
+    const auto shortcuts = findChildren<QShortcut *>();
+    for (QShortcut *shortcut : shortcuts) {
+        shortcut->setEnabled(false);
+    }
+    setCursor(Qt::ArrowCursor);
+    update();
+}
+
+bool ShotWindow::isFrozenBackdrop() const
+{
+    return m_frozenBackdrop;
 }
 
 void ShotWindow::toggleCaptureScope()
@@ -414,6 +457,25 @@ QVector<ShotWindow::ExtensionCommand> ShotWindow::extensionCommands(QString *err
 
 bool ShotWindow::eventFilter(QObject *watched, QEvent *event)
 {
+    // 冻结背景状态吞掉所有鼠标/键盘事件，防止其他显示器的覆盖层在用户
+    // 已完成选区后仍可交互。
+    if (m_frozenBackdrop) {
+        switch (event->type()) {
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+        case QEvent::MouseButtonDblClick:
+        case QEvent::MouseMove:
+        case QEvent::KeyPress:
+        case QEvent::KeyRelease:
+        case QEvent::Wheel:
+        case QEvent::ContextMenu:
+            event->accept();
+            return true;
+        default:
+            break;
+        }
+    }
+
     if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::KeyPress) {
         clearWheelPreview();
     }

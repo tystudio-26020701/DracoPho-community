@@ -1,5 +1,6 @@
 #include "settings/settings_page_pinned.h"
 
+#include "settings/settings_dialog.h"
 #include "settings/settings_ui_helpers.h"
 #include "ui/i18n.h"
 
@@ -43,6 +44,11 @@ SettingsPagePinned::SettingsPagePinned(QWidget *parent)
         }
         m_borderColorValue = selected;
         updateBorderColorButton();
+        // 取色对话框在模态循环中返回后才应用颜色，期间不产生任何值变更信号，
+        // 需要显式通知对话框刷新"未保存修改"标记。
+        if (auto *dialog = dynamic_cast<SettingsDialog *>(window())) {
+            dialog->notifyConfigChanged();
+        }
     });
     m_borderWidth = addDoubleRow(windowForm, MS_TR("Border Width"), 1.0, 12.0, 1);
     m_borderWidth->setSuffix(QStringLiteral(" px"));
@@ -96,6 +102,8 @@ void SettingsPagePinned::setConfig(const SettingsConfig &config)
     m_borderColorValue = config.pinned.borderColor;
     updateBorderColorButton();
     m_borderWidth->setValue(config.pinned.borderWidth);
+    // 归一化基线到控件精度（一位小数），配置若含更多位小数不误报未保存。
+    m_saved.pinned.borderWidth = m_borderWidth->value();
     m_ocrEnabled->setChecked(config.pinned.ocrEnabled);
     m_autoOcr->setChecked(config.pinned.autoOcr);
     m_ocrBackend->setText(config.pinned.ocrBackend);

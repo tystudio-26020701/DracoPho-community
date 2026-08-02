@@ -1,5 +1,6 @@
 #include "settings/settings_page_annotation.h"
 
+#include "settings/settings_dialog.h"
 #include "settings/settings_ui_helpers.h"
 #include "ui/i18n.h"
 
@@ -64,6 +65,11 @@ SettingsPageAnnotation::SettingsPageAnnotation(QWidget *parent)
         }
         m_defaultColor = selected;
         updateColorButton();
+        // 取色对话框在模态循环中返回后才应用颜色，期间不产生任何值变更信号，
+        // 需要显式通知对话框刷新"未保存修改"标记。
+        if (auto *dialog = dynamic_cast<SettingsDialog *>(window())) {
+            dialog->notifyConfigChanged();
+        }
     });
     addCardRestoreButton(defaultsCard, [this] {
         setToolComboValue(m_normalTool, m_saved.annotation.normalTool);

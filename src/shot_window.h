@@ -147,6 +147,17 @@ public:
     void setDefaultColor(QColor color);
     void showDisplayCaptureTargets(QVector<markshot::display_capture::Target> targets);
     /**
+     * 进入"冻结背景"状态：本窗口继续显示冻结画面并拦截全部输入，
+     * 用于多屏冻结会话中用户已在另一台显示器完成选区后，保持其余显示器的
+     * 冻结覆盖层不被关闭（配合"冻结全部屏幕"配置，其他屏幕不可操作）。
+     */
+    void enterFrozenBackdrop();
+    /**
+     * 判断窗口是否处于"冻结背景"状态。
+     * @return 处于冻结背景状态时返回 true。
+     */
+    bool isFrozenBackdrop() const;
+    /**
      * 使用已确认录制配置进入区域录制选区状态。
      * @param options 已确认的录制配置。
      * @return 无返回值。
@@ -632,6 +643,10 @@ private:
     bool m_annotationHistoryCaptured = false;
     bool m_annotationSelectionBoxActive = false;
     bool m_fullscreenAnnotation = false;
+    // 冻结背景：多屏"冻结全部屏幕"会话中，其他显示器的覆盖层在用户于
+    // 主显示器完成选区后进入此状态——继续显示冻结画面但拦截全部输入，
+    // 保持整张虚拟桌面处于冻结状态，直到截图会话结束。
+    bool m_frozenBackdrop = false;
     bool m_toolbarDragging = false;
     bool m_toolbarUserPlaced = false;
     bool m_actionToolbarUserPlaced = false;

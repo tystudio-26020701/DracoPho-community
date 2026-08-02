@@ -114,6 +114,8 @@ void SettingsPageIntegrations::setConfig(const SettingsConfig &config)
     m_translationModel->setText(config.integrations.translationModel);
     m_translationTemperature->setValue(config.integrations.translationTemperature);
     m_translationSystemPrompt->setPlainText(config.integrations.translationSystemPrompt);
+    // 归一化基线到控件精度（两位小数），配置若含更多位小数不误报未保存。
+    m_saved.integrations.translationTemperature = m_translationTemperature->value();
     refreshProviderStatus(config);
 }
 

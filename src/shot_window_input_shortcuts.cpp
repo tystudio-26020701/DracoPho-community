@@ -58,6 +58,10 @@ qreal annotationWidthWheelStepSize(ShotWindow::Tool tool)
  */
 void ShotWindow::wheelEvent(QWheelEvent *event)
 {
+    if (m_frozenBackdrop) {
+        event->accept();
+        return;
+    }
     if (m_mode == Mode::Selecting && m_startupTool == StartupTool::ColorPicker) {
         const int delta = event->angleDelta().y() != 0 ? event->angleDelta().y() : event->pixelDelta().y();
         if (delta == 0) {
@@ -148,6 +152,10 @@ void ShotWindow::wheelEvent(QWheelEvent *event)
  */
 void ShotWindow::keyPressEvent(QKeyEvent *event)
 {
+    if (m_frozenBackdrop) {
+        event->accept();
+        return;
+    }
     clearWheelPreview();
 
     if (m_mode == Mode::Selecting && activeRecordingAvailable() && event->key() == Qt::Key_S) {

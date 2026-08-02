@@ -21,20 +21,28 @@
 #include "ui/interface_theme_config.h"
 
 #include <QApplication>
+#include <QAbstractSpinBox>
+#include <QCheckBox>
 #include <QCloseEvent>
+#include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDoubleSpinBox>
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QJsonObject>
+#include <QKeySequenceEdit>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMessageBox>
+#include <QPlainTextEdit>
 #include <QPointer>
 #include <QProcessEnvironment>
 #include <QPushButton>
 #include <QScreen>
 #include <QGuiApplication>
 #include <QScrollArea>
+#include <QSpinBox>
 #include <QStackedWidget>
 #include <QStyle>
 #include <QTimer>
@@ -216,6 +224,9 @@ void SettingsDialog::createPagesAndPopulate()
     addScrollablePage(m_stack, m_storagePage);
     addScrollablePage(m_stack, m_advancedPage);
     addScrollablePage(m_stack, m_aboutPage);
+    // 连接全部控件的值变更信号：任何改值方式都触发脏状态刷新（见
+    // connectDirtyRefreshSignals）。构造与语言重建后都要重新连接。
+    connectDirtyRefreshSignals();
 }
 
 void SettingsDialog::installDirtyTracker()
@@ -235,6 +246,15 @@ bool SettingsDialog::eventFilter(QObject *watched, QEvent *event)
     if (!widget || widget->window() != window()) {
         return QDialog::eventFilter(watched, event);
     }
+    scheduleDirtyRefresh();
+    return QDialog::eventFilter(watched, event);
+}
+
+void SettingsDialog::scheduleDirtyRefresh()
+{
+    if (m_rebuilding) {
+        return;
+    }
     // 延迟到事件处理完成后统一刷新；合并同一轮内的多次输入，最多排一个刷新。
     if (!m_dirtyRefreshPending) {
         m_dirtyRefreshPending = true;
@@ -245,7 +265,58 @@ bool SettingsDialog::eventFilter(QObject *watched, QEvent *event)
             }
         });
     }
-    return QDialog::eventFilter(watched, event);
+}
+
+void SettingsDialog::notifyConfigChanged()
+{
+    scheduleDirtyRefresh();
+}
+
+void SettingsDialog::connectDirtyRefreshSignals()
+{
+    // 值变更信号是确定性的脏状态触发器：不依赖"事件落在设置窗口内"这一假设，
+    // 下拉框弹出层选择、程序化赋值、键盘录入等任何改值途径都会触发刷新，
+    // 避免状态栏滞后/虚报未保存修改。
+    const auto combos = findChildren<QComboBox *>();
+    for (QComboBox *combo : combos) {
+        connect(combo,
+                QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this,
+                &SettingsDialog::scheduleDirtyRefresh,
+                Qt::UniqueConnection);
+    }
+    const auto checkboxes = findChildren<QCheckBox *>();
+    for (QCheckBox *box : checkboxes) {
+        connect(box, &QCheckBox::toggled, this, &SettingsDialog::scheduleDirtyRefresh, Qt::UniqueConnection);
+    }
+    const auto spins = findChildren<QAbstractSpinBox *>();
+    for (QAbstractSpinBox *spin : spins) {
+        if (auto *intSpin = qobject_cast<QSpinBox *>(spin)) {
+            connect(intSpin,
+                    QOverload<int>::of(&QSpinBox::valueChanged),
+                    this,
+                    &SettingsDialog::scheduleDirtyRefresh,
+                    Qt::UniqueConnection);
+        } else if (auto *doubleSpin = qobject_cast<QDoubleSpinBox *>(spin)) {
+            connect(doubleSpin,
+                    QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                    this,
+                    &SettingsDialog::scheduleDirtyRefresh,
+                    Qt::UniqueConnection);
+        }
+    }
+    const auto lineEdits = findChildren<QLineEdit *>();
+    for (QLineEdit *edit : lineEdits) {
+        connect(edit, &QLineEdit::textChanged, this, &SettingsDialog::scheduleDirtyRefresh, Qt::UniqueConnection);
+    }
+    const auto plainEdits = findChildren<QPlainTextEdit *>();
+    for (QPlainTextEdit *edit : plainEdits) {
+        connect(edit, &QPlainTextEdit::textChanged, this, &SettingsDialog::scheduleDirtyRefresh, Qt::UniqueConnection);
+    }
+    const auto keyEdits = findChildren<QKeySequenceEdit *>();
+    for (QKeySequenceEdit *edit : keyEdits) {
+        connect(edit, &QKeySequenceEdit::keySequenceChanged, this, &SettingsDialog::scheduleDirtyRefresh, Qt::UniqueConnection);
+    }
 }
 
 void SettingsDialog::loadConfig()
