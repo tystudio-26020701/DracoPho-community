@@ -18,6 +18,14 @@
 
 [English README](README.md)
 
+其他语言版本：
+[简体中文](README.zh-CN.md) · [繁體中文](READMEs/README.zh-TW.md) ·
+[日本語](READMEs/README.ja.md) · [한국어](READMEs/README.ko.md) ·
+[Русский](READMEs/README.ru.md) · [Italiano](READMEs/README.it.md) ·
+[العربية](READMEs/README.ar.md) · [Français](READMEs/README.fr.md) ·
+[Deutsch](READMEs/README.de.md) · [Español](READMEs/README.es.md) ·
+[Português](READMEs/README.pt.md)
+
 **标签**：`C++` / `Qt 6` / `屏幕截图` / `图像标注` / `桌面贴图` / `OCR 识别` / `滚动长截图` / `Wayland` / `Windows`
 
 
