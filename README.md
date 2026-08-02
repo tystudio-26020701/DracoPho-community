@@ -18,6 +18,14 @@
 
 [中文说明](README.zh-CN.md)
 
+Read this README in other languages:
+[简体中文](README.zh-CN.md) · [繁體中文](READMEs/README.zh-TW.md) ·
+[日本語](READMEs/README.ja.md) · [한국어](READMEs/README.ko.md) ·
+[Русский](READMEs/README.ru.md) · [Italiano](READMEs/README.it.md) ·
+[العربية](READMEs/README.ar.md) · [Français](READMEs/README.fr.md) ·
+[Deutsch](READMEs/README.de.md) · [Español](READMEs/README.es.md) ·
+[Português](READMEs/README.pt.md)
+
 **Tags**: `C++` / `Qt 6` / `Screenshot` / `Annotation` / `Pin Sticker` / `OCR` / `Scroll Screenshot` / `Wayland` / `Windows`
 
 
