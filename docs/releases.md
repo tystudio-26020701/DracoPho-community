@@ -1,5 +1,38 @@
 # Release Notes
 
+### 26.8.2.0
+
+> **Mark Shot Community Edition** — feature release adding configurable
+> startup behavior (tray icon / floating ball / settings window / direct
+> capture, combinable) and a new draggable floating ball, so launching Mark
+> Shot no longer opens the screenshot overlay by default.
+
+#### Features
+
+**Configurable startup behavior**
+- Clicking the Mark Shot icon no longer opens the capture overlay by default.
+- New **Startup Behavior** settings (Settings → General) with four combinable
+  modes: **Direct Capture** (enter screenshot mode immediately), **Tray Icon**
+  (keep running in the system tray), **Floating Ball** (show the quick-access
+  ball) and **Settings Window** (open Settings at launch).
+- Default for fresh installs: Tray Icon + Floating Ball; direct capture is off
+  by default. Configs without the new key fall back to the tray instead of
+  capturing.
+- Explicit CLI flags still win: `--capture`, `--all-outputs`, `--fullscreen`
+  force a capture session; `--tray` forces tray mode.
+- Config key `startup.modes` (array of `capture` / `tray` / `floating` /
+  `settings`); the legacy `windows.tray.enabled` flag stays in sync.
+
+**Floating ball (悬浮球)**
+- Small circular always-on-top widget (bottom-right by default), draggable
+  anywhere; position persists across launches.
+- Single click: quick menu (Capture / Fullscreen Capture / Start Recording /
+  Settings / Hide Floating Ball / Quit). Double click: capture immediately.
+- Hides automatically during a capture session and reappears afterwards.
+
+#### Tests
+- New `floating-ball` and `startup-behavior-config` test targets.
+
 ### 26.8.1.1
 
 > **Mark Shot Community Edition** — maintenance release fixing settings-window
