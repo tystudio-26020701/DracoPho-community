@@ -90,6 +90,7 @@ Il capture l'écran instantanément et ouvre une couche d'annotation interactive
 - **X11** : utilise `QScreen::grabWindow` pour la capture d'écran, une fenêtre plein écran toujours au premier plan comme couche, et `xclip` pour la persistance du presse-papiers.
 - **Windows** : utilise les API natives de capture d'écran et de presse-papiers de Qt pour les flux de base : capture, annotation, copie, enregistrement et épinglage. Les backends propres à Linux tels que PipeWire, xdg-desktop-portal, `grim`, la détection de fenêtres XCB, LayerShellQt et les assistants GNOME Shell sont désactivés à la compilation.
 - Le backend du serveur d'affichage Linux est détecté automatiquement à l'exécution via `$XDG_SESSION_TYPE` ; Windows utilise le backend de plateforme natif de Qt.
+- **Multi-monitor freeze scope** : par défaut, la sélection d'une région gèle tous les écrans connectés (une seule fenêtre de bureau virtuel lorsque les DPR correspondent sous X11/Windows) ; après avoir validé une sélection sur un écran, les autres écrans restent gelés et non interactifs jusqu'à la fin de la session. La portée **Cursor Screen** ne gèle que l'écran sous le curseur.
 
 ### Intégration au bureau
 - **Raccourcis du bureau** :

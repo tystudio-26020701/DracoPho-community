@@ -159,6 +159,17 @@ Before the region is committed you can use the startup overlay tools:
 
 `Esc` cancels the session; right click (no startup tool) also cancels.
 
+#### 3.1 Multi-monitor freeze behavior
+
+With the default **Freeze All Screens** capture scope, every connected display
+is frozen while a region is selected. Once you commit a selection on one
+monitor, the other displays keep showing their frozen frame as a non-interactive
+backdrop: mouse, keyboard, wheel and shortcut input are swallowed and the
+overlays show no toolbars, so the rest of the virtual desktop stays frozen
+until the capture session ends. If you instead use the **Cursor Screen** scope
+(Settings → Capture → Freeze Scope), only the monitor under the cursor is
+frozen and the other screens remain fully usable.
+
 ---
 
 ## 4. Annotation Tools
@@ -428,6 +439,11 @@ provides capture / recording / settings / quit menu entries. Desktop hotkeys:
 - Backends: Wayland (PipeWire portal / grim / wlroots screencopy), X11
   (`QScreen::grabWindow`), Windows (native WGC). Recording prefers the
   PipeWire portal and falls back automatically.
+- The Settings window tracks unsaved changes deterministically: every control
+  (dropdown, switch, spin box, text field, shortcut field, color picker)
+  updates the unsaved-changes indicator immediately, including values picked
+  from combo-box popups and the modal color dialog. Reverting a change clears
+  the indicator, so the window only asks about real pending edits when closing.
 
 Optional helpers:
 

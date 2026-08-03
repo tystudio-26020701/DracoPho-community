@@ -90,6 +90,7 @@ Es kann in Sekundenschnelle den Bildschirm erfassen und eine adaptive Vollbild-A
 - **X11**: Nutzt `QScreen::grabWindow` für Screenshots, ein Vollbild-Immer-im-Vordergrund-Fenster als Überlagerung und `xclip` für die dauerhafte Zwischenablage.
 - **Windows**: Unterstützt grundlegende Screenshot-, Annotations-, Kopier-, Speicher- und Pin-Workflows über die nativen Qt-Screenshot- und Zwischenablage-APIs. Linux-spezifische Backends wie PipeWire, xdg-desktop-portal, `grim`, XCB-Fenstererkennung, LayerShellQt und der GNOME-Shell-Helper werden zur Kompilierzeit deaktiviert.
 - Der Linux-Display-Server-Backend wird zur Laufzeit automatisch über `$XDG_SESSION_TYPE` erkannt; Windows verwendet den nativen Qt-Plattform-Backend.
+- **Multi-monitor freeze scope**: standardmäßig friert die Bereichsauswahl alle angeschlossenen Monitore ein (ein einzelnes virtuelles Desktop-Fenster, wenn die DPRs unter X11/Windows übereinstimmen); nach dem Bestätigen einer Auswahl auf einem Monitor bleiben die übrigen Monitore bis zum Ende der Sitzung eingefroren und nicht interaktiv. Der **Cursor Screen**-Bereich friert nur den Monitor unter dem Mauszeiger ein.
 
 ### Desktop-Integration
 - **Desktop-Verknüpfungen**:

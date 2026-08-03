@@ -170,6 +170,19 @@ verwenden:
 `Esc` bricht die Sitzung ab; Rechtsklick (ohne Startwerkzeug) bricht ebenfalls
 ab.
 
+#### 3.1 Einfrierverhalten bei mehreren Monitoren
+
+Mit dem standardmäßigen Erfassungsbereich **Freeze All Screens** wird jeder
+angeschlossene Bildschirm eingefroren, während eine Region ausgewählt wird.
+Sobald Sie eine Auswahl auf einem Monitor bestätigen, zeigen die anderen Displays
+weiterhin ihr eingefrorenes Bild als nicht interaktiven Hintergrund: Maus-,
+Tastatur-, Rad- und Tastenkombinationseingaben werden verschluckt und die Overlays
+zeigen keine Werkzeugleisten, sodass der Rest des virtuellen Desktops eingefroren
+bleibt, bis die Erfassungssitzung endet. Wenn Sie stattdessen den Bereich
+**Cursor Screen** (Settings → Capture → Freeze Scope) verwenden, wird nur der
+Monitor unter dem Cursor eingefroren und die anderen Bildschirme bleiben
+vollständig nutzbar.
+
 ---
 
 ## 4. Annotation-Werkzeuge
@@ -462,6 +475,13 @@ Einstellungen / Beenden bereit. Desktop-Hotkeys:
 - Backends: Wayland (PipeWire-Portal / grim / wlroots-Screencopy), X11
   (`QScreen::grabWindow`), Windows (nativer WGC). Die Aufnahme bevorzugt das
   PipeWire-Portal und fällt automatisch zurück.
+- Das Einstellungsfenster verfolgt ungespeicherte Änderungen deterministisch:
+  jedes Bedienelement (Dropdown, Schalter, Spinbox, Textfeld, Kürzel-Feld,
+  Farbwähler) aktualisiert den Indikator für ungespeicherte Änderungen sofort,
+  einschließlich der Werte, die über Combo-Box-Popups und den modalen
+  Farbdialog gewählt wurden. Das Rückgängigmachen einer Änderung löscht den
+  Indikator, sodass das Fenster beim Schließen nur nach wirklich anstehenden
+  Änderungen fragt.
 
 Optionale Helfer:
 

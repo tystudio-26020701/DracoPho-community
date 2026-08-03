@@ -169,6 +169,18 @@ Prima di confermare la regione puoi usare gli strumenti dell'overlay di avvio:
 `Esc` annulla la sessione; anche il clic destro (senza strumento di avvio)
 annulla.
 
+#### 3.1 Comportamento di congelamento con più monitor
+
+Con l'ambito di acquisizione predefinito **Freeze All Screens**, ogni display
+collegato viene congelato mentre viene selezionata una regione. Una volta
+confermata una selezione su un monitor, gli altri display continuano a mostrare
+il fotogramma congelato come sfondo non interattivo: gli input di mouse, tastiera,
+rotellina e scorciatoie vengono assorbiti e gli overlay non mostrano barre degli
+strumenti, quindi il resto del desktop virtuale rimane congelato fino al termine
+della sessione di acquisizione. Se invece usi l'ambito **Cursor Screen** (Settings
+→ Capture → Freeze Scope), viene congelato solo il monitor sotto il cursore e gli
+altri schermi rimangono completamente utilizzabili.
+
 ---
 
 ## 4. Strumenti di annotazione
@@ -457,6 +469,13 @@ della regione e fornisce le voci di menu cattura / registrazione / impostazioni
 - Backend: Wayland (portale PipeWire / grim / screencopy wlroots), X11
   (`QScreen::grabWindow`), Windows (WGC nativo). La registrazione preferisce il
   portale PipeWire e ripiega automaticamente.
+- La finestra delle impostazioni tiene traccia delle modifiche non salvate in
+  modo deterministico: ogni controllo (menu a discesa, interruttore, casella di
+  rotazione, campo di testo, campo scorciatoia, selettore colore) aggiorna
+  immediatamente l'indicatore delle modifiche non salvate, inclusi i valori
+  scelti dai popup delle caselle combinate e dalla finestra di dialogo modale
+  del colore. Annullare una modifica cancella l'indicatore, così la finestra
+  chiede solo delle vere modifiche in sospeso alla chiusura.
 
 Helper opzionali:
 

@@ -172,6 +172,18 @@ inicio:
 `Esc` cancela la sesión; el clic derecho (sin herramienta de inicio) también
 cancela.
 
+#### 3.1 Comportamiento de congelación en múltiples monitores
+
+Con el alcance de captura predeterminado **Freeze All Screens**, cada pantalla
+conectada se congela mientras se selecciona una región. Una vez que confirma una
+selección en un monitor, las otras pantallas siguen mostrando su marco congelado
+como fondo no interactivo: las entradas del mouse, el teclado, la rueda y los
+atajos se absorben y las superposiciones no muestran barras de herramientas, por
+lo que el resto del escritorio virtual permanece congelado hasta que termina la
+sesión de captura. Si en su lugar usa el alcance **Cursor Screen** (Settings →
+Capture → Freeze Scope), solo se congela el monitor bajo el cursor y las demás
+pantallas permanecen totalmente utilizables.
+
 ---
 
 ## 4. Herramientas de anotación
@@ -462,6 +474,13 @@ de región y proporciona entradas de menú de captura / grabación / configuraci
 - Backends: Wayland (portal PipeWire / grim / wlroots screencopy), X11
   (`QScreen::grabWindow`), Windows (WGC nativo). La grabación prefiere el
   portal PipeWire y vuelve a fallar automáticamente.
+- La ventana de Configuración rastrea los cambios sin guardar de forma
+  determinista: cada control (menú desplegable, interruptor, cuadro numérico,
+  campo de texto, campo de atajos, selector de color) actualiza inmediatamente
+  el indicador de cambios sin guardar, incluidos los valores elegidos en las
+  ventanas emergentes de cuadros combinados y en el diálogo modal de color.
+  Revertir un cambio borra el indicador, por lo que la ventana solo pregunta por
+  cambios pendientes reales al cerrarse.
 
 Auxiliares opcionales:
 

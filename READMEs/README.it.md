@@ -85,6 +85,7 @@ Cattura istantaneamente lo schermo e apre una sovrapposizione di annotazione a s
 - **X11**: cattura con `QScreen::grabWindow`, una finestra a schermo intero sempre in primo piano come sovrapposizione e `xclip` per appunti persistenti.
 - **Windows**: usa le API native di Qt per cattura e appunti per il flusso base di cattura, annotazione, copia, salvataggio e blocco. I backend specifici di Linux come PipeWire, xdg-desktop-portal, `grim`, il rilevamento delle finestre XCB, LayerShellQt e l'helper di GNOME Shell vengono disattivati in fase di compilazione.
 - Su Linux il backend del display server viene rilevato automaticamente in fase di esecuzione tramite `$XDG_SESSION_TYPE`; su Windows viene usato il backend nativo di Qt.
+- **Multi-monitor freeze scope**: per impostazione predefinita, la selezione della regione congela tutti i display collegati (una singola finestra del desktop virtuale quando i DPR coincidono su X11/Windows); dopo aver confermato una selezione su un monitor, gli altri display restano congelati e non interattivi fino alla fine della sessione. Lo scope **Cursor Screen** congela solo il monitor sotto il cursore.
 
 ### Integrazione desktop
 - **Scorciatoie desktop**:
