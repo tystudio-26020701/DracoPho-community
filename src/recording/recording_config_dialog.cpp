@@ -37,7 +37,13 @@ namespace {
  */
 QString titleForMode(RecordingMode mode)
 {
-    return mode == RecordingMode::Gif ? MS_TR("GIF Recording") : MS_TR("Video Recording");
+    if (mode == RecordingMode::Gif) {
+        return MS_TR("GIF Recording");
+    }
+    if (mode == RecordingMode::Webp) {
+        return MS_TR("WebP Recording");
+    }
+    return MS_TR("Video Recording");
 }
 
 /**
@@ -123,12 +129,17 @@ void populateFrameRateOptions(QComboBox *combo, RecordingMode mode, int requeste
         return;
     }
     combo->clear();
-    const QVector<int> values = mode == RecordingMode::Gif
+    const QVector<int> values = isAnimatedImageMode(mode)
         ? QVector<int>{6, 8, 10, 12, 15, 20, 24, 30}
         : QVector<int>{15, 24, 30, 48, 60};
-    const int fallback = mode == RecordingMode::Gif ? 12 : 30;
+    const int fallback = isAnimatedImageMode(mode) ? 12 : 30;
     for (int fps : values) {
         combo->addItem(MS_TR("%1 fps").arg(fps), fps);
+    }
+    // 持久化帧率可能不在阶梯选项内（例如旧配置的 120fps）：补一个自定义项，
+    // 避免静默回退到默认值。
+    if (requestedFps > 0 && !values.contains(requestedFps)) {
+        combo->addItem(MS_TR("%1 fps").arg(requestedFps), requestedFps);
     }
     const int requestedIndex = combo->findData(requestedFps);
     const int fallbackIndex = combo->findData(fallback);
@@ -171,6 +182,9 @@ RecordingMode modeFromCombo(const QComboBox *combo, RecordingMode fallback)
     const int value = combo ? combo->currentData().toInt(&ok) : 0;
     if (!ok) {
         return fallback;
+    }
+    if (value == static_cast<int>(RecordingMode::Webp)) {
+        return RecordingMode::Webp;
     }
     return value == static_cast<int>(RecordingMode::Video)
         ? RecordingMode::Video
@@ -242,6 +256,7 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
     m_modeSelector = markshot::settings::addComboRow(form, MS_TR("Recording Type"));
     m_modeSelector->setObjectName(QStringLiteral("recordingModeSelector"));
     m_modeSelector->addItem(QStringLiteral("GIF"), static_cast<int>(RecordingMode::Gif));
+    m_modeSelector->addItem(MS_TR("WebP"), static_cast<int>(RecordingMode::Webp));
     m_modeSelector->addItem(MS_TR("Video"), static_cast<int>(RecordingMode::Video));
     const int modeIndex = m_modeSelector->findData(static_cast<int>(m_mode));
     m_modeSelector->setCurrentIndex(modeIndex >= 0 ? modeIndex : 0);
@@ -345,9 +360,14 @@ RecordingOptions RecordingConfigDialog::options() const
     RecordingOptions result;
     result.mode = m_mode;
     bool fpsOk = false;
-    const int fallbackFps = m_mode == RecordingMode::Gif ? 12 : 30;
+    const int fallbackFps = isAnimatedImageMode(m_mode) ? 12 : 30;
     const int selectedFps = m_fps ? m_fps->currentData().toInt(&fpsOk) : fallbackFps;
-    result.fps = fpsOk ? selectedFps : fallbackFps;
+    const int effectiveFps = fpsOk ? selectedFps : fallbackFps;
+    result.fps = effectiveFps;
+    // 记录两个模式各自的帧率：当前模式取下拉框实时值，另一模式取内存中
+    // 最后一次切换时保存的值，避免"切模式后直接开始"丢掉另一模式的选择。
+    result.videoFps = m_mode == RecordingMode::Video ? effectiveFps : m_videoFps;
+    result.gifFps = isAnimatedImageMode(m_mode) ? effectiveFps : m_gifFps;
     result.includeAudio = m_audio && m_audio->isEnabled() && m_audio->isChecked();
     result.captureBackend = backendFromCombo(m_backend);
     result.scope = static_cast<RecordingScope>(m_scope ? m_scope->currentData().toInt() : static_cast<int>(RecordingScope::Region));
@@ -365,9 +385,14 @@ RecordingOptions RecordingConfigDialog::options() const
 
 void RecordingConfigDialog::browseOutputPath()
 {
-    const QString filter = m_mode == RecordingMode::Gif
-        ? MS_TR("GIF Images (*.gif)")
-        : MS_TR("MP4 Videos (*.mp4)");
+    QString filter;
+    if (m_mode == RecordingMode::Gif) {
+        filter = MS_TR("GIF Images (*.gif)");
+    } else if (m_mode == RecordingMode::Webp) {
+        filter = MS_TR("WebP Images (*.webp)");
+    } else {
+        filter = MS_TR("MP4 Videos (*.mp4)");
+    }
     const QString path = QFileDialog::getSaveFileName(this,
                                                       MS_TR("Save Recording"),
                                                       m_outputPath ? m_outputPath->text() : defaultRecordingPath(m_mode),
@@ -420,7 +445,7 @@ void RecordingConfigDialog::updateDisplayControls()
  */
 int RecordingConfigDialog::fpsForMode(RecordingMode mode) const
 {
-    return mode == RecordingMode::Gif ? m_gifFps : m_videoFps;
+    return isAnimatedImageMode(mode) ? m_gifFps : m_videoFps;
 }
 
 /**
@@ -438,7 +463,7 @@ void RecordingConfigDialog::storeCurrentFpsForMode(RecordingMode mode)
     if (!ok) {
         return;
     }
-    if (mode == RecordingMode::Gif) {
+    if (isAnimatedImageMode(mode)) {
         m_gifFps = value;
         return;
     }

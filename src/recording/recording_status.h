@@ -8,6 +8,9 @@ namespace markshot::recording {
 
 struct RecordingStatus {
     bool active = false;
+    bool finishedOk = false;      // 录制已结束且成功（文件已最终化）
+    bool failed = false;          // 录制失败（未产生有效输出文件）
+    QString errorMessage;         // 失败原因（failed 时有效）
     RecordingMode mode = RecordingMode::Gif;
     int fps = 0;
     int frameCount = 0;

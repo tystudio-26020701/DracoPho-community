@@ -115,7 +115,8 @@ void ShotWindow::beginRegionRecordingSelection(markshot::recording::RecordingOpt
 
     options.scope = markshot::recording::RecordingScope::Region;
     m_pendingRecordingOptions = std::move(options);
-    const StartupTool targetTool = m_pendingRecordingOptions->mode == markshot::recording::RecordingMode::Gif
+    // 动图（GIF / WebP）复用 GIF 启动工具；视频走视频工具。
+    const StartupTool targetTool = markshot::recording::isAnimatedImageMode(m_pendingRecordingOptions->mode)
         ? StartupTool::GifRecorder
         : StartupTool::VideoRecorder;
     if (m_startupTool != targetTool) {

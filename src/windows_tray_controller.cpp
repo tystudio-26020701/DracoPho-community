@@ -172,9 +172,13 @@ QString formatRecordingElapsed(qint64 elapsedMs)
  */
 QString recordingModeLabel(markshot::recording::RecordingMode mode)
 {
-    return mode == markshot::recording::RecordingMode::Gif
-        ? QStringLiteral("GIF")
-        : MS_TR("Video");
+    if (mode == markshot::recording::RecordingMode::Gif) {
+        return QStringLiteral("GIF");
+    }
+    if (mode == markshot::recording::RecordingMode::Webp) {
+        return QStringLiteral("WebP");
+    }
+    return MS_TR("Video");
 }
 
 /**

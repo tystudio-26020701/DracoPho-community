@@ -325,7 +325,12 @@ bool LibavAudioEncoder::Private::encodeFrame(AVFrame *frame,
         m_packet->stream_index = m_stream->index;
         {
             std::lock_guard<std::mutex> lock(writeMutex);
-            result = av_interleaved_write_frame(m_formatContext, m_packet);
+            // 与视频写出保持一致：av_write_frame 立即交给 muxer；每次包都
+            // 刷 avio 缓冲，避免默认 32KB 缓冲把音频数据滞留在内存。
+            result = av_write_frame(m_formatContext, m_packet);
+            if (result >= 0 && m_formatContext && m_formatContext->pb) {
+                avio_flush(m_formatContext->pb);
+            }
         }
         av_packet_unref(m_packet);
         if (result < 0) {

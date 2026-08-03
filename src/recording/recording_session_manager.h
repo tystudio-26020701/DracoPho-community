@@ -50,6 +50,9 @@ private:
     explicit RecordingSessionManager(QObject *parent = nullptr);
 
     QPointer<RecordingController> m_controller;
+    // 最近一次录制结束结果：无活动录制时 status() 返回它，供 CLI/MCP
+    // 判别成功/失败与失败原因（录制结束后控制器即被销毁）。
+    RecordingStatus m_lastStatus;
 };
 
 }  // namespace markshot::recording

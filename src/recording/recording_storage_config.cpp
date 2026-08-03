@@ -102,9 +102,12 @@ RecordingStorageConfig configuredRecordingStorageConfig()
 QString recordingDirectoryForMode(RecordingMode mode)
 {
     const RecordingStorageConfig config = configuredRecordingStorageConfig();
-    return mode == RecordingMode::Gif ? config.gifDirectory : config.videoDirectory;
+    // WebP 是 GIF 的现代替代：动图默认与 GIF 共用目录（均可通过设置页调整）。
+    if (mode == RecordingMode::Video) {
+        return config.videoDirectory;
+    }
+    return config.gifDirectory;
 }
-
 QString normalizedRecordingDirectory(QString path, const QString &fallback)
 {
     path = expandHomePath(path);

@@ -25,7 +25,7 @@ bool GifRecordingWriter::start(QSize frameSize, int fps, QString *error)
         return false;
     }
 
-    return m_process.start(m_options.outputPath, frameSize, fps, error);
+    return m_process.start(m_options.mode, m_options.outputPath, frameSize, fps, error);
 }
 
 bool GifRecordingWriter::writeFrame(const RecordingFrameSample &sample, QString *error)

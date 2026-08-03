@@ -20,7 +20,8 @@ namespace {
  */
 std::unique_ptr<RecordingWriter> createSynchronousWriter(const RecordingOptions &options)
 {
-    if (options.mode == RecordingMode::Gif) {
+    // GIF 与动画 WebP 都是"动图"输出，走同一写出器（内部按模式选编码器）。
+    if (isAnimatedImageMode(options.mode)) {
         return std::make_unique<GifRecordingWriter>(options);
     }
     return std::make_unique<VideoRecordingWriter>(options);

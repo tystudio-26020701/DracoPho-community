@@ -10,13 +10,36 @@ namespace markshot::recording {
 namespace {
 
 /**
+ * 展开用户目录缩写。
+ * @param path 用户输入路径。
+ * @return 展开后的路径。
+ */
+QString expandHomePath(QString path)
+{
+    path = path.trimmed();
+    if (path == QStringLiteral("~")) {
+        return QDir::homePath();
+    }
+    if (path.startsWith(QStringLiteral("~/"))) {
+        return QDir::home().filePath(path.mid(2));
+    }
+    return path;
+}
+
+/**
  * 返回录制模式对应的文件扩展名。
  * @param mode 录制模式。
  * @return 不含点号的扩展名。
  */
 QString extensionForMode(RecordingMode mode)
 {
-    return mode == RecordingMode::Gif ? QStringLiteral("gif") : QStringLiteral("mp4");
+    if (mode == RecordingMode::Gif) {
+        return QStringLiteral("gif");
+    }
+    if (mode == RecordingMode::Webp) {
+        return QStringLiteral("webp");
+    }
+    return QStringLiteral("mp4");
 }
 
 }  // namespace
@@ -39,7 +62,7 @@ QString defaultRecordingPathInDirectory(const QString &directory, RecordingMode 
 
 QString normalizedRecordingPath(QString path, RecordingMode mode)
 {
-    path = path.trimmed();
+    path = expandHomePath(path);
     if (path.isEmpty()) {
         return defaultRecordingPath(mode);
     }

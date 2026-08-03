@@ -4,7 +4,13 @@ namespace markshot::recording {
 
 QString recordingModeName(RecordingMode mode)
 {
-    return mode == RecordingMode::Gif ? QStringLiteral("gif") : QStringLiteral("video");
+    if (mode == RecordingMode::Gif) {
+        return QStringLiteral("gif");
+    }
+    if (mode == RecordingMode::Webp) {
+        return QStringLiteral("webp");
+    }
+    return QStringLiteral("video");
 }
 
 }  // namespace markshot::recording

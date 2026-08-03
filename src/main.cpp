@@ -10,6 +10,9 @@
 #include "debug_log.h"
 #include "floating_ball.h"
 #include "ipc/single_instance_ipc.h"
+#include "recording/recording_dialog_config.h"
+#include "recording/recording_display_source.h"
+#include "recording/recording_file_naming.h"
 #include "recording/recording_session_manager.h"
 #include "settings/settings_dialog.h"
 #include "shot_window.h"
@@ -32,6 +35,7 @@
 #include <QPointer>
 #include <QScreen>
 #include <QStringList>
+#include <QTextStream>
 #include <QTimer>
 #include <QVector>
 
@@ -97,6 +101,28 @@ int main(int argc, char *argv[])
                                              QStringLiteral("Print the current recording status as JSON."));
     QCommandLineOption stopRecordingOption(QStringLiteral("stop-recording"),
                                            QStringLiteral("Stop the active recording through the running instance."));
+    QCommandLineOption recordRegionOption(QStringLiteral("record-region"),
+                                          QStringLiteral("Record a screen region for the given duration (see --record-duration). Geometry as x,y,width,height."),
+                                          QStringLiteral("geometry"));
+    QCommandLineOption recordDisplayOption(QStringLiteral("record-display"),
+                                           QStringLiteral("Record a display by id (see --list-displays output: a raw screen name such as \"DP-1\", the \"output:DP-1\" key, or \"all\")."),
+                                           QStringLiteral("id"));
+    QCommandLineOption recordDurationOption(QStringLiteral("record-duration"),
+                                            QStringLiteral("Recording duration in seconds; 0 records until --stop-recording."),
+                                            QStringLiteral("seconds"));
+    QCommandLineOption recordOutputOption(QStringLiteral("record-output"),
+                                          QStringLiteral("Output file path for the recording."),
+                                          QStringLiteral("path"));
+    QCommandLineOption recordFpsOption(QStringLiteral("record-fps"),
+                                       QStringLiteral("Frame rate for the recording (default 15)."),
+                                       QStringLiteral("fps"));
+    QCommandLineOption recordFormatOption(QStringLiteral("record-format"),
+                                          QStringLiteral("Recording format: mp4 (default), gif or webp."),
+                                          QStringLiteral("format"));
+    QCommandLineOption recordAudioOption(QStringLiteral("record-audio"),
+                                         QStringLiteral("Include system audio in the recording."));
+    QCommandLineOption recordWaitOption(QStringLiteral("record-wait-json"),
+                                        QStringLiteral("Wait for the recording to finish, then print the final status as JSON."));
     QCommandLineOption defaultToolOption(QStringLiteral("default-tool"),
                                          QStringLiteral("Set the default annotation tool after a selected region. Also seeds fullscreen mode unless overridden. Supported: %1.")
                                              .arg(ShotWindow::supportedToolNames().join(QStringLiteral(", "))),
@@ -127,6 +153,14 @@ int main(int argc, char *argv[])
     parser.addOption(pinImageOption);
     parser.addOption(recordingStatusOption);
     parser.addOption(stopRecordingOption);
+    parser.addOption(recordRegionOption);
+    parser.addOption(recordDisplayOption);
+    parser.addOption(recordDurationOption);
+    parser.addOption(recordOutputOption);
+    parser.addOption(recordFpsOption);
+    parser.addOption(recordFormatOption);
+    parser.addOption(recordAudioOption);
+    parser.addOption(recordWaitOption);
     parser.addOption(defaultToolOption);
     parser.addOption(fullscreenDefaultToolOption);
     parser.addOption(fileDefaultToolOption);
@@ -143,6 +177,38 @@ int main(int argc, char *argv[])
     }
     if (parser.isSet(recordingStatusOption)) {
         return markshot::cli::printRecordingStatus();
+    }
+
+    // 无人值守录制：由运行实例执行，返回 JSON 状态。
+    if (parser.isSet(recordRegionOption) || parser.isSet(recordDisplayOption)) {
+        markshot::cli::CliRecordingRequest request;
+        request.geometryText = parser.value(recordRegionOption).trimmed();
+        request.displayKey = parser.value(recordDisplayOption).trimmed();
+        request.outputPath = parser.value(recordOutputOption).trimmed();
+        request.format = parser.value(recordFormatOption).trimmed();
+        if (!parser.isSet(recordFpsOption)) {
+            request.fps = 15;
+        } else {
+            request.fps = std::clamp(parser.value(recordFpsOption).toInt(), 1, 120);
+        }
+        request.includeAudio = parser.isSet(recordAudioOption);
+        // 用 qint64 解析并夹紧到 24h 上限，避免 int 溢出进 QTimer 区间。
+        const qint64 durationSeconds =
+            std::clamp<qint64>(parser.value(recordDurationOption).toLongLong(), 0, 24 * 3600);
+        request.durationMs = static_cast<int>(std::min<qint64>(durationSeconds * 1000, INT_MAX));
+        request.waitForFinish = parser.isSet(recordWaitOption);
+
+        if (request.outputPath.isEmpty()) {
+            QTextStream errorStream(stderr);
+            errorStream << "mark-shot: --record-output is required for recording\n";
+            return 1;
+        }
+        if (request.displayKey.isEmpty() && request.geometryText.isEmpty()) {
+            QTextStream errorStream(stderr);
+            errorStream << "mark-shot: one of --record-display or --record-region is required for recording\n";
+            return 1;
+        }
+        return markshot::cli::startRecordingFromCommandLine(request);
     }
 
     // 无头模式必须绝不弹窗、绝不创建任何窗口（包括图片编辑窗口）。在进入
@@ -455,10 +521,23 @@ int main(int argc, char *argv[])
     };
 
     auto &recordingManager = markshot::recording::RecordingSessionManager::instance();
+    // 限时录制的自动停止定时器：任何录制结束/停止时都必须取消，
+    // 否则上一个录制遗留的定时器会误停新开启的录制。
+    QPointer<QTimer> recordingAutoStopTimer;
+    QObject::connect(&recordingManager,
+                     &markshot::recording::RecordingSessionManager::recordingFinished,
+                     &app,
+                     [&recordingAutoStopTimer](bool, const QString &, const QString &) {
+                         if (recordingAutoStopTimer) {
+                             recordingAutoStopTimer->stop();
+                             recordingAutoStopTimer->deleteLater();
+                             recordingAutoStopTimer = nullptr;
+                         }
+                     });
     markshot::ipc::installSingleInstanceCommandHandler(
         singleInstanceServer.get(),
         &app,
-        [&app, launchCapture, &recordingManager](const markshot::ipc::SingleInstanceCommand &command) {
+        [&app, launchCapture, &recordingManager, &recordingAutoStopTimer](const markshot::ipc::SingleInstanceCommand &command) {
             markshot::ipc::SingleInstanceResponse response;
             response.handled = true;
 
@@ -477,6 +556,104 @@ int main(int argc, char *argv[])
                 response.message = response.recording.active
                     ? QStringLiteral("recording active")
                     : QStringLiteral("recording inactive");
+                return response;
+            }
+
+            if (command.startRecording) {
+                markshot::recording::RecordingOptions options;
+                if (command.recordFormat == QStringLiteral("gif")) {
+                    options.mode = markshot::recording::RecordingMode::Gif;
+                } else if (command.recordFormat == QStringLiteral("webp")) {
+                    options.mode = markshot::recording::RecordingMode::Webp;
+                } else {
+                    options.mode = markshot::recording::RecordingMode::Video;
+                }
+                options.scope = markshot::recording::RecordingScope::Region;
+                options.fps = std::clamp(command.recordFps, 1, 120);
+                options.includeAudio = command.recordIncludeAudio;
+                options.outputPath = markshot::recording::normalizedRecordingPath(
+                    command.recordOutputPath, options.mode);
+
+                const QVector<markshot::recording::DisplaySource> sources =
+                    markshot::recording::availableDisplaySources();
+                if (!command.recordDisplayKey.trimmed().isEmpty()) {
+                    const QString key = command.recordDisplayKey.trimmed();
+                    int matched = -1;
+                    for (int i = 0; i < sources.size(); ++i) {
+                        if (markshot::recording::recordingDisplayPersistenceKey(sources.at(i)) == key) {
+                            matched = i;
+                            break;
+                        }
+                    }
+                    if (matched < 0) {
+                        response.message = QStringLiteral("display id not found: %1").arg(key);
+                        response.recording = recordingManager.status();
+                        return response;
+                    }
+                    options.display = sources.at(matched);
+                    options.captureGeometry = options.display.geometry;
+                } else {
+                    const QStringList parts = command.recordGeometryText.split(QLatin1Char(','), Qt::SkipEmptyParts);
+                    if (parts.size() == 4) {
+                        options.captureGeometry = QRect(parts.at(0).toInt(),
+                                                        parts.at(1).toInt(),
+                                                        parts.at(2).toInt(),
+                                                        parts.at(3).toInt()).normalized();
+                    }
+                }
+
+                if (options.captureGeometry.isEmpty()) {
+                    response.message = QStringLiteral("recording geometry is invalid");
+                    response.recording = recordingManager.status();
+                    return response;
+                }
+                // 区域必须落在真实显示器的虚拟桌面内：拒绝完全越界的区域，
+                // 避免把不可捕获的几何交给采集后端。注意显示器可能位于主屏
+                // 左/上方（虚拟桌面坐标可为负），因此只做相交校验、不断言
+                // 坐标非负。
+                QRect virtualDesktop;
+                for (const markshot::recording::DisplaySource &source : sources) {
+                    virtualDesktop = virtualDesktop.isNull()
+                        ? source.geometry
+                        : virtualDesktop.united(source.geometry);
+                }
+                const QRect region = options.captureGeometry.normalized();
+                if (!virtualDesktop.isNull() && !virtualDesktop.intersects(region)) {
+                    response.message = QStringLiteral("recording geometry is outside all displays");
+                    response.recording = recordingManager.status();
+                    return response;
+                }
+
+                QString startError;
+                if (!recordingManager.start(options, &app, &startError)) {
+                    response.message = startError.isEmpty()
+                        ? QStringLiteral("failed to start recording")
+                        : startError;
+                    response.recording = recordingManager.status();
+                    return response;
+                }
+                response.recordingStarted = true;
+                response.message = QStringLiteral("recording started");
+                // 限时录制：到时自动停止。定时器与当前录制会话绑定，录制提前
+                // 结束（stop/失败）时会通过 recordingFinished 取消，避免误停
+                // 后续开启的录制。时长由 IPC 传来，夹紧到 24h 上限。
+                const int durationMs = std::clamp(command.recordDurationMs, 0, 24 * 3600 * 1000);
+                if (durationMs > 0) {
+                    if (recordingAutoStopTimer) {
+                        recordingAutoStopTimer->stop();
+                        recordingAutoStopTimer->deleteLater();
+                    }
+                    auto *timer = new QTimer(&app);
+                    timer->setSingleShot(true);
+                    timer->setInterval(durationMs);
+                    QObject::connect(timer, &QTimer::timeout, &app, [&recordingManager] {
+                        QString stopError;
+                        recordingManager.stop(&stopError);
+                    });
+                    recordingAutoStopTimer = timer;
+                    timer->start();
+                }
+                response.recording = recordingManager.status();
                 return response;
             }
 

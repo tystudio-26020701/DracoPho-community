@@ -1,6 +1,7 @@
 #pragma once
 
 #include "recording/recording_frame_sample.h"
+#include "recording/recording_options.h"
 
 #include <QSize>
 #include <QString>
@@ -13,14 +14,15 @@ public:
     ~LibavGifRecordingProcess();
 
     /**
-     * 启动库内 GIF 编码器。
-     * @param outputPath 输出 GIF 路径。
+     * 启动库内动图编码器（GIF 或动画 WebP）。
+     * @param mode 录制模式（Gif / Webp）。
+     * @param outputPath 输出文件路径。
      * @param frameSize 帧尺寸。
      * @param fps 帧率。
      * @param error 输出错误信息。
      * @return 启动成功时返回 true。
      */
-    bool start(const QString &outputPath, QSize frameSize, int fps, QString *error);
+    bool start(RecordingMode mode, const QString &outputPath, QSize frameSize, int fps, QString *error);
 
     /**
      * 写入一帧 GIF 图像。

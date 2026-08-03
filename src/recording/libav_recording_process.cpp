@@ -7,6 +7,7 @@
 #include "recording/recording_frame_converter.h"
 
 #include <QByteArray>
+#include <QDateTime>
 #include <QFile>
 
 #include <algorithm>
@@ -190,6 +191,14 @@ private:
     bool openOutput(const QString &outputPath, QString *error);
 
     /**
+     * 结束时把临时 MKV 流拷贝 remux 为最终 MP4（崩溃安全路径）。
+     * @param tempMkvPath 临时 MKV 路径。
+     * @param error 输出错误信息。
+     * @return 成功时返回 true。
+     */
+    bool remuxTempToFinal(const QString &tempMkvPath, QString *error);
+
+    /**
      * 初始化视频编码器。
      * @param encoder 编码器候选。
      * @param fps 目标帧率。
@@ -250,6 +259,7 @@ private:
 
 #ifdef HAVE_LIBAV_RECORDING
     AVFormatContext *m_formatContext = nullptr;
+    AVDictionary *m_formatOptions = nullptr;
     AVCodecContext *m_codecContext = nullptr;
     AVStream *m_stream = nullptr;
     AVFrame *m_frame = nullptr;
@@ -261,6 +271,10 @@ private:
     LibavAudioEncoder m_audioEncoder;
     std::unique_ptr<AudioCaptureReader> m_audioReader;
     QByteArray m_outputPathBytes;
+    // 崩溃安全：录制期间写入临时 MKV（增量落盘），结束时机内 remux 成最终
+    // MP4。进程被杀死时临时 MKV 仍可恢复，避免直接写 MP4 全量丢失。
+    QString m_tempMkvPath;
+    QString m_finalOutputPath;
     QSize m_frameSize;
     QSize m_encodedSize;
     std::mutex m_writeMutex;
@@ -293,6 +307,12 @@ bool LibavRecordingProcessPrivate::start(const RecordingOptions &options,
     }
 
     cleanup();
+    // 上一次录制若在 remux 前中断（进程被杀），会遗留 .part.mkv；新录制开始时
+    // 清掉旧残留，避免占用磁盘。cancel() 与正常 finish 已各自清理。
+    if (!m_tempMkvPath.isEmpty()) {
+        QFile::remove(m_tempMkvPath);
+        m_tempMkvPath.clear();
+    }
     m_frameSize = frameSize;
     m_encodedSize = evenEncodedSize(frameSize);
     m_fps = std::max(1, fps);
@@ -310,7 +330,9 @@ bool LibavRecordingProcessPrivate::start(const RecordingOptions &options,
         return false;
     }
 
-    int result = avformat_write_header(m_formatContext, nullptr);
+    int result = avformat_write_header(m_formatContext, &m_formatOptions);
+    av_dict_free(&m_formatOptions);
+    m_formatOptions = nullptr;
     if (result < 0) {
         cleanup();
         return failWith(error,
@@ -398,11 +420,20 @@ bool LibavRecordingProcessPrivate::finish(QString *error)
         return false;
     }
     const int result = av_write_trailer(m_formatContext);
+    // cleanup 会删除临时文件；先取回路径供后续 remux 使用。
+    const QString tempMkvPath = m_tempMkvPath;
     cleanup();
     if (result < 0) {
         return failWith(error,
                         QStringLiteral("Failed to write libav output trailer: %1")
                             .arg(libavErrorText(result)));
+    }
+    // 崩溃安全：把临时 MKV 流拷贝 remux 成最终 MP4（保留编码质量、避免重编码），
+    // 成功后删除临时文件；失败时保留 .part.mkv 供恢复，并如实报告。
+    if (!tempMkvPath.isEmpty()) {
+        if (!remuxTempToFinal(tempMkvPath, error)) {
+            return false;
+        }
     }
     return true;
 #endif
@@ -411,6 +442,140 @@ bool LibavRecordingProcessPrivate::finish(QString *error)
 void LibavRecordingProcessPrivate::cancel()
 {
     cleanup();
+    if (!m_tempMkvPath.isEmpty()) {
+        QFile::remove(m_tempMkvPath);
+        m_tempMkvPath.clear();
+    }
+}
+
+bool LibavRecordingProcessPrivate::remuxTempToFinal(const QString &tempMkvPath, QString *error)
+{
+#ifdef HAVE_LIBAV_RECORDING
+    if (tempMkvPath.isEmpty() || m_finalOutputPath.isEmpty()) {
+        return failWith(error, QStringLiteral("No temporary recording file to finalize"));
+    }
+    const QByteArray inputPathBytes = QFile::encodeName(tempMkvPath);
+    const QByteArray outputPathBytes = QFile::encodeName(m_finalOutputPath);
+
+    AVFormatContext *input = nullptr;
+    AVFormatContext *output = nullptr;
+    if (avformat_open_input(&input, inputPathBytes.constData(), nullptr, nullptr) < 0) {
+        return failWith(error,
+                        QStringLiteral("Failed to open temporary recording for finalization: %1")
+                            .arg(tempMkvPath));
+    }
+    if (avformat_find_stream_info(input, nullptr) < 0) {
+        avformat_close_input(&input);
+        return failWith(error, QStringLiteral("Failed to read temporary recording stream info"));
+    }
+
+    int outputResult = avformat_alloc_output_context2(&output,
+                                                      nullptr,
+                                                      nullptr,
+                                                      outputPathBytes.constData());
+    if (outputResult < 0 || !output) {
+        avformat_close_input(&input);
+        return failWith(error,
+                        QStringLiteral("Failed to allocate libav final output context: %1")
+                            .arg(libavErrorText(outputResult)));
+    }
+
+    // 复制全部流（视频 + 音频），流拷贝保留编码质量。
+    for (unsigned i = 0; i < input->nb_streams; ++i) {
+        AVStream *inStream = input->streams[i];
+        AVStream *outStream = avformat_new_stream(output, nullptr);
+        if (!outStream) {
+            avformat_close_input(&input);
+            avformat_free_context(output);
+            return failWith(error, QStringLiteral("Failed to create libav final output stream"));
+        }
+        if (avcodec_parameters_copy(outStream->codecpar, inStream->codecpar) < 0) {
+            avformat_close_input(&input);
+            avformat_free_context(output);
+            return failWith(error, QStringLiteral("Failed to copy libav final stream parameters"));
+        }
+        outStream->time_base = inStream->time_base;
+    }
+
+    if (!(output->oformat->flags & AVFMT_NOFILE)) {
+        outputResult = avio_open(&output->pb, outputPathBytes.constData(), AVIO_FLAG_WRITE);
+        if (outputResult < 0) {
+            avformat_close_input(&input);
+            avformat_free_context(output);
+            return failWith(error,
+                            QStringLiteral("Failed to open libav final output file: %1")
+                                .arg(libavErrorText(outputResult)));
+        }
+    }
+
+    AVDictionary *finalOptions = nullptr;
+    // faststart：把 moov 提到文件头，便于网络/流式场景即时播放。
+    av_dict_set(&finalOptions, "movflags", "faststart", 0);
+    outputResult = avformat_write_header(output, &finalOptions);
+    av_dict_free(&finalOptions);
+    if (outputResult < 0) {
+        if (output->pb) {
+            avio_closep(&output->pb);
+        }
+        avformat_close_input(&input);
+        avformat_free_context(output);
+        return failWith(error,
+                        QStringLiteral("Failed to write libav final output header: %1")
+                            .arg(libavErrorText(outputResult)));
+    }
+
+    AVPacket *packet = av_packet_alloc();
+    if (!packet) {
+        if (output->pb) {
+            avio_closep(&output->pb);
+        }
+        avformat_close_input(&input);
+        avformat_free_context(output);
+        return failWith(error, QStringLiteral("Failed to allocate libav final packet"));
+    }
+    while (av_read_frame(input, packet) >= 0) {
+        if (packet->stream_index >= 0
+            && static_cast<unsigned>(packet->stream_index) < input->nb_streams) {
+            AVStream *inStream = input->streams[packet->stream_index];
+            AVStream *outStream = output->streams[packet->stream_index];
+            av_packet_rescale_ts(packet, inStream->time_base, outStream->time_base);
+        }
+        packet->pos = -1;
+        outputResult = av_interleaved_write_frame(output, packet);
+        av_packet_unref(packet);
+        if (outputResult < 0) {
+            av_packet_free(&packet);
+            if (output->pb) {
+                avio_closep(&output->pb);
+            }
+            avformat_close_input(&input);
+            avformat_free_context(output);
+            return failWith(error,
+                            QStringLiteral("Failed to finalize recording: %1")
+                                .arg(libavErrorText(outputResult)));
+        }
+    }
+    av_packet_free(&packet);
+    outputResult = av_write_trailer(output);
+    if (output->pb) {
+        avio_closep(&output->pb);
+    }
+    avformat_close_input(&input);
+    avformat_free_context(output);
+    if (outputResult < 0) {
+        return failWith(error,
+                        QStringLiteral("Failed to write libav final output trailer: %1")
+                            .arg(libavErrorText(outputResult)));
+    }
+
+    // remux 成功，删除临时 MKV。
+    QFile::remove(tempMkvPath);
+    m_tempMkvPath.clear();
+    return true;
+#else
+    Q_UNUSED(error)
+    return true;
+#endif
 }
 
 bool LibavRecordingProcessPrivate::openAudio(QString *error)
@@ -463,23 +628,44 @@ bool LibavRecordingProcessPrivate::openOutput(const QString &outputPath, QString
     Q_UNUSED(outputPath)
     return failWith(error, QStringLiteral("FFmpeg libraries are not linked"));
 #else
-    m_outputPathBytes = QFile::encodeName(outputPath);
+    m_finalOutputPath = outputPath;
+    // 崩溃安全：MP4/MOV 直接写普通格式时 av_interleaved_write_frame 会把全部
+    // 数据缓冲到 trailer，进程被杀时文件不可用（全量丢失）。改为录制期间写
+    // 临时 MKV（增量落盘、中断可恢复），结束时 remux 成最终 MP4——与
+    // vokoscreenNG/OBS 的可靠录制路径一致。
+    m_tempMkvPath.clear();
+    const QString lower = outputPath.toLower();
+    if (lower.endsWith(QStringLiteral(".mp4")) || lower.endsWith(QStringLiteral(".mov"))) {
+        // 随机后缀：避免可预测的 .part.mkv 被预置符号链接指向受害者文件
+        // （共享/组可写输出目录下的经典符号链接攻击）。
+        const QString randomSuffix =
+            QString::number(QDateTime::currentMSecsSinceEpoch() ^ (quintptr(this) & 0xFFFF));
+        m_tempMkvPath = QStringLiteral("%1.%2.part.mkv").arg(outputPath, randomSuffix);
+    }
+    const QByteArray muxPathBytes = QFile::encodeName(
+        m_tempMkvPath.isEmpty() ? outputPath : m_tempMkvPath);
+    m_outputPathBytes = muxPathBytes;
     int result = avformat_alloc_output_context2(&m_formatContext,
                                                 nullptr,
                                                 nullptr,
-                                                m_outputPathBytes.constData());
+                                                muxPathBytes.constData());
     if (result < 0 || !m_formatContext) {
         return failWith(error,
                         QStringLiteral("Failed to allocate libav output context: %1")
                             .arg(libavErrorText(result)));
     }
     if (!(m_formatContext->oformat->flags & AVFMT_NOFILE)) {
-        result = avio_open(&m_formatContext->pb, m_outputPathBytes.constData(), AVIO_FLAG_WRITE);
+        result = avio_open(&m_formatContext->pb, muxPathBytes.constData(), AVIO_FLAG_WRITE);
         if (result < 0) {
             return failWith(error,
                             QStringLiteral("Failed to open libav output file: %1")
                                 .arg(libavErrorText(result)));
         }
+    }
+    // MKV 崩溃窗口：默认 cluster 每 5 秒落盘一次，中断最多丢最后 5 秒。
+    // 缩短到 1 秒，把崩溃损失压到最小。
+    if (!m_tempMkvPath.isEmpty()) {
+        av_dict_set(&m_formatOptions, "cluster_time_limit", "1000000", 0);
     }
     return true;
 #endif
@@ -517,7 +703,9 @@ bool LibavRecordingProcessPrivate::openEncoder(const RecordingVideoEncoderOption
     m_codecContext->pix_fmt = m_encodePixelFormat;
     m_codecContext->time_base = AVRational{1, fps};
     m_codecContext->framerate = AVRational{fps, 1};
-    m_codecContext->gop_size = fps;
+    // 关键帧间隔 = 2 秒：便于拖动/剪辑定位，同时比逐秒关键帧节省码率
+    // （SVT-AV1/x264 均建议 2*fps 左右；过密关键帧浪费码率，过疏难以跳转）。
+    m_codecContext->gop_size = std::max(1, fps * 2);
     m_codecContext->max_b_frames = 0;
     // 0 表示自动按 CPU 核数分配编码线程，默认值 1 会让 libx264 单线程运行
     m_codecContext->thread_count = 0;
@@ -655,7 +843,15 @@ bool LibavRecordingProcessPrivate::encodeFrame(AVFrame *frame, QString *error)
         m_packet->stream_index = m_stream->index;
         {
             std::lock_guard<std::mutex> lock(m_writeMutex);
-            result = av_interleaved_write_frame(m_formatContext, m_packet);
+            // av_write_frame：立即把 packet 交给 muxer（MKV 按 cluster 增量
+            // 写出）；av_interleaved_write_frame 会把全部数据缓冲到 trailer，
+            // 崩溃即全量丢失。
+            result = av_write_frame(m_formatContext, m_packet);
+            if (result >= 0 && m_formatContext && m_formatContext->pb && !m_tempMkvPath.isEmpty()) {
+                // 把 avio 缓冲立即刷到磁盘：默认 32KB 缓冲会吃掉小写入，
+                // 不刷则进程被杀时仍有大量数据只停留在内存。
+                avio_flush(m_formatContext->pb);
+            }
         }
         av_packet_unref(m_packet);
         if (result < 0) {
@@ -700,6 +896,8 @@ void LibavRecordingProcessPrivate::cleanup()
         avformat_free_context(m_formatContext);
         m_formatContext = nullptr;
     }
+    av_dict_free(&m_formatOptions);
+    m_formatOptions = nullptr;
     m_stream = nullptr;
 #endif
     m_started = false;

@@ -19,11 +19,22 @@ struct SingleInstanceCommand {
     bool allOutputs = false;
     bool recordingStatus = false;
     bool stopRecording = false;
+    // 无人值守录制请求（供 CLI / MCP 智能体调用）：
+    // 以显式几何或显示器键启动一次录制，可选时长自动停止。
+    bool startRecording = false;
+    QString recordDisplayKey;      // 显示器持久化键（如 "screen:DP-1" / "all"）
+    QString recordGeometryText;    // "x,y,width,height"，displayKey 为空时使用
+    QString recordOutputPath;      // 输出文件路径
+    QString recordFormat;          // "mp4"（默认） / "gif"
+    int recordFps = 15;
+    bool recordIncludeAudio = false;
+    int recordDurationMs = 0;      // 0 表示不限时，等待 stop-recording
 };
 
 struct SingleInstanceResponse {
     bool handled = false;
     bool stopped = false;
+    bool recordingStarted = false;
     QString message;
     markshot::recording::RecordingStatus recording;
 };

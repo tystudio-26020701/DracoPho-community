@@ -19,6 +19,9 @@ QJsonObject recordingStatusToJson(const markshot::recording::RecordingStatus &st
 {
     QJsonObject object;
     object.insert(QStringLiteral("active"), status.active);
+    object.insert(QStringLiteral("finishedOk"), status.finishedOk);
+    object.insert(QStringLiteral("failed"), status.failed);
+    object.insert(QStringLiteral("errorMessage"), status.errorMessage);
     object.insert(QStringLiteral("mode"), markshot::recording::recordingModeName(status.mode));
     object.insert(QStringLiteral("fps"), status.fps);
     object.insert(QStringLiteral("frameCount"), status.frameCount);
@@ -36,9 +39,17 @@ markshot::recording::RecordingStatus recordingStatusFromJson(const QJsonObject &
 {
     markshot::recording::RecordingStatus status;
     status.active = object.value(QStringLiteral("active")).toBool(false);
-    status.mode = object.value(QStringLiteral("mode")).toString() == QStringLiteral("video")
-        ? markshot::recording::RecordingMode::Video
-        : markshot::recording::RecordingMode::Gif;
+    status.finishedOk = object.value(QStringLiteral("finishedOk")).toBool(false);
+    status.failed = object.value(QStringLiteral("failed")).toBool(false);
+    status.errorMessage = object.value(QStringLiteral("errorMessage")).toString();
+    const QString modeText = object.value(QStringLiteral("mode")).toString();
+    if (modeText == QStringLiteral("video")) {
+        status.mode = markshot::recording::RecordingMode::Video;
+    } else if (modeText == QStringLiteral("webp")) {
+        status.mode = markshot::recording::RecordingMode::Webp;
+    } else {
+        status.mode = markshot::recording::RecordingMode::Gif;
+    }
     status.fps = object.value(QStringLiteral("fps")).toInt(0);
     status.frameCount = object.value(QStringLiteral("frameCount")).toInt(0);
     status.elapsedMs = static_cast<qint64>(object.value(QStringLiteral("elapsedMs")).toDouble(0.0));
@@ -59,6 +70,14 @@ QByteArray encodeCommand(const SingleInstanceCommand &command)
     object.insert(QStringLiteral("allOutputs"), command.allOutputs);
     object.insert(QStringLiteral("recordingStatus"), command.recordingStatus);
     object.insert(QStringLiteral("stopRecording"), command.stopRecording);
+    object.insert(QStringLiteral("startRecording"), command.startRecording);
+    object.insert(QStringLiteral("recordDisplayKey"), command.recordDisplayKey);
+    object.insert(QStringLiteral("recordGeometryText"), command.recordGeometryText);
+    object.insert(QStringLiteral("recordOutputPath"), command.recordOutputPath);
+    object.insert(QStringLiteral("recordFormat"), command.recordFormat);
+    object.insert(QStringLiteral("recordFps"), command.recordFps);
+    object.insert(QStringLiteral("recordIncludeAudio"), command.recordIncludeAudio);
+    object.insert(QStringLiteral("recordDurationMs"), command.recordDurationMs);
     return QJsonDocument(object).toJson(QJsonDocument::Compact) + '\n';
 }
 
@@ -85,6 +104,14 @@ std::optional<SingleInstanceCommand> decodeCommand(const QByteArray &payload)
     command.allOutputs = object.value(QStringLiteral("allOutputs")).toBool(false);
     command.recordingStatus = object.value(QStringLiteral("recordingStatus")).toBool(false);
     command.stopRecording = object.value(QStringLiteral("stopRecording")).toBool(false);
+    command.startRecording = object.value(QStringLiteral("startRecording")).toBool(false);
+    command.recordDisplayKey = object.value(QStringLiteral("recordDisplayKey")).toString();
+    command.recordGeometryText = object.value(QStringLiteral("recordGeometryText")).toString();
+    command.recordOutputPath = object.value(QStringLiteral("recordOutputPath")).toString();
+    command.recordFormat = object.value(QStringLiteral("recordFormat")).toString();
+    command.recordFps = object.value(QStringLiteral("recordFps")).toInt(15);
+    command.recordIncludeAudio = object.value(QStringLiteral("recordIncludeAudio")).toBool(false);
+    command.recordDurationMs = object.value(QStringLiteral("recordDurationMs")).toInt(0);
     return command;
 }
 
@@ -105,6 +132,7 @@ std::optional<SingleInstanceResponse> decodeResponse(const QByteArray &payload)
     SingleInstanceResponse response;
     response.handled = object.value(QStringLiteral("handled")).toBool(false);
     response.stopped = object.value(QStringLiteral("stopped")).toBool(false);
+    response.recordingStarted = object.value(QStringLiteral("recordingStarted")).toBool(false);
     response.message = object.value(QStringLiteral("message")).toString();
     response.recording = recordingStatusFromJson(object.value(QStringLiteral("recording")).toObject());
     return response;
@@ -229,6 +257,7 @@ QJsonObject responseToJsonObject(const SingleInstanceResponse &response)
     QJsonObject object;
     object.insert(QStringLiteral("handled"), response.handled);
     object.insert(QStringLiteral("stopped"), response.stopped);
+    object.insert(QStringLiteral("recordingStarted"), response.recordingStarted);
     object.insert(QStringLiteral("message"), response.message);
     object.insert(QStringLiteral("recording"), recordingStatusToJson(response.recording));
     return object;

@@ -84,6 +84,9 @@ bool legacyModeMatches(QString text, RecordingMode mode)
     if (text.isEmpty()) {
         return true;
     }
+    if (mode == RecordingMode::Webp) {
+        return text == QStringLiteral("webp");
+    }
     if (mode == RecordingMode::Gif) {
         return text == QStringLiteral("gif");
     }
@@ -157,7 +160,8 @@ RecordingDialogConfig recordingDialogConfigFromRoot(const QJsonObject &root, Rec
                                                QStringLiteral("gifFps"),
                                                RecordingMode::Gif,
                                                12);
-    config.fps = config.mode == RecordingMode::Gif ? config.gifFps : config.videoFps;
+    // WebP 是 GIF 的现代替代：复用动图帧率键（gifFps）。
+    config.fps = config.mode == RecordingMode::Video ? config.videoFps : config.gifFps;
     config.includeAudio = dialog.value(QStringLiteral("includeAudio")).toBool(false);
     config.outputPath = generatedOutputPathFromDialogConfig(dialog, config.mode);
     config.displayKey = dialog.value(QStringLiteral("displayKey")).toString().trimmed();
@@ -189,8 +193,10 @@ bool saveRecordingDialogConfig(const RecordingDialogConfig &config, QString *err
     dialog.remove(QStringLiteral("fps"));
     dialog.insert(QStringLiteral("scope"), scopeName(config.scope));
     dialog.insert(QStringLiteral("backend"), recordingCaptureBackendName(config.backend));
-    dialog.insert(config.mode == RecordingMode::Gif ? QStringLiteral("gifFps") : QStringLiteral("videoFps"),
-                  config.fps);
+    // 同时持久化两个模式的独立帧率：只写当前模式会让"切模式后直接开始"
+    // 丢掉另一模式的选择，导致下次打开对话框时回退为旧值。
+    dialog.insert(QStringLiteral("videoFps"), config.videoFps);
+    dialog.insert(QStringLiteral("gifFps"), config.gifFps);
     dialog.insert(QStringLiteral("includeAudio"), config.includeAudio);
     dialog.insert(QStringLiteral("outputDirectory"), QFileInfo(config.outputPath).absolutePath());
     dialog.insert(QStringLiteral("displayKey"), config.displayKey);
@@ -207,8 +213,8 @@ RecordingDialogConfig recordingDialogConfigFromOptions(const RecordingOptions &o
     config.scope = options.scope;
     config.backend = options.captureBackend;
     config.fps = options.fps;
-    config.videoFps = options.mode == RecordingMode::Video ? options.fps : 30;
-    config.gifFps = options.mode == RecordingMode::Gif ? options.fps : 12;
+    config.videoFps = options.videoFps > 0 ? options.videoFps : 30;
+    config.gifFps = options.gifFps > 0 ? options.gifFps : 12;
     config.includeAudio = options.includeAudio;
     config.outputPath = options.outputPath.trimmed().isEmpty()
         ? defaultRecordingPath(options.mode)
