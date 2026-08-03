@@ -41,6 +41,12 @@ private:
     void updateAudioControls();
 
     /**
+     * 按录制范围更新显示器控件可用状态。
+     * @return 无返回值。
+     */
+    void updateDisplayControls();
+
+    /**
      * 读取指定录制模式的帧率状态。
      * @param mode 录制模式。
      * @return 帧率。
