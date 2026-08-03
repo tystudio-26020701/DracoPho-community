@@ -76,28 +76,30 @@ void ShotWindow::beginStartupRecording(markshot::recording::RecordingMode mode)
     request.initialMode = mode;
     request.stayOnTop = true;
     request.startDisplayRecording = [this, quitOnLastWindowClosed](markshot::recording::RecordingOptions options) {
+        m_recordingConfigDialogOpen = false;
         QApplication::setQuitOnLastWindowClosed(quitOnLastWindowClosed);
         m_pendingRecordingOptions.reset();
         startRecording(std::move(options));
     };
     request.selectRegionRecording = [this, restoreOverlay](markshot::recording::RecordingOptions options) {
+        m_recordingConfigDialogOpen = false;
         restoreOverlay();
         beginRegionRecordingSelection(std::move(options));
     };
     request.showError = [this, restoreOverlay](const QString &message) {
+        m_recordingConfigDialogOpen = false;
         restoreOverlay();
         QMessageBox::warning(this, QStringLiteral("Mark Shot"), message);
     };
-
-    const bool accepted = markshot::recording::runRecordingStartFlow(request);
-    m_recordingConfigDialogOpen = false;
-    if (!accepted) {
+    request.cancelled = [this, restoreOverlay] {
+        m_recordingConfigDialogOpen = false;
         restoreOverlay();
         if (recordingModeForStartupTool(m_startupTool).has_value()) {
             leaveStartupTool();
         }
-        return;
-    }
+    };
+
+    markshot::recording::runRecordingStartFlow(request);
 }
 
 /**

@@ -1,10 +1,15 @@
 #include "recording/recording_config_dialog.h"
 
+#include "app_config_store.h"
 #include "recording/audio/audio_capture_reader_factory.h"
 #include "recording/recording_dialog_config.h"
 #include "recording/recording_display_source.h"
 #include "recording/recording_file_naming.h"
+#include "settings/settings_design_tokens.h"
+#include "settings/settings_ui_helpers.h"
+#include "settings/settings_wheel_guard.h"
 #include "ui/i18n.h"
+#include "ui/interface_theme_config.h"
 #include "ui/theme.h"
 
 #include <QCheckBox>
@@ -43,6 +48,21 @@ QScreen *currentScreen()
 {
     QScreen *screen = QGuiApplication::screenAt(QCursor::pos());
     return screen ? screen : QGuiApplication::primaryScreen();
+}
+
+/**
+ * 解析录制配置窗口应跟随的界面主题。
+ * 与设置窗口一致：读取配置 ui.theme（system/dark/light），再解析实际明暗。
+ * @return 实际应用的明暗主题模式。
+ */
+markshot::ui::UiThemeMode effectiveDialogTheme()
+{
+    bool ok = false;
+    const QJsonObject root = markshot::readAppConfigRoot(&ok);
+    const markshot::ui::UiThemeMode configured = ok
+        ? markshot::ui::uiThemeModeFromConfigRoot(root)
+        : markshot::ui::UiThemeMode::System;
+    return markshot::ui::effectiveUiThemeMode(configured);
 }
 
 /**
@@ -127,11 +147,14 @@ void populateBackendOptions(QComboBox *combo, RecordingCaptureBackend requested)
         return;
     }
     combo->clear();
-    combo->addItem(QStringLiteral("Auto"), static_cast<int>(RecordingCaptureBackend::Auto));
-    combo->addItem(QStringLiteral("wlroots screencopy"), static_cast<int>(RecordingCaptureBackend::Wlroots));
-    combo->addItem(QStringLiteral("PipeWire"), static_cast<int>(RecordingCaptureBackend::PipeWire));
-    combo->addItem(QStringLiteral("Windows Graphics Capture"), static_cast<int>(RecordingCaptureBackend::WindowsWgc));
-    combo->addItem(QStringLiteral("Polling"), static_cast<int>(RecordingCaptureBackend::Polling));
+    combo->addItem(MS_TR("Auto"), static_cast<int>(RecordingCaptureBackend::Auto));
+#if defined(_WIN32)
+    combo->addItem(MS_TR("Windows Graphics Capture"), static_cast<int>(RecordingCaptureBackend::WindowsWgc));
+#else
+    combo->addItem(MS_TR("wlroots screencopy"), static_cast<int>(RecordingCaptureBackend::Wlroots));
+    combo->addItem(MS_TR("PipeWire"), static_cast<int>(RecordingCaptureBackend::PipeWire));
+#endif
+    combo->addItem(MS_TR("Polling"), static_cast<int>(RecordingCaptureBackend::Polling));
     const int index = combo->findData(static_cast<int>(requested));
     combo->setCurrentIndex(index >= 0 ? index : 0);
 }
@@ -189,42 +212,56 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
     m_videoFps = persisted.videoFps;
     m_gifFps = persisted.gifFps;
     setWindowTitle(titleForMode(m_mode));
-    setModal(true);
-    setMinimumWidth(460);
+    setMinimumSize(460, 400);
+    // 主题跟随用户设置：与设置窗口共享设计 token，按 ui.theme 选择明暗样式
+    // 与调色板，保证复选框勾选、下拉弹层等原生绘制也随主题一致。
+    const markshot::ui::UiThemeMode effectiveTheme = effectiveDialogTheme();
+    setPalette(markshot::settings::tokens::settingsPalette(effectiveTheme));
+    setStyleSheet(markshot::theme::recordingDialogStyleSheet(
+        effectiveTheme != markshot::ui::UiThemeMode::Light));
+
+    // 滚轮防护：与设置窗口一致，未聚焦的下拉框不再被滚轮误改内容。
+    markshot::settings::installSettingsWheelGuard(this);
 
     auto *root = new QVBoxLayout(this);
-    root->setContentsMargins(18, 18, 18, 18);
-    root->setSpacing(14);
+    root->setContentsMargins(20, 20, 20, 18);
+    root->setSpacing(16);
 
     m_title = new QLabel(titleForMode(m_mode), this);
+    m_title->setObjectName(QStringLiteral("recordingDialogTitle"));
     m_title->setFont(markshot::theme::uiFont(16, QFont::DemiBold));
     root->addWidget(m_title);
 
     auto *form = new QFormLayout;
-    form->setHorizontalSpacing(16);
-    form->setVerticalSpacing(10);
+    form->setHorizontalSpacing(18);
+    form->setVerticalSpacing(12);
     root->addLayout(form);
 
-    m_modeSelector = new QComboBox(this);
+    // 下拉框全部走设置窗口的行辅助函数：设置光标、禁用上下文菜单，
+    // 并安装控件级滚轮抑制——无论聚焦与否，滚轮都绝不篡改选中项。
+    m_modeSelector = markshot::settings::addComboRow(form, MS_TR("Recording Type"));
+    m_modeSelector->setObjectName(QStringLiteral("recordingModeSelector"));
     m_modeSelector->addItem(QStringLiteral("GIF"), static_cast<int>(RecordingMode::Gif));
     m_modeSelector->addItem(MS_TR("Video"), static_cast<int>(RecordingMode::Video));
     const int modeIndex = m_modeSelector->findData(static_cast<int>(m_mode));
     m_modeSelector->setCurrentIndex(modeIndex >= 0 ? modeIndex : 0);
-    form->addRow(MS_TR("Recording Type"), m_modeSelector);
 
-    m_fps = new QComboBox(this);
+    m_fps = markshot::settings::addComboRow(form, MS_TR("Frame Rate"));
+    m_fps->setObjectName(QStringLiteral("recordingFps"));
     populateFrameRateOptions(m_fps, m_mode, fpsForMode(m_mode));
-    form->addRow(MS_TR("Frame Rate"), m_fps);
 
-    m_audio = new QCheckBox(MS_TR("Record system default audio input"), this);
+    m_audio = markshot::settings::addSwitchRow(form,
+                                               MS_TR("Audio"),
+                                               MS_TR("Record system default audio input"));
+    m_audio->setObjectName(QStringLiteral("recordingAudioCheck"));
     m_audio->setChecked(persisted.includeAudio);
-    form->addRow(MS_TR("Audio"), m_audio);
 
-    m_display = new QComboBox(this);
+    m_display = markshot::settings::addComboRow(form, MS_TR("Display"));
+    m_display->setObjectName(QStringLiteral("recordingDisplay"));
     for (int i = 0; i < m_sources.size(); ++i) {
         const DisplaySource &source = m_sources.at(i);
         const QString subtitle = QStringLiteral("%1 x %2").arg(source.geometry.width()).arg(source.geometry.height());
-        m_display->addItem(QStringLiteral("%1  %2").arg(source.title, subtitle), i);
+        m_display->addItem(QStringLiteral("%1  ·  %2").arg(source.title, subtitle), i);
     }
     const int savedSourceIndex = displaySourceIndexForKey(m_sources, persisted.displayKey);
     const int currentSourceIndex = savedSourceIndex >= 0 ? savedSourceIndex : currentDisplaySourceIndex(m_sources);
@@ -232,32 +269,37 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
         const int comboIndex = m_display->findData(currentSourceIndex);
         m_display->setCurrentIndex(comboIndex >= 0 ? comboIndex : 0);
     }
-    form->addRow(MS_TR("Display"), m_display);
 
-    m_backend = new QComboBox(this);
+    m_backend = markshot::settings::addComboRow(form, MS_TR("Recording Backend"));
+    m_backend->setObjectName(QStringLiteral("recordingBackend"));
     populateBackendOptions(m_backend, persisted.backend);
-    form->addRow(MS_TR("Recording Backend"), m_backend);
 
-    m_scope = new QComboBox(this);
+    m_scope = markshot::settings::addComboRow(form, MS_TR("Capture Area"));
+    m_scope->setObjectName(QStringLiteral("recordingScope"));
     m_scope->addItem(MS_TR("Record selected display"), static_cast<int>(RecordingScope::Display));
     m_scope->addItem(MS_TR("Select region after this dialog"), static_cast<int>(RecordingScope::Region));
     const int scopeIndex = m_scope->findData(static_cast<int>(persisted.scope));
     m_scope->setCurrentIndex(scopeIndex >= 0 ? scopeIndex : 0);
-    form->addRow(MS_TR("Capture Area"), m_scope);
 
     m_outputPath = new QLineEdit(persisted.outputPath.isEmpty()
                                      ? defaultRecordingPath(m_mode)
                                      : normalizedRecordingPath(persisted.outputPath, m_mode),
                                  this);
+    m_outputPath->setObjectName(QStringLiteral("recordingOutputPath"));
     m_outputPathTouched = false;
     auto *outputRow = new QWidget(this);
     auto *outputLayout = new QHBoxLayout(outputRow);
     outputLayout->setContentsMargins(0, 0, 0, 0);
     outputLayout->setSpacing(8);
     auto *outputBrowse = new QPushButton(MS_TR("Browse"), outputRow);
+    outputBrowse->setObjectName(QStringLiteral("recordingBrowseButton"));
     outputLayout->addWidget(m_outputPath, 1);
     outputLayout->addWidget(outputBrowse);
     form->addRow(MS_TR("Output"), outputRow);
+
+    // 拉伸项吸收窗口放大/最大化后的多余纵向空间，避免表单行被拉伸变形；
+    // 与设置页"内容 + 页脚按钮"的布局一致，按钮始终贴底。
+    root->addStretch();
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel | QDialogButtonBox::Ok, this);
     buttons->button(QDialogButtonBox::Ok)->setText(MS_TR("Start"));
@@ -265,6 +307,7 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
     root->addWidget(buttons);
 
     connect(outputBrowse, &QPushButton::clicked, this, [this] { browseOutputPath(); });
+    connect(m_scope, &QComboBox::currentIndexChanged, this, [this] { updateDisplayControls(); });
     connect(m_modeSelector, &QComboBox::currentIndexChanged, this, [this] {
         const RecordingMode nextMode = modeFromCombo(m_modeSelector, m_mode);
         if (nextMode == m_mode) {
@@ -294,6 +337,7 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
     updateAudioControls();
+    updateDisplayControls();
 }
 
 RecordingOptions RecordingConfigDialog::options() const
@@ -351,6 +395,22 @@ void RecordingConfigDialog::updateAudioControls()
     } else {
         m_audio->setToolTip(QString());
     }
+}
+
+/**
+ * 按录制范围更新显示器控件可用状态。
+ * @return 无返回值。
+ */
+void RecordingConfigDialog::updateDisplayControls()
+{
+    if (!m_display || !m_scope) {
+        return;
+    }
+    bool ok = false;
+    const int value = m_scope->currentData().toInt(&ok);
+    const bool regionScope = ok && value == static_cast<int>(RecordingScope::Region);
+    m_display->setEnabled(!regionScope && !m_sources.isEmpty());
+    m_display->setToolTip(regionScope ? MS_TR("A region is selected on screen after this dialog.") : QString());
 }
 
 /**

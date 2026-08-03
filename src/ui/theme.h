@@ -56,6 +56,11 @@ QString ocrEditorStyleSheet();
 // The glyph alone communicates state, so the rule keeps the button frameless.
 QString ocrPinButtonStyleSheet();
 
+// Stylesheet for the recording configuration dialog. Matches the settings
+// window design language (dark glass + teal accent, or the light variant),
+// so the dialog follows the user-selected interface theme.
+QString recordingDialogStyleSheet(bool dark = true);
+
 // Stylesheet for the inline color dialog panel docked next to the property
 // panel.
 QString propertyColorDialogPanelStyleSheet();
