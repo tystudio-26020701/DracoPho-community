@@ -429,6 +429,17 @@ const QHash<QString, QString> &tableDe()
         {QStringLiteral("Licensed under the MIT License."), QStringLiteral("Lizenziert unter der MIT-Lizenz.")},
         {QStringLiteral("Beijing Taiyin Zhaowu Technology Co., Ltd."), QStringLiteral("Beijing Taiyin Zhaowu Technology Co., Ltd.")},
         {QStringLiteral("Discard all unsaved changes?"), QStringLiteral("Alle nicht gespeicherten Änderungen verwerfen?")},
+        {QStringLiteral("Startup Behavior"), QStringLiteral("Verhalten beim Start")},
+        {QStringLiteral("Choose what happens when Mark Shot starts. Multiple options can be combined."), QStringLiteral("Wählen Sie, was beim Start von Mark Shot passiert. Mehrere Optionen können kombiniert werden.")},
+        {QStringLiteral("Direct Capture"), QStringLiteral("Direkte Aufnahme")},
+        {QStringLiteral("Enter screenshot mode immediately when Mark Shot starts."), QStringLiteral("Beim Start von Mark Shot sofort in den Aufnahmemodus wechseln.")},
+        {QStringLiteral("Tray Icon"), QStringLiteral("Tray-Symbol")},
+        {QStringLiteral("Keep Mark Shot running in the system tray."), QStringLiteral("Mark Shot im System Tray im Hintergrund laufen lassen.")},
+        {QStringLiteral("Floating Ball"), QStringLiteral("Schwebende Kugel")},
+        {QStringLiteral("Show a draggable floating ball for quick access to capture and settings."), QStringLiteral("Eine ziehbare schwebende Kugel für schnellen Zugriff auf Aufnahme und Einstellungen anzeigen.")},
+        {QStringLiteral("Settings Window"), QStringLiteral("Einstellungsfenster")},
+        {QStringLiteral("Open the settings window when Mark Shot starts."), QStringLiteral("Beim Start von Mark Shot das Einstellungsfenster öffnen.")},
+        {QStringLiteral("Hide Floating Ball"), QStringLiteral("Schwebende Kugel ausblenden")},
     };
     return table;
 }

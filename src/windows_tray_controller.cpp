@@ -284,10 +284,14 @@ std::optional<NativeHotkey> nativeHotkeyFromSequence(const QKeySequence &sequenc
 
 }  // namespace
 
-WindowsTrayController::WindowsTrayController(QApplication *application, Config config, QObject *parent)
+WindowsTrayController::WindowsTrayController(QApplication *application,
+                                             Config config,
+                                             QObject *parent,
+                                             bool showTrayIcon)
     : QObject(parent)
     , m_application(application)
     , m_config(std::move(config))
+    , m_showTrayIcon(showTrayIcon)
 {
 }
 
@@ -358,36 +362,38 @@ bool WindowsTrayController::start()
     const QIcon icon = markshot::ui::applicationIcon();
     m_application->setWindowIcon(icon);
 
-    m_menu = new QMenu;
-    m_menu->addAction(MS_TR("Capture"), this, [this] { triggerCapture(); });
-    m_menu->addAction(MS_TR("Fullscreen Capture"), this, [this] { triggerFullscreenCapture(); });
-    m_startRecordingAction = m_menu->addAction(MS_TR("Start Recording"), this, [this] {
-        startRecordingFromTray();
-    });
-    m_menu->addAction(MS_TR("Settings"), this, [] { settings::showSettingsDialog(); });
-    m_menu->addSeparator();
-    m_recordingStatusAction = m_menu->addAction(MS_TR("Recording: idle"));
-    m_recordingStatusAction->setEnabled(false);
-    m_stopRecordingAction = m_menu->addAction(MS_TR("Stop Recording"), this, [this] { stopRecordingFromTray(); });
-    m_stopRecordingAction->setEnabled(false);
-    m_menu->addSeparator();
-    m_menu->addAction(MS_TR("Quit"), m_application, [this] {
-        unregisterHotkeys();
-        if (m_tray) {
-            m_tray->hide();
-        }
-        m_application->quit();
-    });
+    if (m_showTrayIcon) {
+        m_menu = new QMenu;
+        m_menu->addAction(MS_TR("Capture"), this, [this] { triggerCapture(); });
+        m_menu->addAction(MS_TR("Fullscreen Capture"), this, [this] { triggerFullscreenCapture(); });
+        m_startRecordingAction = m_menu->addAction(MS_TR("Start Recording"), this, [this] {
+            startRecordingFromTray();
+        });
+        m_menu->addAction(MS_TR("Settings"), this, [] { settings::showSettingsDialog(); });
+        m_menu->addSeparator();
+        m_recordingStatusAction = m_menu->addAction(MS_TR("Recording: idle"));
+        m_recordingStatusAction->setEnabled(false);
+        m_stopRecordingAction = m_menu->addAction(MS_TR("Stop Recording"), this, [this] { stopRecordingFromTray(); });
+        m_stopRecordingAction->setEnabled(false);
+        m_menu->addSeparator();
+        m_menu->addAction(MS_TR("Quit"), m_application, [this] {
+            unregisterHotkeys();
+            if (m_tray) {
+                m_tray->hide();
+            }
+            m_application->quit();
+        });
 
-    m_tray = new QSystemTrayIcon(icon, this);
-    m_tray->setToolTip(QStringLiteral("Mark Shot"));
-    m_tray->setContextMenu(m_menu);
-    connect(m_tray, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
-        if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
-            triggerCapture();
-        }
-    });
-    m_tray->show();
+        m_tray = new QSystemTrayIcon(icon, this);
+        m_tray->setToolTip(QStringLiteral("Mark Shot"));
+        m_tray->setContextMenu(m_menu);
+        connect(m_tray, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
+            if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
+                triggerCapture();
+            }
+        });
+        m_tray->show();
+    }
 
     m_recordingStatusTimer = new QTimer(this);
     m_recordingStatusTimer->setInterval(1000);

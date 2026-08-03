@@ -8,9 +8,12 @@
 #include "cli/recording_cli.h"
 #include "cli/window_capture_cli.h"
 #include "debug_log.h"
+#include "floating_ball.h"
 #include "ipc/single_instance_ipc.h"
 #include "recording/recording_session_manager.h"
+#include "settings/settings_dialog.h"
 #include "shot_window.h"
+#include "startup_behavior_config.h"
 #include "startup_config.h"
 #include "ui/icons.h"
 #include "ui/i18n.h"
@@ -314,20 +317,57 @@ int main(int argc, char *argv[])
     }
 
     const bool allOutputs = parser.isSet(allOutputsOption);
-    const markshot::CaptureFreezeScope freezeScope = markshot::configuredCaptureFreezeScope();
     const bool useRegularWindow = parser.isSet(xdgWindowOption);
     const bool fullscreenAnnotation = parser.isSet(fullscreenAnnotationOption);
     const markshot::WindowsTrayController::Config trayConfig = markshot::WindowsTrayController::readConfig();
     const bool explicitCaptureRequest =
         parser.isSet(captureOption) || parser.isSet(allOutputsOption) || parser.isSet(fullscreenAnnotationOption);
-    const bool trayMode = !explicitCaptureRequest && (parser.isSet(trayOption) || trayConfig.autoStart);
 
-    const bool explicitTrayOnly = parser.isSet(trayOption)
-        && !parser.isSet(captureOption)
-        && !parser.isSet(allOutputsOption)
-        && !parser.isSet(fullscreenAnnotationOption);
+    // 解析启动行为（多选组合）：直接截图 / 托盘图标 / 悬浮球 / 设置窗口。
+    // 显式 CLI 请求（--capture/--all-outputs/--fullscreen/--tray）始终优先于配置。
+    const markshot::StartupBehaviorConfig startupBehavior = markshot::configuredStartupBehavior();
+
+    bool wantCapture = false;
+    bool wantTray = false;
+    bool wantFloatingBall = false;
+    bool wantSettingsWindow = false;
+
+    if (explicitCaptureRequest) {
+        wantCapture = true;
+        if (startupBehavior.configured) {
+            wantTray = startupBehavior.tray;
+            wantFloatingBall = startupBehavior.floatingBall;
+        } else {
+            wantTray = trayConfig.autoStart;
+            wantFloatingBall = false;
+        }
+        wantSettingsWindow = false;
+    } else if (parser.isSet(trayOption)) {
+        wantTray = true;
+        wantFloatingBall = startupBehavior.configured && startupBehavior.floatingBall;
+    } else if (startupBehavior.configured) {
+        wantCapture = startupBehavior.directCapture;
+        wantTray = startupBehavior.tray;
+        wantFloatingBall = startupBehavior.floatingBall;
+        wantSettingsWindow = startupBehavior.settingsWindow;
+    } else {
+        // 旧版配置（无 startup.modes）：直接截图已不再是默认行为。
+        // 回退为后台托盘运行，避免点击图标后意外弹出截图界面。
+        wantTray = true;
+    }
+
+    // 防御：不允许出现"启动后无任何入口"的组合（如手写空 modes 数组）。
+    if (!wantCapture && !wantTray && !wantFloatingBall && !wantSettingsWindow) {
+        wantTray = true;
+    }
+
+    const bool keepAlive = wantTray || wantFloatingBall;
+    if (keepAlive) {
+        QApplication::setQuitOnLastWindowClosed(false);
+    }
+
     markshot::ipc::SingleInstanceCommand duplicateCommand;
-    duplicateCommand.capture = !explicitTrayOnly;
+    duplicateCommand.capture = wantCapture;
     duplicateCommand.fullscreen = fullscreenAnnotation;
     duplicateCommand.allOutputs = allOutputs;
     if (markshot::ipc::sendSingleInstanceCommand(duplicateCommand, nullptr, nullptr)) {
@@ -351,13 +391,20 @@ int main(int argc, char *argv[])
     }
 
     bool captureActive = false;
+    markshot::FloatingBall *floatingBall = nullptr;
     auto launchCapture = [&app,
                           &captureActive,
+                          &floatingBall,
                           useRegularWindow](bool startFullscreen,
-                                        bool requestAllOutputs,
-                                        std::optional<markshot::recording::RecordingOptions> regionRecordingOptions = std::nullopt) -> bool {
+                                            bool requestAllOutputs,
+                                            std::optional<markshot::recording::RecordingOptions> regionRecordingOptions = std::nullopt) -> bool {
         if (captureActive) {
             return true;
+        }
+
+        // 截图会话期间隐藏悬浮球，避免悬浮球进入截图画面/遮挡选区。
+        if (floatingBall) {
+            floatingBall->hide();
         }
 
         QString captureError;
@@ -374,6 +421,9 @@ int main(int argc, char *argv[])
                                          &captureError,
                                          std::move(regionRecordingOptions));
         if (windows.isEmpty()) {
+            if (floatingBall) {
+                floatingBall->show();
+            }
             QMessageBox::critical(nullptr,
                                   QStringLiteral("Mark Shot"),
                                   captureError.isEmpty() ? MS_TR("Failed to start capture session.") : captureError);
@@ -391,10 +441,13 @@ int main(int argc, char *argv[])
             if (!window) {
                 continue;
             }
-            QObject::connect(window, &QObject::destroyed, &app, [&captureActive, remainingWindows] {
+            QObject::connect(window, &QObject::destroyed, &app, [&captureActive, &floatingBall, remainingWindows] {
                 --(*remainingWindows);
                 if (*remainingWindows <= 0) {
                     captureActive = false;
+                    if (floatingBall) {
+                        floatingBall->show();
+                    }
                 }
             });
         }
@@ -439,8 +492,24 @@ int main(int argc, char *argv[])
             return response;
         });
 
-    if (trayMode) {
-        auto *trayController = new markshot::WindowsTrayController(&app, trayConfig, &app);
+    if (wantFloatingBall) {
+        floatingBall = new markshot::FloatingBall();
+        // 没有托盘入口时，隐藏悬浮球改为退出应用，避免失去唯一入口。
+        floatingBall->setQuitWhenHidden(!wantTray);
+        floatingBall->setCaptureCallbacks([launchCapture, allOutputs] { launchCapture(false, allOutputs); },
+                                          [launchCapture, allOutputs] { launchCapture(true, allOutputs); });
+        floatingBall->setRecordingRegionCallback([launchCapture, allOutputs](markshot::recording::RecordingOptions options) {
+            launchCapture(false, allOutputs, std::move(options));
+        });
+        floatingBall->placeOnScreen();
+        floatingBall->show();
+    }
+
+    // 托盘控制器：wantTray 时显示托盘图标；悬浮球-only 且启用全局快捷键时
+    // 以隐藏模式创建，仅注册热键（否则热键随托盘缺失而静默失效）。
+    const bool wantHotkeys = trayConfig.hotkeysEnabled && (wantTray || wantFloatingBall);
+    if (wantTray || wantHotkeys) {
+        auto *trayController = new markshot::WindowsTrayController(&app, trayConfig, &app, wantTray);
         trayController->setCaptureCallbacks([launchCapture, allOutputs] { launchCapture(false, allOutputs); },
                                             [launchCapture, allOutputs] { launchCapture(true, allOutputs); });
         trayController->setRecordingRegionCallback([launchCapture, allOutputs](markshot::recording::RecordingOptions options) {
@@ -450,11 +519,23 @@ int main(int argc, char *argv[])
             QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), trayController->errorString());
             return 1;
         }
-        return QApplication::exec();
     }
 
-    if (!launchCapture(fullscreenAnnotation, allOutputs)) {
-        return 1;
+    if (wantSettingsWindow) {
+        QTimer::singleShot(0, &app, [&captureActive] {
+            // 若同时配置了直接截图，截图会话已优先开始，设置窗口留待从
+            // 截图工具栏/托盘/悬浮球入口打开，避免覆盖截图界面。
+            if (!captureActive) {
+                markshot::settings::showSettingsDialog();
+            }
+        });
     }
+
+    if (wantCapture) {
+        if (!launchCapture(fullscreenAnnotation, allOutputs)) {
+            return 1;
+        }
+    }
+
     return QApplication::exec();
 }

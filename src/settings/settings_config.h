@@ -19,11 +19,19 @@ namespace markshot::settings {
 struct GeneralSettings {
     markshot::ui::UiLanguageMode uiLanguageMode = markshot::ui::UiLanguageMode::System;
     markshot::ui::UiThemeMode uiThemeMode = markshot::ui::UiThemeMode::System;
-    bool trayEnabled = false;
     bool launchOnStartup = false;
     bool hotkeysEnabled = true;
     QKeySequence captureHotkey = QKeySequence(QStringLiteral("Ctrl+Alt+S"));
     QKeySequence fullscreenHotkey;
+    /// 启动行为（点击应用图标后执行的动作，允许多选组合）：
+    /// 直接进入截图模式。
+    bool startupDirectCapture = false;
+    /// 启动行为：显示系统托盘图标并保持后台运行。
+    bool startupTray = true;
+    /// 启动行为：显示悬浮球快捷入口。
+    bool startupFloatingBall = false;
+    /// 启动行为：打开设置窗口。
+    bool startupSettings = false;
 };
 
 struct CaptureSettings {
@@ -132,9 +140,11 @@ struct SettingsConfig {
 inline bool operator==(const GeneralSettings &a, const GeneralSettings &b)
 {
     return a.uiLanguageMode == b.uiLanguageMode && a.uiThemeMode == b.uiThemeMode
-        && a.trayEnabled == b.trayEnabled && a.launchOnStartup == b.launchOnStartup
+        && a.launchOnStartup == b.launchOnStartup
         && a.hotkeysEnabled == b.hotkeysEnabled && a.captureHotkey == b.captureHotkey
-        && a.fullscreenHotkey == b.fullscreenHotkey;
+        && a.fullscreenHotkey == b.fullscreenHotkey
+        && a.startupDirectCapture == b.startupDirectCapture && a.startupTray == b.startupTray
+        && a.startupFloatingBall == b.startupFloatingBall && a.startupSettings == b.startupSettings;
 }
 
 inline bool operator==(const CaptureSettings &a, const CaptureSettings &b)

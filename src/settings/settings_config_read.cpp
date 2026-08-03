@@ -10,6 +10,7 @@
 #include "recording/recording_storage_config.h"
 #include "save_path_config.h"
 #include "settings/provider_preference_config.h"
+#include "startup_behavior_config.h"
 #include "startup_config.h"
 #include "toolbar_appearance_config.h"
 #include "ui/i18n.h"
@@ -547,7 +548,18 @@ SettingsConfig readSettingsConfig(QString *error)
     settings.general.uiLanguageMode = markshot::ui::uiLanguageModeFromConfigRoot(root);
     settings.general.uiThemeMode = markshot::ui::uiThemeModeFromConfigRoot(root);
     const WindowsTrayController::Config tray = WindowsTrayController::readConfig();
-    settings.general.trayEnabled = tray.autoStart;
+    const StartupBehaviorConfig startupBehavior = configuredStartupBehavior();
+    if (startupBehavior.configured) {
+        settings.general.startupDirectCapture = startupBehavior.directCapture;
+        settings.general.startupTray = startupBehavior.tray;
+        settings.general.startupFloatingBall = startupBehavior.floatingBall;
+        settings.general.startupSettings = startupBehavior.settingsWindow;
+    } else {
+        // 旧版配置（无 startup.modes）：与 main 的启动解析一致，
+        // 直接截图已不是默认行为——回退为后台托盘运行。
+        settings.general.startupTray = true;
+        settings.general.startupDirectCapture = false;
+    }
     settings.general.launchOnStartup = autostart::isEnabled();
     settings.general.hotkeysEnabled = tray.hotkeysEnabled;
     settings.general.captureHotkey = tray.captureHotkey;

@@ -35,8 +35,8 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
 {
     auto *layout = createSettingsPageLayout(this);
 
-    QFrame *startupCard = createSettingsCard(MS_TR("General"),
-                                             MS_TR("Configure interface language, theme, tray startup, and global shortcuts."),
+    QFrame *startupCard = createSettingsCard(MS_TR("Startup Behavior"),
+                                             MS_TR("Choose what happens when Mark Shot starts. Multiple options can be combined."),
                                              this);
     QFormLayout *startupForm = settingsCardForm(startupCard);
     m_uiLanguage = addComboRow(startupForm, MS_TR("Interface Language"));
@@ -61,9 +61,18 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
                        QVariant::fromValue(static_cast<int>(markshot::ui::UiThemeMode::Dark)));
     m_uiTheme->addItem(MS_TR("Light"),
                        QVariant::fromValue(static_cast<int>(markshot::ui::UiThemeMode::Light)));
-    m_trayEnabled = addSwitchRow(startupForm,
-                                 MS_TR("Start in Tray"),
-                                 MS_TR("Launch Mark Shot directly into the system tray."));
+    m_startupCapture = addSwitchRow(startupForm,
+                                    MS_TR("Direct Capture"),
+                                    MS_TR("Enter screenshot mode immediately when Mark Shot starts."));
+    m_startupTray = addSwitchRow(startupForm,
+                                 MS_TR("Tray Icon"),
+                                 MS_TR("Keep Mark Shot running in the system tray."));
+    m_startupFloatingBall = addSwitchRow(startupForm,
+                                         MS_TR("Floating Ball"),
+                                         MS_TR("Show a draggable floating ball for quick access to capture and settings."));
+    m_startupSettings = addSwitchRow(startupForm,
+                                     MS_TR("Settings Window"),
+                                     MS_TR("Open the settings window when Mark Shot starts."));
     m_launchOnStartup = addSwitchRow(startupForm,
                                      MS_TR("Launch on Startup"),
                                      MS_TR("Start Mark Shot automatically after signing in."));
@@ -77,7 +86,10 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
         const int themeIndex =
             m_uiTheme->findData(QVariant::fromValue(static_cast<int>(m_saved.general.uiThemeMode)));
         m_uiTheme->setCurrentIndex(themeIndex >= 0 ? themeIndex : 0);
-        m_trayEnabled->setChecked(m_saved.general.trayEnabled);
+        m_startupCapture->setChecked(m_saved.general.startupDirectCapture);
+        m_startupTray->setChecked(m_saved.general.startupTray);
+        m_startupFloatingBall->setChecked(m_saved.general.startupFloatingBall);
+        m_startupSettings->setChecked(m_saved.general.startupSettings);
         m_launchOnStartup->setEnabled(autostart::isSupported());
         m_launchOnStartup->setChecked(m_launchOnStartup->isEnabled() && m_saved.general.launchOnStartup);
         m_hotkeysEnabled->setChecked(m_saved.general.hotkeysEnabled);
@@ -157,7 +169,10 @@ void SettingsPageGeneral::setConfig(const SettingsConfig &config)
     const int themeIndex =
         m_uiTheme->findData(QVariant::fromValue(static_cast<int>(config.general.uiThemeMode)));
     m_uiTheme->setCurrentIndex(themeIndex >= 0 ? themeIndex : 0);
-    m_trayEnabled->setChecked(config.general.trayEnabled);
+    m_startupCapture->setChecked(config.general.startupDirectCapture);
+    m_startupTray->setChecked(config.general.startupTray);
+    m_startupFloatingBall->setChecked(config.general.startupFloatingBall);
+    m_startupSettings->setChecked(config.general.startupSettings);
     m_launchOnStartup->setEnabled(autostart::isSupported());
     m_launchOnStartup->setChecked(m_launchOnStartup->isEnabled() && config.general.launchOnStartup);
     m_hotkeysEnabled->setChecked(config.general.hotkeysEnabled);
@@ -171,11 +186,14 @@ void SettingsPageGeneral::updateConfig(SettingsConfig *config) const
         return;
     }
 
-    config->general.trayEnabled = m_trayEnabled->isChecked();
     config->general.uiLanguageMode =
         static_cast<markshot::ui::UiLanguageMode>(m_uiLanguage->currentData().toInt());
     config->general.uiThemeMode =
         static_cast<markshot::ui::UiThemeMode>(m_uiTheme->currentData().toInt());
+    config->general.startupDirectCapture = m_startupCapture->isChecked();
+    config->general.startupTray = m_startupTray->isChecked();
+    config->general.startupFloatingBall = m_startupFloatingBall->isChecked();
+    config->general.startupSettings = m_startupSettings->isChecked();
     config->general.launchOnStartup = m_launchOnStartup->isEnabled() && m_launchOnStartup->isChecked();
     config->general.hotkeysEnabled = m_hotkeysEnabled->isChecked();
     config->general.captureHotkey = m_captureHotkey->keySequence();

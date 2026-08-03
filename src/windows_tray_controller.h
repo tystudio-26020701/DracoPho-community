@@ -36,7 +36,16 @@ public:
     using Callback = std::function<void()>;
     using RecordingRegionCallback = std::function<void(recording::RecordingOptions)>;
 
-    explicit WindowsTrayController(QApplication *application, Config config, QObject *parent = nullptr);
+    /// @brief 创建托盘控制器。
+    /// @param application 应用实例。
+    /// @param config 托盘配置。
+    /// @param parent 父对象。
+    /// @param showTrayIcon 是否显示托盘图标。为 false 时仅注册全局快捷键
+    /// （悬浮球-only 组合下仍需热键常驻，但用户未选择托盘）。
+    explicit WindowsTrayController(QApplication *application,
+                                   Config config,
+                                   QObject *parent = nullptr,
+                                   bool showTrayIcon = true);
     ~WindowsTrayController() override;
 
     static bool hotkeysSupported();
@@ -85,6 +94,7 @@ private:
     QAction *m_stopRecordingAction = nullptr;
     QTimer *m_recordingStatusTimer = nullptr;
     QString m_errorString;
+    bool m_showTrayIcon = true;
     bool m_nativeEventFilterInstalled = false;
     bool m_captureHotkeyRegistered = false;
     bool m_fullscreenHotkeyRegistered = false;

@@ -429,6 +429,17 @@ const QHash<QString, QString> &tableZhTW()
         {QStringLiteral("Licensed under the MIT License."), QStringLiteral("以 MIT 授權條款發布。")},
         {QStringLiteral("Beijing Taiyin Zhaowu Technology Co., Ltd."), QStringLiteral("北京太殷造物科技有限公司")},
         {QStringLiteral("Discard all unsaved changes?"), QStringLiteral("是否捨棄所有未儲存的變更？")},
+        {QStringLiteral("Startup Behavior"), QStringLiteral("啟動行為")},
+        {QStringLiteral("Choose what happens when Mark Shot starts. Multiple options can be combined."), QStringLiteral("選擇點擊 Mark Shot 圖示啟動後執行的動作，可多選組合。")},
+        {QStringLiteral("Direct Capture"), QStringLiteral("直接截圖")},
+        {QStringLiteral("Enter screenshot mode immediately when Mark Shot starts."), QStringLiteral("啟動 Mark Shot 後立即進入截圖模式。")},
+        {QStringLiteral("Tray Icon"), QStringLiteral("托盤圖示")},
+        {QStringLiteral("Keep Mark Shot running in the system tray."), QStringLiteral("在系統托盤中保持 Mark Shot 背景執行。")},
+        {QStringLiteral("Floating Ball"), QStringLiteral("懸浮球")},
+        {QStringLiteral("Show a draggable floating ball for quick access to capture and settings."), QStringLiteral("顯示可拖動的懸浮球，快速存取截圖與設定。")},
+        {QStringLiteral("Settings Window"), QStringLiteral("設定視窗")},
+        {QStringLiteral("Open the settings window when Mark Shot starts."), QStringLiteral("啟動 Mark Shot 時開啟設定視窗。")},
+        {QStringLiteral("Hide Floating Ball"), QStringLiteral("隱藏懸浮球")},
     };
     return table;
 }
