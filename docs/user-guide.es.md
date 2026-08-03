@@ -19,7 +19,7 @@ clic la selecciona), el flujo de anotación, la captura sin interfaz
 Inicie una sesión de captura de región:
 
 ```bash
-mark-shot
+mark-shot --capture
 ```
 
 Pulse una tecla de acceso rápido del escritorio (véase § 8) o ejecútelo desde
@@ -41,6 +41,29 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 El lanzador antepone su directorio `bin/` a `PATH`, lo cual es necesario para
 los scripts auxiliares de detección de ventanas
 (`mark-shot-window-detection-*`) y los auxiliares de OCR / carga.
+
+### 1.3 Comportamiento al inicio (bola flotante / bandeja / ventana de configuración / captura directa)
+
+Lo que ocurre al iniciar Mark Shot (por ejemplo al hacer clic en el icono del
+escritorio) es configurable. Abra **Configuración → General → Comportamiento al
+inicio** y marque cualquier combinación:
+
+| Opción | Comportamiento al inicio |
+| :--- | :--- |
+| **Icono de bandeja** (predeterminado) | Mark Shot permanece en ejecución en la bandeja del sistema. Un clic izquierdo en el icono captura; un clic derecho abre el menú. |
+| **Bola flotante** (predeterminado) | Una pequeña bola siempre encima (abajo a la derecha por defecto). Un clic abre un menú rápido, doble clic captura, arrastrar la mueve (recuerda la posición) y se oculta automáticamente durante una captura. |
+| **Captura directa** | Entra en modo de captura inmediatamente. |
+| **Ventana de configuración** | Abre la ventana de configuración al iniciar Mark Shot. |
+
+Puede combinar varias opciones. **La captura directa está desactivada por defecto**;
+si no la selecciona, iniciar Mark Shot nunca abre una superposición de captura por sí
+mismo. Si desmarca todas las opciones, Mark Shot vuelve a la bandeja para que siempre
+haya un punto de entrada.
+
+La bola flotante y el menú de la bandeja ofrecen las mismas acciones rápidas:
+**Captura**, **Captura de pantalla completa**, **Iniciar grabación**,
+**Configuración** y **Salir**. El menú de la bola incluye además
+**Ocultar bola flotante**.
 
 ---
 

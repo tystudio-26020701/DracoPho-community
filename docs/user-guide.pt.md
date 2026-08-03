@@ -18,7 +18,7 @@ anotação, na captura headless e na configuração.
 Inicie uma sessão de captura de região:
 
 ```bash
-mark-shot
+mark-shot --capture
 ```
 
 Pressione um atalho do desktop (veja § 8) ou execute a partir de um terminal.
@@ -39,6 +39,28 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 O launcher antepõe seu diretório `bin/` ao `PATH`, o que é necessário para os
 scripts auxiliares de detecção de janelas (`mark-shot-window-detection-*`) e
 para os auxiliares de OCR / upload.
+
+### 1.3 Comportamento na inicialização (bola flutuante / bandeja / janela de configurações / captura direta)
+
+O que acontece ao iniciar o Mark Shot (por exemplo, clicando no ícone da área de
+trabalho) é configurável. Abra **Configurações → Geral → Comportamento na
+inicialização** e marque qualquer combinação:
+
+| Opção | Comportamento na inicialização |
+| :--- | :--- |
+| **Ícone na bandeja** (padrão) | O Mark Shot permanece em execução na bandeja do sistema. Um clique esquerdo no ícone captura; um clique direito abre o menu. |
+| **Bola flutuante** (padrão) | Uma pequena bola sempre no topo (canto inferior direito por padrão). Um clique abre um menu rápido, duplo clique captura, arrastar a move (a posição é lembrada) e ela se oculta automaticamente durante uma captura. |
+| **Captura direta** | Entra no modo de captura imediatamente. |
+| **Janela de configurações** | Abre a janela de configurações ao iniciar o Mark Shot. |
+
+Várias opções podem ser combinadas. **A captura direta está desativada por padrão**;
+se você não a selecionar, iniciar o Mark Shot nunca abre uma sobreposição de captura
+por conta própria. Se desmarcar todas as opções, o Mark Shot volta para a bandeja,
+para que sempre haja um ponto de entrada.
+
+A bola flutuante e o menu da bandeja oferecem as mesmas ações rápidas: **Captura**,
+**Captura de tela inteira**, **Iniciar gravação**, **Configurações** e **Sair**.
+O menu da bola também inclui **Ocultar bola flutuante**.
 
 ---
 

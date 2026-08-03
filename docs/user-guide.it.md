@@ -18,7 +18,7 @@ seleziona), al flusso di annotazione, alla cattura headless e alla configurazion
 Avvia una sessione di cattura di una regione:
 
 ```bash
-mark-shot
+mark-shot --capture
 ```
 
 Premi un tasto di scelta rapida del desktop (vedi § 8) oppure eseguilo da un
@@ -39,6 +39,29 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 Il launcher antepone la propria directory `bin/` a `PATH`, requisito per gli
 script di supporto per il rilevamento delle finestre
 (`mark-shot-window-detection-*`) e per gli helper OCR / upload.
+
+### 1.3 Comportamento all'avvio (pallina fluttuante / barra / finestra impostazioni / cattura diretta)
+
+Cosa succede all'avvio di Mark Shot (ad esempio facendo clic sull'icona del desktop)
+è configurabile. Apri **Impostazioni → Generali → Comportamento all'avvio** e
+combina qualsiasi opzione:
+
+| Opzione | Comportamento all'avvio |
+| :--- | :--- |
+| **Icona nella barra** (predefinita) | Mark Shot resta attivo nella barra di sistema. Un clic sinistro sull'icona cattura; un clic destro apre il menu. |
+| **Pallina fluttuante** (predefinita) | Una piccola pallina sempre in primo piano (in basso a destra per impostazione predefinita). Un clic apre un menu rapido, il doppio clic cattura, il trascinamento la sposta (la posizione viene ricordata) e si nasconde automaticamente durante una cattura. |
+| **Cattura diretta** | Entra subito in modalità cattura. |
+| **Finestra impostazioni** | Apre la finestra delle impostazioni all'avvio di Mark Shot. |
+
+Più opzioni possono essere combinate. **La cattura diretta è disattivata per
+impostazione predefinita**; se non la selezioni, l'avvio di Mark Shot non apre mai
+un overlay di cattura da solo. Se deselezioni tutte le opzioni, Mark Shot ripiega
+sulla barra, così c'è sempre un punto di accesso.
+
+La pallina fluttuante e il menu della barra offrono le stesse azioni rapide:
+**Cattura**, **Cattura a schermo intero**, **Avvia registrazione**,
+**Impostazioni** e **Esci**. Il menu della pallina include anche
+**Nascondi pallina fluttuante**.
 
 ---
 
