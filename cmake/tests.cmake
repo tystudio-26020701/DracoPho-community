@@ -4,6 +4,8 @@ qt_add_executable(mark-shot-color-history-store-test
     src/ui/color_history_store.h
     src/app_config_defaults.cpp
     src/app_config_defaults.h
+    src/startup_behavior_config.cpp
+    src/startup_behavior_config.h
     src/app_config_store.cpp
     src/app_config_store.h
     src/window_detection.cpp
@@ -28,6 +30,18 @@ qt_add_executable(mark-shot-app-config-defaults-test
     tests/app_config_defaults_test.cpp
     src/app_config_defaults.cpp
     src/app_config_defaults.h
+    src/startup_behavior_config.cpp
+    src/startup_behavior_config.h
+    src/app_config_store.cpp
+    src/app_config_store.h
+    src/window_detection.cpp
+    src/window_detection.h
+    src/config_value.cpp
+    src/config_value.h
+    src/shell_command.cpp
+    src/shell_command.h
+    src/debug_log.cpp
+    src/debug_log.h
 )
 target_include_directories(mark-shot-app-config-defaults-test PRIVATE src)
 target_link_libraries(mark-shot-app-config-defaults-test

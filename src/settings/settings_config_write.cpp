@@ -8,6 +8,7 @@
 #include "headless_capture_config.h"
 #include "recording/recording_storage_config.h"
 #include "settings/provider_preference_config.h"
+#include "startup_behavior_config.h"
 #include "ui/i18n.h"
 #include "ui/interface_language_config.h"
 #include "ui/interface_theme_config.h"
@@ -15,6 +16,7 @@
 #include "window_detection.h"
 
 #include <QFile>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
 
@@ -128,10 +130,19 @@ void writeGeneralSettings(QJsonObject *root, const GeneralSettings &settings)
                    markshot::ui::uiLanguageModeName(settings.uiLanguageMode));
     setNestedValue(root, {QStringLiteral("ui"), QStringLiteral("theme")},
                    markshot::ui::uiThemeModeName(settings.uiThemeMode));
+    // 托盘启动开关保持写回 windows.tray.*，供旧逻辑与外部工具读取。
     setNestedValue(root, {QStringLiteral("windows"), QStringLiteral("tray"), QStringLiteral("enabled")},
-                   settings.trayEnabled);
+                   settings.startupTray);
     setNestedValue(root, {QStringLiteral("windows"), QStringLiteral("tray"), QStringLiteral("autoStart")},
-                   settings.trayEnabled);
+                   settings.startupTray);
+    // 启动行为（多选组合）写入 startup.modes，序列化与公共写入 API 共用。
+    StartupBehaviorConfig startupBehavior;
+    startupBehavior.directCapture = settings.startupDirectCapture;
+    startupBehavior.tray = settings.startupTray;
+    startupBehavior.floatingBall = settings.startupFloatingBall;
+    startupBehavior.settingsWindow = settings.startupSettings;
+    startupBehavior.configured = true;
+    setNestedValue(root, {QStringLiteral("startup"), QStringLiteral("modes")}, startupModeArray(startupBehavior));
     setNestedValue(root, {QStringLiteral("windows"), QStringLiteral("hotkeys"), QStringLiteral("enabled")},
                    settings.hotkeysEnabled);
     setNestedValue(root, {QStringLiteral("windows"), QStringLiteral("hotkeys"), QStringLiteral("capture")},

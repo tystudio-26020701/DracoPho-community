@@ -45,7 +45,10 @@ private:
 
     QComboBox *m_uiLanguage = nullptr;
     QComboBox *m_uiTheme = nullptr;
-    QCheckBox *m_trayEnabled = nullptr;
+    QCheckBox *m_startupCapture = nullptr;
+    QCheckBox *m_startupTray = nullptr;
+    QCheckBox *m_startupFloatingBall = nullptr;
+    QCheckBox *m_startupSettings = nullptr;
     QCheckBox *m_launchOnStartup = nullptr;
     QCheckBox *m_hotkeysEnabled = nullptr;
     ShortcutKeySequenceEdit *m_captureHotkey = nullptr;

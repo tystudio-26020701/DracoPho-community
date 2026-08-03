@@ -1,8 +1,10 @@
 #include "app_config_defaults.h"
 
+#include "startup_behavior_config.h"
 #include "ui/theme.h"
 
 #include <QColor>
+#include <QJsonArray>
 #include <QJsonObject>
 
 namespace markshot {
@@ -56,6 +58,13 @@ QJsonObject defaultAppConfigRoot(const QString &windowDetectionCommand)
     QJsonObject capture;
     capture.insert(QStringLiteral("wayland"), wayland);
     root.insert(QStringLiteral("capture"), capture);
+
+    // 启动行为：点击应用图标后执行的动作，允许多选组合。
+    // 默认类似 PixPin：托盘 + 悬浮球（不直接进入截图模式）。
+    QJsonObject startup;
+    startup.insert(QStringLiteral("modes"), startupModeArray(defaultStartupBehavior()));
+    startup.insert(QStringLiteral("launchOnStartup"), false);
+    root.insert(QStringLiteral("startup"), startup);
 
     QJsonObject shortcutTools;
     shortcutTools.insert(QStringLiteral("pen"), QStringLiteral("P"));

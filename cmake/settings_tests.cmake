@@ -177,6 +177,8 @@ qt_add_executable(mark-shot-settings-source-wheel-test
     src/app_config_store.h
     src/app_config_defaults.cpp
     src/app_config_defaults.h
+    src/startup_behavior_config.cpp
+    src/startup_behavior_config.h
     src/config_value.cpp
     src/config_value.h
     src/ui/interface_language_config.cpp
@@ -234,3 +236,57 @@ if(MSVC)
 endif()
 markshot_link_core_test_libraries(mark-shot-settings-dirty-roundtrip-test)
 add_test(NAME settings-dirty-roundtrip COMMAND mark-shot-settings-dirty-roundtrip-test)
+
+qt_add_executable(mark-shot-floating-ball-test
+    tests/floating_ball_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-floating-ball-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-floating-ball-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-floating-ball-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-floating-ball-test)
+add_test(NAME floating-ball COMMAND mark-shot-floating-ball-test)
+
+qt_add_executable(mark-shot-startup-behavior-config-test
+    tests/startup_behavior_config_test.cpp
+    src/startup_behavior_config.cpp
+    src/startup_behavior_config.h
+    src/app_config_store.cpp
+    src/app_config_store.h
+    src/window_detection.cpp
+    src/window_detection.h
+    src/config_value.cpp
+    src/config_value.h
+    src/shell_command.cpp
+    src/shell_command.h
+    src/app_config_defaults.cpp
+    src/app_config_defaults.h
+    src/debug_log.cpp
+    src/debug_log.h
+)
+target_include_directories(mark-shot-startup-behavior-config-test PRIVATE src)
+target_compile_definitions(mark-shot-startup-behavior-config-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-startup-behavior-config-test PRIVATE /utf-8)
+endif()
+target_link_libraries(mark-shot-startup-behavior-config-test
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+add_test(NAME startup-behavior-config COMMAND mark-shot-startup-behavior-config-test)
+
+qt_add_executable(mark-shot-settings-startup-behavior-test
+    tests/settings_startup_behavior_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-settings-startup-behavior-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-settings-startup-behavior-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-settings-startup-behavior-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-settings-startup-behavior-test)
+add_test(NAME settings-startup-behavior COMMAND mark-shot-settings-startup-behavior-test)
