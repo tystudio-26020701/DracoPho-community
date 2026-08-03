@@ -26,7 +26,7 @@
 
         mark-shot = pkgs.stdenv.mkDerivation {
           pname = "mark-shot";
-          version = "26.8.1.0";
+          version = "26.8.1.1";
 
           src = self;
 

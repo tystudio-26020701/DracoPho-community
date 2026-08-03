@@ -1,5 +1,25 @@
 # Release Notes
 
+### 26.8.1.1
+
+> **Mark Shot Community Edition** — maintenance release fixing settings-window
+> unsaved-changes reporting and multi-screen freeze behavior, with ten new
+> localized README editions and documentation fixes.
+
+#### Fixes
+
+**Settings window unsaved-changes reporting**
+- **Deterministic dirty-state tracking**: every settings control's value-change signal (combo-box selection, check-box toggles, spin-box values, text edits, key-sequence edits) drives the unsaved-changes indicator directly instead of relying on events landing inside the settings window. Combo-box popup selections previously skipped the refresh — changing a value did not mark the dialog dirty and reverting it still blocked closing. Both false negatives and false positives are now gone.
+- **Color-picker refresh**: default annotation color and pinned-border color changes via the modal color dialog now refresh the dirty indicator after the dialog returns.
+- **Precision-normalized baselines**: corner radius, shadow opacity, translation temperature and pinned border width are normalized to the widget precision, so hand-written fractional config values no longer show as unsaved right after opening Settings.
+
+**Multi-screen freeze scope**
+- **Frozen backdrop on other displays**: with the default "Freeze All Screens" scope, committing a selection on one monitor keeps the other displays frozen and fully non-interactive (mouse, keyboard, wheel and shortcuts are swallowed; toolbars are hidden) instead of closing those overlays and leaving the screens operable. The session ends when the active selection window closes; closing a frozen backdrop independently no longer interrupts the active edit.
+
+**Documentation**
+- README available in ten additional languages (Traditional Chinese, Japanese, Korean, Russian, Italian, Arabic, French, German, Spanish, Portuguese) in a `READMEs/` subfolder, with a language selector in the root README.
+- Fixed the issue-submission-guide relative link in all twelve user-guide language editions.
+
 ### 26.8.1.0
 
 > **Mark Shot Community Edition** — the first release under the new
