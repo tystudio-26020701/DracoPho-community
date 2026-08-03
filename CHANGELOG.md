@@ -1,5 +1,26 @@
 # Changelog
 
+## 26.8.1.1 - 2026-08-03
+
+> Maintenance release of the **Mark Shot Community Edition**. It fixes
+> settings-window unsaved-changes reporting, keeps the whole virtual desktop
+> frozen during multi-screen region selection, and adds ten localized README
+> editions plus documentation fixes.
+
+### Fixes
+
+**Settings window unsaved-changes reporting**
+- **Deterministic dirty-state tracking**: every settings control's value-change signal (combo-box selection, check-box toggles, spin-box values, text edits, key-sequence edits) now drives the unsaved-changes indicator directly, instead of relying on events landing inside the settings window. Selecting a value from a combo-box popup previously skipped the refresh, so changing a value did not show "unsaved" and reverting it still blocked closing; both cases are now reported correctly.
+- **Color-picker refresh**: changing the default annotation color or pinned-border color through the modal color dialog now refreshes the dirty indicator after the dialog returns (the color was applied with no value signal).
+- **Precision-normalized baselines**: corner radius, shadow opacity, translation temperature and pinned border width are normalized to what their controls can represent, so hand-written fractional config values no longer show as unsaved immediately after opening Settings.
+
+**Multi-screen freeze scope**
+- **Frozen backdrop on other displays**: with the "Freeze All Screens" capture scope, committing a selection on one monitor keeps the other displays' overlay windows frozen and fully non-interactive (mouse, keyboard, wheel and shortcuts are swallowed; toolbars are hidden), instead of closing them and leaving the other screens operable. The session ends when the active selection window closes; independently closing a frozen backdrop no longer interrupts the active edit.
+
+**Documentation**
+- README is now available in ten additional languages (Traditional Chinese, Japanese, Korean, Russian, Italian, Arabic, French, German, Spanish, Portuguese) in a dedicated `READMEs/` subfolder, with a language selector in the root READMEs.
+- Fixed the issue-submission-guide relative link in all twelve user-guide language editions.
+
 ## 26.8.1.0 - 2026-08-01
 
 > The first release of the **Mark Shot Community Edition** under the new
