@@ -1,5 +1,44 @@
 # Changelog
 
+## 26.8.2.0 - 2026-08-03
+
+> Feature release of the **Mark Shot Community Edition**. Launching Mark Shot
+> no longer jumps straight into screenshot mode: startup behavior is now
+> configurable with multiple selectable modes — tray icon, floating ball,
+> settings window and direct capture — similar to PixPin and other popular
+> screenshot tools. A new draggable always-on-top floating ball gives quick
+> access to capture, recording and settings.
+
+### Features
+
+**Configurable startup behavior**
+- Clicking the Mark Shot icon no longer opens the capture overlay by default.
+- New **Startup Behavior** settings (Settings → General) with four combinable
+  modes: **Direct Capture** (enter screenshot mode immediately), **Tray Icon**
+  (keep running in the system tray), **Floating Ball** (show the quick-access
+  ball) and **Settings Window** (open Settings at launch).
+- Default for fresh installs: Tray Icon + Floating Ball. Direct capture is off
+  by default; configs without the new key fall back to the tray instead of
+  capturing (auto-capturing on launch is retired).
+- Explicit CLI flags still win: `--capture`, `--all-outputs` and
+  `--fullscreen` force a capture session; `--tray` forces tray mode.
+- Config key: `startup.modes` (array of `capture` / `tray` / `floating` /
+  `settings`); the legacy `windows.tray.enabled` flag stays in sync when
+  saving Settings.
+
+**Floating ball (悬浮球)**
+- A small circular always-on-top widget (bottom-right by default) that can be
+  dragged anywhere; its position persists across launches.
+- Single click opens a quick menu (Capture / Fullscreen Capture / Start
+  Recording / Settings / Hide Floating Ball / Quit); double click captures
+  immediately; drag moves it.
+- The ball hides automatically while a capture session is active and reappears
+  when it finishes, so it never appears inside the screenshot or blocks the
+  selection.
+
+### Tests
+- New `floating-ball` and `startup-behavior-config` test targets.
+
 ## 26.8.1.1 - 2026-08-03
 
 > Maintenance release of the **Mark Shot Community Edition**. It fixes

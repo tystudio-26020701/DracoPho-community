@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(mark-shot VERSION 26.8.1.1 LANGUAGES C CXX)
+project(mark-shot VERSION 26.8.2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -155,6 +155,10 @@ qt_add_executable(mark-shot
     src/autostart/autostart_manager.cpp
     src/autostart/autostart_manager.h
     src/autostart/autostart_windows.cpp
+    src/floating_ball.cpp
+    src/floating_ball.h
+    src/startup_behavior_config.cpp
+    src/startup_behavior_config.h
     src/startup_config.cpp
     src/startup_config.h
     src/startup_shortcut_hint.cpp
@@ -471,6 +475,8 @@ if(BUILD_TESTING)
         src/clipboard_image_config.h
         src/app_config_defaults.cpp
         src/app_config_defaults.h
+        src/startup_behavior_config.cpp
+        src/startup_behavior_config.h
         src/app_config_store.cpp
         src/app_config_store.h
         src/config_value.cpp
@@ -576,6 +582,8 @@ if(BUILD_TESTING)
         src/kde_capture_config.h
         src/app_config_defaults.cpp
         src/app_config_defaults.h
+        src/startup_behavior_config.cpp
+        src/startup_behavior_config.h
         src/app_config_store.cpp
         src/app_config_store.h
         src/config_value.cpp
