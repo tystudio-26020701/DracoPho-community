@@ -124,6 +124,10 @@ gdbus call --session \
 
 `Esc` 會取消工作階段；右鍵按一下（未啟用啟動工具時）同樣會取消。
 
+#### 3.1 多顯示器凍結行為
+
+使用預設的 **Freeze All Screens** 擷取範圍時，在選取區域期間所有已連接的顯示器都會被凍結。一旦您在某台顯示器上提交選取，其他顯示器會繼續將凍結的畫面顯示為非互動式背景：滑鼠、鍵盤、滾輪與快速鍵輸入都會被吞掉，疊加層也不會顯示工具列，因此在擷取工作階段結束前，虛擬桌面的其餘部分都會保持凍結。若您改用 **Cursor Screen** 範圍（設定 → 擷取 → Freeze Scope），則只有游標下方的顯示器會被凍結，其他螢幕仍可完全正常使用。
+
 ---
 
 ## 4. 註記工具
@@ -335,6 +339,7 @@ mark-shot --window 0 --capture-destination clipboard
 - 設定檔：`~/.config/mark-shot/config.json`（Linux），於首次執行時建立。
 - 完整參考：[Configuration](configuration.md)。
 - 後端：Wayland（PipeWire portal／grim／wlroots screencopy）、X11（`QScreen::grabWindow`）、Windows（原生 WGC）。錄製偏好 PipeWire portal，並會自動退回。
+- 設定視窗會以確定性的方式追蹤未儲存的變更：每個控制項（下拉式選單、開關、微調方塊、文字欄位、快速鍵欄位、色彩選擇器）都會立即更新未儲存變更指示器，包括從下拉式清單快顯與強制回應色彩對話方塊中選取的值。還原變更會清除指示器，因此視窗只會在關閉時詢問真正待處理的編輯。
 
 選用輔助程式：
 

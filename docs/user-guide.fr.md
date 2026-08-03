@@ -174,6 +174,18 @@ superposition de démarrage :
 `Esc` annule la session ; le clic droit (sans outil de démarrage) annule
 également.
 
+#### 3.1 Comportement de gel multi-écrans
+
+Avec la portée de capture **Freeze All Screens** par défaut, chaque écran
+connecté est figé pendant la sélection d'une région. Une fois que vous validez une
+sélection sur un moniteur, les autres écrans continuent d'afficher leur image
+figée comme arrière-plan non interactif : les entrées de la souris, du clavier,
+de la molette et des raccourcis sont avalées et les superpositions n'affichent
+aucune barre d'outils, de sorte que le reste du bureau virtuel reste figé jusqu'à
+la fin de la session de capture. Si vous utilisez plutôt la portée **Cursor
+Screen** (Settings → Capture → Freeze Scope), seul le moniteur sous le curseur est
+figé et les autres écrans restent entièrement utilisables.
+
 ---
 
 ## 4. Outils d'annotation
@@ -469,6 +481,13 @@ enregistrement / réglages / quitter. Raccourcis clavier du bureau :
 - Backends : Wayland (portail PipeWire / grim / wlroots screencopy), X11
   (`QScreen::grabWindow`), Windows (WGC natif). L'enregistrement privilégie le
   portail PipeWire et retombe automatiquement.
+- La fenêtre de configuration suit les modifications non enregistrées de manière
+  déterministe : chaque contrôle (liste déroulante, interrupteur, zone numérique,
+  champ de texte, champ de raccourci, sélecteur de couleur) met immédiatement à
+  jour l'indicateur de modifications non enregistrées, y compris les valeurs
+  choisies dans les popups de listes déroulantes et la boîte de dialogue modale
+  de couleur. Annuler une modification efface l'indicateur, de sorte que la
+  fenêtre ne demande que les vraies modifications en attente à la fermeture.
 
 Aides facultatives :
 

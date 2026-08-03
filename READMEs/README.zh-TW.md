@@ -85,6 +85,7 @@
 - **X11**：使用 `QScreen::grabWindow` 截圖、全螢幕置頂視窗作為覆蓋層、`xclip` 持久化剪貼簿。
 - **Windows**：使用 Qt 原生截圖與剪貼簿 API 支援基礎截圖、標註、複製、儲存和貼圖流程。PipeWire、xdg-desktop-portal、`grim`、XCB 視窗偵測、LayerShellQt、GNOME Shell helper 等 Linux 專用後端會在編譯期關閉。
 - Linux 顯示伺服器後端會在執行階段透過 `$XDG_SESSION_TYPE` 自動偵測；Windows 使用 Qt 原生平台後端。
+- **Multi-monitor freeze scope**：預設情況下，區域選取會凍結所有已連接的顯示器（在 X11/Windows 上 DPR 相符時，顯示為單一虛擬桌面視窗）；在一個顯示器上確定選取後，其他顯示器會保持凍結且無法互動，直到工作階段結束。**Cursor Screen** 範圍只會凍結滑鼠游標所在的顯示器。
 
 ### 桌面整合
 - **桌面捷徑**：

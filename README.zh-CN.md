@@ -90,6 +90,7 @@
 - **X11**：使用 `QScreen::grabWindow` 截屏、全屏置顶窗口作为覆盖层、`xclip` 持久化剪贴板。
 - **Windows**：使用 Qt 原生截屏与剪贴板 API 支持基础截图、标注、复制、保存和贴图流程。PipeWire、xdg-desktop-portal、`grim`、XCB 窗口检测、LayerShellQt、GNOME Shell helper 等 Linux 专用后端会在编译期关闭。
 - Linux 显示服务器后端会在运行时通过 `$XDG_SESSION_TYPE` 自动检测；Windows 使用 Qt 原生平台后端。
+- **多屏冻结范围**：默认情况下，区域截图会冻结全部已连接的显示器（X11/Windows 各屏 DPR 一致时使用单个虚拟桌面窗口），在某台显示器完成选区后，其余显示器保持冻结且不可操作直到截图会话结束；**Cursor Screen**（光标所在屏幕）范围仅冻结光标所在显示器。
 
 ### 桌面集成
 - **桌面快捷方式**：

@@ -90,6 +90,7 @@
 - **X11**: `QScreen::grabWindow`로 스크린샷을 찍고, 전체 화면 항상 위 창을 오버레이로 사용하며, `xclip`으로 클립보드를 유지합니다.
 - **Windows**: Qt 네이티브 스크린샷 및 클립보드 API로 기본 스크린샷, 주석, 복사, 저장, 핀 흐름을 지원합니다. PipeWire, xdg-desktop-portal, `grim`, XCB 창 감지, LayerShellQt, GNOME Shell helper 등 Linux 전용 백엔드는 컴파일 시 비활성화됩니다.
 - Linux 디스플레이 서버 백엔드는 런타임에 `$XDG_SESSION_TYPE`으로 자동 감지됩니다. Windows는 Qt 네이티브 플랫폼 백엔드를 사용합니다.
+- **Multi-monitor freeze scope**: 기본적으로 영역 선택 시 연결된 모든 디스플레이가 고정됩니다(X11/Windows에서 DPR이 일치하면 단일 가상 데스크톱 창으로 표시). 한 모니터에서 선택을 확정하면 다른 디스플레이는 세션이 종료될 때까지 고정된 채 상호 작용할 수 없습니다. **Cursor Screen** 범위는 커서가 있는 모니터만 고정합니다.
 
 ### 데스크톱 통합
 - **데스크톱 바로가기**:

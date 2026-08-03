@@ -168,6 +168,18 @@ de inicialização:
 `Esc` cancela a sessão; o clique direito (sem ferramenta de inicialização)
 também cancela.
 
+#### 3.1 Comportamento de congelamento em múltiplos monitores
+
+Com o escopo de captura padrão **Freeze All Screens**, cada tela conectada é
+congelada enquanto uma região é selecionada. Depois que você confirma uma seleção
+em um monitor, os outros displays continuam mostrando seu quadro congelado como
+um pano de fundo não interativo: entradas do mouse, teclado, roda e atalhos são
+engolidas e as sobreposições não mostram barras de ferramentas, então o resto da
+área de trabalho virtual permanece congelado até o fim da sessão de captura. Se,
+em vez disso, você usar o escopo **Cursor Screen** (Settings → Capture → Freeze
+Scope), apenas o monitor sob o cursor é congelado e as outras telas permanecem
+totalmente utilizáveis.
+
 ---
 
 ## 4. Ferramentas de Anotação
@@ -459,6 +471,13 @@ sair. Atalhos do desktop:
 - Backends: Wayland (portal PipeWire / grim / screencopy wlroots), X11
   (`QScreen::grabWindow`), Windows (WGC nativo). A gravação prefere o portal
   PipeWire e faz fallback automaticamente.
+- A janela de Configurações rastreia alterações não salvas de forma
+  determinística: cada controle (menu suspenso, interruptor, caixa de rotação,
+  campo de texto, campo de atalho, seletor de cores) atualiza imediatamente o
+  indicador de alterações não salvas, incluindo valores escolhidos em pop-ups de
+  caixa de combinação e no diálogo modal de cores. Reverter uma alteração limpa
+  o indicador, então a janela só pergunta sobre alterações pendentes reais ao
+  fechar.
 
 Auxiliares opcionais:
 

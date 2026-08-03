@@ -93,6 +93,7 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **X11**: Uses `QScreen::grabWindow` for screen capture, fullscreen top-level window for overlay, and `xclip` for clipboard persistence.
 - **Windows**: Uses Qt's native screen capture and clipboard APIs for the core screenshot, annotation, copy, save, and pin workflows. Linux-specific backends such as PipeWire, xdg-desktop-portal, `grim`, XCB window detection, LayerShellQt, and GNOME Shell helpers are disabled at build time.
 - Linux display server backends are detected at runtime via `$XDG_SESSION_TYPE`; Windows uses Qt's native platform backend.
+- **Multi-monitor freeze scope**: by default, region selection freezes every connected display (single virtual-desktop window when DPRs match on X11/Windows), and after committing a selection on one monitor the other displays stay frozen and non-interactive until the session ends. The **Cursor Screen** scope freezes only the monitor under the cursor.
 
 ### Desktop Integration
 - **Desktop Entries**:
