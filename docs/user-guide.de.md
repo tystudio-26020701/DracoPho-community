@@ -19,7 +19,7 @@ Konfiguration.
 Eine Regions-Erfassungssitzung starten:
 
 ```bash
-mark-shot
+mark-shot --capture
 ```
 
 Einen Desktop-Hotkey drücken (siehe § 8) oder aus einem Terminal starten. Ein
@@ -41,6 +41,28 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 Der Launcher stellt sein `bin/`-Verzeichnis vor `PATH`, was für die
 Fenstererkennungs-Hilfsskripte (`mark-shot-window-detection-*`) sowie die
 OCR-/Upload-Helfer erforderlich ist.
+
+### 1.3 Startverhalten (Schwebende Kugel / Tray / Einstellungsfenster / direkte Aufnahme)
+
+Was beim Start von Mark Shot (z. B. durch Klicken auf das Desktop-Symbol) passiert,
+ist konfigurierbar. Öffnen Sie **Einstellungen → Allgemein → Startverhalten** und
+kombinieren Sie die Optionen nach Belieben:
+
+| Option | Verhalten beim Start |
+| :--- | :--- |
+| **Tray-Symbol** (Standard) | Mark Shot läuft im System Tray weiter. Linksklick auf das Tray-Symbol: schnelle Aufnahme; Rechtsklick: Menü. |
+| **Schwebende Kugel** (Standard) | Eine kleine immer oben liegende Kugel (standardmäßig unten rechts). Einzelklick öffnet ein Schnellmenü, Doppelklick erstellt eine Aufnahme, Ziehen bewegt sie (Position wird gemerkt). Während einer Aufnahme wird sie automatisch ausgeblendet. |
+| **Direkte Aufnahme** | Startet sofort im Aufnahmemodus. |
+| **Einstellungsfenster** | Öffnet das Einstellungsfenster beim Start von Mark Shot. |
+
+Mehrere Optionen können kombiniert werden. **Direkte Aufnahme ist standardmäßig aus**;
+sofern Sie sie nicht wählen, wird beim Start nie von selbst ein Aufnahme-Overlay
+geöffnet. Wenn alle Optionen abgewählt sind, fällt Mark Shot auf den Tray zurück,
+damit immer ein Einstiegspunkt bleibt.
+
+Die schwebende Kugel und das Tray-Menü bieten dieselben Schnellaktionen:
+**Aufnahme**, **Vollbild-Aufnahme**, **Aufnahme starten**, **Einstellungen** und
+**Beenden**. Das Kugelmenü enthält zusätzlich **Schwebende Kugel ausblenden**.
 
 ---
 

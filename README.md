@@ -96,6 +96,15 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **Multi-monitor freeze scope**: by default, region selection freezes every connected display (single virtual-desktop window when DPRs match on X11/Windows), and after committing a selection on one monitor the other displays stay frozen and non-interactive until the session ends. The **Cursor Screen** scope freezes only the monitor under the cursor.
 
 ### Desktop Integration
+- **Configurable startup behavior**: launching Mark Shot no longer opens the
+  capture overlay by default. In Settings → General → **Startup Behavior** you
+  can combine **Tray Icon**, **Floating Ball**, **Settings Window** and
+  **Direct Capture** modes. Fresh installs default to Tray Icon + Floating
+  Ball; direct capture is opt-in.
+- **Floating ball**: a small draggable always-on-top ball (bottom-right by
+  default) offers quick access to capture, fullscreen capture, recording and
+  settings. Single click opens the menu, double click captures, drag to move
+  (position is remembered), and it hides automatically during a capture.
 - **Desktop Entries**:
   - `mark-shot.desktop`: Configures the utility system-wide, triggerable by custom shortcuts.
   - `mark-shot-edit.desktop`: Registers as an image editor, enabling users to right-click local files in file managers (Dolphin, Nautilus, etc.) and open them directly in annotation mode.

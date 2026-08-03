@@ -19,7 +19,7 @@ capture sans interface (headless) et la configuration.
 Démarrez une session de capture de région :
 
 ```bash
-mark-shot
+mark-shot --capture
 ```
 
 Appuyez sur un raccourci clavier du bureau (voir § 8) ou lancez-le depuis un
@@ -41,6 +41,29 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 Le lanceur ajoute son répertoire `bin/` au début du `PATH`, ce qui est requis
 pour les scripts d'aide à la détection de fenêtres
 (`mark-shot-window-detection-*`) et les aides OCR / upload.
+
+### 1.3 Comportement au démarrage (boule flottante / barre / fenêtre des paramètres / capture directe)
+
+Ce qui se passe au démarrage de Mark Shot (par exemple en cliquant sur l'icône du
+bureau) est configurable. Ouvrez **Paramètres → Général → Comportement au démarrage**
+et cochez n'importe quelle combinaison :
+
+| Option | Comportement au démarrage |
+| :--- | :--- |
+| **Icône dans la barre** (par défaut) | Mark Shot reste actif dans la barre d'état système. Un clic gauche sur l'icône capture, un clic droit ouvre le menu. |
+| **Boule flottante** (par défaut) | Une petite boule toujours au premier plan (en bas à droite par défaut). Un clic ouvre un menu rapide, un double-clic capture, le glisser la déplace (la position est mémorisée). Elle se masque automatiquement pendant une capture. |
+| **Capture directe** | Entre immédiatement en mode capture. |
+| **Fenêtre des paramètres** | Ouvre la fenêtre des paramètres au démarrage de Mark Shot. |
+
+Plusieurs options peuvent être combinées. **La capture directe est désactivée par
+défaut** ; si vous ne la sélectionnez pas, aucun overlay de capture ne s'ouvre
+automatiquement au démarrage. Si toutes les options sont décochées, Mark Shot
+retombe sur la barre pour qu'il y ait toujours un point d'entrée.
+
+La boule flottante et le menu de la barre offrent les mêmes actions rapides :
+**Capture**, **Capture plein écran**, **Démarrer l'enregistrement**,
+**Paramètres** et **Quitter**. Le menu de la boule propose aussi
+**Masquer la boule flottante**.
 
 ---
 

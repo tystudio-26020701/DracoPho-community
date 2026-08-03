@@ -18,12 +18,13 @@ annotation workflow, headless capture, and configuration.
 Start a region-capture session:
 
 ```bash
-mark-shot
+mark-shot --capture
 ```
 
-Press a desktop hotkey (see § 8) or run from a terminal. A frozen full-screen
-overlay opens on the focused display. Move the mouse to draw a selection
-rectangle, then release to enter the annotation editor.
+Or start in the configured startup mode (see § 1.3). Press a desktop hotkey
+(see § 8) or run from a terminal. A frozen full-screen overlay opens on the
+focused display. Move the mouse to draw a selection rectangle, then release to
+enter the annotation editor.
 
 ### 1.2 Portable builds
 
@@ -38,6 +39,29 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 The launcher prepends its `bin/` directory to `PATH`, which is required for the
 window-detection helper scripts (`mark-shot-window-detection-*`) and OCR /
 upload helpers.
+
+### 1.3 Startup behavior (floating ball, tray, settings, direct capture)
+
+When you launch Mark Shot (for example by clicking the desktop icon), what
+happens next is configurable. Open **Settings → General → Startup Behavior**
+and tick any combination of:
+
+| Option | What happens at startup |
+| :--- | :--- |
+| **Tray Icon** (default) | Mark Shot keeps running in the system tray. Left-click the tray icon for a quick capture, right-click for the menu. |
+| **Floating Ball** (default) | A small draggable always-on-top ball appears (bottom-right by default). Single click opens a quick menu, double click captures, drag to move it — its position is remembered. The ball hides automatically while a capture is active. |
+| **Direct Capture** | Enters screenshot mode immediately. |
+| **Settings Window** | Opens the settings window when Mark Shot starts. |
+
+Multiple options can be combined. Direct capture is **off by default**; unless
+you select it, launching Mark Shot never opens a capture overlay by itself. If
+you clear every option, Mark Shot falls back to the tray so there is always an
+entry point.
+
+The floating ball and tray menus offer the same quick actions: **Capture**,
+**Fullscreen Capture**, **Start Recording**, **Settings**, and **Quit**. The
+ball's menu also has **Hide Floating Ball** to dismiss it until the next
+launch.
 
 ---
 
@@ -420,8 +444,9 @@ error on stderr and exits with code `1` instead of silently capturing nothing.
 
 ## 8. Desktop Hotkeys & Tray
 
-Tray mode (`mark-shot --tray`) registers `Ctrl+Alt+S` for region capture and
-provides capture / recording / settings / quit menu entries. Desktop hotkeys:
+Tray mode (enabled by default, see § 1.3) registers `Ctrl+Alt+S` for region
+capture and provides capture / recording / settings / quit menu entries. The
+tray icon stays out of your way until you need it. Desktop hotkeys:
 
 - **GNOME**: Settings → Keyboard → Shortcuts → Custom Shortcuts → bind to `mark-shot`.
 - **KDE**: custom shortcut bound to `mark-shot` (plus the KWin ScreenShot2
@@ -463,11 +488,19 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 
 Use this to verify a build end-to-end:
 
-1. **Launch** — `run-mark-shot.sh` opens the frozen overlay.
-2. **Window hover** — move the mouse over a window: teal frame follows; single
+1. **Launch** — `mark-shot` starts in the configured startup mode (tray +
+   floating ball by default) without opening a capture overlay.
+2. **Startup behavior** — Settings → General → Startup Behavior: tick Direct
+   Capture and relaunch: the frozen overlay opens immediately; untick it and
+   relaunch: no overlay appears.
+3. **Floating ball** — single click opens the quick menu (Capture / Fullscreen /
+   Start Recording / Settings / Hide / Quit); double click captures; dragging
+   moves it and its position persists across launches; it hides while a capture
+   is active and reappears afterwards.
+4. **Window hover** — move the mouse over a window: teal frame follows; single
    click selects the window; overlapping windows pick the topmost one.
-3. **Manual region** — drag a rectangle; release; editor opens.
-4. **Annotate** — draw with each tool (Pen, Line, Rectangle, Ellipse, Arrow,
+5. **Manual region** — drag a rectangle; release; editor opens.
+6. **Annotate** — draw with each tool (Pen, Line, Rectangle, Ellipse, Arrow,
    Highlighter, Text, Number, Mosaic, Magnifier, Laser); undo/redo; Select to
    move/resize/rotate/delete; double-click a text to edit.
 5. **Copy / Save / Pin / Upload** — `Ctrl+C`, `Ctrl+S`, `Ctrl+P`, `Ctrl+U`.

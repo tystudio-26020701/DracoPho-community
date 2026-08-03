@@ -93,6 +93,8 @@ Es kann in Sekundenschnelle den Bildschirm erfassen und eine adaptive Vollbild-A
 - **Multi-monitor freeze scope**: standardmäßig friert die Bereichsauswahl alle angeschlossenen Monitore ein (ein einzelnes virtuelles Desktop-Fenster, wenn die DPRs unter X11/Windows übereinstimmen); nach dem Bestätigen einer Auswahl auf einem Monitor bleiben die übrigen Monitore bis zum Ende der Sitzung eingefroren und nicht interaktiv. Der **Cursor Screen**-Bereich friert nur den Monitor unter dem Mauszeiger ein.
 
 ### Desktop-Integration
+- **Konfigurierbares Startverhalten**: Beim Start von Mark Shot wird die Screenshot-Überlagerung nicht mehr standardmäßig geöffnet. Unter Einstellungen → Allgemein → **Startverhalten** lassen sich die vier Modi **Tray-Symbol**, **Schwebende Kugel**, **Einstellungsfenster** und **Direkte Aufnahme** beliebig kombinieren. Bei Neuinstallationen sind Tray-Symbol + Schwebende Kugel voreingestellt; direkte Aufnahme ist optional.
+- **Schwebende Kugel**: ein kleines rundes Immer-im-Vordergrund-Widget (standardmäßig unten rechts) für schnellen Zugriff auf Aufnahme, Vollbildaufnahme, Aufzeichnung und Einstellungen. Einzelklick öffnet das Menü, Doppelklick erstellt eine Aufnahme, Ziehen bewegt die Kugel (Position wird gemerkt); während einer Aufnahme wird sie automatisch ausgeblendet.
 - **Desktop-Verknüpfungen**:
   - `mark-shot.desktop`: Als systemweites Screenshot-Werkzeug konfiguriert, das direkt über Systemtastenkürzel aufgerufen werden kann.
   - `mark-shot-edit.desktop`: Als eigenständiger Bildeditor registriert und in das Rechtsklick-Menü „Öffnen mit" von Dateimanagern (z. B. Dolphin, Nautilus) integrierbar.

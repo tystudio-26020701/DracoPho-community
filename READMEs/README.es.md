@@ -88,6 +88,8 @@ Permite capturar la pantalla al instante y abrir una capa de anotación a pantal
 - **Multi-monitor freeze scope**: de forma predeterminada, la selección de región congela todos los monitores conectados (una sola ventana de escritorio virtual cuando las DPR coinciden en X11/Windows); tras confirmar una selección en un monitor, los demás monitores permanecen congelados y no interactivos hasta que finalice la sesión. El alcance **Cursor Screen** congela únicamente el monitor bajo el cursor.
 
 ### Integración con el escritorio
+- **Comportamiento de inicio configurable**: al iniciar Mark Shot ya no se abre la superposición de captura por defecto. En Configuración → General → **Comportamiento de inicio** puedes combinar los cuatro modos: **Icono de bandeja**, **Bola flotante**, **Ventana de configuración** y **Captura directa**. Las instalaciones nuevas vienen con Icono de bandeja + Bola flotante; la captura directa es opcional.
+- **Bola flotante**: un pequeño widget circular siempre encima (por defecto abajo a la derecha) que da acceso rápido a captura, captura de pantalla completa, grabación y configuración. Un clic abre el menú, doble clic captura, arrastrar la mueve (recuerda la posición) y se oculta automáticamente durante la captura.
 - **Accesos directos de escritorio**:
   - `mark-shot.desktop`: configurado como herramienta de captura global del sistema, invocable directamente con atajos de teclado del sistema.
   - `mark-shot-edit.desktop`: registrado como editor de imágenes independiente, integrable en el menú contextual «Abrir con» de los administradores de archivos (como Dolphin o Nautilus).
