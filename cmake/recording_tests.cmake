@@ -98,6 +98,8 @@ qt_add_executable(mark-shot-recording-config-dialog-test
     src/recording/audio/audio_capture_sample.h
     src/recording/audio/pulse_audio_capture_reader.cpp
     src/recording/audio/pulse_audio_capture_reader.h
+    src/recording/audio/wasapi_audio_capture_reader.cpp
+    src/recording/audio/wasapi_audio_capture_reader.h
     src/settings/settings_wheel_guard.cpp
     src/settings/settings_wheel_guard.h
     src/settings/settings_ui_helpers.cpp
@@ -152,6 +154,11 @@ target_link_libraries(mark-shot-recording-config-dialog-test
 if(PulseAudioRecording_FOUND)
     target_compile_definitions(mark-shot-recording-config-dialog-test PRIVATE HAVE_PULSE_RECORDING)
     target_link_libraries(mark-shot-recording-config-dialog-test PRIVATE PkgConfig::PulseAudioRecording)
+endif()
+# Windows 需要 WASAPI 读取器依赖与 windows_integration 的系统库，
+# 与主目标保持一致，避免 Windows 测试链接失败。
+if(WIN32)
+    target_link_libraries(mark-shot-recording-config-dialog-test PRIVATE dwmapi ksuser ole32 uuid)
 endif()
 add_test(NAME recording-config-dialog COMMAND mark-shot-recording-config-dialog-test)
 
