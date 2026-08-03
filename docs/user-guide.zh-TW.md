@@ -252,6 +252,13 @@ mark-shot --list-displays
 
 所有無頭選項都與位置參數的影像檔互斥。完整的參數表請參閱 README。
 
+無人值守錄製：無需開啟錄製對話方塊，即可透過正在執行的實例開始錄製。
+`mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+--record-duration 30 --record-wait-json` 會錄製該區域 30 秒並輸出最終的 JSON
+狀態。使用 `--record-display <id>` 錄製整個顯示器，`--record-format webp`
+產生動畫 WebP（支援 GIF/MP4/WebP），`--record-audio` 納入系統音訊，而
+`--record-duration 0` 則錄製到 `--stop-recording` 為止。
+
 ### 7.1 無頭視窗／元件擷取
 
 Mark Shot 可以**不開啟任何使用者介面**，就從腳本、建置管線或代理程式擷取**特定視窗——或視窗內的元件（子區域）**。程序只要寫入或回傳影像後就會結束，而且絕不建立視窗、絕不跳出對話方塊、絕不搶佔焦點，因此工具擷取桌面時使用者可以繼續工作。

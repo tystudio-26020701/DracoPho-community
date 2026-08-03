@@ -1,5 +1,68 @@
 # Changelog
 
+## 26.8.3.0 - 2026-08-04
+
+> Feature release of the **Mark Shot Community Edition**. Recording is now
+> crash-safe (temp MKV with per-frame flush, remuxed to a faststart MP4 on
+> finish — a killed process leaves a recoverable partial file instead of a
+> corrupt MP4), and adds **animated WebP** as a third output format alongside
+> GIF and MP4. A new unattended-recording CLI/IPC channel lets scripts and
+> agents record a region or display with a duration limit through the running
+> instance. Per-mode frame rates persist across mode switches, monitors left
+> or above the primary (negative coordinates) are now recordable, and
+> recording status carries explicit success/failure semantics so callers get
+> real errors fast instead of phantom success.
+
+### Features
+
+**Crash-safe recording**
+- MP4/MOV recordings write to a temporary MKV first, flushing each frame to
+  disk immediately; on finish the temp file is remuxed (stream copy) into the
+  final MP4 with `+faststart` so the `moov` index sits at the front.
+- If the process is killed mid-recording or mid-remux, the partial
+  `.part.mkv` stays readable and recoverable instead of the old total-loss
+  88-byte MP4. Leftover temp files are swept when the session manager starts;
+  temp names carry a random suffix to avoid symlink attacks.
+
+**Animated WebP output**
+- New third output format: **GIF / MP4 / animated WebP** (via `libwebp_anim`,
+  BSD-licensed). WebP is typically 2–3× smaller than GIF at better quality
+  and plays everywhere GIF does in modern browsers.
+- Selectable in the recording dialog (Recording Type), via CLI
+  `--record-format webp`, and in the enterprise MCP recording tools.
+
+**Unattended recording (CLI / IPC)**
+- New flags routed through the running instance (no UI required):
+  `--record-region <x,y,w,h>`, `--record-display <id>`, `--record-output
+  <path>`, `--record-duration <seconds>`, `--record-fps <n>`,
+  `--record-format <mp4|gif|webp>`, `--record-audio`,
+  `--record-wait-json`.
+- `--record-duration` auto-stops the recording through a timer bound to the
+  session (canceled if the recording ends early); `0` records until
+  `--stop-recording`.
+
+**Recording status semantics**
+- `RecordingStatus` now carries `finishedOk` / `failed` / `errorMessage`
+  (and the last result survives the controller lifetime), so CLI and MCP
+  callers distinguish success from failure and receive the real error in
+  milliseconds instead of hanging or reporting phantom success.
+
+### Fixes
+- Per-mode frame rates (`videoFps` / `gifFps`) are both persisted, so
+  switching GIF ↔ Video and pressing Start no longer drops the other mode's
+  FPS.
+- Recording a monitor positioned left/above the primary (negative virtual
+  desktop coordinates) no longer fails validation.
+- `~` in a recording output path is expanded to the home directory.
+- A persisted frame rate outside the standard ladder (e.g. 120 fps) is kept
+  instead of silently reverting to the default.
+- Animated WebP now encodes with `compression_level 4` (ffmpeg default);
+  the slowest method 6 made 1080p recording unusable (~0.1× real-time).
+
+### Tests
+- New `libav` animated-WebP encode test, WebP dialog/config round trips, and
+  per-mode frame-rate persistence coverage.
+
 ## 26.8.2.0 - 2026-08-03
 
 > Feature release of the **Mark Shot Community Edition**. Launching Mark Shot

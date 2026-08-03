@@ -306,6 +306,14 @@ mark-shot --list-displays
 جميع خيارات الالتقاط بدون واجهة متنافية مع ملف صورة موضعي.
 راجع README لجدول الوسائط الكامل.
 
+التسجيل دون مراقبة: يمكنك بدء تسجيل عبر المثيل قيد التشغيل دون فتح مربع حوار
+التسجيل. `mark-shot --record-region 0,0,640,480 --record-output
+~/Videos/clip.mp4 --record-duration 30 --record-wait-json` يسجّل تلك المنطقة
+لمدة 30 ثانية ويطبع حالة JSON النهائية. استخدم `--record-display <id>` لتسجيل
+شاشة كاملة، و`--record-format webp` لصيغة WebP المتحركة (GIF/MP4/WebP
+مدعومة)، و`--record-audio` لتضمين صوت النظام، و`--record-duration 0`
+للتسجيل حتى `--stop-recording`.
+
 ### 7.1 التقاط نافذة / مكوّن بدون واجهة رسومية
 
 يمكن لـ Mark Shot التقاط **نوافذ محددة — أو مكوّن (منطقة فرعية) داخل

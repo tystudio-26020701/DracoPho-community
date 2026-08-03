@@ -334,6 +334,15 @@ mark-shot --list-displays
 Todas las opciones sin interfaz son mutuamente excluyentes con un archivo de
 imagen posicional. Consulte el README para ver la tabla completa de argumentos.
 
+Grabación sin supervisión: puede iniciar una grabación a través de la instancia
+en ejecución sin abrir el diálogo de grabación.
+`mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+--record-duration 30 --record-wait-json` graba esa región durante 30 segundos e
+imprime el estado JSON final. Use `--record-display <id>` para una pantalla
+completa, `--record-format webp` para WebP animado (se admiten GIF/MP4/WebP),
+`--record-audio` para incluir el audio del sistema y `--record-duration 0` para
+grabar hasta `--stop-recording`.
+
 ### 7.1 Captura sin interfaz de ventanas / componentes
 
 Mark Shot puede capturar **ventanas específicas — o un componente (subregión)

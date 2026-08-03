@@ -1,5 +1,55 @@
 # Release Notes
 
+### 26.8.3.0
+
+> **Mark Shot Community Edition** — feature release focused on recording
+> reliability and formats: crash-safe MP4 recording (temp MKV + remux), a new
+> animated WebP output, an unattended-recording CLI/IPC channel, per-mode
+> frame-rate persistence, negative-coordinate display support, and explicit
+> success/failure recording status.
+
+#### Features
+
+**Crash-safe recording**
+- MP4/MOV recordings are written to a temporary MKV with each frame flushed
+  to disk, then remuxed (stream copy) into the final MP4 with `+faststart`.
+- Killing the process mid-recording leaves a recoverable `.part.mkv` instead
+  of a corrupt MP4; leftover temp files are swept at startup and temp names
+  use a random suffix against symlink attacks.
+
+**Animated WebP output**
+- New third format alongside GIF and MP4: animated WebP via `libwebp_anim`
+  (BSD-licensed), typically 2–3× smaller than GIF at better quality.
+- Selectable in the recording dialog, via CLI `--record-format webp`, and in
+  the enterprise MCP recording tools.
+
+**Unattended recording (CLI / IPC)**
+- `--record-region <x,y,w,h>` / `--record-display <id>` / `--record-output
+  <path>` / `--record-duration <seconds>` / `--record-fps <n>` /
+  `--record-format <mp4|gif|webp>` / `--record-audio` / `--record-wait-json`
+  start a recording through the running instance and return JSON status.
+- `--record-duration` auto-stops via a session-bound timer; `0` records until
+  `--stop-recording`.
+
+**Recording status semantics**
+- `RecordingStatus` now exposes `finishedOk` / `failed` / `errorMessage`, and
+  the last result is retained after the controller ends, so scripts and MCP
+  tools get the real error fast instead of phantom success.
+
+#### Fixes
+- Both per-mode frame rates (`videoFps` / `gifFps`) are persisted; switching
+  GIF ↔ Video then pressing Start no longer drops the other mode's FPS.
+- Monitors with negative virtual-desktop coordinates (left/above the primary)
+  are now recordable.
+- `~` in recording output paths is expanded to the home directory.
+- Persisted frame rates outside the standard ladder (e.g. 120 fps) are kept.
+- Animated WebP uses `compression_level 4`; the slowest method made 1080p
+  recording impractical.
+
+#### Tests
+- New animated-WebP encode test, WebP dialog/config round trips, and
+  per-mode frame-rate persistence coverage.
+
 ### 26.8.2.0
 
 > **Mark Shot Community Edition** — feature release adding configurable

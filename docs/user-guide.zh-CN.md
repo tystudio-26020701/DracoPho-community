@@ -282,6 +282,13 @@ mark-shot --list-displays
 
 所有 headless 选项与位置参数（图片文件）互斥。完整参数表见 README。
 
+无人值守录制：无需打开录制对话框，即可通过正在运行的实例开始录制。
+`mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+--record-duration 30 --record-wait-json` 会录制该区域 30 秒并输出最终的 JSON
+状态。使用 `--record-display <id>` 录制整个显示器，`--record-format webp`
+生成动画 WebP（支持 GIF/MP4/WebP），`--record-audio` 收录系统音频，
+`--record-duration 0` 则一直录到 `--stop-recording` 为止。
+
 ### 7.1 无头窗口 / 组件截图
 
 Mark Shot 可以**不打开任何界面**，从脚本、构建流水线或智能体直接截取**指定

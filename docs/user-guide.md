@@ -313,6 +313,14 @@ mark-shot --list-displays
 All headless options are mutually exclusive with a positional image file.
 See the README for the full argument table.
 
+Unattended recording: you can start a recording through the running instance
+without opening the recording dialog. `mark-shot --record-region 0,0,640,480
+--record-output ~/Videos/clip.mp4 --record-duration 30 --record-wait-json`
+records that region for 30 seconds and prints the final JSON status. Use
+`--record-display <id>` for a full display, `--record-format webp` for animated
+WebP (GIF/MP4/WebP are supported), `--record-audio` to include system audio,
+and `--record-duration 0` to record until `--stop-recording`.
+
 ### 7.1 Headless window / component capture
 
 Mark Shot can capture **specific windows — or a component (sub-region) inside
