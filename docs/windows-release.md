@@ -2,7 +2,7 @@
 
 ## 录制依赖
 
-Windows 录制使用 Windows Graphics Capture 采集画面，使用 FFmpeg/libav 写入 MP4 或 GIF。MSYS2/UCRT64 构建必须安装以下包：
+Windows 录制使用 Windows Graphics Capture 采集画面，使用 FFmpeg/libav 写入 MP4、GIF 或动画 WebP。MSYS2/UCRT64 构建必须安装以下包：
 
 ```bash
 pacman -S --needed \

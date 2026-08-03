@@ -62,7 +62,7 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **Magnifier with Independent Frames**: The magnifier loupe exposes resize handles on both the inner source viewfinder and the outer lens. Rectangle lenses get 8 corner/edge handles per frame, circular lenses get 4. Resizing either frame keeps the magnification ratio constant by scaling the other frame proportionally; translating one frame leaves the other untouched.
 - **Startup Code Scan**: Press `Q` before selecting a region, drag around a QR code or barcode, and open the decoded result in a copyable window.
 - **Quick Display Capture**: Press `D` before selecting a region to instantly capture all outputs, crop them by display, and hover a thumbnail to copy, edit, or save that display image.
-- **GIF and Video Recording**: Press the configured startup recording shortcuts or use the tray menu to record a selected display or a custom region as GIF or MP4. Active recordings show tray and frozen-frame status, can be stopped with `S`, the overlay button, the tray menu, or `--stop-recording`, and send desktop notifications when recording starts or saves. On Wayland, recording prefers the PipeWire portal backend and can fall back to wlroots screencopy or polling capture when portal capture is unavailable.
+- **GIF, MP4 and Animated WebP Recording**: Press the configured startup recording shortcuts or use the tray menu to record a selected display or a custom region as GIF, MP4 or animated WebP. Recording is crash-safe: MP4 is written to a temporary MKV and remuxed on finish, so an interrupted recording stays recoverable. Active recordings show tray and frozen-frame status, can be stopped with `S`, the overlay button, the tray menu, or `--stop-recording`, and send desktop notifications when recording starts or saves. On Wayland, recording prefers the PipeWire portal backend and can fall back to wlroots screencopy or polling capture when portal capture is unavailable.
 - **Image Host Upload**: Press `Ctrl+U` or click the toolbar upload button after selecting a region to upload the screenshot to a custom image host (ImgURL, sm.ms, imgbb, litterbox, etc.). The returned URL is automatically copied to the clipboard. Configure the host via `upload.env`, or plug in any custom uploader via `upload.command`.
 - **Mac-style Export Frame**: Adds transparent padding, rounded corners, and a soft shadow to saved, copied, uploaded, Open With, and extension-command images.
 
@@ -248,6 +248,14 @@ argument.
 | `--pin-image <path>` | Opens an existing local image directly as a pinned sticker window, skipping capture and region selection. |
 | `--recording-status` | Prints the current recording status as JSON through the running instance. |
 | `--stop-recording` | Requests the running instance to stop the active recording. |
+| `--record-region <x,y,w,h>` | Records a screen region through the running instance; geometry as x,y,width,height. |
+| `--record-display <id>` | Records a display by id (see `--list-displays` output: a raw screen name such as `DP-1`, the `output:DP-1` key, or `all`). |
+| `--record-output <path>` | Output file path for the recording (required with the record flags). |
+| `--record-duration <seconds>` | Recording duration in seconds; 0 records until `--stop-recording`. |
+| `--record-fps <n>` | Frame rate for the recording (default 15). |
+| `--record-format <mp4\|gif\|webp>` | Recording format: mp4 (default), gif or webp. |
+| `--record-audio` | Include system audio in the recording. |
+| `--record-wait-json` | Wait for the recording to finish, then print the final status as JSON. |
 | `--default-tool <tool>` | Sets the annotation tool selected after region selection. Also seeds fullscreen mode unless `--fullscreen-default-tool` is set. |
 | `--fullscreen-default-tool <tool>` | Sets the annotation tool selected in fullscreen annotation mode. |
 | `--default-color <color>` | Sets the default annotation color. Supports `#RRGGBB` and `#RRGGBBAA`. |

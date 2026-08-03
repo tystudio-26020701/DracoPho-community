@@ -149,7 +149,7 @@ Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置�
 | `save.pathTemplate` | 字符串 | `"{pictures}/mark-shot/mark-shot-{datetime}.png"` | 保存截图文件的路径模板（包括保存动作和另存为的初始文件名）。父级目录在保存时若不存在会自动创建。别名包括：`save.path`、`save.location`、最外层的 `savePathTemplate` 以及 `save.directory`（目录模板）。 |
 | `save.directoryTemplate` | 字符串 | `""` | 仅指定保存目录模板。指定后，文件名会自动采用默认的 `mark-shot-{datetime}.png`。别名包括：`save.directory`、`save.dir`、`save.folder`。 |
 | `recording.storage.videoDirectory` | 字符串 | `"{pictures}/mark-shot/videos"` | MP4 录制文件默认输出目录。别名包括 `recording.storage.videos`、`recording.storage.videoDir` 和 `recording.output.videoDirectory`。 |
-| `recording.storage.gifDirectory` | 字符串 | `"{pictures}/mark-shot/gifs"` | GIF 录制文件默认输出目录。别名包括 `recording.storage.gifs`、`recording.storage.gifDir` 和 `recording.output.gifDirectory`。 |
+| `recording.storage.gifDirectory` | 字符串 | `"{pictures}/mark-shot/gifs"` | GIF 与动画 WebP 录制文件默认输出目录。别名包括 `recording.storage.gifs`、`recording.storage.gifDir` 和 `recording.output.gifDirectory`。 |
 | `export.imageFrame` | 布尔值/对象 | `false` | 用户分享类导出的可选 Mac 风格外框。对象形式支持 `enabled`、`padding` (`0`-`256`，默认 `112`)、`cornerRadius` (`0`-`128`，默认 `18`)、`shadowRadius` (`0`-`128`，默认 `72`)、`shadowOffsetY` (`0`-`128`，默认 `28`) 和 `shadowOpacity` (`0.0`-`1.0`，默认 `0.32`)。作用于保存、另存为、复制、上传、打开方式和扩展命令图片；OCR、扫码、贴图、快速显示器截图和滚动截图保持原始图片。设置 `enabled` 为 `true` 后启用外框导出。 |
 | `shortcuts` | 对象 | - | 自定义快捷键配置。别名：`hotkeys`（或在 `annotation.shortcuts` / `annotation.hotkeys` 下）。详细子节点见折叠说明。 |
 | `windows.tray.enabled` | 布尔值 | Windows 为 `true`，其他平台为 `false` | 自动启动托盘模式。键名出于兼容性保留。可以用 `mark-shot --tray` 在不修改配置时启动托盘模式，也可以用 `mark-shot --capture` 在自动启动托盘时强制执行单次截图。 |

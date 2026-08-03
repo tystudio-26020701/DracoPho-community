@@ -331,6 +331,16 @@ mark-shot --list-displays
 Alle Headless-Optionen schließen sich mit einer positionalen Bilddatei
 gegenseitig aus. Die vollständige Argumenttabelle finden Sie in der README.
 
+Aufnahme ohne Benutzereingriff: Sie können eine Aufnahme über die laufende
+Instanz starten, ohne den Aufnahme-Dialog zu öffnen.
+`mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+--record-duration 30 --record-wait-json` nimmt diese Region 30 Sekunden lang auf
+und gibt den finalen JSON-Status aus. Verwenden Sie `--record-display <id>` für
+ein vollständiges Display, `--record-format webp` für animiertes WebP
+(GIF/MP4/WebP werden unterstützt), `--record-audio`, um Systemaudio
+einzubeziehen, und `--record-duration 0`, um bis `--stop-recording`
+aufzunehmen.
+
 ### 7.1 Headless-Fenster-/Komponentenerfassung
 
 Mark Shot kann **bestimmte Fenster – oder eine Komponente (Teilregion) innerhalb

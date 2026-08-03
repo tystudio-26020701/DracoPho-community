@@ -18,6 +18,21 @@
   </developer>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="26.8.3.0" date="2026-08-04">
+      <description>
+        <p>Crash-safe recording (temp MKV + remux to faststart MP4), animated WebP output, unattended recording CLI, per-mode frame-rate persistence.</p>
+      </description>
+    </release>
+    <release version="26.8.2.0" date="2026-08-03">
+      <description>
+        <p>Configurable startup behavior (tray / floating ball / settings / direct capture) and a draggable floating ball.</p>
+      </description>
+    </release>
+    <release version="26.8.1.1" date="2026-08-03">
+      <description>
+        <p>Settings unsaved-changes reporting and multi-screen freeze fixes; localized README editions.</p>
+      </description>
+    </release>
     <release version="0.1.41" date="2026-07-16" />
     <release version="0.1.40" date="2026-07-16" />
     <release version="0.1.39" date="2026-07-10" />

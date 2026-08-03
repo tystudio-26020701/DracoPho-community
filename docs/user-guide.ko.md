@@ -253,6 +253,14 @@ mark-shot --list-displays
 
 모든 헤드리스 옵션은 위치 인수(포지셔널) 이미지 파일과 상호 배타적입니다. 전체 인수 표는 README를 참조하세요.
 
+무인 녹화: 녹화 대화 상자를 열지 않고 실행 중인 인스턴스를 통해 녹화를 시작할 수
+있습니다. `mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+--record-duration 30 --record-wait-json` 명령은 해당 영역을 30초 동안 녹화하고
+최종 JSON 상태를 출력합니다. `--record-display <id>`로 전체 디스플레이를 녹화하고,
+`--record-format webp`로 애니메이션 WebP를 생성하며(GIF/MP4/WebP 지원),
+`--record-audio`로 시스템 오디오를 포함시키고, `--record-duration 0`은
+`--stop-recording`까지 녹화합니다.
+
 ### 7.1 헤드리스 창 / 구성 요소 캡처
 
 Mark Shot은 **특정 창 — 또는 창 내부의 구성 요소(하위 영역) — 을 UI를 열지 않고 캡처**할 수 있습니다. 스크립트, 빌드 파이프라인 또는 에이전트에서 사용할 수 있습니다. 프로세스는 이미지가 기록되거나 반환되는 즉시 종료되며, 창을 만들지 않고, 대화 상자를 띄우지 않으며, 포커스를 빼앗지 않으므로 도구가 데스크톱을 캡처하는 동안에도 사용자는 계속 작업할 수 있습니다.

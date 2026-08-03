@@ -1,5 +1,49 @@
 # 发版说明
 
+### 26.8.3.0
+
+> **Mark Shot 社区版**——功能发布，聚焦录制可靠性与格式：MP4 崩溃安全录制
+> （临时 MKV + remux）、新增动画 WebP 输出、无人值守录制 CLI/IPC 通道、
+> 双模式帧率持久化、负坐标显示器支持，以及显式成功/失败录制状态。
+
+#### 功能
+
+**崩溃安全录制**
+- MP4/MOV 录制先写入临时 MKV，每帧立即落盘；结束时流拷贝 remux 成最终
+  MP4（`+faststart`，`moov` 前置）。
+- 录制过程中杀掉进程会留下可恢复的 `.part.mkv`，而不是旧版全量丢失的
+  损坏 MP4；启动时自动清扫遗留临时文件；临时文件名带随机后缀防符号链接攻击。
+
+**动画 WebP 输出**
+- 在 GIF 与 MP4 之外新增第三种输出格式：动画 WebP（`libwebp_anim`，
+  BSD 许可），体积通常比 GIF 小 2–3 倍且画质更好。
+- 可在录制对话框、CLI `--record-format webp`、商业版 MCP 录制工具中选择。
+
+**无人值守录制（CLI / IPC）**
+- 新增通过运行实例执行的参数（无需图形界面）：`--record-region <x,y,w,h>` /
+  `--record-display <id>` / `--record-output <path>` / `--record-duration
+  <秒>` / `--record-fps <n>` / `--record-format <mp4|gif|webp>` /
+  `--record-audio` / `--record-wait-json`，返回 JSON 状态。
+- `--record-duration` 通过绑定会话的定时器自动停止；`0` 表示录到
+  `--stop-recording` 为止。
+
+**录制状态语义**
+- `RecordingStatus` 新增 `finishedOk` / `failed` / `errorMessage`，且控制器
+  结束后保留最近一次结果，脚本与 MCP 工具能毫秒级拿到真实错误，不再假成功
+  或挂起。
+
+#### 修复
+- 双模式帧率（`videoFps` / `gifFps`）同时持久化：切换 GIF ↔ 视频后直接
+  开始不再丢失另一模式的帧率。
+- 位于主屏左侧/上方（虚拟桌面坐标为负）的显示器现在可以录制。
+- 录制输出路径中的 `~` 会展开为主目录。
+- 阶梯之外的持久化帧率（如 120fps）会保留，不再静默回退默认值。
+- 动画 WebP 改用 `compression_level 4`；最慢档在 1080p 下几乎无法实时录制。
+
+#### 测试
+- 新增动画 WebP 编码测试、WebP 对话框/配置往返测试，以及双模式帧率持久化
+  覆盖。
+
 ### 26.8.2.0
 
 > **Mark Shot 社区版**——功能发布：启动行为可配置（托盘图标 / 悬浮球 /

@@ -56,7 +56,7 @@
 - **雙框獨立調整的放大鏡**：放大鏡的內層取景框與外層透鏡各自帶有 resize 把手，矩形透鏡每框 8 個角/邊把手，圓形透鏡每框 4 個上下左右把手。調整任一框時會依放大倍率聯動另一框，倍率始終保持不變；平移單框時另一框保持原位。
 - **啟動階段掃碼**：選取前按 `Q` 進入掃碼模式，框選 QR Code 或條碼區域後，會開啟可複製的辨識結果視窗。
 - **快速擷取顯示器**：選取前按 `D` 會立刻擷取全部輸出螢幕，再按顯示器裁切成縮圖；將滑鼠懸停到縮圖上可複製、編輯或儲存該顯示器的截圖。
-- **GIF 與影片錄製**：透過啟動階段錄製快捷鍵或系統匣選單，可以把指定顯示器或自訂區域錄製為 GIF 或 MP4。進行中的錄製會在系統匣與凍結幀中顯示狀態，可用 `S`、覆蓋層按鈕、系統匣選單或 `--stop-recording` 停止，並在開始和儲存時發送桌面通知。在 Wayland 上，錄製優先使用 PipeWire portal 後端；當 portal 擷取不可用時，可回退到 wlroots screencopy 或輪詢採集。
+- **GIF、MP4 與動畫 WebP 錄製**：透過啟動階段錄製快捷鍵或系統匣選單，可以把指定顯示器或自訂區域錄製為 GIF、MP4 或動畫 WebP。錄製具備當機安全設計：MP4 會先寫入暫存的 MKV，並在結束時重新封裝，因此中斷的錄製仍然可以復原。進行中的錄製會在系統匣與凍結幀中顯示狀態，可用 `S`、覆蓋層按鈕、系統匣選單或 `--stop-recording` 停止，並在開始和儲存時發送桌面通知。在 Wayland 上，錄製優先使用 PipeWire portal 後端；當 portal 擷取不可用時，可回退到 wlroots screencopy 或輪詢採集。
 - **圖床上傳**：選取後按 `Ctrl+U` 或點擊工具列上傳按鈕，將目前截圖上傳到自訂圖床（如 ImgURL、sm.ms、imgbb、litterbox 等），上傳成功後 URL 自動複製到剪貼簿。支援透過 `upload.env` 設定圖床參數，或透過 `upload.command` 接入任意自訂上傳腳本。
 - **Mac 風格匯出外框**：為儲存、複製、上傳、開啟方式與擴充指令圖片新增透明邊距、圓角和柔和陰影。
 
@@ -232,6 +232,14 @@ xdg-desktop-portal、PipeWire、grim、KWin/GNOME 輔助、Windows Graphics Capt
 | `--pin-image <path>` | 直接將本機圖片作為貼圖視窗開啟，跳過截圖與選區流程。 |
 | `--recording-status` | 透過執行中的實例輸出目前錄製狀態 JSON。 |
 | `--stop-recording` | 請求執行中的實例停止目前進行的錄製。 |
+| `--record-region <x,y,w,h>` | 透過執行中的實例錄製螢幕區域；幾何格式為 x,y,寬度,高度。 |
+| `--record-display <id>` | 依 ID 錄製顯示器（參見 `--list-displays` 輸出：原始螢幕名稱如 `DP-1`、`output:DP-1` 鍵或 `all`）。 |
+| `--record-output <path>` | 錄製的輸出檔案路徑（使用錄製旗標時為必填）。 |
+| `--record-duration <seconds>` | 錄製持續時間（秒）；0 表示錄製到 `--stop-recording` 為止。 |
+| `--record-fps <n>` | 錄製的影格率（預設 15）。 |
+| `--record-format <mp4\|gif\|webp>` | 錄製格式：mp4（預設）、gif 或 webp。 |
+| `--record-audio` | 在錄製中包含系統音訊。 |
+| `--record-wait-json` | 等待錄製完成，然後以 JSON 列印最終狀態。 |
 | `--debug` | 為本次執行啟用除錯日誌。 |
 | `--no-debug` | 為本次執行停用除錯日誌，並覆蓋設定檔與環境變數。 |
 | `--debug-log <path>` | 將除錯日誌寫入指定路徑；除非同時設定 `--no-debug`，否則會啟用除錯日誌。 |
