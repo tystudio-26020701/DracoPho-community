@@ -132,6 +132,13 @@ private slots:
         QVERIFY(outputPath->text().endsWith(QStringLiteral(".gif")));
         QVERIFY(!audio->isEnabled());
         QVERIFY(!audio->isChecked());
+
+        // 动画 WebP：与 GIF 同为动图，无音频、扩展名 .webp。
+        modeSelector->setCurrentIndex(modeSelector->findData(static_cast<int>(markshot::recording::RecordingMode::Webp)));
+        QCOMPARE(dialog.options().mode, markshot::recording::RecordingMode::Webp);
+        QVERIFY(outputPath->text().endsWith(QStringLiteral(".webp")));
+        QVERIFY(!audio->isEnabled());
+        QVERIFY(!audio->isChecked());
     }
 
     /**

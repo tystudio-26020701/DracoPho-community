@@ -38,7 +38,7 @@ bool failWith(QString *error, const QString &text)
 
 class LibavGifRecordingProcess::Private final {
 public:
-    bool start(const QString &outputPath, QSize frameSize, int fps, QString *error);
+    bool start(RecordingMode mode, const QString &outputPath, QSize frameSize, int fps, QString *error);
     bool writeFrame(const RecordingFrameSample &sample, QString *error);
     bool finish(QString *error);
     void cancel();
@@ -58,6 +58,7 @@ private:
     AVFrame *m_frame = nullptr;
     AVPacket *m_packet = nullptr;
     SwsContext *m_swsContext = nullptr;
+    AVPixelFormat m_encodePixelFormat = AV_PIX_FMT_NONE;
 #endif
     RecordingFrameConverter m_converter;
     QByteArray m_outputPathBytes;
@@ -67,7 +68,8 @@ private:
     bool m_started = false;
 };
 
-bool LibavGifRecordingProcess::Private::start(const QString &outputPath,
+bool LibavGifRecordingProcess::Private::start(RecordingMode mode,
+                                              const QString &outputPath,
                                               QSize frameSize,
                                               int fps,
                                               QString *error)
@@ -76,14 +78,16 @@ bool LibavGifRecordingProcess::Private::start(const QString &outputPath,
         error->clear();
     }
 #ifndef HAVE_LIBAV_RECORDING
+    Q_UNUSED(mode)
     Q_UNUSED(outputPath)
     Q_UNUSED(frameSize)
     Q_UNUSED(fps)
     return failWith(error, QStringLiteral("FFmpeg libraries are not linked"));
 #else
     if (frameSize.isEmpty()) {
-        return failWith(error, QStringLiteral("Cannot start GIF writer with an empty frame size"));
+        return failWith(error, QStringLiteral("Cannot start animated-image writer with an empty frame size"));
     }
+    const bool webp = mode == RecordingMode::Webp;
     cleanup();
     m_frameSize = frameSize;
     m_fps = std::max(1, fps);
@@ -92,46 +96,59 @@ bool LibavGifRecordingProcess::Private::start(const QString &outputPath,
     m_outputPathBytes = QFile::encodeName(outputPath);
     int result = avformat_alloc_output_context2(&m_formatContext,
                                                 nullptr,
-                                                "gif",
+                                                webp ? "webp" : "gif",
                                                 m_outputPathBytes.constData());
     if (result < 0 || !m_formatContext) {
         return failWith(error,
-                        QStringLiteral("Failed to allocate GIF output context: %1")
+                        QStringLiteral("Failed to allocate animated-image output context: %1")
                             .arg(libavErrorText(result)));
     }
 
-    const AVCodec *codec = avcodec_find_encoder_by_name("gif");
+    const AVCodec *codec = avcodec_find_encoder_by_name(webp ? "libwebp_anim" : "gif");
     if (!codec) {
-        return failWith(error, QStringLiteral("GIF encoder is not available in FFmpeg libraries"));
+        return failWith(error,
+                        QStringLiteral("Animated %1 encoder is not available in FFmpeg libraries")
+                            .arg(webp ? QStringLiteral("WebP") : QStringLiteral("GIF")));
     }
     m_stream = avformat_new_stream(m_formatContext, codec);
     if (!m_stream) {
-        return failWith(error, QStringLiteral("Failed to create GIF video stream"));
+        return failWith(error, QStringLiteral("Failed to create animated-image video stream"));
     }
 
     m_codecContext = avcodec_alloc_context3(codec);
     if (!m_codecContext) {
-        return failWith(error, QStringLiteral("Failed to allocate GIF codec context"));
+        return failWith(error, QStringLiteral("Failed to allocate animated-image codec context"));
     }
+    // WebP 走 yuv420p（支持有损压缩），GIF 必须 RGB8 索引色。
+    m_encodePixelFormat = webp ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_RGB8;
     m_codecContext->width = m_frameSize.width();
     m_codecContext->height = m_frameSize.height();
-    m_codecContext->pix_fmt = AV_PIX_FMT_RGB8;
+    m_codecContext->pix_fmt = m_encodePixelFormat;
     m_codecContext->time_base = AVRational{1, m_fps};
     m_codecContext->framerate = AVRational{m_fps, 1};
     if (m_formatContext->oformat->flags & AVFMT_GLOBALHEADER) {
         m_codecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
 
-    result = avcodec_open2(m_codecContext, codec, nullptr);
+    AVDictionary *codecOptions = nullptr;
+    if (webp) {
+        // 有损质量 0-100，动画循环 0 = 无限。compression_level 4 是 libwebp
+        // 的 ffmpeg 默认档：method 6（最慢）在 1080p 下约 0.09x 实时、只能
+        // 录 1fps，4 档约 9 倍更快，仍是高质量，适合实时屏幕录制。
+        av_dict_set(&codecOptions, "quality", "80", 0);
+        av_dict_set(&codecOptions, "compression_level", "4", 0);
+    }
+    result = avcodec_open2(m_codecContext, codec, &codecOptions);
+    av_dict_free(&codecOptions);
     if (result < 0) {
         return failWith(error,
-                        QStringLiteral("Failed to open GIF encoder: %1")
+                        QStringLiteral("Failed to open animated-image encoder: %1")
                             .arg(libavErrorText(result)));
     }
     result = avcodec_parameters_from_context(m_stream->codecpar, m_codecContext);
     if (result < 0) {
         return failWith(error,
-                        QStringLiteral("Failed to copy GIF codec parameters: %1")
+                        QStringLiteral("Failed to copy animated-image codec parameters: %1")
                             .arg(libavErrorText(result)));
     }
     m_stream->time_base = m_codecContext->time_base;
@@ -139,7 +156,7 @@ bool LibavGifRecordingProcess::Private::start(const QString &outputPath,
     m_frame = av_frame_alloc();
     m_packet = av_packet_alloc();
     if (!m_frame || !m_packet) {
-        return failWith(error, QStringLiteral("Failed to allocate GIF frame or packet"));
+        return failWith(error, QStringLiteral("Failed to allocate animated-image frame or packet"));
     }
     m_frame->format = m_codecContext->pix_fmt;
     m_frame->width = m_codecContext->width;
@@ -147,7 +164,7 @@ bool LibavGifRecordingProcess::Private::start(const QString &outputPath,
     result = av_frame_get_buffer(m_frame, 32);
     if (result < 0) {
         return failWith(error,
-                        QStringLiteral("Failed to allocate GIF frame buffer: %1")
+                        QStringLiteral("Failed to allocate animated-image frame buffer: %1")
                             .arg(libavErrorText(result)));
     }
 
@@ -156,25 +173,25 @@ bool LibavGifRecordingProcess::Private::start(const QString &outputPath,
                                   AV_PIX_FMT_BGRA,
                                   m_frameSize.width(),
                                   m_frameSize.height(),
-                                  AV_PIX_FMT_RGB8,
+                                  m_encodePixelFormat,
                                   SWS_FAST_BILINEAR,
                                   nullptr,
                                   nullptr,
                                   nullptr);
     if (!m_swsContext) {
-        return failWith(error, QStringLiteral("Failed to create GIF scale context"));
+        return failWith(error, QStringLiteral("Failed to create animated-image scale context"));
     }
 
     result = avio_open(&m_formatContext->pb, m_outputPathBytes.constData(), AVIO_FLAG_WRITE);
     if (result < 0) {
         return failWith(error,
-                        QStringLiteral("Failed to open GIF output file: %1")
+                        QStringLiteral("Failed to open animated-image output file: %1")
                             .arg(libavErrorText(result)));
     }
     result = avformat_write_header(m_formatContext, nullptr);
     if (result < 0) {
         return failWith(error,
-                        QStringLiteral("Failed to write GIF header: %1")
+                        QStringLiteral("Failed to write animated-image header: %1")
                             .arg(libavErrorText(result)));
     }
     m_started = true;
@@ -363,12 +380,13 @@ LibavGifRecordingProcess::~LibavGifRecordingProcess()
     delete d;
 }
 
-bool LibavGifRecordingProcess::start(const QString &outputPath,
+bool LibavGifRecordingProcess::start(RecordingMode mode,
+                                     const QString &outputPath,
                                      QSize frameSize,
                                      int fps,
                                      QString *error)
 {
-    return d->start(outputPath, frameSize, fps, error);
+    return d->start(mode, outputPath, frameSize, fps, error);
 }
 
 bool LibavGifRecordingProcess::writeFrame(const RecordingFrameSample &sample, QString *error)

@@ -63,7 +63,9 @@ bool RecordingController::start(const RecordingOptions &options, QString *error)
 
     markshot::debugLog("recording",
                        "【录制】【开始】mode=%s fps=%d audio=%d geometry=%d,%d %dx%d output=%s",
-                       m_options.mode == RecordingMode::Gif ? "gif" : "video",
+                       m_options.mode == RecordingMode::Gif
+                           ? "gif"
+                           : (m_options.mode == RecordingMode::Webp ? "webp" : "video"),
                        m_options.fps,
                        m_options.includeAudio ? 1 : 0,
                        m_options.captureGeometry.x(),

@@ -1,4 +1,6 @@
 #include "recording/recording_dialog_config.h"
+#include "recording/recording_file_naming.h"
+#include "recording/recording_status.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -32,6 +34,15 @@ class RecordingDialogConfigTest : public QObject {
     Q_OBJECT
 
 private slots:
+    /**
+     * 隔离应用配置路径，避免测试读写用户真实配置。
+     * @return 无返回值。
+     */
+    void initTestCase()
+    {
+        QStandardPaths::setTestModeEnabled(true);
+    }
+
     /**
      * 验证录制启动界面配置可以从 JSON 恢复。
      * @return 无返回值。
@@ -197,6 +208,112 @@ private slots:
         QVERIFY(config.outputPath.endsWith(QStringLiteral(".gif")));
         QVERIFY(config.outputPath != inputPath);
         QCOMPARE(config.displayKey, QStringLiteral("screen:HDMI-A-1"));
+    }
+
+    /**
+     * 验证切换到另一个录制模式后开始录制不会丢失该模式的帧率选择：
+     * 两个模式的独立帧率都从录制选项透传到持久化配置。
+     * @return 无返回值。
+     */
+    void preservesPerModeFrameRatesAcrossModeSwitch()
+    {
+        markshot::recording::RecordingOptions options;
+        options.mode = markshot::recording::RecordingMode::Video;
+        options.fps = 48;
+        options.videoFps = 48;
+        options.gifFps = 15;
+
+        const markshot::recording::RecordingDialogConfig config =
+            markshot::recording::recordingDialogConfigFromOptions(options);
+
+        QCOMPARE(config.mode, markshot::recording::RecordingMode::Video);
+        QCOMPARE(config.fps, 48);
+        QCOMPARE(config.videoFps, 48);
+        QCOMPARE(config.gifFps, 15);
+
+        // 回读：以 GIF 模式打开对话框时仍能还原 15fps。
+        QJsonObject dialog;
+        dialog.insert(QStringLiteral("gifFps"), config.gifFps);
+        dialog.insert(QStringLiteral("videoFps"), config.videoFps);
+        QJsonObject recording;
+        recording.insert(QStringLiteral("dialog"), dialog);
+        QJsonObject root;
+        root.insert(QStringLiteral("recording"), recording);
+
+        const markshot::recording::RecordingDialogConfig gifConfig =
+            markshot::recording::recordingDialogConfigFromRoot(
+                root,
+                markshot::recording::RecordingMode::Gif);
+        QCOMPARE(gifConfig.gifFps, 15);
+    }
+
+    /**
+     * 验证 WebP 动图模式的配置往返：模式、帧率（复用 gifFps）与扩展名。
+     * @return 无返回值。
+     */
+    void webpModeRoundTrip()
+    {
+        QJsonObject dialog;
+        dialog.insert(QStringLiteral("gifFps"), 15);
+        dialog.insert(QStringLiteral("videoFps"), 30);
+        QJsonObject recording;
+        recording.insert(QStringLiteral("dialog"), dialog);
+        QJsonObject root;
+        root.insert(QStringLiteral("recording"), recording);
+
+        const markshot::recording::RecordingDialogConfig config =
+            markshot::recording::recordingDialogConfigFromRoot(
+                root,
+                markshot::recording::RecordingMode::Webp);
+
+        QCOMPARE(config.mode, markshot::recording::RecordingMode::Webp);
+        QCOMPARE(config.fps, 15);
+
+        markshot::recording::RecordingOptions options;
+        options.mode = markshot::recording::RecordingMode::Webp;
+        options.fps = 12;
+        options.videoFps = 30;
+        options.gifFps = 12;
+        const markshot::recording::RecordingDialogConfig fromOptions =
+            markshot::recording::recordingDialogConfigFromOptions(options);
+        QCOMPARE(fromOptions.mode, markshot::recording::RecordingMode::Webp);
+        QCOMPARE(fromOptions.gifFps, 12);
+
+        QVERIFY(markshot::recording::defaultRecordingPath(markshot::recording::RecordingMode::Webp)
+                    .endsWith(QStringLiteral(".webp")));
+        QCOMPARE(markshot::recording::recordingModeName(markshot::recording::RecordingMode::Webp),
+                 QStringLiteral("webp"));
+    }
+
+    /**
+     * 验证保存时同时持久化两个模式的帧率：以 Video 模式保存（GIF 帧率已在
+     * 会话内改成 15）后，下次以 GIF 模式打开仍能还原 15，而不是回退旧值。
+     * @return 无返回值。
+     */
+    void saveRoundTripPersistsBothFrameRates()
+    {
+        markshot::recording::RecordingDialogConfig config;
+        config.mode = markshot::recording::RecordingMode::Video;
+        config.scope = markshot::recording::RecordingScope::Region;
+        config.backend = markshot::recording::RecordingCaptureBackend::Auto;
+        config.fps = 48;
+        config.videoFps = 48;
+        config.gifFps = 15;
+        config.outputPath = temporaryFilePath(QStringLiteral("mark-shot-save.mp4"));
+
+        QString saveError;
+        QVERIFY2(markshot::recording::saveRecordingDialogConfig(config, &saveError),
+                 qPrintable(saveError));
+
+        const markshot::recording::RecordingDialogConfig videoConfig =
+            markshot::recording::configuredRecordingDialogConfig(
+                markshot::recording::RecordingMode::Video);
+        QCOMPARE(videoConfig.videoFps, 48);
+
+        const markshot::recording::RecordingDialogConfig gifConfig =
+            markshot::recording::configuredRecordingDialogConfig(
+                markshot::recording::RecordingMode::Gif);
+        QCOMPARE(gifConfig.gifFps, 15);
     }
 };
 

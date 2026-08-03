@@ -163,7 +163,47 @@ private slots:
 
         QString error;
         markshot::recording::LibavGifRecordingProcess process;
-        QVERIFY2(process.start(outputPath, QSize(32, 24), 8, &error), qPrintable(error));
+        QVERIFY2(process.start(markshot::recording::RecordingMode::Gif,
+                               outputPath,
+                               QSize(32, 24),
+                               8,
+                               &error),
+                 qPrintable(error));
+        for (int i = 0; i < 4; ++i) {
+            QImage image(32, 24, QImage::Format_ARGB32);
+            image.fill(QColor(120, 40 + i * 20, 80).rgba());
+
+            markshot::recording::RecordingFrameSample sample;
+            sample.image = image;
+            sample.timestampMs = i * 125;
+            sample.sequence = i + 1;
+            QVERIFY2(process.writeFrame(sample, &error), qPrintable(error));
+        }
+        QVERIFY2(process.finish(&error), qPrintable(error));
+
+        const QFileInfo output(outputPath);
+        QVERIFY(output.exists());
+        QVERIFY(output.size() > 0);
+    }
+
+    /**
+     * 验证库内 FFmpeg writer 可以生成动画 WebP 文件。
+     * @return 无返回值。
+     */
+    void writesSmallAnimatedWebp()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString outputPath = directory.filePath(QStringLiteral("sample.webp"));
+
+        QString error;
+        markshot::recording::LibavGifRecordingProcess process;
+        QVERIFY2(process.start(markshot::recording::RecordingMode::Webp,
+                               outputPath,
+                               QSize(32, 24),
+                               8,
+                               &error),
+                 qPrintable(error));
         for (int i = 0; i < 4; ++i) {
             QImage image(32, 24, QImage::Format_ARGB32);
             image.fill(QColor(120, 40 + i * 20, 80).rgba());
