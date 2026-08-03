@@ -11,7 +11,9 @@
 
 namespace {
 
-/// @brief 在独立临时目录下隔离 XDG_CONFIG_HOME，避免触碰真实用户配置。
+/// @brief 在独立临时目录下隔离配置路径，避免触碰真实用户配置。
+/// Linux/macOS 通过 XDG_CONFIG_HOME 隔离；Windows 配置目录来自 APPDATA /
+/// LOCALAPPDATA，需同步设置，否则测试会读写真实用户配置。
 class IsolatedConfigScope {
 public:
     bool init()
@@ -29,7 +31,15 @@ public:
         }
         file.write("{}");
         file.close();
+#if defined(Q_OS_WIN)
+        // AppConfigLocation 在 Windows 上源自 APPDATA；同时覆盖 LOCALAPPDATA
+        // 与 USERPROFILE 兜底路径，保证候选目录全部落在临时目录内。
+        qputenv("LOCALAPPDATA", m_dir.path().toUtf8());
+        qputenv("APPDATA", m_dir.path().toUtf8());
+        return qputenv("USERPROFILE", m_dir.path().toUtf8());
+#else
         return qputenv("XDG_CONFIG_HOME", m_dir.path().toUtf8());
+#endif
     }
 
 private:
