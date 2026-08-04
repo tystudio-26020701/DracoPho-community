@@ -227,6 +227,9 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
     m_gifFps = persisted.gifFps;
     setWindowTitle(titleForMode(m_mode));
     setMinimumSize(460, 400);
+    // 顶层窗口标记：截图会话开始前按 objectName 隐藏本对话框，
+    // 避免录制配置窗口进入截图冻结图。
+    setObjectName(QStringLiteral("recordingConfigDialog"));
     // 主题跟随用户设置：与设置窗口共享设计 token，按 ui.theme 选择明暗样式
     // 与调色板，保证复选框勾选、下拉弹层等原生绘制也随主题一致。
     const markshot::ui::UiThemeMode effectiveTheme = effectiveDialogTheme();
