@@ -233,6 +233,12 @@ void FloatingBall::setQuitWhenHidden(bool quitWhenHidden)
 
 void FloatingBall::savePosition()
 {
+    // 原生 Wayland 下 frameGeometry()/pos() 不可靠（返回陈旧坐标），持久化
+    // 会把已保存的正确位置覆盖成初始/错误值，导致下次启动位置错乱。停靠与
+    // 位置持久化仅在有可靠绝对坐标的平台（X11/Windows/macOS）上进行。
+    if (!positioningEnabled()) {
+        return;
+    }
     const QPoint global = frameGeometry().topLeft();
     const QJsonArray array{QJsonValue(global.x()), QJsonValue(global.y())};
     QString error;
@@ -437,7 +443,7 @@ void FloatingBall::finishDrag()
         }
     }
     // 拖动结束：靠近屏幕边缘则停靠并隐入，否则回到自由漂浮。
-    // enterDocked 返回 false 表示 Wayland 下窗口未真正贴边无法停靠。
+    // enterDocked 返回 false 表示平台不支持停靠（原生 Wayland）或未贴边。
     if (edgeDockEnabled()) {
         const DockEdge edge = detectDockEdge(frameGeometry().topLeft());
         if (edge != DockEdge::None && enterDocked(edge)) {
@@ -445,14 +451,8 @@ void FloatingBall::finishDrag()
             return;
         }
     }
-    // 未贴边：退出任何停靠状态，回到自由漂浮。
-    if (m_dockState != DockState::Floating) {
-        m_dockState = DockState::Floating;
-        m_dockEdge = DockEdge::None;
-        m_contentOffset = QPoint();
-        clearMask();
-        update();
-    }
+    // 未贴边（或停靠不可用）：退出任何停靠状态，回到自由漂浮。
+    exitDockState();
     savePosition();
     noteInteraction();
 }
@@ -504,14 +504,18 @@ void FloatingBall::showEvent(QShowEvent *event)
         m_fadeTickTimer->start();
     }
     // 恢复显示时若处于停靠状态，回到隐入视觉（重新计算偏移，
-    // 窗口位置可能已在隐藏期间变化）。
+    // 窗口位置可能已在隐藏期间变化）。停靠已禁用则退出停靠态。
     if (m_dockState == DockState::Snapped || m_dockState == DockState::Revealed) {
-        m_dockState = DockState::Snapped;
-        QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
-        if (screen) {
-            computeDockOffset(m_dockEdge, screen->availableGeometry(), &m_contentOffset);
+        if (!edgeDockEnabled()) {
+            exitDockState();
+        } else {
+            m_dockState = DockState::Snapped;
+            QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
+            if (screen) {
+                computeDockOffset(m_dockEdge, screen->availableGeometry(), &m_contentOffset);
+            }
+            applyDockVisuals();
         }
-        applyDockVisuals();
     }
     markshot::debugLog("floating", "ball shown platform=%s",
                        QGuiApplication::platformName().toUtf8().constData());
@@ -787,36 +791,19 @@ FloatingBall::DockEdge FloatingBall::computeDockOffset(DockEdge edge,
     return edge;
 }
 
-/// @brief 检查窗口边缘是否真正贴近屏幕边缘。
-///
-/// Wayland 无法程序化贴边（合成器决定位置），只有窗口本身拖到贴近边缘时，
-/// 球体向屏幕外偏移的隐藏部分才会真正藏在屏幕外；否则球体会被窗口边界
-/// 裁剪但隐藏部分落在屏幕内区域，看起来像"球被切掉"。
-bool FloatingBall::windowTightToEdge(DockEdge edge) const
-{
-    QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
-    if (!screen) {
-        return false;
-    }
-    const QRect available = screen->availableGeometry();
-    const int tight = 8;
-    switch (edge) {
-    case DockEdge::Right:
-        return std::abs(available.right() - frameGeometry().right()) <= tight;
-    case DockEdge::Left:
-        return std::abs(available.left() - frameGeometry().left()) <= tight;
-    case DockEdge::Top:
-        return std::abs(available.top() - frameGeometry().top()) <= tight;
-    case DockEdge::Bottom:
-        return std::abs(available.bottom() - frameGeometry().bottom()) <= tight;
-    case DockEdge::None:
-        break;
-    }
-    return false;
-}
-
 bool FloatingBall::enterDocked(DockEdge edge)
 {
+    // 原生 Wayland 客户端无法获取自己的屏幕绝对坐标（frameGeometry()/pos()
+    // 返回创建时的陈旧值，通常为 0,0 或初始位置），而停靠依赖该坐标推导
+    // 吸附位置与内容偏移；在此平台上尝试停靠会把球体画到窗口之外、叠加成
+    // 多层鬼影/重影，还会按陈旧坐标停靠到错误的边缘。因此原生 Wayland 上
+    // 一律不进停靠态，球体保持自由漂浮（协议限制，诚实披露）。
+    if (!positioningEnabled()) {
+        markshot::debugLog("floating", "dock-skip platform=%s (no reliable absolute coords)",
+                           QGuiApplication::platformName().toUtf8().constData());
+        return false;
+    }
+
     QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
     if (!screen) {
         return false;
@@ -825,37 +812,26 @@ bool FloatingBall::enterDocked(DockEdge edge)
 
     // 支持程序化定位的平台（X11/Windows/macOS/offscreen）：先把窗口吸附贴边，
     // 这样球体向屏幕外偏移后，隐藏部分真正藏在屏幕外。
-    if (positioningEnabled()) {
-        const int w = width();
-        const int h = height();
-        QPoint target = frameGeometry().topLeft();
-        switch (edge) {
-        case DockEdge::Left:
-            target.setX(available.left());
-            break;
-        case DockEdge::Right:
-            target.setX(available.right() - w + 1);
-            break;
-        case DockEdge::Top:
-            target.setY(available.top());
-            break;
-        case DockEdge::Bottom:
-            target.setY(available.bottom() - h + 1);
-            break;
-        case DockEdge::None:
-            break;
-        }
-        move(target);
-    } else {
-        // Wayland：窗口位置由合成器决定，只有窗口本身贴近边缘才停靠，
-        // 否则球体"一半藏在屏幕外"的视觉无法成立。
-        if (!windowTightToEdge(edge)) {
-            markshot::debugLog("floating", "dock-skip wayland window not tight edge=%d geom=%d,%d",
-                               static_cast<int>(edge),
-                               frameGeometry().x(), frameGeometry().y());
-            return false;
-        }
+    const int w = width();
+    const int h = height();
+    QPoint target = frameGeometry().topLeft();
+    switch (edge) {
+    case DockEdge::Left:
+        target.setX(available.left());
+        break;
+    case DockEdge::Right:
+        target.setX(available.right() - w + 1);
+        break;
+    case DockEdge::Top:
+        target.setY(available.top());
+        break;
+    case DockEdge::Bottom:
+        target.setY(available.bottom() - h + 1);
+        break;
+    case DockEdge::None:
+        break;
     }
+    move(target);
 
     // 精确计算内容偏移：球体在边缘处隐藏 hiddenExtentPx 于屏幕外。
     computeDockOffset(edge, available, &m_contentOffset);
@@ -867,6 +843,18 @@ bool FloatingBall::enterDocked(DockEdge edge)
                        static_cast<int>(edge), m_contentOffset.x(), m_contentOffset.y(),
                        QGuiApplication::platformName().toUtf8().constData());
     return true;
+}
+
+void FloatingBall::exitDockState()
+{
+    if (m_dockState == DockState::Floating) {
+        return;
+    }
+    m_dockState = DockState::Floating;
+    m_dockEdge = DockEdge::None;
+    m_contentOffset = QPoint();
+    clearMask();
+    update();
 }
 
 void FloatingBall::revealBall()
@@ -882,7 +870,8 @@ void FloatingBall::revealBall()
 
 void FloatingBall::autoHideBall()
 {
-    if (m_dockState != DockState::Revealed) {
+    // 停靠已禁用时无需隐回（球体本来就在自由漂浮态）。
+    if (m_dockState != DockState::Revealed || !edgeDockEnabled()) {
         return;
     }
     QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
@@ -946,14 +935,15 @@ void FloatingBall::revalidateDockState()
     if (!isVisible() || m_dockState == DockState::Floating) {
         return;
     }
+    // 用户运行中关闭了停靠开关：退出停靠态，回到自由漂浮。
+    if (!edgeDockEnabled()) {
+        exitDockState();
+        return;
+    }
     // 屏幕变化后重新检测贴边；若不再贴边则回退自由漂浮。
     const DockEdge edge = detectDockEdge(frameGeometry().topLeft());
     if (edge == DockEdge::None || !enterDocked(edge)) {
-        m_dockState = DockState::Floating;
-        m_dockEdge = DockEdge::None;
-        m_contentOffset = QPoint();
-        clearMask();
-        update();
+        exitDockState();
         placeOnScreen();
         return;
     }
