@@ -115,7 +115,7 @@ def main():
             "height": rect[3],
             "zOrder": total - 1 - idx,
         }
-        for key in ("title", "class", "instance", "monitor", "workspace"):
+        for key in ("title", "class", "instance", "monitor", "workspace", "pid"):
             if key in window:
                 item[key] = window[key]
         result.append(item)

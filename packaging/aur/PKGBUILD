@@ -6,7 +6,7 @@ pkgdesc='Qt 6 Wayland screenshot selection and annotation tool'
 arch=('x86_64' 'aarch64')
 url='https://github.com/jswysnemc/mark-shot'
 license=('MIT')
-depends=('qt6-base' 'qt6-wayland' 'layer-shell-qt' 'pipewire' 'ffmpeg' 'grim' 'wl-clipboard' 'hicolor-icon-theme' 'python')
+depends=('qt6-base' 'qt6-wayland' 'layer-shell-qt' 'pipewire' 'ffmpeg' 'grim' 'wl-clipboard' 'hicolor-icon-theme' 'python' 'libxcomposite')
 makedepends=('cmake' 'ninja' 'pkgconf' 'git')
 optdepends=(
     'xdg-desktop-portal: portal-based screenshot and screencast backend'

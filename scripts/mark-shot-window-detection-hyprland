@@ -224,6 +224,9 @@ def append_client(result, seen, client, capture, targets, z_order):
         value = client.get(key_name)
         if isinstance(value, str) and value:
             item[key_name] = value
+    pid = client.get("pid")
+    if isinstance(pid, int) and pid > 0:
+        item["pid"] = pid
     if isinstance(workspace, dict):
         workspace_name = workspace.get("name")
         workspace_id = workspace.get("id")

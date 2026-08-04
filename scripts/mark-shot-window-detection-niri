@@ -25,7 +25,9 @@ add_shared_module_path()
 
 from mark_shot_window_detection.niri_dms import dms_insets
 from mark_shot_window_detection.niri_geometry import append_candidate
+from mark_shot_window_detection.niri_geometry import clipped_rect
 from mark_shot_window_detection.niri_geometry import env_int
+from mark_shot_window_detection.niri_geometry import intersects
 from mark_shot_window_detection.niri_geometry import output_origin
 from mark_shot_window_detection.niri_geometry import output_rect
 from mark_shot_window_detection.niri_geometry import output_size
@@ -319,6 +321,40 @@ def focus_stamp(window):
     if not isinstance(timestamp, dict):
         return 0, 0
     return int(timestamp.get("secs", 0)), int(timestamp.get("nanos", 0))
+
+
+def append_enriched(result, seen, rect, capture, window):
+    """与 append_candidate 相同，但额外携带窗口元数据（pid/title/app_id）。
+    参数 result: 输出列表; seen: 去重集合; rect: 原始矩形; capture: 捕获边界;
+        window: niri 窗口对象
+    返回: 无返回值
+    """
+    rect = adjusted_rect(rect)
+    if rect is None:
+        return
+    if capture is not None:
+        if not intersects(rect, capture):
+            return
+        rect = clipped_rect(rect, capture)
+        if rect is None:
+            return
+    if rect[2] <= 1 or rect[3] <= 1:
+        return
+    key = tuple(rect)
+    if key in seen:
+        return
+    seen.add(key)
+    item = {"x": rect[0], "y": rect[1], "width": rect[2], "height": rect[3]}
+    pid = window.get("pid")
+    if isinstance(pid, int) and pid > 0:
+        item["pid"] = pid
+    title = window.get("title")
+    if isinstance(title, str) and title:
+        item["title"] = title
+    app_id = window.get("app_id")
+    if isinstance(app_id, str) and app_id:
+        item["class"] = app_id
+    result.append(item)
 
 
 def tile_position(layout):
@@ -626,7 +662,7 @@ def main():
         if rect is None:
             continue
         emitted_ids.add(window.get("id"))
-        append_candidate(result, seen, rect, capture)
+        append_enriched(result, seen, rect, capture, window)
 
     # 2. 其余平铺窗口按滚动布局规则重建矩形
     for workspace_id, workspace_info in workspace_outputs.items():

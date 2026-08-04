@@ -184,6 +184,7 @@ qt_add_executable(mark-shot
     src/screen_capture_platform_api.cpp
     src/screen_capture_windows_wgc.cpp
     src/screen_capture_x11.cpp
+    src/screen_capture_x11_window.cpp
     src/shell_command.cpp
     src/shell_command.h
     src/ocr_result.cpp
@@ -306,6 +307,10 @@ endif()
 if(MARK_SHOT_LINUX AND X11_xcb_FOUND)
     target_link_libraries(mark-shot PRIVATE X11::xcb X11::X11)
     target_compile_definitions(mark-shot PRIVATE HAVE_XCB)
+    if(X11_Xcomposite_FOUND)
+        target_link_libraries(mark-shot PRIVATE X11::Xcomposite)
+        target_compile_definitions(mark-shot PRIVATE HAVE_XCOMPOSITE)
+    endif()
 endif()
 
 if(FFmpegLibav_FOUND)

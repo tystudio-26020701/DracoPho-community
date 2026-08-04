@@ -82,6 +82,7 @@ jobs:
             layer-shell-qt-devel \
             libX11-devel \
             libxcb-devel \
+            libXcomposite-devel \
             ninja-build \
             pipewire-devel \
             pkgconf-pkg-config \

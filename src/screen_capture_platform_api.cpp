@@ -1,14 +1,16 @@
 #include "screen_capture_internal.h"
 
 /// @brief Enumerates the info of all open X11 windows.
-/// @param includeIdentity 是否读取 title/class/instance（需要额外 X11 属性往返）。
+/// @param includeIdentity 是否读取 title/class/instance/pid（需要额外 X11 属性往返）。
+/// @param includeHidden 是否包含最小化/隐藏窗口（无头窗口捕获按 PID 定位时需要）。
 /// @return A vector of WindowInfo with z-order based on _NET_CLIENT_LIST_STACKING order (bottom-to-top).
-QVector<markshot::WindowInfo> enumerateX11WindowInfos(bool includeIdentity)
+QVector<markshot::WindowInfo> enumerateX11WindowInfos(bool includeIdentity, bool includeHidden)
 {
     QVector<markshot::WindowInfo> results;
 
 #ifndef HAVE_XCB
     Q_UNUSED(includeIdentity);
+    Q_UNUSED(includeHidden);
 #endif
 
 #if defined(HAVE_XCB) && defined(Q_OS_LINUX)
@@ -36,22 +38,30 @@ QVector<markshot::WindowInfo> enumerateX11WindowInfos(bool includeIdentity)
     const X11WindowAtoms atoms = readX11WindowAtoms(connection);
 
     auto appendInfo = [&](xcb_window_t window, int zOrder) {
-        const std::optional<QRect> rect = x11WindowFrameGeometry(connection, root, window, atoms);
+        const std::optional<QRect> rect = x11WindowFrameGeometry(connection, root, window, atoms, includeHidden);
         if (!rect.has_value()) {
             return;
         }
+        const QString id = QStringLiteral("0x%1").arg(static_cast<qulonglong>(window), 0, 16);
         for (const markshot::WindowInfo &existing : std::as_const(results)) {
-            if (existing.rect == *rect) {
+            // 矩形去重可能误删共享同一矩形的窗口（如并列最大化、最小化窗口与
+            // 同尺寸可见窗口）：有 id 时优先按 id 判重，避免 PID/进程名定位的
+            // 目标窗口被静默丢弃。
+            if (existing.rect == *rect || existing.id == id) {
                 return;
             }
         }
         markshot::WindowInfo info;
         info.rect = *rect;
         info.zOrder = zOrder;
-        info.id = QStringLiteral("0x%1").arg(static_cast<qulonglong>(window), 0, 16);
+        info.id = id;
         if (includeIdentity) {
             info.title = x11WindowTitle(connection, window, atoms);
             x11WindowClass(connection, window, atoms, &info.instance, &info.className);
+            // pid 读取也是一次阻塞的 X11 属性往返：与 title/class 一样只在
+            // 需要身份信息时执行，避免交互式几何枚举（includeIdentity=false）
+            // 为每条窗口付出额外往返。
+            info.pid = x11WindowPid(connection, window, atoms);
         }
         results.append(info);
     };
