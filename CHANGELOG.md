@@ -1,5 +1,90 @@
 # Changelog
 
+## 26.8.3.1 - 2026-08-04
+
+> Maintenance release of the **Mark Shot Community Edition**. The floating
+> ball no longer attempts edge docking on native Wayland (clients cannot read
+> reliable absolute window coordinates there), eliminating the ghost/ghosting
+> trails and wrong-edge docking reported on GNOME Wayland — the ball stays
+> free-floating while idle fade keeps working on every platform.
+> `capture.hideOwnWindows=false` now genuinely lets your own windows appear in
+> captures instead of silently always hiding them. The headless recording CLI
+> accepts raw display names, validates its arguments, and the window-capture
+> pipeline marks platform limitations honestly. The README feature-comparison
+> matrix is rebuilt to 15 tools × 22 capabilities and synced across all 12
+> languages.
+
+### Features
+
+**Wayland-safe floating ball**
+- Edge docking is disabled on native Wayland (`enterDocked` refuses when the
+  platform cannot position windows), removing the multi-layer ghost trails,
+  wrong-edge docking and off-screen painting caused by stale
+  `frameGeometry()` coordinates.
+- Position persistence is skipped on Wayland so stale coordinates never
+  overwrite a saved position; on restart the ball is placed by the compositor.
+- The `edgeDockEnabled` switch is now honored across every dock-state
+  transition (show, screen revalidation, auto-hide, drag finish), so turning
+  it off mid-session cleanly returns the ball to floating.
+- X11/Windows/macOS keep the full edge-dock behavior: snap to the edge, half
+  off-screen, hover reveal, auto re-hide.
+
+**Honest own-window exclusion during capture**
+- `capture.hideOwnWindows=false` is honored by the capture entry point: own
+  windows stay visible and can be captured; on Windows the
+  `WDA_EXCLUDEFROMCAPTURE` marker is re-applied per configuration before each
+  capture so the toggle works end-to-end.
+- Own-window hiding now also covers tooltips and the recording-config dialog
+  (object-name allow-list), so they no longer leak into the frozen frame.
+- UI restoration is driven by a session-level monitor that tracks all current
+  overlay windows — including windows swapped in by the "display capture"
+  editor — fixing premature restore of the floating ball / settings window on
+  top of a still-open overlay.
+
+**Headless recording polish**
+- `--record-display` accepts raw screen names (`DP-1`), `screen:`/`output:`
+  prefixes and `all`, normalized through the same shared helper the MCP server
+  uses; `--list-displays` now also reports the `key` value to pass back.
+- `--record-format` validates against `mp4|gif|webp`, `--record-region`
+  requires four integers, and `--record-wait-json` without `--record-duration`
+  is rejected up front instead of timing out after 15 minutes.
+
+**Window-capture honesty**
+- Component sub-regions (`<selector>@x,y,w,h`) on X11 now capture from the
+  window's own composited buffer first (occluded/minimized windows included),
+  falling back to a screen-region grab only when needed.
+- Wayland and non-X11 captures report `windowObjectCapture:false`, and a
+  window-object capture that fell back to a region grab now exits non-zero so
+  scripts/agents can detect that the result is not the window's own content.
+
+### Docs
+- README feature-comparison matrix rebuilt: 15 tools (ShareX, PixPin,
+  Snipaste, Flameshot, ksnip, Spectacle, Greenshot, PicPick, Windows Snipping
+  Tool, Snagit, CleanShot X, Shottr, Xnip, iShot) × 22 capabilities in four
+  value-ordered groups, with honest ✅/⭕/❌ marking and per-cell notes; synced
+  to all 12 language editions (verified identical).
+- Floating-ball edge-dock platform limitation documented honestly in READMEs
+  and `docs/configuration.{md,zh-CN.md}`; config docs no longer claim Wayland
+  content-offset docking.
+
+### Fixes
+- Native Wayland: floating-ball ghost trails / wrong-edge docking removed
+  (root cause: unreliable absolute coordinates).
+- Wayland: dragging no longer persists stale window coordinates over the
+  saved position.
+- `capture.hideOwnWindows=false` now actually lets own windows appear in
+  captures (previously the setting only switched the KWin backend route).
+- Display-capture target switching no longer pops the floating ball/settings
+  back over the still-open overlay.
+- `--record-display DP-1` (raw screen name) no longer fails with
+  "display id not found".
+- Unsupported `--record-format` values no longer silently record MP4.
+
+### Tests
+- Community + enterprise: 51/51 passing each (offscreen); edge-dock and
+  dock-state transitions remain covered on the coordinate-reliable offscreen
+  platform.
+
 ## 26.8.3.0 - 2026-08-04
 
 > Feature release of the **Mark Shot Community Edition**. Recording is now
