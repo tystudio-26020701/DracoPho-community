@@ -386,13 +386,19 @@ void FloatingBall::mouseMoveEvent(QMouseEvent *event)
             return;
         }
         if (!m_systemMoveStarted) {
-            // Wayland 下顶层窗口无法用 move() 定位，交给合成器系统拖动；
-            // 失败（X11/offscreen 等）回退到手拖 + 鼠标抓取。
-            if (QWindow *window = windowHandle()) {
-                if (window->startSystemMove()) {
-                    m_systemMoveStarted = true;
-                    event->accept();
-                    return;
+            // 仅对真实用户输入（spontaneous 事件）发起系统拖动：Wayland 下顶层
+            // 窗口无法用 move() 定位，交给合成器系统拖动；X11/Windows 也借系统
+            // 手势获得原生拖拽体验。合成事件（测试用 QApplication::sendEvent 注入，
+            // spontaneous()==false）一律走 move() 回退，保证测试在任意平台可复现
+            // （Windows 的 startSystemMove() 无条件返回 true 且不实际移动窗口，
+            // 若合成事件也走系统拖动，位置断言类测试会失败）。真实输入行为不变。
+            if (event->spontaneous()) {
+                if (QWindow *window = windowHandle()) {
+                    if (window->startSystemMove()) {
+                        m_systemMoveStarted = true;
+                        event->accept();
+                        return;
+                    }
                 }
             }
             if (QWidget::mouseGrabber() != this) {
