@@ -20,13 +20,16 @@ namespace markshot {
 /// 始终置顶的小型圆形窗口，可拖动改变位置（Wayland 下走合成器系统拖动，
 /// 其余平台回退到手拖）。拖动释放时若靠近屏幕边缘则触发"边缘停靠"：
 /// 球体向屏幕外方向平移一半（露出部分通过 setMask 限定输入区域），实现
-/// "隐入靠边缘的一半"的视觉效果——该方案不依赖 move()，原生 Wayland
-/// 会话同样生效（X11/Windows 额外把窗口吸附到贴边位置）。悬停/按下滑出
-/// 完整显示，移开后延迟隐回。闲置数秒后自动淡出为半透明（paintEvent 自绘
-/// alpha，平台无关），鼠标悬停/移动立即恢复不透明度。淡出判定由"交互
-/// 时间戳 + 常驻 tick"驱动，不依赖 leaveEvent，杜绝"移开不淡出"。
-/// 左键单击/右键弹出快捷菜单，双击快速截图。截图会话进行中自动隐藏，会话
-/// 结束后自动恢复显示（用户主动隐藏的状态不会被会话覆盖）。位置持久化。
+/// "隐入靠边缘的一半"的视觉效果。该停靠仅在可程序化定位的平台可用
+/// （X11/Windows/macOS/offscreen）；原生 Wayland 客户端无法获取自己的屏幕
+/// 绝对坐标，基于坐标的吸附与偏移计算不可靠（会把球画到窗口外、产生鬼影
+/// 拖尾），故 Wayland 上停靠不可用（协议限制），球体保持自由漂浮。
+/// 悬停/按下滑出完整显示，移开后延迟隐回。闲置数秒后自动淡出为半透明
+/// （paintEvent 自绘 alpha，平台无关），鼠标悬停/移动立即恢复不透明度。
+/// 淡出判定由"交互时间戳 + 常驻 tick"驱动，不依赖 leaveEvent，杜绝"移开
+/// 不淡出"。左键单击/右键弹出快捷菜单，双击快速截图。截图会话进行中自动
+/// 隐藏，会话结束后自动恢复显示（用户主动隐藏的状态不会被会话覆盖）。
+/// 位置持久化（仅限坐标可靠的平台，Wayland 上跳过以免陈旧坐标覆盖）。
 class FloatingBall final : public QWidget {
     Q_OBJECT
     Q_PROPERTY(qreal fadeAlpha READ fadeAlpha WRITE setFadeAlpha)
@@ -153,7 +156,7 @@ private:
 
     /// @brief 停靠到边缘（进入 Snapped 状态：球体向屏幕外方向平移）。
     /// @param edge 停靠边缘。
-    /// @return Wayland 下窗口未真正贴边而无法停靠时返回 false。
+    /// @return 平台不支持停靠（原生 Wayland，坐标不可靠）时返回 false。
     bool enterDocked(DockEdge edge);
 
     /// @brief 计算使球体在指定边缘"隐藏 extent 像素于屏幕外"所需的内容偏移。
@@ -163,10 +166,8 @@ private:
     /// @return 传入的边缘。
     DockEdge computeDockOffset(DockEdge edge, const QRect &available, QPoint *offset) const;
 
-    /// @brief 检查窗口边缘是否真正贴近屏幕边缘（Wayland 停靠前置条件）。
-    /// @param edge 目标边缘。
-    /// @return 贴近时返回 true。
-    bool windowTightToEdge(DockEdge edge) const;
+    /// @brief 退出停靠态，回到自由漂浮（清除偏移与输入 mask）。
+    void exitDockState();
 
     /// @brief 拖动结束的统一处理（mouseReleaseEvent 与拖动卡死自愈共用）。
     ///
