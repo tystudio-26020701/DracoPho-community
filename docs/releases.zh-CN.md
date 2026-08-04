@@ -1,5 +1,57 @@
 # 发版说明
 
+### 26.8.3.1
+
+> **Mark Shot 社区版**——维护发布。悬浮球不再在原生 Wayland 上尝试边缘停靠
+> （客户端无法读取可靠的窗口绝对坐标），消除鬼影/重影与停靠错边；
+> `capture.hideOwnWindows=false` 现在真正允许本软件窗口进入截图画面；
+> 无人值守录制 CLI 接受裸屏名并校验参数；README 功能对比矩阵重构为
+> 15 款工具并同步至 12 种语言。
+
+#### 功能
+
+**Wayland 安全的悬浮球**
+- 原生 Wayland 禁用边缘停靠，球体保持自由漂浮、无鬼影；闲置淡出在所有平台正常。
+- Wayland 上跳过位置持久化，陈旧坐标不再覆盖已保存位置。
+- `edgeDockEnabled` 开关在所有停靠状态切换（显示 / 屏幕重校验 / 自动隐回 /
+  拖动结束）中一致生效。
+- X11/Windows/macOS 保留完整边缘停靠（吸附、一半隐入屏外、悬停滑出、移开自动隐回）。
+
+**诚实的"自身窗口排除"**
+- `capture.hideOwnWindows=false` 在截图入口被真正尊重；Windows 每次截图前按配置
+  重新应用 `WDA_EXCLUDEFROMCAPTURE` 标记。
+- 自身窗口隐藏范围扩展到 tooltip 与录制配置对话框。
+- UI 恢复改由会话级监视器驱动（跟踪当前全部覆盖窗口），修复"显示器快速截取"
+  换窗时悬浮球/设置窗口提前弹回的问题。
+
+**无人值守录制打磨**
+- `--record-display` 接受裸屏名、`screen:`/`output:` 前缀与 `all`；`--list-displays`
+  现在输出可直接回传的 `key` 字段。
+- `--record-format` 白名单校验（mp4/gif/webp）、`--record-region` 要求四个整数、
+  `--record-wait-json` 未配 `--record-duration` 时前置拒绝。
+
+**窗口捕获诚实标记**
+- X11 组件子区域优先从窗口自身合成缓冲抓取；Wayland/非 X11 捕获输出
+  `windowObjectCapture:false`；窗口对象抓取回退为区域抓屏时退出码非零。
+
+#### 文档
+
+- README 功能对比矩阵重构为 15 工具 × 22 能力、按价值分四组，并同步至全部 12 种语言。
+- 悬浮球边缘停靠的平台限制在 README 与 `docs/configuration.{md,zh-CN.md}` 中诚实披露。
+
+#### 修复
+
+- 消除原生 Wayland 悬浮球鬼影/重影与停靠错边。
+- Wayland 拖动不再用陈旧坐标覆盖已保存位置。
+- `capture.hideOwnWindows=false` 现在真正允许本软件窗口入画。
+- "显示器快速截取"换窗不再把悬浮球/设置窗口弹回仍开着的覆盖层之上。
+- `--record-display DP-1`（裸屏名）不再报"display id not found"。
+- 非法 `--record-format` 不再静默录成 MP4。
+
+#### 测试
+
+- 社区版与商业版各 51/51 全绿（offscreen 平台）。
+
 ### 26.8.3.0
 
 > **Mark Shot 社区版**——功能发布，聚焦录制可靠性与格式：MP4 崩溃安全录制

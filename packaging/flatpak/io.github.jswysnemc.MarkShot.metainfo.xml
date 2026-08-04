@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="26.8.3.1" date="2026-08-04">
+      <description>
+        <p>Maintenance release: Wayland-safe floating ball (edge docking disabled on native Wayland to remove ghost trails), honest hideOwnWindows toggle, headless recording CLI display-id normalization and argument validation, and a rebuilt 12-language feature comparison matrix.</p>
+      </description>
+    </release>
     <release version="26.8.3.0" date="2026-08-04">
       <description>
         <p>Crash-safe recording (temp MKV + remux to faststart MP4), animated WebP output, unattended recording CLI, per-mode frame-rate persistence.</p>
