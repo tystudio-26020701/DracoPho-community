@@ -105,6 +105,10 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
   default) offers quick access to capture, fullscreen capture, recording and
   settings. Single click opens the menu, double click captures, drag to move
   (position is remembered), and it hides automatically during a capture.
+  Dropping it near a screen edge snaps and docks it with **half of the ball
+  sliding off-screen** (hover to reveal, move away to re-hide), and it fades
+  to semi-transparent after a few idle seconds, returning to full opacity on
+  hover.
 - **Desktop Entries**:
   - `mark-shot.desktop`: Configures the utility system-wide, triggerable by custom shortcuts.
   - `mark-shot-edit.desktop`: Registers as an image editor, enabling users to right-click local files in file managers (Dolphin, Nautilus, etc.) and open them directly in annotation mode.

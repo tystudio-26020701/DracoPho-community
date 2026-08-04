@@ -90,6 +90,7 @@ Permite capturar la pantalla al instante y abrir una capa de anotación a pantal
 ### Integración con el escritorio
 - **Comportamiento de inicio configurable**: al iniciar Mark Shot ya no se abre la superposición de captura por defecto. En Configuración → General → **Comportamiento de inicio** puedes combinar los cuatro modos: **Icono de bandeja**, **Bola flotante**, **Ventana de configuración** y **Captura directa**. Las instalaciones nuevas vienen con Icono de bandeja + Bola flotante; la captura directa es opcional.
 - **Bola flotante**: un pequeño widget circular siempre encima (por defecto abajo a la derecha) que da acceso rápido a captura, captura de pantalla completa, grabación y configuración. Un clic abre el menú, doble clic captura, arrastrar la mueve (recuerda la posición) y se oculta automáticamente durante la captura.
+  Al soltarla cerca del borde de la pantalla se acopla y **la mitad del lado del borde se desliza fuera de la pantalla** (pasar el ratón la revela y alejarlo la vuelve a ocultar; funciona en todas las plataformas) y, tras unos segundos de inactividad, se desvanece a semitransparente, volviendo a su opacidad total al pasar el ratón.
 - **Accesos directos de escritorio**:
   - `mark-shot.desktop`: configurado como herramienta de captura global del sistema, invocable directamente con atajos de teclado del sistema.
   - `mark-shot-edit.desktop`: registrado como editor de imágenes independiente, integrable en el menú contextual «Abrir con» de los administradores de archivos (como Dolphin o Nautilus).

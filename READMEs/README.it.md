@@ -90,6 +90,7 @@ Cattura istantaneamente lo schermo e apre una sovrapposizione di annotazione a s
 ### Integrazione desktop
 - **Comportamento di avvio configurabile**: all'avvio di Mark Shot l'overlay di cattura non si apre più per impostazione predefinita. In Impostazioni → Generali → **Comportamento all'avvio** puoi combinare le quattro modalità: **Icona nella barra**, **Pallina fluttuante**, **Finestra impostazioni** e **Cattura diretta**. Le nuove installazioni usano Icona nella barra + Pallina fluttuante; la cattura diretta è opzionale.
 - **Pallina fluttuante**: un piccolo widget circolare sempre in primo piano (in basso a destra per impostazione predefinita) per un accesso rapido a cattura, cattura a schermo intero, registrazione e impostazioni. Un clic apre il menu, il doppio clic cattura, il trascinamento la sposta (la posizione viene ricordata) e si nasconde automaticamente durante una cattura.
+  Trascinandola vicino al bordo dello schermo si aggancia e **si nasconde per metà oltre il bordo** (il passaggio del mouse la fa riemergere, allontanandolo si nasconde di nuovo; funziona su tutte le piattaforme) e, dopo alcuni secondi di inattività, sfuma fino a diventare semitrasparente, tornando completamente opaca al passaggio del mouse.
 - **Scorciatoie desktop**:
   - `mark-shot.desktop`: configurato come strumento di cattura globale di sistema, invocabile direttamente con le scorciatoie di sistema.
   - `mark-shot-edit.desktop`: registrato come editor di immagini indipendente, integrabile nel menu "Apri con" dei file manager (ad es. Dolphin, Nautilus).
