@@ -163,4 +163,13 @@ private:
 /// @param parent 用于定位窗口的父控件。
 void showSettingsDialog(QWidget *parent = nullptr);
 
+/// @brief 截图前隐藏设置窗口（若可见），避免本软件 UI 进入截图画面。
+///
+/// 截图会话结束后须调用 restoreSettingsWindowAfterCapture() 恢复原可见状态。
+/// 仅在有窗口实例且可见时生效，并记住"截图前可见"状态。
+void hideSettingsWindowForCapture();
+
+/// @brief 截图会话结束后恢复设置窗口到截图前的可见状态。
+void restoreSettingsWindowAfterCapture();
+
 }  // namespace markshot::settings

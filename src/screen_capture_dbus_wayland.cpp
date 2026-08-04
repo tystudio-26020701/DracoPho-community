@@ -109,6 +109,11 @@ CaptureResult captureWithKWinScreenShot(const CaptureRequest &request)
     // native-resolution keeps device pixels on HiDPI instead of downscaling to
     // logical size, so the stitched result stays sharp.
     options.insert(QStringLiteral("native-resolution"), true);
+    // 显式传 hide-caller-windows：KWin 会按调用进程 PID 匹配并隐藏本软件全部
+    // 顶层窗口（悬浮球/设置窗口/托盘菜单等）后再合成截图，是"图形合成层级"
+    // 的自身窗口排除，而不是截图前逐个 hide。KWin 对未知选项忽略，低版本
+    // 不认识该键时行为与现状一致（靠其他后端/应用层隐藏兜底）。
+    options.insert(QStringLiteral("hide-caller-windows"), request.hideOwnWindows);
     // KWin sends the D-Bus reply with the buffer metadata first, then writes the
     // pixels to the pipe, so this synchronous call does not deadlock even when
     // the image is larger than the pipe buffer.

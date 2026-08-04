@@ -3,6 +3,7 @@
 #include "capture_freeze_scope.h"
 #include "capture_own_windows_policy.h"
 #include "capture_session_launcher.h"
+#include "capture_session_screen_utils.h"
 #include "cli/headless_capture.h"
 #include "cli/image_pin_launch.h"
 #include "cli/recording_cli.h"
@@ -26,6 +27,7 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QEventLoop>
 #include <QFileInfo>
 #include <QFont>
 #include <QGuiApplication>
@@ -36,6 +38,7 @@
 #include <QScreen>
 #include <QStringList>
 #include <QTextStream>
+#include <QThread>
 #include <QTimer>
 #include <QVector>
 
@@ -468,10 +471,36 @@ int main(int argc, char *argv[])
             return true;
         }
 
-        // 截图会话期间隐藏悬浮球，避免悬浮球进入截图画面/遮挡选区。
+        // 截图会话期间隐藏本软件自身 UI（悬浮球、设置窗口、已打开的弹出菜单），
+        // 避免它们进入截图画面/遮挡选区。贴图窗口是用户内容，不属于本软件 UI，
+        // 因此不隐藏。会话结束后统一恢复；用户主动隐藏的状态不被覆盖。
         if (floatingBall) {
             floatingBall->hide();
         }
+        const bool ballHiddenByUser = floatingBall && floatingBall->isHiddenByUser();
+        markshot::settings::hideSettingsWindowForCapture();
+        // 热键触发截图时托盘菜单/悬浮球菜单可能仍打开：先关闭所有弹出窗口，
+        // 避免 QMenu popup（Qt::Popup 顶层窗口）进入截图画面。
+        for (QWidget *widget : QApplication::topLevelWidgets()) {
+            if (widget->isVisible() && widget->windowType() == Qt::Popup) {
+                widget->hide();
+            }
+        }
+        QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        // GNOME/wlroots 等无合成器级"排除调用者窗口"接口的平台只能靠隐藏 +
+        // 等待合成器重绘：hide() 只是把 unmap 请求交给合成器，立即抓屏可能仍
+        // 捕获到尚未消失的自身窗口。等待约两帧再进抓屏。KWin Wayland 走
+        // hide-caller-windows（合成层排除）与 Windows 走 WDA_EXCLUDEFROMCAPTURE，
+        // 无需此等待；该等待会阻塞主线程约 50ms，故只在确有必要的平台生效。
+#if !defined(Q_OS_WIN)
+        const bool kdeWayland = markshot::capture_session::isWaylandPlatform()
+            && qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains(QStringLiteral("KDE"),
+                                                                    Qt::CaseInsensitive);
+        if (!kdeWayland
+            && (qEnvironmentVariableIsSet("DISPLAY") || qEnvironmentVariableIsSet("WAYLAND_DISPLAY"))) {
+            QThread::msleep(50);
+        }
+#endif
 
         QString captureError;
         markshot::DefaultTools defaultTools = markshot::configuredDefaultTools(nullptr);
@@ -487,9 +516,10 @@ int main(int argc, char *argv[])
                                          &captureError,
                                          std::move(regionRecordingOptions));
         if (windows.isEmpty()) {
-            if (floatingBall) {
+            if (floatingBall && !ballHiddenByUser) {
                 floatingBall->show();
             }
+            markshot::settings::restoreSettingsWindowAfterCapture();
             QMessageBox::critical(nullptr,
                                   QStringLiteral("Mark Shot"),
                                   captureError.isEmpty() ? MS_TR("Failed to start capture session.") : captureError);
@@ -511,9 +541,11 @@ int main(int argc, char *argv[])
                 --(*remainingWindows);
                 if (*remainingWindows <= 0) {
                     captureActive = false;
-                    if (floatingBall) {
+                    // 用户主动隐藏的悬浮球不被截图会话重新唤起。
+                    if (floatingBall && !floatingBall->isHiddenByUser()) {
                         floatingBall->show();
                     }
+                    markshot::settings::restoreSettingsWindowAfterCapture();
                 }
             });
         }
@@ -561,6 +593,9 @@ int main(int argc, char *argv[])
 
             if (command.startRecording) {
                 markshot::recording::RecordingOptions options;
+                // 无人值守录制（CLI/MCP 经 IPC 触发）：静默执行——不弹桌面通知、
+                // 不发起交互式 portal 授权，全程对用户无感、不抢焦点。
+                options.silent = true;
                 if (command.recordFormat == QStringLiteral("gif")) {
                     options.mode = markshot::recording::RecordingMode::Gif;
                 } else if (command.recordFormat == QStringLiteral("webp")) {
@@ -692,6 +727,12 @@ int main(int argc, char *argv[])
         trayController->setRecordingRegionCallback([launchCapture, allOutputs](markshot::recording::RecordingOptions options) {
             launchCapture(false, allOutputs, std::move(options));
         });
+        // 托盘"显示/隐藏悬浮球"开关：必须在 start() 之前设置，start() 构建菜单。
+        if (floatingBall) {
+            trayController->setFloatingBallVisibilityControl(
+                [floatingBall] { floatingBall->toggleByUser(); },
+                [floatingBall] { return floatingBall->isVisible(); });
+        }
         if (!trayController->start()) {
             QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), trayController->errorString());
             return 1;
