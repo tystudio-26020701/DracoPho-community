@@ -95,6 +95,7 @@ Il capture l'écran instantanément et ouvre une couche d'annotation interactive
 ### Intégration au bureau
 - **Comportement de démarrage configurable**: le lancement de Mark Shot n'ouvre plus l'overlay de capture par défaut. Dans Paramètres → Général → **Comportement au démarrage**, combinez les quatre modes : **Icône dans la barre**, **Boule flottante**, **Fenêtre des paramètres** et **Capture directe**. Les nouvelles installations utilisent Icône dans la barre + Boule flottante ; la capture directe est optionnelle.
 - **Boule flottante**: un petit widget circulaire toujours au premier plan (en bas à droite par défaut) donnant un accès rapide à la capture, la capture plein écran, l'enregistrement et les paramètres. Un clic ouvre le menu, un double-clic capture, le glisser la déplace (la position est mémorisée) et elle se masque automatiquement pendant une capture.
+  Déposée près d'un bord de l'écran, elle s'y aimante et **disparaît à moitié hors de l'écran** (le survol la fait réapparaître, l'éloignement de la souris la masque à nouveau ; fonctionne sur toutes les plateformes) ; après quelques secondes d'inactivité, elle devient semi-transparente et retrouve son opacité totale au survol.
 - **Raccourcis du bureau** :
   - `mark-shot.desktop` : configuré comme outil de capture d'écran global du système, invocable directement via un raccourci système.
   - `mark-shot-edit.desktop` : enregistré comme éditeur d'images indépendant, intégrable au menu contextuel « Ouvrir avec » des gestionnaires de fichiers (Dolphin, Nautilus, etc.).
