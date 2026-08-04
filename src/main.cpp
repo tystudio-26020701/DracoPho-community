@@ -212,6 +212,41 @@ int main(int argc, char *argv[])
             errorStream << "mark-shot: one of --record-display or --record-region is required for recording\n";
             return 1;
         }
+        // 录制格式白名单校验：非法值立即报错，绝不静默降级为 mp4。
+        if (!request.format.isEmpty()
+            && request.format != QLatin1String("mp4")
+            && request.format != QLatin1String("gif")
+            && request.format != QLatin1String("webp")) {
+            QTextStream errorStream(stderr);
+            errorStream << "mark-shot: unsupported --record-format \"" << request.format
+                        << "\" (expected mp4, gif or webp)\n";
+            return 1;
+        }
+        // --record-wait-json 等待录制自行结束；无限录制（duration=0）只能靠
+        // --stop-recording 结束，二者组合必然超时，直接拒绝并说明。
+        if (request.waitForFinish && request.durationMs <= 0) {
+            QTextStream errorStream(stderr);
+            errorStream << "mark-shot: --record-wait-json requires --record-duration > 0 "
+                           "(infinite recording only ends via --stop-recording)\n";
+            return 1;
+        }
+        // --record-region 必须为 4 个整数（x,y,width,height）。
+        if (!request.geometryText.isEmpty()) {
+            const QStringList parts = request.geometryText.split(QLatin1Char(','), Qt::SkipEmptyParts);
+            bool valid = parts.size() == 4;
+            if (valid) {
+                for (const QString &part : parts) {
+                    bool partOk = false;
+                    part.trimmed().toInt(&partOk);
+                    valid = valid && partOk;
+                }
+            }
+            if (!valid) {
+                QTextStream errorStream(stderr);
+                errorStream << "mark-shot: --record-region expects x,y,width,height integers\n";
+                return 1;
+            }
+        }
         return markshot::cli::startRecordingFromCommandLine(request);
     }
 
@@ -624,8 +659,14 @@ int main(int argc, char *argv[])
                     options.mode = markshot::recording::RecordingMode::Gif;
                 } else if (command.recordFormat == QStringLiteral("webp")) {
                     options.mode = markshot::recording::RecordingMode::Webp;
-                } else {
+                } else if (command.recordFormat == QStringLiteral("mp4")
+                           || command.recordFormat.isEmpty()) {
                     options.mode = markshot::recording::RecordingMode::Video;
+                } else {
+                    response.message = QStringLiteral("unsupported recording format: %1 (expected mp4, gif or webp)")
+                                           .arg(command.recordFormat);
+                    response.recording = recordingManager.status();
+                    return response;
                 }
                 options.scope = markshot::recording::RecordingScope::Region;
                 options.fps = std::clamp(command.recordFps, 1, 120);
@@ -636,7 +677,10 @@ int main(int argc, char *argv[])
                 const QVector<markshot::recording::DisplaySource> sources =
                     markshot::recording::availableDisplaySources();
                 if (!command.recordDisplayKey.trimmed().isEmpty()) {
-                    const QString key = command.recordDisplayKey.trimmed();
+                    // 归一化显示器标识（裸屏名 "DP-1"、"screen:DP-1"、"output:DP-1"、
+                    // "all" 均可），使 CLI 帮助文本承诺的用法与 MCP 路径一致。
+                    const QString key = markshot::recording::normalizeRecordingDisplayId(
+                        command.recordDisplayKey);
                     int matched = -1;
                     for (int i = 0; i < sources.size(); ++i) {
                         if (markshot::recording::recordingDisplayPersistenceKey(sources.at(i)) == key) {
@@ -654,6 +698,17 @@ int main(int argc, char *argv[])
                 } else {
                     const QStringList parts = command.recordGeometryText.split(QLatin1Char(','), Qt::SkipEmptyParts);
                     if (parts.size() == 4) {
+                        bool allOk = true;
+                        for (const QString &part : parts) {
+                            bool partOk = false;
+                            part.trimmed().toInt(&partOk);
+                            allOk = allOk && partOk;
+                        }
+                        if (!allOk) {
+                            response.message = QStringLiteral("recording geometry is invalid: expected x,y,width,height integers");
+                            response.recording = recordingManager.status();
+                            return response;
+                        }
                         options.captureGeometry = QRect(parts.at(0).toInt(),
                                                         parts.at(1).toInt(),
                                                         parts.at(2).toInt(),

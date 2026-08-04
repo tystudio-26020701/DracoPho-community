@@ -440,7 +440,9 @@ QJsonObject captureOne(const WindowInfo &info,
     QString captureError;
     QString windowCaptureError;
     bool attemptedWindowCapture = false;
-    if (!subRect.has_value() && isX11SessionLike() && info.id.startsWith(QLatin1String("0x"))) {
+    const bool objectCaptureAvailable =
+        isX11SessionLike() && info.id.startsWith(QLatin1String("0x"));
+    if (objectCaptureAvailable) {
         // X11 窗口对象抓取：即使目标被其他窗口遮挡或已最小化，也从合成命名
         // pixmap 读取窗口自身内容，不弹起窗口、不抢焦点；失败回退区域抓屏。
         bool ok = false;
@@ -450,8 +452,28 @@ QJsonObject captureOne(const WindowInfo &info,
             capturedImage = captureX11WindowContent(windowId, &windowCaptureError);
             if (!capturedImage.isNull()) {
                 entry.insert(QStringLiteral("windowCapture"), true);
+                // 组件子区域：先取窗口对象抓取图，再按窗口内偏移裁剪，
+                // 使遮挡/最小化窗口的子区域也能拿到真实内容（装饰边距
+                // 与抓取缓冲坐标系近似，子区域超出缓冲时被裁掉并回退）。
+                if (subRect.has_value()) {
+                    capturedImage = capturedImage.copy(QRect(subRect->x(),
+                                                             subRect->y(),
+                                                             subRect->width(),
+                                                             subRect->height())
+                                                           .intersected(capturedImage.rect()));
+                    if (capturedImage.isNull()) {
+                        windowCaptureError =
+                            QStringLiteral("component sub-region is outside the window content buffer");
+                    }
+                }
             }
         }
+    } else {
+        // 平台/选择器不支持窗口对象抓取（Wayland 无访问窗口内容的接口，
+        // 或非 X11 窗口 id）：任何结果都是"窗口矩形内的屏幕区域抓取"，
+        // 对遮挡/最小化窗口不能保证得到目标窗口内容。如实标注，供脚本/
+        // Agent 判别，绝不伪装成"拿到窗口自身内容"。
+        entry.insert(QStringLiteral("windowObjectCapture"), false);
     }
 
     if (capturedImage.isNull()) {
@@ -753,7 +775,10 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
                                                includeCursor,
                                                selection.subRect,
                                                &err);
-            if (one.value(QStringLiteral("error")).isString()) {
+            if (one.value(QStringLiteral("error")).isString()
+                || one.value(QStringLiteral("windowCaptureFallback")).toBool()) {
+                // 硬错误（未产出图像）或软错误（窗口对象抓取失败、结果可能
+                // 不是目标窗口内容）都算部分失败，让脚本/Agent 能检测到。
                 anyFailed = true;
             }
             captures.append(one);
