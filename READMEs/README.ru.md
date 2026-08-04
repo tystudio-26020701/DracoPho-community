@@ -541,7 +541,7 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. Скопируйте вспомогательный OCR-скрипт**
 
-Скопируйте `../scripts/mark-shot-ocr` из [репозитория Mark Shot](https://github.com/jswysnemc/mark-shot) в локальный каталог, например в `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
+Скопируйте `../scripts/mark-shot-ocr` из [репозитория Mark Shot](https://github.com/tystudio-26020701/mark-shot-community) в локальный каталог, например в `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"

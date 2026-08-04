@@ -539,7 +539,7 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. OCR 헬퍼 스크립트 복사**
 
-[Mark Shot 저장소](https://github.com/jswysnemc/mark-shot)의 `scripts/mark-shot-ocr`를 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py` 같은 로컬 디렉터리로 복사합니다.
+[Mark Shot 저장소](https://github.com/tystudio-26020701/mark-shot-community)의 `scripts/mark-shot-ocr`를 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py` 같은 로컬 디렉터리로 복사합니다.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"

@@ -541,7 +541,7 @@ Téléchargez et installez Python 3.10 ou une version ultérieure depuis [python
 
 **2. Copiez le script d'assistance OCR**
 
-Copiez `scripts/mark-shot-ocr` depuis le [dépôt Mark Shot](https://github.com/jswysnemc/mark-shot) dans un répertoire local, par exemple `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
+Copiez `scripts/mark-shot-ocr` depuis le [dépôt Mark Shot](https://github.com/tystudio-26020701/mark-shot-community) dans un répertoire local, par exemple `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"

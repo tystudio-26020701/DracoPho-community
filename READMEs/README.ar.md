@@ -541,7 +541,7 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. انسخ السكربت المساعد لـ OCR**
 
-انسخ `scripts/mark-shot-ocr` من [مستودع Mark Shot](https://github.com/jswysnemc/mark-shot) إلى مجلد محلي، مثل `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
+انسخ `scripts/mark-shot-ocr` من [مستودع Mark Shot](https://github.com/tystudio-26020701/mark-shot-community) إلى مجلد محلي، مثل `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"

@@ -569,7 +569,7 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. 复制 OCR 辅助脚本**
 
-将 [Mark Shot 仓库](https://github.com/jswysnemc/mark-shot) 中的 `scripts/mark-shot-ocr` 复制到本地目录，例如 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`。
+将 [Mark Shot 仓库](https://github.com/tystudio-26020701/mark-shot-community) 中的 `scripts/mark-shot-ocr` 复制到本地目录，例如 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`。
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
