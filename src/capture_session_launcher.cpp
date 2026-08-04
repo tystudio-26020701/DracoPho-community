@@ -318,6 +318,14 @@ void connectCaptureWindowSession(QApplication *app,
         return;
     }
 
+    // 登记到会话监视器：只有本会话全部窗口（含后续替换窗口）销毁，
+    // 才算整场截图会话结束（供 launchCapture 恢复被临时隐藏的本软件 UI）。
+    for (const QPointer<ShotWindow> &candidateWindow : windows) {
+        if (candidateWindow) {
+            markshot::CaptureSessionMonitor::instance().registerWindow(candidateWindow.data());
+        }
+    }
+
     auto closingSession = std::make_shared<bool>(false);
     // 记录完成选区的主选区窗口：只有它的销毁才结束整场会话。
     auto activeWindow = std::make_shared<QPointer<ShotWindow>>();
@@ -684,6 +692,31 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromSingleFrame(const QList<QScr
 }  // namespace
 
 namespace markshot {
+
+CaptureSessionMonitor &CaptureSessionMonitor::instance()
+{
+    static CaptureSessionMonitor monitor;
+    return monitor;
+}
+
+void CaptureSessionMonitor::registerWindow(QObject *window)
+{
+    if (!window || m_liveWindows.contains(window)) {
+        return;
+    }
+    m_liveWindows.insert(window);
+    QObject::connect(window, &QObject::destroyed, this, [this, window] {
+        m_liveWindows.remove(window);
+        if (m_liveWindows.isEmpty()) {
+            emit sessionEnded();
+        }
+    });
+}
+
+bool CaptureSessionMonitor::hasActiveWindows() const
+{
+    return !m_liveWindows.isEmpty();
+}
 
 QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
                                                  bool allOutputs,

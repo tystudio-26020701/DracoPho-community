@@ -23,6 +23,7 @@
 #include "ui/i18n.h"
 #include "ui/theme.h"
 #include "window_detection.h"
+#include "windows_integration.h"
 #include "windows_tray_controller.h"
 
 #include <QApplication>
@@ -471,36 +472,65 @@ int main(int argc, char *argv[])
             return true;
         }
 
+        const bool hideOwn = markshot::configuredHideOwnWindowsDuringCapture();
         // 截图会话期间隐藏本软件自身 UI（悬浮球、设置窗口、已打开的弹出菜单），
         // 避免它们进入截图画面/遮挡选区。贴图窗口是用户内容，不属于本软件 UI，
         // 因此不隐藏。会话结束后统一恢复；用户主动隐藏的状态不被覆盖。
+        //
+        // Windows 上抓屏/合成器按 WDA_EXCLUDEFROMCAPTURE 标记排除本软件窗口，
+        // 各窗口构造期已默认打标；此处按当前配置把本软件全部顶层窗口的标记
+        // 重新校正一次，使 capture.hideOwnWindows=false 诚实生效（关闭后本软件
+        // 窗口可被截入画面）。其余平台该调用为空操作，仅应用层 hide 生效。
         if (floatingBall) {
-            floatingBall->hide();
+            markshot::windows::setExcludedFromCapture(floatingBall, hideOwn);
         }
-        const bool ballHiddenByUser = floatingBall && floatingBall->isHiddenByUser();
-        markshot::settings::hideSettingsWindowForCapture();
-        // 热键触发截图时托盘菜单/悬浮球菜单可能仍打开：先关闭所有弹出窗口，
-        // 避免 QMenu popup（Qt::Popup 顶层窗口）进入截图画面。
         for (QWidget *widget : QApplication::topLevelWidgets()) {
-            if (widget->isVisible() && widget->windowType() == Qt::Popup) {
-                widget->hide();
+            markshot::windows::setExcludedFromCapture(widget, hideOwn);
+        }
+
+        const bool ballHiddenByUser = floatingBall && floatingBall->isHiddenByUser();
+        if (hideOwn) {
+            if (floatingBall) {
+                floatingBall->hide();
             }
-        }
-        QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-        // GNOME/wlroots 等无合成器级"排除调用者窗口"接口的平台只能靠隐藏 +
-        // 等待合成器重绘：hide() 只是把 unmap 请求交给合成器，立即抓屏可能仍
-        // 捕获到尚未消失的自身窗口。等待约两帧再进抓屏。KWin Wayland 走
-        // hide-caller-windows（合成层排除）与 Windows 走 WDA_EXCLUDEFROMCAPTURE，
-        // 无需此等待；该等待会阻塞主线程约 50ms，故只在确有必要的平台生效。
+            markshot::settings::hideSettingsWindowForCapture();
+            // 热键触发截图时托盘菜单/悬浮球菜单可能仍打开：先关闭所有弹出窗口，
+            // 避免 QMenu popup（Qt::Popup 顶层窗口）进入截图画面；录制配置对话框
+            // 等非 popup 业务顶层窗口也一并隐藏（objectName 白名单）；tooltip
+            // （Qt::ToolTip 顶层窗口）同样处理。
+            for (QWidget *widget : QApplication::topLevelWidgets()) {
+                const Qt::WindowType type = widget->windowType();
+                if (widget->isVisible()
+                    && (type == Qt::Popup || type == Qt::ToolTip
+                        || widget->objectName() == QLatin1String("recordingConfigDialog"))) {
+                    widget->hide();
+                }
+            }
+            QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            // GNOME/wlroots 等无合成器级"排除调用者窗口"接口的平台只能靠隐藏 +
+            // 等待合成器重绘：hide() 只是把 unmap 请求交给合成器，立即抓屏可能仍
+            // 捕获到尚未消失的自身窗口。等待约两帧再进抓屏。KWin Wayland 走
+            // hide-caller-windows（合成层排除）与 Windows 走 WDA_EXCLUDEFROMCAPTURE，
+            // 无需此等待；该等待会阻塞主线程约 50ms，故只在确有必要的平台生效。
 #if !defined(Q_OS_WIN)
-        const bool kdeWayland = markshot::capture_session::isWaylandPlatform()
-            && qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains(QStringLiteral("KDE"),
-                                                                    Qt::CaseInsensitive);
-        if (!kdeWayland
-            && (qEnvironmentVariableIsSet("DISPLAY") || qEnvironmentVariableIsSet("WAYLAND_DISPLAY"))) {
-            QThread::msleep(50);
-        }
+            const bool kdeWayland = markshot::capture_session::isWaylandPlatform()
+                && qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains(QStringLiteral("KDE"),
+                                                                        Qt::CaseInsensitive);
+            if (!kdeWayland
+                && (qEnvironmentVariableIsSet("DISPLAY") || qEnvironmentVariableIsSet("WAYLAND_DISPLAY"))) {
+                QThread::msleep(50);
+            }
 #endif
+        } else {
+            // 开关关闭：本软件自身 UI 保持可见、可入画，仅需避免弹出菜单
+            // 等瞬态 popup 干扰（菜单本身不属"本软件持久 UI"）。
+            for (QWidget *widget : QApplication::topLevelWidgets()) {
+                if (widget->isVisible() && widget->windowType() == Qt::Popup) {
+                    widget->hide();
+                }
+            }
+            QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
 
         QString captureError;
         markshot::DefaultTools defaultTools = markshot::configuredDefaultTools(nullptr);
@@ -509,7 +539,7 @@ int main(int argc, char *argv[])
                                          requestAllOutputs,
                                          markshot::configuredCaptureFreezeScope(),
                                          markshot::configuredCaptureIncludeCursor(),
-                                         markshot::configuredHideOwnWindowsDuringCapture(),
+                                         hideOwn,
                                          useRegularWindow,
                                          startFullscreen,
                                          defaultTools,
@@ -527,30 +557,24 @@ int main(int argc, char *argv[])
         }
 
         captureActive = true;
-        auto remainingWindows = std::make_shared<int>(0);
-        for (const QPointer<ShotWindow> &window : std::as_const(windows)) {
-            if (window) {
-                ++(*remainingWindows);
-            }
-        }
-        for (const QPointer<ShotWindow> &window : std::as_const(windows)) {
-            if (!window) {
-                continue;
-            }
-            QObject::connect(window, &QObject::destroyed, &app, [&captureActive, &floatingBall, remainingWindows] {
-                --(*remainingWindows);
-                if (*remainingWindows <= 0) {
-                    captureActive = false;
-                    // 用户主动隐藏的悬浮球不被截图会话重新唤起。
-                    if (floatingBall && !floatingBall->isHiddenByUser()) {
-                        floatingBall->show();
-                    }
-                    markshot::settings::restoreSettingsWindowAfterCapture();
-                }
-            });
-        }
         return true;
     };
+
+    // 会话级恢复：整场截图会话（含"显示器快速截取"编辑目标时替换出的新窗口）
+    // 的最后一个截图覆盖窗口销毁时，统一恢复被临时隐藏的本软件 UI。连接一次、
+    // 跨多次截图复用。若按"最初那批窗口的销毁数"判断，会话内替换窗口会提前
+    // 恢复悬浮球/设置窗口，把它们重新压回仍全屏打开的截图覆盖层之上。
+    QObject::connect(&markshot::CaptureSessionMonitor::instance(),
+                     &markshot::CaptureSessionMonitor::sessionEnded,
+                     &app,
+                     [&captureActive, &floatingBall] {
+                         captureActive = false;
+                         // 用户主动隐藏的悬浮球不被截图会话重新唤起。
+                         if (floatingBall && !floatingBall->isHiddenByUser()) {
+                             floatingBall->show();
+                         }
+                         markshot::settings::restoreSettingsWindowAfterCapture();
+                     });
 
     auto &recordingManager = markshot::recording::RecordingSessionManager::instance();
     // 限时录制的自动停止定时器：任何录制结束/停止时都必须取消，
