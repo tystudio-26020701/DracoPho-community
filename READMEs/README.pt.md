@@ -146,62 +146,89 @@ Depois de modificar os arquivos .desktop, é recomendável fazer logout e login 
 
 ## Comparação de produtos
 
-A Edição Comunitária do Mark Shot é uma ferramenta integrada de captura de tela, anotação, fixação (pin), OCR, tradução e gravação de tela, **open source (MIT), multiplataforma (nativa em Linux X11/Wayland + Windows)** e **totalmente offline**. As tabelas abaixo foram compiladas com base na documentação e nos sites oficiais de cada produto (até **agosto de 2026**) e indicam com honestidade a presença ou ausência de cada capacidade: **✅ suporte integrado**; **⭕ suporte parcial ou dependência de ferramentas/serviços externos**; **❌ sem suporte**. As capacidades são sempre contadas pelo critério "pronto para uso" (out of the box) e não estão vinculadas a assinaturas pagas, serviços em nuvem ou ramificações experimentais.
+A Edição Comunitária do Mark Shot é uma ferramenta integrada de captura de tela, anotação, fixação (pin), OCR, tradução e gravação, **open source (MIT), multiplataforma (nativa em Linux X11/Wayland + Windows)** e **totalmente offline**. As tabelas abaixo foram compiladas com base na documentação e nos sites oficiais de cada produto (até **agosto de 2026**) e abrangem as ferramentas de captura de tela mais populares — open source e comerciais — em todas as principais plataformas de desktop. As capacidades são marcadas com honestidade: **✅ suporte integrado**; **⭕ suporte parcial (limitado por assinatura paga, plataforma ou ferramenta/serviço externo)**; **❌ não disponível**. Elas são sempre contadas pelo critério "pronto para uso" (out of the box) — sem vínculo com assinaturas pagas, serviços em nuvem ou ramificações experimentais; as limitações exatas de cada ⭕ são explicadas nas notas detalhadas abaixo.
 
-### Visão geral das capacidades principais
+### Matriz de capacidades principais
 
-| Capacidade | Mark Shot CE | Flameshot | ShareX | PixPin | Snipaste | Spectacle | Snagit | CleanShot X | Shottr |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Captura de região | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Captura em tela cheia | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Captura de janela | ⭕ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Captura de rolagem / longa | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Conjunto de ferramentas de anotação | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Números de etapa / anotação com lupa | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Fixar na tela (Pin) | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
-| Reconhecimento de texto OCR | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Tradução | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Reconhecimento de QR / código de barras | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Gravação de tela | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ⭕ |
-| Saída em WebP animado | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Upload de imagens | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ⭕ |
-| CLI headless / scripts | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ | ❌ | ⭕ | ⭕ |
-| Atalho pela bola flutuante | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Wayland nativo no Linux | ✅ | ⭕ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Captura programada / com atraso | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Open source / gratuito | ✅ | ✅ | ✅ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ✅ |
+#### I. Captura (você consegue capturar o que precisa)
 
-### Detalhamento das funcionalidades
+| Capacidade | Mark Shot CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Captura de região | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Captura em tela cheia / vários monitores | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Captura de janela | ⭕ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Conteúdo de janela oculta / minimizada | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Captura de rolagem / longa | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ⭕ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Captura programada / com atraso | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ |
 
-**Qualidade e cobertura da captura** (determina "se você consegue capturar o que deseja")
+#### II. Anotação e inteligência (você consegue trabalhar com eficiência após a captura)
 
-- **Captura de região / tela cheia / monitor** — o Mark Shot suporta todas elas, lidando corretamente com coordenadas negativas e escala independente (HiDPI) em configurações com vários monitores; os principais concorrentes também já cobrem essa capacidade básica.
-- **Captura de janela** — no modo headless (`--window`), o Mark Shot oferece suporte completo à seleção da janela por id / título / classe / PID / nome do processo; no X11, mesmo quando a janela está oculta ou minimizada, ele lê o conteúdo real diretamente do buffer da janela mantido pelo compositor (sem trazê-la à frente e sem roubar o foco). O modo interativo usa uma camada de seleção em tela cheia e não oferece um modo de um clique dedicado de "janela ativa" (por isso ⭕).
-- **Captura de rolagem / longa** — o Mark Shot funciona nativamente no niri e no GNOME Wayland (no GNOME, é necessária a extensão oficial); no KDE/X11 é um recurso experimental. ShareX e Snagit (Windows) e CleanShot X / Shottr (macOS) também a incluem; no campo do open source, Flameshot, Spectacle e Snipaste não oferecem suporte.
-- **Captura programada / com atraso** — ainda não disponível no Mark Shot (❌); a maioria das ferramentas convencionais oferece suporte e é um item que pode ser adicionado posteriormente.
+| Capacidade | Mark Shot CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Conjunto de ferramentas de anotação | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Fixar na tela (Pin) | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Reconhecimento de texto OCR | ✅ | ✅ | ✅ | ⭕ | ❌ | ⭕ | ⭕ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Tradução | ✅ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Reconhecimento de QR / código de barras | ✅ | ✅ | ✅ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ❌ | ⭕ |
+| Conta-gotas (seletor de cores) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ✅ | ✅ | ✅ | ✅ |
 
-**Anotação, reconhecimento e privacidade** ("se você consegue usar com eficiência depois da captura")
+#### III. Saída e automação (você consegue compartilhar/arquivar o resultado)
 
-- **Conjunto de ferramentas de anotação** — o Mark Shot inclui 12+ ferramentas: pincel, marcador, linha, retângulo, elipse, seta, texto, números de etapa, mosaico, lupa de duas molduras, caneta laser, conta-gotas e régua; está no mesmo nível de ksnip, Spectacle e ShareX.
-- **Fixação (Pin)** — o Mark Shot oferece fixação sem bordas sempre no topo, com escala, rotação, seleção de palavras via OCR e tradução no lugar via LLM; Snipaste, ShareX, CleanShot X e Shottr também a incluem.
-- **Reconhecimento de texto OCR** — o Mark Shot inclui RapidOCR (modelos PP-OCR, offline) com fallback para Tesseract, pronto para uso; Snipaste, Flameshot e Snagit não possuem (ou exigem plug-in), e o Spectacle depende de um Tesseract externo.
-- **Tradução** — o Mark Shot inclui tradução de capturas por LLM com interface compatível com OpenAI (offline / serviço próprio); **nenhum dos concorrentes inclui uma tradução de capturas de uso geral** (no PixPin é um recurso de assinatura; a tradução do WeChat/QQ está vinculada aos seus clientes). Essa é uma das capacidades de diferenciação mais exclusivas atualmente.
-- **Reconhecimento de QR Code / código de barras** — o Mark Shot tem leitura de código integrada (QR / códigos unidimensionais / PDF417 etc.), acessada diretamente pela tecla `Q` na fase de captura; ShareX e Shottr oferecem suporte, mas a maioria das ferramentas não possui.
-- **Mascaramento com IA em um clique** — o mascaramento automático adicionado em 2026 à captura do WeChat ainda não está integrado ao Mark Shot (❌), sendo uma direção a acompanhar; o mosaico/vidro fosco atual do Mark Shot é anotação manual.
+| Capacidade | Mark Shot CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Gravação de tela | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Saída em GIF / WebP animado | ✅ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ❌ | ❌ | ✅ |
+| Upload de imagens / nuvem | ✅ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ❌ |
+| CLI headless / scripts | ✅ | ✅ | ⭕ | ⭕ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ⭕ | ❌ | ❌ |
+| Atalho pela bola flutuante | ✅ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Histórico de capturas | ❌ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ❌ | ⭕ | ❌ | ✅ | ✅ | ⭕ | ❌ | ⭕ |
 
-**Compartilhamento, colaboração e automação** ("se você consegue distribuir/consolidar a captura sem esforço")
+#### IV. Plataforma e ecossistema
 
-- **Upload para hospedagem de imagens** — o Mark Shot inclui ImgURL / sm.ms / imgbb / litterbox / comando personalizado, com upload em um clique via `Ctrl+U` e cópia do link; ShareX é o que tem mais destinos de upload, Flameshot suporta apenas Imgur, e Snipaste / PixPin não têm hospedagem de imagens.
-- **CLI headless / scripts** — o Mark Shot oferece um pipeline headless completo: `--capture-to` para capturas de região/monitor, `--list-windows` + `--window` para capturas de janela/componente, `--record-region/--record-display` para gravação sem supervisão e `--record-wait-json` para aguardar e emitir o status estruturado; o tempo todo sem janelas, sem diálogos e sem roubo de foco, além de **permitir especificar PID / nome do processo** e capturar janelas ocultas/minimizadas. O MCP server da edição empresarial reutiliza o mesmo pipeline. Entre os concorrentes, apenas o ShareX (somente Windows) e o Flameshot têm uma CLI mais forte; o PixPin tem apenas um mecanismo de ações por script JS.
-- **Atalho pela bola flutuante** — o Mark Shot inclui uma bola flutuante arrastável, que pode ser encaixada na borda da tela e fica semitransparente automaticamente quando ociosa; entre os similares, apenas o PixPin (assinatura) oferece algo parecido.
+| Capacidade | Mark Shot CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Wayland nativo no Linux | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Multiplataforma (≥2 SO de desktop) | ⭕ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Mecanismo de plug-ins / extensões | ✅ | ⭕ | ❌ | ❌ | ⭕ | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ⭕ | ❌ | ❌ |
+| Open source / gratuito | ✅ | ✅ | ⭕ | ⭕ | ✅ | ✅ | ✅ | ✅ | ⭕ | ✅ | ❌ | ❌ | ✅ | ⭕ | ⭕ |
 
-**Plataforma, licenciamento e ecossistema**
+### Notas detalhadas sobre as funcionalidades
 
-- **Wayland nativo no Linux** — o Mark Shot oferece suporte nativo a PipeWire portal, grim, layer-shell, KDE KWin ScreenShot2 e extensões do GNOME; no campo do open source, apenas o Spectacle (KDE) alcança o mesmo nível de suporte nativo, enquanto o Wayland do Flameshot é experimental. PixPin / Snipaste (Pro) não têm versão para Linux.
-- **Open source / gratuito** — a Edição Comunitária do Mark Shot é open source (MIT), totalmente gratuita, sem anúncios, sem conta e sem necessidade de conexão; Flameshot, ShareX, Spectacle e Shottr também são gratuitos/open source; PixPin / Snipaste são comerciais de código fechado (assinatura/licença), e Snagit / CleanShot X são softwares comerciais pagos.
-- **Ecossistema de plug-ins** — o Mark Shot oferece um sistema de plug-ins Qt com um mercado de plug-ins no GitHub (providers extensíveis de OCR / tradução / leitura de código); o ShareX tem plug-ins de ações/upload, o ksnip tem plug-in de OCR, e Flameshot / Spectacle não têm sistema de plug-ins.
+**I. Captura** (você consegue capturar o que precisa)
 
-> Nota: a comparação acima foi compilada com base nos sites e na documentação oficiais de cada produto (2026-08); o conjunto de capacidades muda conforme a evolução das versões, portanto consulte sempre a documentação mais recente de cada produto. Algumas ferramentas (FastStone Capture, Nimbus, captura do Sogou etc.) não foram incluídas na tabela de visão geral; suas capacidades seguem o mesmo critério de levantamento descrito acima.
+- **Captura de região / tela cheia / vários monitores** — integrada em todas as 15 ferramentas listadas; o Mark Shot, adicionalmente, lida corretamente com monitores de coordenadas negativas e com a escala HiDPI por monitor, sem "fantasmas" ao unir capturas de vários monitores.
+- **Captura de janela** — o modo interativo do Mark Shot usa uma camada de seleção em tela cheia (sem um modo dedicado de um clique de "janela ativa"; por isso ⭕), enquanto o modo headless (`--window`) seleciona janelas com precisão por id, título, classe, **PID ou nome do processo**; o Flameshot não tem nenhum modo de janela, e todas as outras ferramentas incluem um.
+- **Conteúdo de janela oculta / minimizada** — no X11, o Mark Shot lê o buffer composto da própria janela via XComposite, capturando o conteúdo real mesmo quando a janela está totalmente oculta ou minimizada (sem trazê-la à frente e sem roubar o foco); entre as ferramentas similares, apenas o `--stack` do `scrot` consegue fazer isso. O protocolo do Wayland impede que qualquer ferramenta leia o conteúdo de janelas minimizadas.
+- **Captura de rolagem / longa** — o Mark Shot funciona nativamente no niri e no GNOME Wayland (extensão oficial), com KDE/X11 como experimental. ShareX, PixPin, PicPick, Snagit, CleanShot X, Shottr, Xnip e iShot a incluem nativamente; o Greenshot apenas para cenários legados de IE; Snipaste, Flameshot, ksnip, Spectacle e a Ferramenta de Recorte do Windows não a incluem.
+- **Captura programada / com atraso** — ainda não disponível no Mark Shot (❌); é suportada pela maioria das ferramentas convencionais, exceto PixPin, Snipaste e Xnip — um item natural para uma próxima versão.
+
+**II. Anotação e inteligência** (você consegue trabalhar com eficiência após a captura)
+
+- **Conjunto de ferramentas de anotação** — o Mark Shot inclui 12+ ferramentas: pincel, marcador, linha, retângulo, elipse, seta, texto, números de etapa, mosaico, lupa de duas molduras, caneta laser, conta-gotas e régua; todas as 15 ferramentas têm anotação integrada com profundidades variadas.
+- **Fixar na tela (Pin)** — o Mark Shot oferece adesivos sem bordas sempre no topo, com escala, rotação, seleção de palavras via OCR e tradução no lugar via LLM; Snipaste, PixPin, ShareX, ksnip, CleanShot X, Shottr, Xnip e iShot também a incluem; Flameshot, Spectacle, Greenshot, PicPick, a Ferramenta de Recorte e o Snagit não a incluem.
+- **Reconhecimento de texto OCR** — o Mark Shot inclui RapidOCR (modelos PP-OCR offline) com fallback para Tesseract, funcionando pronto para uso; a Ferramenta de Recorte do Windows (Ações de Texto locais), ShareX, Snagit, CleanShot X, Shottr, Xnip e iShot a incluem; o Snipaste a restringe a uma assinatura paga, o ksnip via plug-in e o Spectacle via instalação externa do Tesseract; Flameshot, Greenshot e PicPick não têm nenhuma.
+- **Tradução** — o Mark Shot inclui tradução de capturas por LLM com interface compatível com OpenAI (com suporte offline / auto-hospedado). Apenas o iShot inclui tradução de capturas, o PixPin a restringe à assinatura e nenhuma outra ferramenta oferece. Esse continua sendo um dos diferenciais mais fortes.
+- **Reconhecimento de QR / código de barras** — o Mark Shot lê QR, códigos unidimensionais e PDF417 com a tecla `Q` durante a captura; ShareX e PixPin oferecem suporte; o Snipaste (assinatura), além de CleanShot X / Shottr / iShot, leem apenas QR, por meio de seus mecanismos de OCR.
+- **Conta-gotas (seletor de cores)** — o Mark Shot tem um seletor de cores de tela integrado com paleta de histórico; a maioria das ferramentas inclui um, exceto Spectacle e Snagit; a Ferramenta de Recorte do Windows apenas em PCs com IA Copilot+.
+- **Mascaramento com IA em um clique** — o mascaramento automático adicionado em 2026 à captura do WeChat ainda não está integrado (❌); o mosaico/desfoque do Mark Shot é manual. O Snagit (AI Smart Redact) e a redação de texto da Ferramenta de Recorte são implementações comparáveis; o mascaramento automatizado é um possível próximo passo.
+
+**III. Saída e automação** (você consegue compartilhar/arquivar o resultado)
+
+- **Gravação de tela** — o Mark Shot grava MP4 / GIF / WebP animado, com gravação silenciosa e sem supervisão de região/monitor (sem janelas, sem diálogos e sem roubo de foco); ShareX, PixPin, Spectacle (Plasma 6), PicPick, a Ferramenta de Recorte, Snagit, CleanShot X e iShot a incluem; Snipaste, Flameshot, ksnip, Greenshot, Shottr e Xnip não a incluem.
+- **Saída em GIF / WebP animado** — o Mark Shot grava nativamente **WebP animado** (arquivos menores, suporte a alfa); nenhum concorrente produz WebP animado nativamente. PixPin e iShot gravam GIF, o ShareX grava GIF (WebP apenas para salvamento estático), Snagit e CleanShot X exportam GIF; os demais não têm saída animada.
+- **Upload de imagens / nuvem** — o Mark Shot inclui upload via ImgURL / sm.ms / imgbb / litterbox / comando personalizado (`Ctrl+U`); o ShareX tem o maior número de destinos; Greenshot, PicPick, Snagit e CleanShot X têm upload em nuvem integrado; o Flameshot apenas Imgur, o ksnip Imgur/FTP/scripts e o Shottr S3 após ativação; Snipaste, PixPin, a Ferramenta de Recorte, Xnip e iShot não têm nenhum.
+- **CLI headless / scripts** — o Mark Shot oferece um pipeline headless completo: `--capture-to` para capturas de região/monitor, `--list-windows` + `--window` para capturas de janela/componente, `--record-region` / `--record-display` para gravação sem supervisão e `--record-wait-json` para emitir o status estruturado — o tempo todo sem janelas, sem diálogos e sem roubo de foco, com **seleção por PID/nome do processo e captura de janelas ocultas/minimizadas**. O MCP server da edição empresarial reutiliza o mesmo pipeline. ShareX (somente Windows), Flameshot, ksnip e Spectacle têm CLIs sólidas; a CLI do Snipaste é um recurso de assinatura paga; o PixPin oferece apenas um mecanismo de ações por script JS.
+- **Atalho pela bola flutuante** — o Mark Shot tem uma bola arrastável que se encaixa nas bordas da tela (X11/Windows/macOS; o Wayland a mantém flutuando livremente por limites do protocolo) e esmaece quando ociosa; apenas o PixPin oferece algo parecido.
+- **Histórico de capturas** — o Mark Shot ainda não tem um painel de histórico dedicado; ShareX, Snipaste, Flameshot, Snagit e CleanShot X têm; ksnip / PicPick / Shottr / iShot têm alternativas leves (abas / galeria / acervo fixado); os demais não têm.
+
+**IV. Plataforma e ecossistema**
+
+- **Wayland nativo no Linux** — o Mark Shot oferece suporte nativo a PipeWire portal, grim, layer-shell, KDE KWin ScreenShot2 e extensões do GNOME; entre as ferramentas open source, apenas o Spectacle (KDE) alcança esse nível de profundidade, enquanto Flameshot / ksnip são experimentais ou dependentes de portal.
+- **Multiplataforma** — Snipaste, Flameshot, ksnip e Snagit cobrem os três principais sistemas operacionais de desktop (Windows + macOS + Linux); o Mark Shot cobre Linux + Windows (macOS planejado); ShareX, PicPick, a Ferramenta de Recorte, Spectacle, CleanShot X, Shottr, Xnip e iShot são de plataforma única.
+- **Mecanismo de plug-ins / extensões** — o Mark Shot oferece um sistema de plug-ins Qt com um mercado de plug-ins no GitHub (providers extensíveis de OCR / tradução / leitura de código); ksnip e Greenshot têm APIs de plug-in; ShareX, Spectacle, Snagit, CleanShot X e Shottr os substituem por ações / integrações personalizadas.
+- **Open source / gratuito** — a Edição Comunitária do Mark Shot é licenciada sob MIT, totalmente gratuita, sem anúncios, sem conta e com conexão opcional; ShareX, Flameshot, ksnip, Spectacle e Greenshot (Windows) também são gratuitos/open source; Shottr e a Ferramenta de Recorte são gratuitos; PixPin / Snipaste / PicPick / Xnip / iShot são freemium de código fechado; Snagit / CleanShot X são softwares comerciais pagos.
+
+> Nota: compilado com base nos sites e na documentação oficiais de cada produto (2026-08); o conjunto de capacidades muda a cada versão, portanto consulte sempre a documentação mais recente. FastStone Capture, Nimbus, Lightshot, Captura do Sogou e a captura de tela do WeChat / QQ não estão na matriz acima (o mascaramento com IA em um clique do WeChat de 2026 lidera o segmento).
 
 ---
 
