@@ -12,7 +12,8 @@
 
 #include <QAction>
 #include <QApplication>
-#include <QGraphicsOpacityEffect>
+#include <QEasingCurve>
+#include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QMenu>
@@ -20,9 +21,14 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPropertyAnimation>
+#include <QRegion>
 #include <QScreen>
 #include <QTimer>
 #include <QWindow>
+
+#include <algorithm>
+#include <cmath>
 
 namespace markshot {
 namespace {
@@ -31,7 +37,7 @@ namespace {
 constexpr int kBallSize = 44;
 /// @brief 悬浮球外阴影半径。
 constexpr int kShadowRadius = 10;
-/// @brief 距屏幕边缘多少像素内触发吸附。
+/// @brief 距屏幕边缘多少像素内触发吸附停靠。
 constexpr int kSnapMarginPixels = 24;
 /// @brief 拖动判定最小位移（像素）。
 constexpr int kDragThresholdPixels = 4;
@@ -39,6 +45,24 @@ constexpr int kDragThresholdPixels = 4;
 constexpr int kDefaultFadeSeconds = 3;
 /// @brief 默认闲置不透明度。
 constexpr double kDefaultIdleOpacity = 0.35;
+/// @brief 默认边缘停靠隐入像素数（露出约一半球体）。
+constexpr int kDefaultHiddenExtentPx = kBallSize / 2;
+/// @brief 滑出后隐回延迟（毫秒，参考 Plank HideDelay）。
+constexpr int kAutoHideDelayMs = 600;
+/// @brief 闲置判定 tick 间隔（毫秒）。
+constexpr int kFadeTickIntervalMs = 300;
+
+/// @brief 当前单调时钟（毫秒）。
+qint64 monotonicMs()
+{
+    static QElapsedTimer timer;
+    static const bool initialized = [] {
+        timer.start();
+        return true;
+    }();
+    Q_UNUSED(initialized);
+    return timer.elapsed();
+}
 
 /// @brief 读取已保存的悬浮球位置。
 /// @return 已保存位置；无则返回无效点。
@@ -98,13 +122,6 @@ FloatingBall::FloatingBall(QWidget *parent)
     markshot::windows::setExcludedFromTaskbar(this);
     markshot::windows::setExcludedFromCapture(this);
 
-    // 闲置淡出用客户端渲染的 QGraphicsOpacityEffect 实现：Wayland 不支持
-    // setWindowOpacity（xdg-shell 无全局透明度概念），效果层在 Qt 合成阶段
-    // 生效，X11/Wayland 均可用。
-    m_opacityEffect = new QGraphicsOpacityEffect(this);
-    m_opacityEffect->setOpacity(1.0);
-    setGraphicsEffect(m_opacityEffect);
-
     // 单击弹出菜单、双击快速截图：用计时器区分两种手势，
     // 避免单击的菜单弹出窗口吞掉双击事件的第二击。
     m_clickTimer = new QTimer(this);
@@ -114,17 +131,49 @@ FloatingBall::FloatingBall(QWidget *parent)
         showBallMenu(m_pendingClickPos);
     });
 
-    // 闲置淡出：离开悬浮球一段时间后降低不透明度，悬停时立即恢复，
-    // 避免长时间悬浮在屏幕上干扰用户阅读/操作。
-    m_fadeTimer = new QTimer(this);
-    m_fadeTimer->setSingleShot(true);
-    connect(m_fadeTimer, &QTimer::timeout, this, [this] {
-        int fadeSeconds = kDefaultFadeSeconds;
-        double idleOpacity = kDefaultIdleOpacity;
-        idleFadeConfig(&fadeSeconds, &idleOpacity);
-        if (fadeSeconds > 0 && !m_hovered && !m_dragging) {
-            setBallOpacity(idleOpacity);
+    // 闲置淡出用自绘 alpha（paintEvent 里 painter.setOpacity）实现，平台无关：
+    // Wayland 不支持 setWindowOpacity，而 QGraphicsOpacityEffect 对顶层透明窗口
+    // 存在"opacity 已设置但画面不重绘"的已知缺陷。淡入淡出由 QPropertyAnimation
+    // 驱动 fadeAlpha 属性（实机已验证 Wayland 下平滑生效）。
+    m_fadeAnim = new QPropertyAnimation(this, "fadeAlpha", this);
+    m_fadeAnim->setDuration(180);
+    m_fadeAnim->setEasingCurve(QEasingCurve::OutCubic);
+
+    // 常驻闲置 tick：淡出/恢复的唯一判定。它依据"最近一次交互（悬停/移动/
+    // 点击）的时间戳"决定是否进入闲置，完全不依赖 leaveEvent——即使合成器
+    // 丢失 leave 事件（GNOME Wayland 部分场景），鼠标移开后时间戳不再刷新，
+    // tick 超时后照样淡出，从根上杜绝"移开不淡出"。
+    m_fadeTickTimer = new QTimer(this);
+    m_fadeTickTimer->setInterval(kFadeTickIntervalMs);
+    connect(m_fadeTickTimer, &QTimer::timeout, this, &FloatingBall::onFadeTick);
+
+    // 停靠隐回延迟：滑出后移开，等一小段时间确认不会回来再隐入。
+    m_autoHideTimer = new QTimer(this);
+    m_autoHideTimer->setSingleShot(true);
+    m_autoHideTimer->setInterval(kAutoHideDelayMs);
+    connect(m_autoHideTimer, &QTimer::timeout, this, [this] {
+        if (m_dockState == DockState::Revealed) {
+            autoHideBall();
         }
+    });
+
+    // 屏幕拔插/分辨率/方向变化时重算停靠（球体隐入依赖屏幕边缘几何）。
+    auto connectScreenSignals = [this](QScreen *screen) {
+        if (!screen) {
+            return;
+        }
+        connect(screen, &QScreen::geometryChanged, this, [this] { revalidateDockState(); });
+        connect(screen, &QScreen::availableGeometryChanged, this, [this] { revalidateDockState(); });
+    };
+    for (QScreen *screen : QGuiApplication::screens()) {
+        connectScreenSignals(screen);
+    }
+    connect(qGuiApp, &QGuiApplication::screenAdded, this, [this, connectScreenSignals](QScreen *screen) {
+        connectScreenSignals(screen);
+        revalidateDockState();
+    });
+    connect(qGuiApp, &QGuiApplication::screenRemoved, this, [this](QScreen *) {
+        revalidateDockState();
     });
 
     m_menu = new QMenu(this);
@@ -155,13 +204,15 @@ FloatingBall::FloatingBall(QWidget *parent)
         }
         // 用户主动隐藏：置位持久状态，截图会话结束不得重新显示。
         m_hiddenByUser = true;
-        pauseIdleFade();
         hide();
     });
     m_menu->addAction(MS_TR("Quit"), qApp, [this] {
         savePosition();
         qApp->quit();
     });
+
+    markshot::debugLog("floating", "ball constructed platform=%s",
+                       QGuiApplication::platformName().toUtf8().constData());
 }
 
 void FloatingBall::setCaptureCallbacks(CaptureCallback capture, CaptureCallback fullscreen)
@@ -201,9 +252,8 @@ void FloatingBall::placeOnScreen()
         return;
     }
 
-    // 已保存位置若不在任何当前屏幕内（显示器拔出等），回退到默认位置。
-    const QRect bounds = screen->availableGeometry().adjusted(0, 0, -kBallSize - 16, -kBallSize - 16);
-    if (bounds.contains(stored)) {
+    // 已保存位置若完全在屏幕外（显示器拔出等），回退到默认位置。
+    if (positionWithinScreenBounds(stored)) {
         move(stored);
     } else {
         move(defaultBallPosition());
@@ -222,12 +272,26 @@ void FloatingBall::toggleByUser()
         placeOnScreen();
         setBallOpacity(1.0);
         show();
-        restartIdleFade();
         return;
     }
     m_hiddenByUser = true;
-    pauseIdleFade();
     hide();
+}
+
+qreal FloatingBall::fadeAlpha() const
+{
+    return m_fadeAlpha;
+}
+
+void FloatingBall::setFadeAlpha(qreal alpha)
+{
+    m_fadeAlpha = qBound<qreal>(0.05, alpha, 1.0);
+    update();
+}
+
+void FloatingBall::setBallOpacity(qreal opacity)
+{
+    setFadeAlpha(opacity);
 }
 
 void FloatingBall::paintEvent(QPaintEvent *event)
@@ -236,6 +300,14 @@ void FloatingBall::paintEvent(QPaintEvent *event)
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
+    // 自绘 alpha：整体（阴影/球体/图标）统一按当前不透明度合成。
+    // 相比 QGraphicsOpacityEffect 无"属性变化不刷新"的缺陷，且平台无关。
+    // 注意：Wayland 合成器对 ARGB buffer 会正确混合（无 opaque region），
+    // 判断"是否半透明"应看像素 RGB 是否混入背景色，而非截图 PNG 的 alpha 通道。
+    painter.setOpacity(m_fadeAlpha);
+    // 停靠隐入：球体整体向"屏幕外方向"平移半个球体，超出窗口/屏幕边界的
+    // 部分被天然裁剪，实现"一半隐入屏幕外"。不依赖 move()，Wayland 有效。
+    painter.translate(m_contentOffset);
 
     const QRectF ballRect(kShadowRadius, kShadowRadius, kBallSize, kBallSize);
     const QColor accent = theme::kAccent;
@@ -257,7 +329,7 @@ void FloatingBall::paintEvent(QPaintEvent *event)
     gradient.setColorAt(0.55, accent);
     gradient.setColorAt(1.0, accent.darker(120));
     painter.setBrush(gradient);
-    painter.setPen(m_hovered ? QPen(QColor(255, 255, 255, 200), 2.0) : QPen(QColor(255, 255, 255, 90), 1.0));
+    painter.setPen(QPen(QColor(255, 255, 255, 120), 1.5));
     painter.drawEllipse(body);
 
     // 中心图标。
@@ -275,10 +347,15 @@ void FloatingBall::paintEvent(QPaintEvent *event)
 void FloatingBall::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        pauseIdleFade();
+        noteInteraction();
+        // 从停靠隐入状态按下：先滑出，让本次点击落在完整球体上。
+        if (m_dockState == DockState::Snapped && edgeDockEnabled()) {
+            revealBall();
+        }
         m_dragging = true;
         m_moved = false;
         m_systemMoveStarted = false;
+        m_lastDragActivityMs = monotonicMs();
         m_pressGlobalPos = event->globalPosition().toPoint();
         m_pressFrameTopLeft = frameGeometry().topLeft();
         m_dragOffset = m_pressGlobalPos - m_pressFrameTopLeft;
@@ -293,6 +370,7 @@ void FloatingBall::mousePressEvent(QMouseEvent *event)
 void FloatingBall::mouseMoveEvent(QMouseEvent *event)
 {
     if (m_dragging && (event->buttons() & Qt::LeftButton)) {
+        m_lastDragActivityMs = monotonicMs();
         const QPoint delta = event->globalPosition().toPoint() - m_pressGlobalPos;
         if (!m_moved && delta.manhattanLength() >= kDragThresholdPixels) {
             m_moved = true;
@@ -319,33 +397,64 @@ void FloatingBall::mouseMoveEvent(QMouseEvent *event)
         event->accept();
         return;
     }
+    // 悬停移动（无按键）：也算一次交互，刷新闲置计时。
+    noteInteraction();
     QWidget::mouseMoveEvent(event);
 }
 
 void FloatingBall::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton && m_dragging) {
-        const bool moved = m_moved;
-        m_dragging = false;
-        const bool wasSystemMove = m_systemMoveStarted;
-        m_systemMoveStarted = false;
-        if (!wasSystemMove) {
-            if (QWidget::mouseGrabber() == this) {
-                releaseMouse();
-            }
-        }
         event->accept();
-        if (!moved) {
+        if (!m_moved) {
             // 单击：延迟弹出菜单，等待可能的双击。
             m_pendingClickPos = event->globalPosition().toPoint();
             m_clickTimer->start();
+            // 复位拖动状态（点击不进入 finishDrag 的停靠逻辑）。
+            m_dragging = false;
+            m_systemMoveStarted = false;
+            if (QWidget::mouseGrabber() == this) {
+                releaseMouse();
+            }
             return;
         }
-        snapAndSavePosition();
-        restartIdleFade();
+        finishDrag();
         return;
     }
     QWidget::mouseReleaseEvent(event);
+}
+
+void FloatingBall::finishDrag()
+{
+    // 拖动结束统一收尾（release 事件与拖动卡死自愈共用）。
+    const bool wasSystemMove = m_systemMoveStarted;
+    m_dragging = false;
+    m_systemMoveStarted = false;
+    m_lastDragActivityMs = -1;
+    if (!wasSystemMove) {
+        if (QWidget::mouseGrabber() == this) {
+            releaseMouse();
+        }
+    }
+    // 拖动结束：靠近屏幕边缘则停靠并隐入，否则回到自由漂浮。
+    // enterDocked 返回 false 表示 Wayland 下窗口未真正贴边无法停靠。
+    if (edgeDockEnabled()) {
+        const DockEdge edge = detectDockEdge(frameGeometry().topLeft());
+        if (edge != DockEdge::None && enterDocked(edge)) {
+            noteInteraction();
+            return;
+        }
+    }
+    // 未贴边：退出任何停靠状态，回到自由漂浮。
+    if (m_dockState != DockState::Floating) {
+        m_dockState = DockState::Floating;
+        m_dockEdge = DockEdge::None;
+        m_contentOffset = QPoint();
+        clearMask();
+        update();
+    }
+    savePosition();
+    noteInteraction();
 }
 
 void FloatingBall::mouseDoubleClickEvent(QMouseEvent *event)
@@ -355,6 +464,7 @@ void FloatingBall::mouseDoubleClickEvent(QMouseEvent *event)
         m_clickTimer->stop();
         m_dragging = false;
         event->accept();
+        noteInteraction();
         if (m_captureCallback) {
             m_captureCallback();
         }
@@ -365,17 +475,21 @@ void FloatingBall::mouseDoubleClickEvent(QMouseEvent *event)
 
 void FloatingBall::enterEvent(QEnterEvent *event)
 {
-    m_hovered = true;
-    pauseIdleFade();
-    update();
+    noteInteraction();
+    // 悬停滑出：从隐入状态恢复完整显示。
+    if (m_dockState == DockState::Snapped && edgeDockEnabled()) {
+        revealBall();
+    }
     QWidget::enterEvent(event);
 }
 
 void FloatingBall::leaveEvent(QEvent *event)
 {
-    m_hovered = false;
-    restartIdleFade();
-    update();
+    // 注：淡出判定完全由 onFadeTick 依据交互时间戳驱动，这里不依赖
+    // leaveEvent。只处理停靠态的延迟隐回。
+    if (m_dockState == DockState::Revealed) {
+        m_autoHideTimer->start();
+    }
     QWidget::leaveEvent(event);
 }
 
@@ -383,19 +497,41 @@ void FloatingBall::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
     setBallOpacity(1.0);
-    restartIdleFade();
+    // 显示即视为一次交互：鼠标在球上则不淡出，否则 tick 会在
+    // fadeSeconds 后自然淡出。
+    m_lastInteractionMs = monotonicMs();
+    if (!m_fadeTickTimer->isActive()) {
+        m_fadeTickTimer->start();
+    }
+    // 恢复显示时若处于停靠状态，回到隐入视觉（重新计算偏移，
+    // 窗口位置可能已在隐藏期间变化）。
+    if (m_dockState == DockState::Snapped || m_dockState == DockState::Revealed) {
+        m_dockState = DockState::Snapped;
+        QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
+        if (screen) {
+            computeDockOffset(m_dockEdge, screen->availableGeometry(), &m_contentOffset);
+        }
+        applyDockVisuals();
+    }
+    markshot::debugLog("floating", "ball shown platform=%s",
+                       QGuiApplication::platformName().toUtf8().constData());
 }
 
 void FloatingBall::hideEvent(QHideEvent *event)
 {
-    pauseIdleFade();
+    if (m_fadeTickTimer) {
+        m_fadeTickTimer->stop();
+    }
+    if (m_autoHideTimer) {
+        m_autoHideTimer->stop();
+    }
     QWidget::hideEvent(event);
 }
 
 void FloatingBall::showBallMenu(const QPoint &globalPos)
 {
     // 悬浮球菜单每次现建现用（菜单关闭后不持有动作），动作复用 m_menu。
-    pauseIdleFade();
+    m_menuOpen = true;
     QMenu menu;
     for (QAction *action : m_menu->actions()) {
         if (action->isSeparator()) {
@@ -411,9 +547,8 @@ void FloatingBall::showBallMenu(const QPoint &globalPos)
         }
     }
     menu.exec(globalPos);
-    if (isVisible() && !m_hovered) {
-        restartIdleFade();
-    }
+    m_menuOpen = false;
+    noteInteraction();
 }
 
 void FloatingBall::startRecordingFromBall()
@@ -451,27 +586,28 @@ void FloatingBall::startRecordingFromBall()
     recording::runRecordingStartFlow(request);
 }
 
-void FloatingBall::pauseIdleFade()
+void FloatingBall::noteInteraction()
 {
-    if (m_fadeTimer) {
-        m_fadeTimer->stop();
-    }
-    if (isVisible() && !m_hiddenByUser) {
-        setBallOpacity(1.0);
+    m_lastInteractionMs = monotonicMs();
+    if (isVisible() && m_fadeAlpha < 1.0 - 0.01 && !m_dragging && !m_menuOpen) {
+        fadeTo(1.0);
     }
 }
 
-void FloatingBall::setBallOpacity(qreal opacity)
+void FloatingBall::onFadeTick()
 {
-    if (m_opacityEffect) {
-        m_opacityEffect->setOpacity(qBound<qreal>(0.0, opacity, 1.0));
-        update();
+    // 拖动卡死自愈：Wayland 系统移动（startSystemMove）结束时合成器接管手势，
+    // 客户端可能永远收不到 mouseReleaseEvent，导致 m_dragging 卡 true（淡出被
+    // 禁用）且停靠逻辑（finishDrag → enterDocked）永不执行。若拖动活动已停止
+    // 超过 2 秒（无新 move 事件），视为拖动已结束：补一次 finishDrag 完成停靠/
+    // 保存位置，再恢复淡出。
+    if (m_dragging && m_lastDragActivityMs > 0
+        && monotonicMs() - m_lastDragActivityMs > 2000) {
+        markshot::debugLog("ball", "drag-stuck-heal: finishDrag after %lld ms idle",
+                           monotonicMs() - m_lastDragActivityMs);
+        finishDrag();
     }
-}
-
-void FloatingBall::restartIdleFade()
-{
-    if (!m_fadeTimer || !isVisible() || m_hovered || m_dragging || m_hiddenByUser) {
+    if (m_dragging || m_menuOpen || !isVisible() || m_hiddenByUser) {
         return;
     }
     int fadeSeconds = kDefaultFadeSeconds;
@@ -480,9 +616,35 @@ void FloatingBall::restartIdleFade()
     if (fadeSeconds <= 0) {
         return;
     }
-    setBallOpacity(1.0);
-    m_fadeTimer->setInterval(fadeSeconds * 1000);
-    m_fadeTimer->start();
+    const qint64 now = monotonicMs();
+    if (m_lastInteractionMs < 0) {
+        m_lastInteractionMs = now;
+        return;
+    }
+    const qint64 idleMs = static_cast<qint64>(fadeSeconds) * 1000;
+    const qint64 elapsed = now - m_lastInteractionMs;
+    if (elapsed >= idleMs) {
+        if (m_fadeAlpha > idleOpacity + 0.01) {
+            markshot::debugLog("ball", "tick FADE elapsed=%lld alpha=%.2f -> %.2f",
+                               elapsed, double(m_fadeAlpha), idleOpacity);
+            fadeTo(idleOpacity);
+        }
+    } else if (m_fadeAlpha < 1.0 - 0.01) {
+        markshot::debugLog("ball", "tick RESTORE elapsed=%lld alpha=%.2f", elapsed, double(m_fadeAlpha));
+        fadeTo(1.0);
+    }
+}
+
+void FloatingBall::fadeTo(qreal target)
+{
+    if (!m_fadeAnim) {
+        setBallOpacity(target);
+        return;
+    }
+    m_fadeAnim->stop();
+    m_fadeAnim->setStartValue(m_fadeAlpha);
+    m_fadeAnim->setEndValue(qBound<qreal>(0.05, target, 1.0));
+    m_fadeAnim->start();
 }
 
 void FloatingBall::idleFadeConfig(int *fadeSeconds, double *idleOpacity) const
@@ -515,36 +677,296 @@ void FloatingBall::idleFadeConfig(int *fadeSeconds, double *idleOpacity) const
     }
 }
 
-QPoint FloatingBall::snappedPosition(const QPoint &desired) const
+bool FloatingBall::positioningEnabled() const
+{
+    // 原生 Wayland 顶层窗口位置由合成器决定，move()/setGeometry 无效；
+    // offscreen 平台 move 记录位置，测试可用。
+    const QString platform = QGuiApplication::platformName();
+    return platform != QLatin1String("wayland");
+}
+
+bool FloatingBall::edgeDockEnabled() const
+{
+    bool ok = false;
+    const QJsonObject root = readAppConfigRoot(&ok);
+    if (ok) {
+        const QJsonObject ball = root.value(QStringLiteral("floatingBall")).toObject();
+        const QJsonValue enabled = ball.value(QStringLiteral("edgeDockEnabled"));
+        if (enabled.isBool()) {
+            return enabled.toBool();
+        }
+    }
+    return true;
+}
+
+int FloatingBall::hiddenExtentPx() const
+{
+    bool ok = false;
+    const QJsonObject root = readAppConfigRoot(&ok);
+    if (ok) {
+        const QJsonObject ball = root.value(QStringLiteral("floatingBall")).toObject();
+        const QJsonValue extent = ball.value(QStringLiteral("hiddenExtentPx"));
+        if (extent.isDouble() && extent.toInt() >= 0 && extent.toInt() < kBallSize) {
+            return extent.toInt();
+        }
+    }
+    return kDefaultHiddenExtentPx;
+}
+
+FloatingBall::DockEdge FloatingBall::detectDockEdge(const QPoint &desired) const
 {
     QScreen *screen = QGuiApplication::screenAt(QRect(desired, size()).center());
     if (!screen) {
-        return desired;
+        return DockEdge::None;
     }
     const QRect available = screen->availableGeometry();
     const int w = width();
     const int h = height();
-    int x = desired.x();
-    int y = desired.y();
-    if (std::abs(x - available.left()) <= kSnapMarginPixels) {
-        x = available.left();
-    } else if (std::abs(available.right() - (x + w - 1)) <= kSnapMarginPixels) {
-        x = available.right() - w + 1;
+
+    // 距离 = 窗口边缘与屏幕边缘的间隙；窗口越过屏幕边缘（重叠/在屏幕外）时
+    // 距离为 0（即已贴边）。注意不能对间隙取 abs：球拖到屏幕外时间隙为负，
+    // abs 会把"超出屏幕"误判为"距边很远"而不吸附。
+    const int dl = std::max(0, desired.x() - available.left());
+    const int dr = std::max(0, available.right() - (desired.x() + w - 1));
+    const int dt = std::max(0, desired.y() - available.top());
+    const int db = std::max(0, available.bottom() - (desired.y() + h - 1));
+    const int nearest = std::min({dl, dr, dt, db});
+    if (nearest > kSnapMarginPixels) {
+        return DockEdge::None;
     }
-    if (std::abs(y - available.top()) <= kSnapMarginPixels) {
-        y = available.top();
-    } else if (std::abs(available.bottom() - (y + h - 1)) <= kSnapMarginPixels) {
-        y = available.bottom() - h + 1;
+    if (nearest == dl) {
+        return DockEdge::Left;
     }
-    return QPoint(x, y);
+    if (nearest == dr) {
+        return DockEdge::Right;
+    }
+    if (nearest == dt) {
+        return DockEdge::Top;
+    }
+    return DockEdge::Bottom;
 }
 
-void FloatingBall::snapAndSavePosition()
+/// @brief 计算使球体在指定边缘"隐藏 extent 像素于屏幕外"所需的内容偏移。
+///
+/// 球体在窗口内的边界为 [kShadowRadius, kShadowRadius + kBallSize]。
+/// 以右边缘为例：要求球体右缘（全局）恰好落在 available.right() + extent，
+/// 即球体右缘"藏到屏幕外 extent 像素"。偏移量由窗口实际位置推导，
+/// 因此不依赖窗口是否贴边（X11/Win 会先 move 贴边；Wayland 用实际位置）。
+FloatingBall::DockEdge FloatingBall::computeDockOffset(DockEdge edge,
+                                                       const QRect &available,
+                                                       QPoint *offset) const
 {
-    const QPoint snapped = snappedPosition(frameGeometry().topLeft());
-    move(snapped);
+    if (!offset) {
+        return edge;
+    }
+    const QPoint tl = frameGeometry().topLeft();
+    const int ballLeft = kShadowRadius;
+    const int ballRight = kShadowRadius + kBallSize;
+    const int extent = hiddenExtentPx();
+    switch (edge) {
+    case DockEdge::Right:
+        offset->setX(available.right() + extent - tl.x() - ballRight);
+        offset->setY(0);
+        break;
+    case DockEdge::Left:
+        offset->setX(available.left() - extent - tl.x() - ballLeft);
+        offset->setY(0);
+        break;
+    case DockEdge::Top:
+        offset->setX(0);
+        offset->setY(available.top() - extent - tl.y() - ballLeft);
+        break;
+    case DockEdge::Bottom:
+        offset->setX(0);
+        offset->setY(available.bottom() + extent - tl.y() - ballRight);
+        break;
+    case DockEdge::None:
+        *offset = QPoint();
+        break;
+    }
+    return edge;
+}
+
+/// @brief 检查窗口边缘是否真正贴近屏幕边缘。
+///
+/// Wayland 无法程序化贴边（合成器决定位置），只有窗口本身拖到贴近边缘时，
+/// 球体向屏幕外偏移的隐藏部分才会真正藏在屏幕外；否则球体会被窗口边界
+/// 裁剪但隐藏部分落在屏幕内区域，看起来像"球被切掉"。
+bool FloatingBall::windowTightToEdge(DockEdge edge) const
+{
+    QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
+    if (!screen) {
+        return false;
+    }
+    const QRect available = screen->availableGeometry();
+    const int tight = 8;
+    switch (edge) {
+    case DockEdge::Right:
+        return std::abs(available.right() - frameGeometry().right()) <= tight;
+    case DockEdge::Left:
+        return std::abs(available.left() - frameGeometry().left()) <= tight;
+    case DockEdge::Top:
+        return std::abs(available.top() - frameGeometry().top()) <= tight;
+    case DockEdge::Bottom:
+        return std::abs(available.bottom() - frameGeometry().bottom()) <= tight;
+    case DockEdge::None:
+        break;
+    }
+    return false;
+}
+
+bool FloatingBall::enterDocked(DockEdge edge)
+{
+    QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
+    if (!screen) {
+        return false;
+    }
+    const QRect available = screen->availableGeometry();
+
+    // 支持程序化定位的平台（X11/Windows/macOS/offscreen）：先把窗口吸附贴边，
+    // 这样球体向屏幕外偏移后，隐藏部分真正藏在屏幕外。
+    if (positioningEnabled()) {
+        const int w = width();
+        const int h = height();
+        QPoint target = frameGeometry().topLeft();
+        switch (edge) {
+        case DockEdge::Left:
+            target.setX(available.left());
+            break;
+        case DockEdge::Right:
+            target.setX(available.right() - w + 1);
+            break;
+        case DockEdge::Top:
+            target.setY(available.top());
+            break;
+        case DockEdge::Bottom:
+            target.setY(available.bottom() - h + 1);
+            break;
+        case DockEdge::None:
+            break;
+        }
+        move(target);
+    } else {
+        // Wayland：窗口位置由合成器决定，只有窗口本身贴近边缘才停靠，
+        // 否则球体"一半藏在屏幕外"的视觉无法成立。
+        if (!windowTightToEdge(edge)) {
+            markshot::debugLog("floating", "dock-skip wayland window not tight edge=%d geom=%d,%d",
+                               static_cast<int>(edge),
+                               frameGeometry().x(), frameGeometry().y());
+            return false;
+        }
+    }
+
+    // 精确计算内容偏移：球体在边缘处隐藏 hiddenExtentPx 于屏幕外。
+    computeDockOffset(edge, available, &m_contentOffset);
+    m_dockState = DockState::Snapped;
+    m_dockEdge = edge;
+    applyDockVisuals();
     savePosition();
-    markshot::debugLog("floating", "snapped to %d,%d", snapped.x(), snapped.y());
+    markshot::debugLog("floating", "docked edge=%d offset=%d,%d platform=%s",
+                       static_cast<int>(edge), m_contentOffset.x(), m_contentOffset.y(),
+                       QGuiApplication::platformName().toUtf8().constData());
+    return true;
+}
+
+void FloatingBall::revealBall()
+{
+    if (m_dockState != DockState::Snapped) {
+        return;
+    }
+    m_dockState = DockState::Revealed;
+    m_contentOffset = QPoint();
+    applyDockVisuals();
+    noteInteraction();
+}
+
+void FloatingBall::autoHideBall()
+{
+    if (m_dockState != DockState::Revealed) {
+        return;
+    }
+    QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
+    if (!screen) {
+        return;
+    }
+    m_dockState = DockState::Snapped;
+    computeDockOffset(m_dockEdge, screen->availableGeometry(), &m_contentOffset);
+    applyDockVisuals();
+    // 隐回后不立即淡出：先保持可见一段时间。
+    noteInteraction();
+}
+
+void FloatingBall::applyDockVisuals()
+{
+    // 输入 mask：停靠隐入时球体向屏幕外方向平移，窗口内可见部分 = 球体
+    // 与窗口边界的交集 sliver。mask 精确保留该 sliver 作为输入区域
+    // （Wayland 下即 input region），窗口其余透明空白不挡鼠标。
+    if (m_contentOffset.isNull()) {
+        clearMask();
+        update();
+        return;
+    }
+    const int w = width();
+    const int h = height();
+    const int bl = kShadowRadius;                    // 球体窗口内左缘
+    const int br = kShadowRadius + kBallSize;        // 球体窗口内右缘
+    const int ox = m_contentOffset.x();
+    const int oy = m_contentOffset.y();
+    QRect visibleRect;
+    switch (m_dockEdge) {
+    case DockEdge::Left:
+    case DockEdge::Right: {
+        const int left = qBound(0, bl + ox, w);
+        const int right = qBound(0, br + ox, w);
+        visibleRect = QRect(left, 0, std::max(0, right - left), h);
+        break;
+    }
+    case DockEdge::Top:
+    case DockEdge::Bottom: {
+        const int top = qBound(0, bl + oy, h);
+        const int bottom = qBound(0, br + oy, h);
+        visibleRect = QRect(0, top, w, std::max(0, bottom - top));
+        break;
+    }
+    case DockEdge::None:
+        clearMask();
+        update();
+        return;
+    }
+    if (visibleRect.isEmpty()) {
+        clearMask();
+    } else {
+        setMask(QRegion(visibleRect));
+    }
+    update();
+}
+
+void FloatingBall::revalidateDockState()
+{
+    if (!isVisible() || m_dockState == DockState::Floating) {
+        return;
+    }
+    // 屏幕变化后重新检测贴边；若不再贴边则回退自由漂浮。
+    const DockEdge edge = detectDockEdge(frameGeometry().topLeft());
+    if (edge == DockEdge::None || !enterDocked(edge)) {
+        m_dockState = DockState::Floating;
+        m_dockEdge = DockEdge::None;
+        m_contentOffset = QPoint();
+        clearMask();
+        update();
+        placeOnScreen();
+        return;
+    }
+}
+
+bool FloatingBall::positionWithinScreenBounds(const QPoint &topLeft) const
+{
+    const QRect ballRect(topLeft, size());
+    QScreen *screen = QGuiApplication::screenAt(ballRect.center());
+    if (!screen) {
+        return false;
+    }
+    return screen->geometry().intersects(ballRect);
 }
 
 }  // namespace markshot
