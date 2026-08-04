@@ -42,12 +42,19 @@ struct CaptureRequest {
 
 // Captures one frame and normalizes the image for downstream painting/stitching.
 CaptureResult captureScreenFrame(const CaptureRequest &request);
+// X11: captures a window's own composited content (via XComposite named pixmap)
+// so occluded or minimized windows still yield their real content without being
+// brought to the front. Returns a null image on failure.
+QImage captureX11WindowContent(qulonglong windowId, QString *error = nullptr);
 // Stops a reusable screencast session when scrolling capture pauses or fails.
 void stopActiveScreencastCapture();
 // Returns visible X11 window info for selection snapping/highlighting.
 // When includeIdentity is false the title/class/instance fields are skipped,
 // which avoids extra blocking X11 property round trips for geometry-only users.
-QVector<markshot::WindowInfo> enumerateX11WindowInfos(bool includeIdentity = true);
+// includeHidden additionally lists minimized/iconic windows (used by the headless
+// window capture so PID/process selectors can still target them).
+QVector<markshot::WindowInfo> enumerateX11WindowInfos(bool includeIdentity = true,
+                                                      bool includeHidden = false);
 bool isGnomeWaylandSession();
 bool hasGnomeScrollHelper();
 bool hasGnomeScrollPreviewHelper();

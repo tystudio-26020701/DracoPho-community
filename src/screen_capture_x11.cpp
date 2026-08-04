@@ -30,6 +30,7 @@ X11WindowAtoms readX11WindowAtoms(xcb_connection_t *connection)
     atoms.netWmName = internX11Atom(connection, "_NET_WM_NAME");
     atoms.wmName = internX11Atom(connection, "WM_NAME");
     atoms.wmClass = internX11Atom(connection, "WM_CLASS");
+    atoms.netWmPid = internX11Atom(connection, "_NET_WM_PID");
     return atoms;
 }
 
@@ -158,9 +159,11 @@ bool x11WindowIsHiddenOrIconic(xcb_connection_t *connection,
 std::optional<QRect> x11WindowFrameGeometry(xcb_connection_t *connection,
                                             xcb_window_t root,
                                             xcb_window_t window,
-                                            const X11WindowAtoms &atoms)
+                                            const X11WindowAtoms &atoms,
+                                            bool allowHidden)
 {
-    if (!connection || window == XCB_WINDOW_NONE || x11WindowIsHiddenOrIconic(connection, window, atoms)) {
+    if (!connection || window == XCB_WINDOW_NONE
+        || (!allowHidden && x11WindowIsHiddenOrIconic(connection, window, atoms))) {
         return std::nullopt;
     }
 
@@ -170,10 +173,13 @@ std::optional<QRect> x11WindowFrameGeometry(xcb_connection_t *connection,
     if (!attrReply) {
         return std::nullopt;
     }
-    const bool isViewable = attrReply->map_state == XCB_MAP_STATE_VIEWABLE;
     const bool isOverrideRedirect = attrReply->override_redirect != 0;
+    const bool isViewable = attrReply->map_state == XCB_MAP_STATE_VIEWABLE;
     std::free(attrReply);
-    if (!isViewable || isOverrideRedirect) {
+    // allowHidden 只放宽"最小化/隐藏"窗口（Iconic / _NET_WM_STATE_HIDDEN）；
+    // 未映射但无隐藏标记的窗口（创建中、被应用直接 unmap、withdrawn 但仍在
+    // _NET_CLIENT_LIST）一律排除，保持默认路径（选区吸附/高亮）既有行为。
+    if (isOverrideRedirect || (!allowHidden && !isViewable)) {
         return std::nullopt;
     }
 
@@ -284,6 +290,32 @@ void x11WindowClass(xcb_connection_t *connection,
     }
 
     std::free(reply);
+}
+
+qint64 x11WindowPid(xcb_connection_t *connection,
+                    xcb_window_t window,
+                    const X11WindowAtoms &atoms)
+{
+    if (!connection || window == XCB_WINDOW_NONE || atoms.netWmPid == XCB_ATOM_NONE) {
+        return -1;
+    }
+
+    xcb_get_property_cookie_t cookie =
+        xcb_get_property(connection, 0, window, atoms.netWmPid, XCB_ATOM_CARDINAL, 0, 1);
+    xcb_get_property_reply_t *reply = xcb_get_property_reply(connection, cookie, nullptr);
+    if (!reply) {
+        return -1;
+    }
+
+    qint64 pid = -1;
+    if (reply->format == 32 && reply->type == XCB_ATOM_CARDINAL
+        && xcb_get_property_value_length(reply) >= static_cast<int>(sizeof(std::uint32_t))) {
+        const auto *raw = static_cast<const std::uint32_t *>(xcb_get_property_value(reply));
+        pid = static_cast<qint64>(*raw);
+    }
+
+    std::free(reply);
+    return pid;
 }
 
 #endif

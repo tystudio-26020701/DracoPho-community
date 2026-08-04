@@ -60,11 +60,12 @@ bool RecordingSessionManager::start(const RecordingOptions &options, QObject *pa
     }
 
     auto *controller = new RecordingController(parent ? parent : this);
+    const bool silent = options.silent;
     connect(controller, &RecordingController::statusChanged, this, &RecordingSessionManager::statusChanged);
     connect(controller,
             &RecordingController::finished,
             this,
-            [this, controller](bool ok, const QString &outputPath, const QString &message) {
+            [this, controller, silent](bool ok, const QString &outputPath, const QString &message) {
                 if (m_controller == controller) {
                     m_controller = nullptr;
                 }
@@ -77,10 +78,12 @@ bool RecordingSessionManager::start(const RecordingOptions &options, QObject *pa
                 m_lastStatus.errorMessage = message;
                 m_lastStatus.outputPath = outputPath;
                 emit statusChanged();
-                if (ok) {
-                    markshot::notifications::notifyRecordingSaved(outputPath);
-                } else {
-                    markshot::notifications::notifyRecordingFailed(message);
+                if (!silent) {
+                    if (ok) {
+                        markshot::notifications::notifyRecordingSaved(outputPath);
+                    } else {
+                        markshot::notifications::notifyRecordingFailed(message);
+                    }
                 }
                 emit recordingFinished(ok, outputPath, message);
             });
@@ -92,7 +95,9 @@ bool RecordingSessionManager::start(const RecordingOptions &options, QObject *pa
     m_controller = controller;
     m_lastStatus = RecordingStatus();
     emit statusChanged();
-    markshot::notifications::notifyRecordingStarted(options);
+    if (!silent) {
+        markshot::notifications::notifyRecordingStarted(options);
+    }
     return true;
 }
 

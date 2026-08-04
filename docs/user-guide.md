@@ -346,7 +346,10 @@ Example output (GNOME Wayland):
 
 Each entry carries the fields that selectors match against: `index`, `id`
 (X11 window id / backend-provided id), `title`, `class` and `instance`, plus
-`x`/`y`/`width`/`height` and an optional `zOrder`.
+`x`/`y`/`width`/`height` and an optional `zOrder`. When the detection backend
+can report process ownership (X11 `_NET_WM_PID`, KDE/KWin, Hyprland, the GNOME
+extension, niri), entries also carry `pid` (process id) and `process`
+(process name).
 
 #### 7.1.1 Selecting windows (single or multiple)
 
@@ -357,11 +360,22 @@ Each selector is interpreted automatically (`--window-by auto`):
 | :---                      | :---                                                |
 | `0`, `1`, …               | list `index`                                        |
 | `0x3c00007`               | window `id`                                         |
+| `12345`                   | process `pid`                                       |
 | `VSCodium`                | `class` or `instance`, then `title` (exact, then substring) |
 | `Mark Shot - VSCodium`    | `title`                                             |
 
-Force one matching rule with `--window-by id|title|class|index`. A selector
-that matches several windows captures **all of them**.
+Force one matching rule with `--window-by id|title|class|index|pid|process`.
+`pid` matches the process id exactly; `process` matches the process name
+(case-insensitive substring, read from `/proc/<pid>/comm`). Note that
+`pid`/`process` rely on the window-declared `_NET_WM_PID` (or the
+compositor-reported process id) and are best-effort metadata — on X11 that
+property is declared by the client itself, so automation should not treat it as
+trusted process ownership. When targeting by pid/process, an X11 session still
+captures the target's real content even if it is fully occluded, minimized, or
+off the current workspace: the window's own composited buffer is read directly
+(`"windowCapture": true`) without raising the window or stealing focus. Other
+platforms fall back to region capture and are limited by the compositor. A
+selector that matches several windows captures **all of them**.
 
 Capture a component (a sub-region inside a window) by appending
 `@x,y,width,height` to the selector — the offset is relative to the window's
@@ -438,6 +452,10 @@ Every headless mode is guaranteed to be invisible and non-disruptive:
   immediately with a non-zero code and a stderr message instead of popping a
   `QMessageBox` or falling through to the interactive UI;
 - no interactive portal prompt appears (`allowInteractivePortal` is disabled);
+- unattended recording (`--record-*`) is equally silent: **no desktop
+  notification and no interactive portal prompt**, no focus stealing and no
+  dialogs; the outcome is queried via `--recording-status` / `--record-wait-json`
+  instead of bothering the user;
 - the process exits immediately after writing the output;
 - the window list captured before and after a headless operation is identical;
 - headless modes never touch the system clipboard unless `clipboard` was

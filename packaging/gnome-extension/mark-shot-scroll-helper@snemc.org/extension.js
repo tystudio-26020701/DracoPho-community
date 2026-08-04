@@ -389,6 +389,10 @@ export default class MarkShotScrollHelper extends Extension {
             if (typeof wmClassInstance === 'string' && wmClassInstance) {
                 item.instance = wmClassInstance;
             }
+            const pid = metaWindow.get_pid?.();
+            if (Number.isInteger(pid) && pid > 0) {
+                item.pid = pid;
+            }
             if (Number.isInteger(monitor)) {
                 item.monitor = monitor;
             }

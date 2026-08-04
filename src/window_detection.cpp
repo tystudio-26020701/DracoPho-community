@@ -403,6 +403,16 @@ std::optional<WindowInfo> windowInfoFromWindowObject(const QJsonObject &object)
                                              QStringLiteral("output")});
     info.workspace = namedStringValue(object, {QStringLiteral("workspace"),
                                                QStringLiteral("desktop")});
+    const QJsonValue pidValue = object.value(QStringLiteral("pid"));
+    if (pidValue.isDouble()) {
+        info.pid = static_cast<qint64>(pidValue.toDouble());
+    } else if (pidValue.isString()) {
+        bool ok = false;
+        const qint64 parsed = pidValue.toString().trimmed().toLongLong(&ok);
+        if (ok) {
+            info.pid = parsed;
+        }
+    }
 
     return info;
 }

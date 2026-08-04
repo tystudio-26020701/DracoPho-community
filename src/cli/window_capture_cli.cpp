@@ -14,6 +14,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QHash>
 #include <QImage>
 #include <QImageWriter>
 #include <QJsonArray>
@@ -28,7 +29,6 @@
 #if defined(Q_OS_UNIX)
 #include <unistd.h>
 #endif
-
 namespace markshot::cli {
 namespace {
 
@@ -64,6 +64,42 @@ bool isX11SessionLike()
 #endif
 }
 
+// Reads the process name behind a pid from /proc (Linux). Empty on other
+// platforms or when the process is gone. Results are memoized: the name is
+// stable for the lifetime of a pid, and the headless path reads it once per
+// window per selector otherwise (O(N×M) file opens).
+QString processNameForPid(qint64 pid)
+{
+    if (pid <= 0) {
+        return {};
+    }
+    static QHash<qint64, QString> cache;
+    const auto cached = cache.constFind(pid);
+    if (cached != cache.constEnd()) {
+        return *cached;
+    }
+    QString name;
+#if defined(Q_OS_LINUX)
+    QFile comm(QStringLiteral("/proc/%1/comm").arg(pid));
+    if (comm.open(QIODevice::ReadOnly)) {
+        name = QString::fromUtf8(comm.readAll()).trimmed();
+    }
+    if (name.isEmpty()) {
+        QFile cmdline(QStringLiteral("/proc/%1/cmdline").arg(pid));
+        if (cmdline.open(QIODevice::ReadOnly)) {
+            const QList<QByteArray> args = cmdline.readAll().split('\0');
+            if (!args.isEmpty()) {
+                name = QFileInfo(args.first()).fileName();
+            }
+        }
+    }
+#else
+    Q_UNUSED(pid);
+#endif
+    cache.insert(pid, name);
+    return name;
+}
+
 // Collects the windows used by --list-windows / --window. Prefers the
 // configured per-compositor detection script (GNOME / KDE / Hyprland / niri
 // Wayland), and falls back to the in-process X11 enumeration.
@@ -83,7 +119,8 @@ QVector<WindowInfo> collectWindowInfos(QString *source)
     }
 
     if (isX11SessionLike()) {
-        const QVector<WindowInfo> x11 = enumerateX11WindowInfos();
+        // includeHidden=true：最小化/隐藏窗口也要列出，供按 PID/进程名定位截图。
+        const QVector<WindowInfo> x11 = enumerateX11WindowInfos(true, true);
         if (source) {
             *source = QStringLiteral("x11");
         }
@@ -129,6 +166,13 @@ QJsonObject windowJson(const WindowInfo &info, int index)
     }
     if (!info.workspace.isEmpty()) {
         entry.insert(QStringLiteral("workspace"), info.workspace);
+    }
+    if (info.pid > 0) {
+        entry.insert(QStringLiteral("pid"), info.pid);
+        const QString process = processNameForPid(info.pid);
+        if (!process.isEmpty()) {
+            entry.insert(QStringLiteral("process"), process);
+        }
     }
     entry.insert(QStringLiteral("x"), info.rect.x());
     entry.insert(QStringLiteral("y"), info.rect.y());
@@ -197,6 +241,21 @@ bool windowMatches(const WindowInfo &info, int index, const QString &spec, const
     if (mode == QLatin1String("id")) {
         return !info.id.isEmpty() && info.id == spec;
     }
+    if (mode == QLatin1String("pid")) {
+        bool ok = false;
+        const qint64 wanted = spec.toLongLong(&ok);
+        return ok && wanted > 0 && info.pid == wanted;
+    }
+    if (mode == QLatin1String("process")) {
+        if (info.pid <= 0) {
+            return false;
+        }
+        const QString process = processNameForPid(info.pid);
+        return !process.isEmpty()
+            && (process == spec
+                || process.contains(spec, Qt::CaseInsensitive)
+                || spec.contains(process, Qt::CaseInsensitive));
+    }
     if (mode == QLatin1String("title")) {
         return !info.title.isEmpty()
             && (info.title == spec || info.title.contains(spec, Qt::CaseInsensitive));
@@ -213,7 +272,7 @@ bool windowMatches(const WindowInfo &info, int index, const QString &spec, const
         return ok && wanted == index;
     }
 
-    // auto: exact id -> exact title -> exact class -> index -> substrings.
+    // auto: exact id -> exact title -> exact class -> index -> pid -> substrings.
     if (!info.id.isEmpty() && info.id == spec) {
         return true;
     }
@@ -226,6 +285,9 @@ bool windowMatches(const WindowInfo &info, int index, const QString &spec, const
     bool indexOk = false;
     const int wantedIndex = spec.toInt(&indexOk);
     if (indexOk && wantedIndex == index) {
+        return true;
+    }
+    if (info.pid > 0 && spec == QString::number(info.pid)) {
         return true;
     }
     if (!info.title.isEmpty() && info.title.contains(spec, Qt::CaseInsensitive)) {
@@ -374,31 +436,62 @@ QJsonObject captureOne(const WindowInfo &info,
     entry.insert(QStringLiteral("width"), captureRect.width());
     entry.insert(QStringLiteral("height"), captureRect.height());
 
-    CaptureRequest request;
-    request.sourceGeometry = captureRect;
-    request.includeCursor = includeCursor;
-    request.allowInteractivePortal = false;
-    request.hideOwnWindows = false;
-    request.allOutputs = false;
+    QImage capturedImage;
+    QString captureError;
+    QString windowCaptureError;
+    bool attemptedWindowCapture = false;
+    if (!subRect.has_value() && isX11SessionLike() && info.id.startsWith(QLatin1String("0x"))) {
+        // X11 窗口对象抓取：即使目标被其他窗口遮挡或已最小化，也从合成命名
+        // pixmap 读取窗口自身内容，不弹起窗口、不抢焦点；失败回退区域抓屏。
+        bool ok = false;
+        const qulonglong windowId = info.id.mid(2).toULongLong(&ok, 16);
+        if (ok && windowId != 0) {
+            attemptedWindowCapture = true;
+            capturedImage = captureX11WindowContent(windowId, &windowCaptureError);
+            if (!capturedImage.isNull()) {
+                entry.insert(QStringLiteral("windowCapture"), true);
+            }
+        }
+    }
 
-    const CaptureResult result = captureScreenFrame(request);
-    if (result.image.isNull()) {
+    if (capturedImage.isNull()) {
+        CaptureRequest request;
+        request.sourceGeometry = captureRect;
+        request.includeCursor = includeCursor;
+        request.allowInteractivePortal = false;
+        request.hideOwnWindows = false;
+        request.allOutputs = false;
+
+        const CaptureResult result = captureScreenFrame(request);
+        capturedImage = result.image;
+        captureError = result.error;
+    }
+    // 窗口对象抓取失败后回退到区域抓屏时如实标注：被遮挡/最小化窗口若没有
+    // 保留的合成缓冲，区域抓屏得到的是该区域当前内容（可能是另一个窗口），
+    // 必须让调用方（CLI/MCP）知道这是回退产物而非目标窗口本身。
+    if (attemptedWindowCapture && !windowCaptureError.isEmpty()) {
+        entry.insert(QStringLiteral("windowCaptureError"), windowCaptureError);
+        if (!capturedImage.isNull()) {
+            entry.insert(QStringLiteral("windowCaptureFallback"), true);
+        }
+    }
+    if (capturedImage.isNull()) {
         if (err) {
-            *err << result.error << '\n';
+            *err << captureError << '\n';
         }
         entry.insert(QStringLiteral("path"), QJsonValue::Null);
         entry.insert(QStringLiteral("width"), 0);
         entry.insert(QStringLiteral("height"), 0);
-        entry.insert(QStringLiteral("error"), result.error);
+        entry.insert(QStringLiteral("error"), captureError);
         return entry;
     }
 
-    entry.insert(QStringLiteral("width"), result.image.width());
-    entry.insert(QStringLiteral("height"), result.image.height());
+    entry.insert(QStringLiteral("width"), capturedImage.width());
+    entry.insert(QStringLiteral("height"), capturedImage.height());
 
     switch (destination) {
     case CaptureDestination::Inline: {
-        const QByteArray png = pngBytes(result.image);
+        const QByteArray png = pngBytes(capturedImage);
         if (png.isEmpty()) {
             entry.insert(QStringLiteral("error"), QStringLiteral("failed to encode PNG"));
         } else {
@@ -411,7 +504,7 @@ QJsonObject captureOne(const WindowInfo &info,
     case CaptureDestination::Clipboard: {
         // 无头进程走专用无阻塞剪贴板路径，避免 Wayland QClipboard::setImage
         // 的组合往返阻塞短命进程。
-        const bool copied = copyImageToClipboardHeadless(result.image);
+        const bool copied = copyImageToClipboardHeadless(capturedImage);
         entry.insert(QStringLiteral("path"), QJsonValue::Null);
         entry.insert(QStringLiteral("error"), copied
             ? QJsonValue::Null
@@ -425,7 +518,7 @@ QJsonObject captureOne(const WindowInfo &info,
         QString writeError;
         const QString path = writePng(directory,
                                       windowStem(info, index, outputName),
-                                      result.image,
+                                      capturedImage,
                                       &writeError);
         if (path.isEmpty()) {
             if (err) {
@@ -501,13 +594,14 @@ QString captureDestinationName(CaptureDestination destination)
 void addWindowCaptureOptions(QCommandLineParser *parser)
 {
     QCommandLineOption listWindowsOption(QStringLiteral("list-windows"),
-                                         QStringLiteral("List the visible windows (id, title, class, geometry) as JSON and exit."));
+                                         QStringLiteral("List the visible windows (id, title, class, pid, geometry) as JSON and exit."));
     QCommandLineOption windowOption(QStringLiteral("window"),
                                     QStringLiteral("Capture the window(s) matching the given selector. May be repeated to capture several windows at once. "
                                                    "A selector may carry a component sub-region: \"<selector>@x,y,width,height\" captures only that part of the window."),
                                     QStringLiteral("selector"));
     QCommandLineOption windowByOption(QStringLiteral("window-by"),
-                                      QStringLiteral("How to interpret each --window selector: auto, id, title, class or index (default: auto)."),
+                                      QStringLiteral("How to interpret each --window selector: auto, id, title, class, index, pid or process (default: auto). "
+                                                     "pid/process rely on the window-declared _NET_WM_PID / compositor-reported process id and are best-effort metadata."),
                                       QStringLiteral("mode"));
     QCommandLineOption destinationOption(QStringLiteral("capture-destination"),
                                          QStringLiteral("Where captured window images go: inline (base64 in the JSON output, no files, clipboard untouched), "
@@ -572,9 +666,11 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
         && windowBy != QLatin1String("id")
         && windowBy != QLatin1String("title")
         && windowBy != QLatin1String("class")
-        && windowBy != QLatin1String("index")) {
+        && windowBy != QLatin1String("index")
+        && windowBy != QLatin1String("pid")
+        && windowBy != QLatin1String("process")) {
         err << "invalid --window-by mode \"" << windowBy
-            << "\" (expected auto, id, title, class or index).\n";
+            << "\" (expected auto, id, title, class, index, pid or process).\n";
         return 1;
     }
 

@@ -292,6 +292,10 @@ def script_source(token):
         if (output.length > 0) {{
             item.output = output;
         }}
+        const pid = value(window, "pid");
+        if (typeof pid === "number" && pid > 0) {{
+            item.pid = pid;
+        }}
         const desktops = desktopNames(window);
         if (desktops.length > 0) {{
             item.desktops = desktops;
@@ -549,6 +553,7 @@ def normalize_window(window):
         "instance",
         "output",
         "desktops",
+        "pid",
         "normalWindow",
         "dialog",
         "utility",

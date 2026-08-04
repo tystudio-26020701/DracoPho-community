@@ -57,7 +57,9 @@ public:
         request.preferredOutputName = m_options.display.outputName;
         request.allOutputs = false;
         request.preferScreencast = true;
-        request.allowInteractivePortal = true;
+        // 静默录制（无人值守/MCP）绝不发起交互式 portal 授权弹窗，避免抢焦点；
+        // 未授权时会失败并回退到 wlroots/polling 后端，保证用户无感。
+        request.allowInteractivePortal = !m_options.silent;
         request.allowPortalScreenshotFallback = false;
         request.includeCursor = true;
         request.targetFps = std::max(1, m_options.fps);

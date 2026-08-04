@@ -163,6 +163,7 @@ struct X11WindowAtoms {
     xcb_atom_t netWmName = XCB_ATOM_NONE;
     xcb_atom_t wmName = XCB_ATOM_NONE;
     xcb_atom_t wmClass = XCB_ATOM_NONE;
+    xcb_atom_t netWmPid = XCB_ATOM_NONE;
 };
 
 xcb_atom_t internX11Atom(xcb_connection_t *connection, const char *name);
@@ -190,7 +191,8 @@ bool x11WindowIsHiddenOrIconic(xcb_connection_t *connection,
 std::optional<QRect> x11WindowFrameGeometry(xcb_connection_t *connection,
                                             xcb_window_t root,
                                             xcb_window_t window,
-                                            const X11WindowAtoms &atoms);
+                                            const X11WindowAtoms &atoms,
+                                            bool allowHidden = false);
 // Reads a window's title (_NET_WM_NAME, falling back to WM_NAME) and WM_CLASS
 // (instance + class) for the window enumeration/listing features.
 QString x11WindowTitle(xcb_connection_t *connection,
@@ -201,6 +203,10 @@ void x11WindowClass(xcb_connection_t *connection,
                     const X11WindowAtoms &atoms,
                     QString *instance,
                     QString *className);
+// Reads a window's _NET_WM_PID (owning process id). Returns -1 when unknown.
+qint64 x11WindowPid(xcb_connection_t *connection,
+                    xcb_window_t window,
+                    const X11WindowAtoms &atoms);
 
 #endif
 

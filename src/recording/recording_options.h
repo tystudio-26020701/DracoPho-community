@@ -50,6 +50,9 @@ struct RecordingOptions {
     DisplaySource display;
     QRect captureGeometry;
     QString outputPath;
+    // 静默录制（无人值守 CLI / MCP 触发）：不弹桌面通知、不发起交互式 portal
+    // 授权，保证对用户完全无感、不抢焦点。
+    bool silent = false;
 };
 
 }  // namespace markshot::recording

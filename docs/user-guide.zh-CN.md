@@ -313,6 +313,8 @@ mark-shot --list-windows
 
 每条记录都带有选择器可匹配的字段：`index`、`id`（X11 窗口 id / 后端 id）、
 `title`、`class`、`instance`，以及 `x`/`y`/`width`/`height` 和可选的 `zOrder`。
+当检测后端能提供进程归属时（X11 的 `_NET_WM_PID`、KDE/KWin、Hyprland、GNOME
+扩展、niri），记录还会带 `pid`（进程号）与 `process`（进程名）。
 
 #### 7.1.1 选择窗口（单选 / 任意多选）
 
@@ -323,11 +325,19 @@ mark-shot --list-windows
 | :---                  | :---                                                |
 | `0`、`1`、…           | 列表 `index`                                        |
 | `0x3c00007`           | 窗口 `id`                                           |
+| `12345`               | 进程 `pid`                                          |
 | `VSCodium`            | `class` 或 `instance`，再按 `title`（精确 → 子串）     |
 | `Mark Shot - VSCodium`| `title`                                             |
 
-可用 `--window-by id|title|class|index` 强制指定某一种匹配规则。一个选择器
-命中多个窗口时会**全部**截取。
+可用 `--window-by id|title|class|index|pid|process` 强制指定某一种匹配规则。
+`pid` 按进程号精确匹配；`process` 按进程名匹配（支持大小写不敏感子串，取自
+`/proc/<pid>/comm`）。注意 `pid`/`process` 依赖窗口声明的 `_NET_WM_PID`（或
+合成器上报的进程号），属尽力而为的元数据——X11 上该属性由客户端自行声明，
+自动化脚本请勿将其当作可信的进程归属证明。按 PID/进程名选窗时，即使目标
+窗口被其他窗口完全遮挡、已最小化或不在当前工作区，X11 会话仍能从合成器保留
+的窗口缓冲直接读取其真实内容（`windowCapture: true`），既不弹起窗口也不抢占
+焦点；其他平台按区域抓屏并受合成器能力限制。一个选择器命中多个窗口时会
+**全部**截取。
 
 在窗口选择器后追加 `@x,y,width,height` 即可截取窗口内的组件子区域（偏移量
 相对窗口左上角，自动裁剪到窗口范围内）：
@@ -392,6 +402,9 @@ Agent 发起的截图不会覆盖用户正在别处使用的文本或图片。�
   多余的图片文件位置参数）也会立即以非零退出码结束并在 stderr 给出原因，
   而不会弹出 `QMessageBox`，更不会落入交互式界面；
 - 绝不弹出交互式 portal 授权框（`allowInteractivePortal` 已禁用）；
+- 无人值守录制（`--record-*`）同样静默执行：**不弹桌面通知、不发起交互式
+  portal 授权**，录制期间不抢焦点、不弹窗，结束状态通过 `--recording-status` /
+  `--record-wait-json` 查询，而不是打扰用户；
 - 写出输出后进程立即退出；
 - 捕获前后窗口列表完全一致；
 - 无头模式绝不触碰系统剪贴板，除非显式请求了 `clipboard` **且**已在

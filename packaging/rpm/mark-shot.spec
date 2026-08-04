@@ -21,6 +21,7 @@ BuildRequires:  cmake(LayerShellQt)
 BuildRequires:  pkgconfig(libpipewire-0.3)
 BuildRequires:  pkgconfig(x11-xcb)
 BuildRequires:  pkgconfig(xcb)
+BuildRequires:  pkgconfig(xcomposite)
 
 Requires:       python3
 Requires:       qt6-qtwayland

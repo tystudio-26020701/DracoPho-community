@@ -19,6 +19,7 @@ struct WindowInfo {
     QString instance;  // WM_CLASS instance / app name
     QString monitor;   // monitor name when the backend reports it
     QString workspace; // workspace / desktop when the backend reports it
+    qint64 pid = -1;   // owning process id when the backend reports it (-1 = unknown)
 };
 
 QString markShotConfigDir();
