@@ -12,6 +12,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QGraphicsOpacityEffect>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QMenu>
@@ -21,6 +22,7 @@
 #include <QPainterPath>
 #include <QScreen>
 #include <QTimer>
+#include <QWindow>
 
 namespace markshot {
 namespace {
@@ -29,6 +31,14 @@ namespace {
 constexpr int kBallSize = 44;
 /// @brief 悬浮球外阴影半径。
 constexpr int kShadowRadius = 10;
+/// @brief 距屏幕边缘多少像素内触发吸附。
+constexpr int kSnapMarginPixels = 24;
+/// @brief 拖动判定最小位移（像素）。
+constexpr int kDragThresholdPixels = 4;
+/// @brief 默认闲置淡出延迟（秒）。
+constexpr int kDefaultFadeSeconds = 3;
+/// @brief 默认闲置不透明度。
+constexpr double kDefaultIdleOpacity = 0.35;
 
 /// @brief 读取已保存的悬浮球位置。
 /// @return 已保存位置；无则返回无效点。
@@ -86,6 +96,14 @@ FloatingBall::FloatingBall(QWidget *parent)
     setObjectName(QStringLiteral("floatingBall"));
 
     markshot::windows::setExcludedFromTaskbar(this);
+    markshot::windows::setExcludedFromCapture(this);
+
+    // 闲置淡出用客户端渲染的 QGraphicsOpacityEffect 实现：Wayland 不支持
+    // setWindowOpacity（xdg-shell 无全局透明度概念），效果层在 Qt 合成阶段
+    // 生效，X11/Wayland 均可用。
+    m_opacityEffect = new QGraphicsOpacityEffect(this);
+    m_opacityEffect->setOpacity(1.0);
+    setGraphicsEffect(m_opacityEffect);
 
     // 单击弹出菜单、双击快速截图：用计时器区分两种手势，
     // 避免单击的菜单弹出窗口吞掉双击事件的第二击。
@@ -94,6 +112,19 @@ FloatingBall::FloatingBall(QWidget *parent)
     m_clickTimer->setInterval(220);
     connect(m_clickTimer, &QTimer::timeout, this, [this] {
         showBallMenu(m_pendingClickPos);
+    });
+
+    // 闲置淡出：离开悬浮球一段时间后降低不透明度，悬停时立即恢复，
+    // 避免长时间悬浮在屏幕上干扰用户阅读/操作。
+    m_fadeTimer = new QTimer(this);
+    m_fadeTimer->setSingleShot(true);
+    connect(m_fadeTimer, &QTimer::timeout, this, [this] {
+        int fadeSeconds = kDefaultFadeSeconds;
+        double idleOpacity = kDefaultIdleOpacity;
+        idleFadeConfig(&fadeSeconds, &idleOpacity);
+        if (fadeSeconds > 0 && !m_hovered && !m_dragging) {
+            setBallOpacity(idleOpacity);
+        }
     });
 
     m_menu = new QMenu(this);
@@ -122,6 +153,9 @@ FloatingBall::FloatingBall(QWidget *parent)
             qApp->quit();
             return;
         }
+        // 用户主动隐藏：置位持久状态，截图会话结束不得重新显示。
+        m_hiddenByUser = true;
+        pauseIdleFade();
         hide();
     });
     m_menu->addAction(MS_TR("Quit"), qApp, [this] {
@@ -176,6 +210,26 @@ void FloatingBall::placeOnScreen()
     }
 }
 
+bool FloatingBall::isHiddenByUser() const
+{
+    return m_hiddenByUser;
+}
+
+void FloatingBall::toggleByUser()
+{
+    if (m_hiddenByUser || !isVisible()) {
+        m_hiddenByUser = false;
+        placeOnScreen();
+        setBallOpacity(1.0);
+        show();
+        restartIdleFade();
+        return;
+    }
+    m_hiddenByUser = true;
+    pauseIdleFade();
+    hide();
+}
+
 void FloatingBall::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
@@ -221,9 +275,15 @@ void FloatingBall::paintEvent(QPaintEvent *event)
 void FloatingBall::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
+        pauseIdleFade();
         m_dragging = true;
         m_moved = false;
-        m_dragOffset = event->globalPosition().toPoint() - frameGeometry().topLeft();
+        m_systemMoveStarted = false;
+        m_pressGlobalPos = event->globalPosition().toPoint();
+        m_pressFrameTopLeft = frameGeometry().topLeft();
+        m_dragOffset = m_pressGlobalPos - m_pressFrameTopLeft;
+        // 暂不发起系统拖动：先在移动事件里检测到真实位移再交给合成器，
+        // 保证纯单击/双击（截图）不会被系统移动手势吞掉。
         event->accept();
         return;
     }
@@ -233,12 +293,29 @@ void FloatingBall::mousePressEvent(QMouseEvent *event)
 void FloatingBall::mouseMoveEvent(QMouseEvent *event)
 {
     if (m_dragging && (event->buttons() & Qt::LeftButton)) {
-        const QPoint target = event->globalPosition().toPoint() - m_dragOffset;
-        const QPoint delta = target - frameGeometry().topLeft();
-        if (delta.manhattanLength() >= 4) {
+        const QPoint delta = event->globalPosition().toPoint() - m_pressGlobalPos;
+        if (!m_moved && delta.manhattanLength() >= kDragThresholdPixels) {
             m_moved = true;
         }
-        move(target);
+        if (!m_moved) {
+            event->accept();
+            return;
+        }
+        if (!m_systemMoveStarted) {
+            // Wayland 下顶层窗口无法用 move() 定位，交给合成器系统拖动；
+            // 失败（X11/offscreen 等）回退到手拖 + 鼠标抓取。
+            if (QWindow *window = windowHandle()) {
+                if (window->startSystemMove()) {
+                    m_systemMoveStarted = true;
+                    event->accept();
+                    return;
+                }
+            }
+            if (QWidget::mouseGrabber() != this) {
+                grabMouse();
+            }
+            move(event->globalPosition().toPoint() - m_dragOffset);
+        }
         event->accept();
         return;
     }
@@ -248,15 +325,24 @@ void FloatingBall::mouseMoveEvent(QMouseEvent *event)
 void FloatingBall::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton && m_dragging) {
+        const bool moved = m_moved;
         m_dragging = false;
+        const bool wasSystemMove = m_systemMoveStarted;
+        m_systemMoveStarted = false;
+        if (!wasSystemMove) {
+            if (QWidget::mouseGrabber() == this) {
+                releaseMouse();
+            }
+        }
         event->accept();
-        if (!m_moved) {
+        if (!moved) {
             // 单击：延迟弹出菜单，等待可能的双击。
             m_pendingClickPos = event->globalPosition().toPoint();
             m_clickTimer->start();
-        } else {
-            savePosition();
+            return;
         }
+        snapAndSavePosition();
+        restartIdleFade();
         return;
     }
     QWidget::mouseReleaseEvent(event);
@@ -280,6 +366,7 @@ void FloatingBall::mouseDoubleClickEvent(QMouseEvent *event)
 void FloatingBall::enterEvent(QEnterEvent *event)
 {
     m_hovered = true;
+    pauseIdleFade();
     update();
     QWidget::enterEvent(event);
 }
@@ -287,13 +374,28 @@ void FloatingBall::enterEvent(QEnterEvent *event)
 void FloatingBall::leaveEvent(QEvent *event)
 {
     m_hovered = false;
+    restartIdleFade();
     update();
     QWidget::leaveEvent(event);
+}
+
+void FloatingBall::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    setBallOpacity(1.0);
+    restartIdleFade();
+}
+
+void FloatingBall::hideEvent(QHideEvent *event)
+{
+    pauseIdleFade();
+    QWidget::hideEvent(event);
 }
 
 void FloatingBall::showBallMenu(const QPoint &globalPos)
 {
     // 悬浮球菜单每次现建现用（菜单关闭后不持有动作），动作复用 m_menu。
+    pauseIdleFade();
     QMenu menu;
     for (QAction *action : m_menu->actions()) {
         if (action->isSeparator()) {
@@ -309,6 +411,9 @@ void FloatingBall::showBallMenu(const QPoint &globalPos)
         }
     }
     menu.exec(globalPos);
+    if (isVisible() && !m_hovered) {
+        restartIdleFade();
+    }
 }
 
 void FloatingBall::startRecordingFromBall()
@@ -344,6 +449,102 @@ void FloatingBall::startRecordingFromBall()
     };
 
     recording::runRecordingStartFlow(request);
+}
+
+void FloatingBall::pauseIdleFade()
+{
+    if (m_fadeTimer) {
+        m_fadeTimer->stop();
+    }
+    if (isVisible() && !m_hiddenByUser) {
+        setBallOpacity(1.0);
+    }
+}
+
+void FloatingBall::setBallOpacity(qreal opacity)
+{
+    if (m_opacityEffect) {
+        m_opacityEffect->setOpacity(qBound<qreal>(0.0, opacity, 1.0));
+        update();
+    }
+}
+
+void FloatingBall::restartIdleFade()
+{
+    if (!m_fadeTimer || !isVisible() || m_hovered || m_dragging || m_hiddenByUser) {
+        return;
+    }
+    int fadeSeconds = kDefaultFadeSeconds;
+    double idleOpacity = kDefaultIdleOpacity;
+    idleFadeConfig(&fadeSeconds, &idleOpacity);
+    if (fadeSeconds <= 0) {
+        return;
+    }
+    setBallOpacity(1.0);
+    m_fadeTimer->setInterval(fadeSeconds * 1000);
+    m_fadeTimer->start();
+}
+
+void FloatingBall::idleFadeConfig(int *fadeSeconds, double *idleOpacity) const
+{
+    if (fadeSeconds) {
+        *fadeSeconds = kDefaultFadeSeconds;
+    }
+    if (idleOpacity) {
+        *idleOpacity = kDefaultIdleOpacity;
+    }
+
+    bool ok = false;
+    const QJsonObject root = readAppConfigRoot(&ok);
+    if (!ok) {
+        return;
+    }
+    const QJsonObject ball = root.value(QStringLiteral("floatingBall")).toObject();
+
+    const QJsonValue seconds = ball.value(QStringLiteral("idleFadeSeconds"));
+    if (seconds.isDouble() && seconds.toInt() >= 0) {
+        if (fadeSeconds) {
+            *fadeSeconds = seconds.toInt();
+        }
+    }
+    const QJsonValue opacity = ball.value(QStringLiteral("idleOpacity"));
+    if (opacity.isDouble() && opacity.toDouble() > 0.0 && opacity.toDouble() <= 1.0) {
+        if (idleOpacity) {
+            *idleOpacity = opacity.toDouble();
+        }
+    }
+}
+
+QPoint FloatingBall::snappedPosition(const QPoint &desired) const
+{
+    QScreen *screen = QGuiApplication::screenAt(QRect(desired, size()).center());
+    if (!screen) {
+        return desired;
+    }
+    const QRect available = screen->availableGeometry();
+    const int w = width();
+    const int h = height();
+    int x = desired.x();
+    int y = desired.y();
+    if (std::abs(x - available.left()) <= kSnapMarginPixels) {
+        x = available.left();
+    } else if (std::abs(available.right() - (x + w - 1)) <= kSnapMarginPixels) {
+        x = available.right() - w + 1;
+    }
+    if (std::abs(y - available.top()) <= kSnapMarginPixels) {
+        y = available.top();
+    } else if (std::abs(available.bottom() - (y + h - 1)) <= kSnapMarginPixels) {
+        y = available.bottom() - h + 1;
+    }
+    return QPoint(x, y);
+}
+
+void FloatingBall::snapAndSavePosition()
+{
+    const QPoint snapped = snappedPosition(frameGeometry().topLeft());
+    move(snapped);
+    savePosition();
+    markshot::debugLog("floating", "snapped to %d,%d", snapped.x(), snapped.y());
 }
 
 }  // namespace markshot

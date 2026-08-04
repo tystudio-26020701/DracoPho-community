@@ -35,6 +35,7 @@ public:
 
     using Callback = std::function<void()>;
     using RecordingRegionCallback = std::function<void(recording::RecordingOptions)>;
+    using FloatingBallVisibility = std::function<bool()>;
 
     /// @brief 创建托盘控制器。
     /// @param application 应用实例。
@@ -53,6 +54,15 @@ public:
 
     void setCaptureCallbacks(Callback capture, Callback fullscreen);
     void setRecordingRegionCallback(RecordingRegionCallback callback);
+
+    /// @brief 关联悬浮球的"显示/隐藏"开关。
+    ///
+    /// 托盘菜单会添加"显示/隐藏悬浮球"项：点击调用 toggle 回调，菜单显示前
+    /// 通过 visible 回调刷新文案。未设置时不显示该菜单项。
+    /// @param toggle 切换悬浮球可见状态的回调。
+    /// @param visible 返回悬浮球当前是否可见的回调。
+    void setFloatingBallVisibilityControl(Callback toggle, FloatingBallVisibility visible);
+
     bool start();
     QString errorString() const;
 
@@ -87,11 +97,14 @@ private:
     Callback m_captureCallback;
     Callback m_fullscreenCaptureCallback;
     RecordingRegionCallback m_recordingRegionCallback;
+    Callback m_floatingBallToggle;
+    FloatingBallVisibility m_floatingBallVisible;
     QMenu *m_menu = nullptr;
     QSystemTrayIcon *m_tray = nullptr;
     QAction *m_startRecordingAction = nullptr;
     QAction *m_recordingStatusAction = nullptr;
     QAction *m_stopRecordingAction = nullptr;
+    QAction *m_floatingBallToggleAction = nullptr;
     QTimer *m_recordingStatusTimer = nullptr;
     QString m_errorString;
     bool m_showTrayIcon = true;
