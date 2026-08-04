@@ -72,4 +72,22 @@ QVector<DisplaySource> availableDisplaySources()
     return sources;
 }
 
+QString normalizeRecordingDisplayId(const QString &raw)
+{
+    QString id = raw.trimmed();
+    if (id.isEmpty()) {
+        return {};
+    }
+    if (id.startsWith(QStringLiteral("screen:"))) {
+        const QString name = id.mid(7).trimmed();
+        return name.isEmpty() ? QString() : QStringLiteral("output:%1").arg(name);
+    }
+    if (id.startsWith(QStringLiteral("output:"))
+        || id.startsWith(QStringLiteral("geometry:"))
+        || id == QLatin1String("all")) {
+        return id;
+    }
+    return QStringLiteral("output:%1").arg(id);
+}
+
 }  // namespace markshot::recording

@@ -1,5 +1,6 @@
 #include "cli/headless_capture.h"
 
+#include "recording/recording_display_source.h"
 #include "screen_capture.h"
 
 #include <QDateTime>
@@ -51,6 +52,10 @@ QByteArray displaysJson()
         }
         QJsonObject entry;
         entry.insert(QStringLiteral("name"), screen->name());
+        // 持久化键：可直接用于 --record-display（裸名、screen:、output: 前缀
+        // 均会被归一化，此处给出规范形式 output:<name>）。
+        entry.insert(QStringLiteral("key"),
+                     markshot::recording::normalizeRecordingDisplayId(screen->name()));
         const QRect geometry = screen->geometry();
         entry.insert(QStringLiteral("x"), geometry.x());
         entry.insert(QStringLiteral("y"), geometry.y());
