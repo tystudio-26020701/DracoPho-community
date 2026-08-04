@@ -4,7 +4,7 @@ Release:        1%{?dist}
 Summary:        Qt 6 screenshot selection and annotation tool
 
 License:        MIT
-URL:            https://github.com/jswysnemc/mark-shot
+URL:            https://github.com/tystudio-26020701/mark-shot-community
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  cmake >= 3.20

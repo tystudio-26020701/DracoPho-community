@@ -11,8 +11,8 @@
     <p xml:lang="zh-CN">Mark Shot 支持截图选区、图像标注、置顶贴图，以及针对置顶图像文字的 OCR 与翻译辅助功能。</p>
   </description>
   <launchable type="desktop-id">io.github.jswysnemc.MarkShot.desktop</launchable>
-  <url type="homepage">https://github.com/jswysnemc/mark-shot</url>
-  <url type="bugtracker">https://github.com/jswysnemc/mark-shot/issues</url>
+  <url type="homepage">https://github.com/tystudio-26020701/mark-shot-community</url>
+  <url type="bugtracker">https://github.com/tystudio-26020701/mark-shot-community/issues</url>
   <developer id="io.github.jswysnemc">
     <name>jswysnemc</name>
   </developer>
