@@ -19,6 +19,7 @@
 #include "ui/icons.h"
 #include "ui/interface_language_config.h"
 #include "ui/interface_theme_config.h"
+#include "windows_integration.h"
 
 #include <QApplication>
 #include <QAbstractSpinBox>
@@ -51,9 +52,16 @@
 namespace markshot::settings {
 namespace {
 
+/// @brief 全局设置窗口单例（showSettingsDialog 复用；截图隐藏/恢复共用）。
+QPointer<SettingsDialog> &settingsDialogSingleton()
+{
+    static QPointer<SettingsDialog> dialog;
+    return dialog;
+}
+
 /// @brief 将设置页包装成可滚动页面。
 /// @param stack 目标堆叠控件。
-/// @param page 需要显示的设置页。
+/// @param page 需要显示的设置页面。
 void addScrollablePage(QStackedWidget *stack, QWidget *page)
 {
     auto *area = new QScrollArea(stack);
@@ -101,6 +109,10 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     setWindowIcon(markshot::ui::applicationIcon());
     setMinimumSize(820, 600);
     resize(900, 640);
+
+    // Windows: 设置窗口从截图/录屏中排除（图形合成层 WDA 标志），
+    // 避免用户在本软件设置界面打开时误截到本软件 UI。
+    markshot::windows::setExcludedFromCapture(this);
 
     applyTheme(configuredSettingsThemeMode());
 
@@ -597,7 +609,7 @@ void SettingsDialog::reject()
 
 void showSettingsDialog(QWidget *parent)
 {
-    static QPointer<SettingsDialog> dialog;
+    QPointer<SettingsDialog> &dialog = settingsDialogSingleton();
     if (!dialog) {
         dialog = new SettingsDialog(nullptr);
         dialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -617,6 +629,32 @@ void showSettingsDialog(QWidget *parent)
     dialog->show();
     dialog->raise();
     dialog->activateWindow();
+}
+
+void hideSettingsWindowForCapture()
+{
+    QPointer<SettingsDialog> dialog = settingsDialogSingleton();
+    if (!dialog || !dialog->isVisible()) {
+        return;
+    }
+    // 记录"截图前可见"状态：会话结束后仅对原来就可见的窗口恢复显示，
+    // 避免截图前设置窗口本身不可见时被意外弹出。
+    dialog->setProperty("_markshotVisibleBeforeCapture", true);
+    dialog->hide();
+}
+
+void restoreSettingsWindowAfterCapture()
+{
+    QPointer<SettingsDialog> dialog = settingsDialogSingleton();
+    if (!dialog) {
+        return;
+    }
+    const QVariant wasVisible = dialog->property("_markshotVisibleBeforeCapture");
+    dialog->setProperty("_markshotVisibleBeforeCapture", QVariant());
+    if (wasVisible.toBool() && !dialog->isVisible()) {
+        dialog->show();
+        dialog->raise();
+    }
 }
 
 }  // namespace markshot::settings
