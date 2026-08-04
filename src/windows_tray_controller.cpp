@@ -354,6 +354,12 @@ void WindowsTrayController::setRecordingRegionCallback(RecordingRegionCallback c
     m_recordingRegionCallback = std::move(callback);
 }
 
+void WindowsTrayController::setFloatingBallVisibilityControl(Callback toggle, FloatingBallVisibility visible)
+{
+    m_floatingBallToggle = std::move(toggle);
+    m_floatingBallVisible = std::move(visible);
+}
+
 bool WindowsTrayController::start()
 {
     if (!m_application) {
@@ -374,6 +380,24 @@ bool WindowsTrayController::start()
             startRecordingFromTray();
         });
         m_menu->addAction(MS_TR("Settings"), this, [] { settings::showSettingsDialog(); });
+        if (m_floatingBallToggle) {
+            // 悬浮球显示/隐藏开关：用户主动隐藏的状态会持久，截图会话不会覆盖。
+            m_floatingBallToggleAction =
+                m_menu->addAction(MS_TR("Hide Floating Ball"), this, [this] {
+                    if (m_floatingBallToggle) {
+                        m_floatingBallToggle();
+                    }
+                });
+            QObject::connect(m_menu, &QMenu::aboutToShow, this, [this] {
+                if (!m_floatingBallToggleAction) {
+                    return;
+                }
+                const bool visible = m_floatingBallVisible && m_floatingBallVisible();
+                m_floatingBallToggleAction->setText(visible
+                    ? MS_TR("Hide Floating Ball")
+                    : MS_TR("Show Floating Ball"));
+            });
+        }
         m_menu->addSeparator();
         m_recordingStatusAction = m_menu->addAction(MS_TR("Recording: idle"));
         m_recordingStatusAction->setEnabled(false);
