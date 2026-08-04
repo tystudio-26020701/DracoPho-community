@@ -157,6 +157,67 @@ After changing desktop entries, refresh KDE's desktop file cache by logging out 
 
 ---
 
+## Product Comparison
+
+Mark Shot Community Edition is an **open source (MIT), cross-platform (native Linux X11/Wayland + Windows), fully offline** all-in-one screenshot, annotation, pin, OCR, translation and recording tool. The tables below are compiled from each product's official documentation and website (as of **August 2026**) and honestly reflect capability: **✅ built-in**; **⭕ partial or depends on external tools/services**; **❌ not available**. Capabilities are counted on an "out of the box" basis — not tied to paid tiers, cloud services or experimental branches.
+
+### Core capability matrix
+
+| Capability | Mark Shot CE | Flameshot | ShareX | PixPin | Snipaste | Spectacle | Snagit | CleanShot X | Shottr |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Region capture | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Fullscreen capture | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Window capture | ⭕ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Scrolling / long screenshot | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Annotation toolset | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Step number / magnifier annotation | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Pin to screen | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| OCR text recognition | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Translation | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| QR / barcode recognition | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Screen recording | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ⭕ |
+| Animated WebP output | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Image upload | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ⭕ |
+| Headless CLI / scripting | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ | ❌ | ⭕ | ⭕ |
+| Floating ball launcher | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Native Linux Wayland | ✅ | ⭕ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Timed / delayed capture | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Open source / free | ✅ | ✅ | ✅ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ✅ |
+
+### Detailed feature notes
+
+**Capture quality and coverage** (whether you can capture what you need)
+
+- **Region / fullscreen / display capture** — Mark Shot supports all of them, handling negative coordinates and per-display HiDPI scaling correctly on multi-monitor setups; every mainstream competitor covers this baseline too.
+- **Window capture** — Mark Shot's headless mode (`--window`) fully supports selecting by id, title, class, **PID or process name**; on X11 it reads the window's own composited buffer even when occluded or minimized (no raising, no focus stealing). The interactive mode uses a fullscreen selection overlay and has no dedicated "active window" one-click mode (hence ⭕).
+- **Scrolling / long screenshot** — Mark Shot works natively on niri and GNOME Wayland (official extension), with KDE/X11 as an experimental feature. ShareX (Windows) and CleanShot X / Shottr (macOS) also ship it; Flameshot, Spectacle and Snipaste do not.
+- **Timed / delayed capture** — not yet available in Mark Shot (❌); most mainstream tools support it and it is a natural follow-up.
+
+**Annotation, recognition and privacy** (getting the most out of a capture)
+
+- **Annotation toolset** — Mark Shot ships 12+ tools: pen, highlighter, line, rectangle, ellipse, arrow, text, step numbers, mosaic, dual-frame magnifier, laser pointer, color picker and ruler; on par with ksnip, Spectacle and ShareX.
+- **Pin to screen** — Mark Shot offers frameless always-on-top stickers with scale, rotate, OCR word picking and on-sticker LLM translation; Snipaste, ShareX, CleanShot X and Shottr include it too.
+- **OCR text recognition** — Mark Shot bundles RapidOCR (PP-OCR, offline) with a Tesseract fallback, working out of the box; Snipaste and Flameshot have none, Spectacle relies on an external Tesseract install.
+- **Translation** — Mark Shot bundles OpenAI-compatible LLM screenshot translation (offline / self-hosted supported). **None of the competitors ships a general-purpose screenshot translator** (PixPin is a paid tier, WeChat/QQ translation is tied to their clients). This is one of the strongest differentiators today.
+- **QR / barcode recognition** — Mark Shot has built-in code scanning (QR, 1D codes, PDF417…), reachable with `Q` during capture; ShareX and Shottr support it, most others do not.
+- **One-click AI redaction** — WeChat's 2026 auto-redaction is not built in yet (❌); Mark Shot's mosaic/blur is manual annotation, and this is a possible follow-up.
+
+**Sharing, collaboration and automation** (what happens after the capture)
+
+- **Image upload** — Mark Shot ships ImgURL / sm.ms / imgbb / litterbox / custom command upload (`Ctrl+U`); ShareX has the most targets, Flameshot only Imgur, Snipaste and PixPin have none.
+- **Headless CLI / scripting** — Mark Shot provides a complete headless pipeline: `--capture-to` region/display screenshots, `--list-windows` + `--window` window/component captures, `--record-region/--record-display` unattended recording and `--record-wait-json` structured status output — all without windows, dialogs or focus stealing, and with **PID/process-name targeting plus occluded/minimized window capture**. The enterprise MCP server reuses the same pipeline. Among competitors only ShareX (Windows-only) and Flameshot have comparable CLIs; PixPin only offers a JS action engine.
+- **Floating ball launcher** — Mark Shot has a draggable ball that snaps to screen edges and fades out when idle; only PixPin (paid) offers something similar.
+
+**Platform, licensing and ecosystem**
+
+- **Native Linux Wayland** — Mark Shot natively supports PipeWire portal, grim, layer-shell, KDE KWin ScreenShot2 and GNOME extensions; among open source tools only Spectacle (KDE) matches that depth, while Flameshot's Wayland support is experimental. PixPin / Snipaste (Pro) have no Linux build.
+- **Open source / free** — Mark Shot CE is MIT licensed, fully free, ad-free, account-free and network-optional; Flameshot, ShareX, Spectacle and Shottr are also free/open, PixPin and Snipaste are closed-source commercial (tier/paid), Snagit and CleanShot X are paid commercial software.
+- **Plugin ecosystem** — Mark Shot provides a Qt plugin system with a GitHub plugin marketplace (extensible OCR / translation / code-scan providers); ShareX has action/upload plugins, ksnip has an OCR plugin, Flameshot and Spectacle have none.
+
+> Note: compiled from each product's official website and documentation (2026-08); capability changes with each release, so refer to the latest docs. Tools such as FastStone Capture, Nimbus and Sogou Capture are not in the matrix above.
+
+---
+
 ## Usage
 
 ### Command Line Interface (CLI)
@@ -233,6 +294,28 @@ Graphics Capture), so image quality and region handling are identical. All
 headless options are mutually exclusive with the positional image-file
 argument.
 
+Headless mode can also capture **specific windows or components** (no windows,
+no dialogs, no focus stealing):
+```bash
+# list windows (including pid/process for process-based targeting)
+mark-shot --list-windows
+
+# capture by window title / process name / process id
+mark-shot --window "VSCodium" --capture-destination file --capture-to /tmp/shots/
+mark-shot --window-by process --window vscode --capture-destination inline
+
+# capture by PID even when occluded or minimized (X11 reads the window's own
+# composited buffer without raising it)
+mark-shot --window-by pid --window 12345 --capture-destination file --capture-to /tmp/shots/
+
+# capture a 100px component strip at the top of window 0
+mark-shot --window "0@0,0,1680,100" --capture-destination stage
+```
+
+Unattended recording (`--record-*`) is equally silent: no desktop notification,
+no interactive portal prompt, no focus stealing; the outcome is queried via
+`--recording-status` / `--record-wait-json`.
+
 ### CLI Arguments
 
 | Option | Description |
@@ -268,6 +351,10 @@ argument.
 | `--include-cursor` | With `--capture-to`: draw the mouse cursor into the captured frame. |
 | `--output-name <name>` | With `--capture-to`: base file name (without extension) used when the capture path is a directory. |
 | `--list-displays` | Prints the available outputs as JSON and exits. |
+| `--list-windows` | Lists the visible windows (id, title, class, pid, geometry) as JSON and exits. |
+| `--window <selector>` | Captures the window(s) matching the selector. May be repeated; append `@x,y,w,h` to capture a component sub-region. |
+| `--window-by <mode>` | How `--window` selectors are interpreted: `auto`, `id`, `title`, `class`, `index`, `pid` or `process`. |
+| `--capture-destination <mode>` | Where captured window images go: `inline` (base64), `file`, `stage` or `clipboard`. |
 
 ### Compositor / Desktop Hotkey Integration
 

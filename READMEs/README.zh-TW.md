@@ -140,6 +140,68 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 修改桌面檔案後，建議登出並重新登入，讓 KDE 重新讀取桌面檔案快取。如果目前 KDE 工作階段仍回傳 `NoAuthorized`，請重新啟動 KWin 或重新啟動系統一次。
 </details>
 
+
+---
+
+## 產品功能對比
+
+Mark Shot 社群版是一款**開源（MIT）、跨平台（Linux X11/Wayland 原生 + Windows）、可完全離線**的截圖·標註·貼圖·OCR·翻譯·螢幕錄製一體化工具。下表按各產品官方文件與官網整理（截至 **2026 年 8 月**），如實標註能力有無：**✅ 內建支援**；**⭕ 部分支援或依賴外部工具/服務**；**❌ 不支援**。能力一律按「開箱即用」口徑統計，不與付費會員、雲端服務或實驗性分支掛鉤。
+
+### 核心能力總覽
+
+| 能力 | Mark Shot 社群版 | Flameshot | ShareX | PixPin | Snipaste | Spectacle | Snagit | CleanShot X | Shottr |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 區域截圖 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 全螢幕截圖 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 視窗截圖 | ⭕ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 捲動長截圖 | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| 標註工具集 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 序號 / 放大鏡標註 | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| 貼圖 Pin 到螢幕 | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| OCR 文字辨識 | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| 翻譯 | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 二維碼 / 條碼辨識 | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| 螢幕錄製 | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ⭕ |
+| 動畫 WebP 輸出 | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| 圖床上傳 | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ⭕ |
+| 無頭 CLI / 腳本化 | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ | ❌ | ⭕ | ⭕ |
+| 懸浮球快捷入口 | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Linux Wayland 原生 | ✅ | ⭕ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| 定時 / 延遲截圖 | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| 開源 / 免費 | ✅ | ✅ | ✅ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ✅ |
+
+### 功能詳解
+
+**截圖品質與覆蓋面**（決定「能不能截到想要的東西」）
+
+- **區域 / 全螢幕 / 顯示器截圖** — Mark Shot 全支援，多顯示器下正確處理負座標與獨立縮放（HiDPI）；主流競品均已涵蓋此基礎能力。
+- **視窗截圖** — Mark Shot 在無頭模式（`--window`）完整支援按 id / 標題 / 類別 / PID / 行程名稱選窗；X11 下即使視窗被遮擋或已最小化，也能從合成器保留的視窗緩衝直接讀取真實內容（不彈起、不搶焦點）。互動模式為全螢幕選區覆蓋層，未單獨提供「活動視窗」一鍵模式（故標 ⭕）。
+- **捲動長截圖** — Mark Shot 在 niri 與 GNOME Wayland 原生可用（GNOME 需官方擴充套件），KDE/X11 為實驗特性。Windows 的 ShareX、Snagit 與 macOS 的 CleanShot X / Shottr 亦內建；開源陣營中 Flameshot、Spectacle、Snipaste 均不支援。
+- **定時 / 延遲截圖** — Mark Shot 暫未提供（❌）；多數主流工具支援，屬後續可補齊項目。
+
+**標註、辨識與隱私**（「截完之後能不能高效率地使用」）
+
+- **標註工具集** — Mark Shot 內建 12+ 工具：畫筆、螢光筆、直線、矩形、橢圓、箭頭、文字、步驟序號、馬賽克、雙框放大鏡、雷射筆、取色器與尺子；與 ksnip、Spectacle、ShareX 處於同一水準。
+- **貼圖 Pin** — Mark Shot 支援無邊框置頂貼圖、縮放、旋轉、OCR 取詞、LLM 原位翻譯；Snipaste、ShareX、CleanShot X、Shottr 亦內建。
+- **OCR 文字辨識** — Mark Shot 內建 RapidOCR（PP-OCR 模型，離線）+ Tesseract 回退，開箱即用；Snipaste、Flameshot、Snagit 無（或需外掛），Spectacle 依賴外部 Tesseract。
+- **翻譯** — Mark Shot 內建 OpenAI 相容介面的 LLM 截圖翻譯（可離線/自建服務）；**競品中無一內建通用截圖翻譯**（PixPin 為會員功能，微信/QQ 翻譯綁定其用戶端）。這是目前最獨特的差異化能力之一。
+- **二維碼 / 條碼辨識** — Mark Shot 內建掃碼（QR / 一維碼 / PDF417 等），截圖階段按 `Q` 鍵直達；ShareX、Shottr 支援，多數工具沒有。
+- **一鍵 AI 打碼** — 微信截圖 2026 年新增的自動打碼能力 Mark Shot 暫未內建（❌），屬可跟進方向；Mark Shot 現有馬賽克/毛玻璃為手動標註。
+
+**分享、協作與自動化**（「截完能不能順手分發/沉澱」）
+
+- **圖床上傳** — Mark Shot 內建 ImgURL / sm.ms / imgbb / litterbox / 自訂指令，`Ctrl+U` 一鍵上傳並複製連結；ShareX 上傳目標最齊全，Flameshot 僅 Imgur，Snipaste / PixPin 無圖床。
+- **無頭 CLI / 腳本化** — Mark Shot 提供完整無頭鏈路：`--capture-to` 區域/顯示器截圖、`--list-windows` + `--window` 視窗/元件截圖、`--record-region/--record-display` 無人值守錄製、`--record-wait-json` 等待並輸出結構化狀態；全程無視窗、無彈窗、無焦點搶佔，且**可指定 PID / 行程名稱**並截取被遮擋/最小化視窗。商業版 MCP server 複用同一鏈路。競品中僅 ShareX（僅 Windows）與 Flameshot 有較強 CLI；PixPin 僅有 JS 腳本動作引擎。
+- **懸浮球快捷入口** — Mark Shot 內建可拖曳、可吸附螢幕邊緣、閒置自動半透明的懸浮球；同類僅 PixPin（會員）提供。
+
+**平台、授權與生態**
+
+- **Linux Wayland 原生** — Mark Shot 原生支援 PipeWire portal、grim、layer-shell、KDE KWin ScreenShot2 與 GNOME 擴充套件；開源陣營中僅 Spectacle（KDE）達到同等原生水準，Flameshot 的 Wayland 為實驗性。PixPin / Snipaste（Pro）無 Linux 版。
+- **開源 / 免費** — Mark Shot 社群版為 MIT 開源、完全免費、無廣告、無帳號、無需連網；Flameshot、ShareX、Spectacle、Shottr 同為免費開源/免費，PixPin / Snipaste 為閉源商業（會員/授權），Snagit / CleanShot X 為付費商業軟體。
+- **外掛生態** — Mark Shot 提供 Qt 外掛體系與 GitHub 外掛市集（OCR / 翻譯 / 掃碼 provider 可擴充）；ShareX 有動作/上傳外掛，ksnip 有 OCR 外掛，Flameshot / Spectacle 無外掛體系。
+
+> 說明：以上對比基於各產品官網與官方文件（2026-08）整理；功能口徑隨版本演進會變化，請以各產品最新文件為準。部分工具（FastStone Capture、Nimbus、搜狗截圖等）未列入總覽表，其能力詳見上文調查口徑。
+
 ---
 
 ## 命令列介面 (CLI)

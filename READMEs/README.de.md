@@ -145,6 +145,68 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 Nach dem Ändern der Desktop-Datei empfiehlt es sich, sich ab- und wieder anzumelden, damit KDE den Desktop-Datei-Cache neu einliest. Wenn die aktuelle KDE-Sitzung weiterhin `NoAuthorized` zurückgibt, starte KWin oder das System einmal neu.
 </details>
 
+
+---
+
+## Produktvergleich
+
+Mark Shot Community Edition ist ein **Open-Source- (MIT), plattformübergreifendes (natives Linux X11/Wayland + Windows) und vollständig offline nutzbares** All-in-One-Werkzeug für Screenshot, Annotation, Pin, OCR, Übersetzung und Bildschirmaufnahme. Die folgende Tabelle wurde anhand der offiziellen Dokumentation und der Websites der jeweiligen Produkte zusammengestellt (Stand **August 2026**) und kennzeichnet die Fähigkeiten wahrheitsgemäß: **✅ integriert unterstützt**; **⭕ teilweise unterstützt oder von externen Werkzeugen/Diensten abhängig**; **❌ nicht unterstützt**. Die Fähigkeiten werden durchgängig nach dem Maßstab „out of the box" erfasst und nicht an kostenpflichtige Mitgliedschaften, Cloud-Dienste oder experimentelle Branches gekoppelt.
+
+### Kernfunktionsübersicht
+
+| Fähigkeit | Mark Shot CE | Flameshot | ShareX | PixPin | Snipaste | Spectacle | Snagit | CleanShot X | Shottr |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Region-Screenshot | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Vollbild-Screenshot | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Fenster-Screenshot | ⭕ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Scroll-/Lang-Screenshot | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Annotation-Werkzeugset | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Schrittnr. / Lupen-Annotation | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Pin auf den Bildschirm | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| OCR-Texterkennung | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Übersetzung | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| QR- / Barcode-Erkennung | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Bildschirmaufnahme | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ⭕ |
+| Animierte WebP-Ausgabe | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Bild-Hosting-Upload | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ⭕ |
+| Headless-CLI / Skripting | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ | ❌ | ⭕ | ⭕ |
+| Schwebende-Kugel-Schnellzugriff | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Natives Linux-Wayland | ✅ | ⭕ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Zeitgesteuerter / verzögerter Screenshot | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Open Source / Kostenlos | ✅ | ✅ | ✅ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ✅ |
+
+### Funktionen im Detail
+
+**Screenshot-Qualität und -Abdeckung** (entscheidet, „ob man das bekommt, was man möchte")
+
+- **Region- / Vollbild- / Monitor-Screenshot** — Mark Shot unterstützt alle Varianten und verarbeitet bei Multi-Monitor-Setups negative Koordinaten und unabhängige Skalierung (HiDPI) korrekt; auch alle gängigen Wettbewerber decken diese Grundfunktion ab.
+- **Fenster-Screenshot** — Mark Shot unterstützt im Headless-Modus (`--window`) die Auswahl von Fenstern vollständig nach ID / Titel / Klasse / PID / Prozessname; unter X11 wird der echte Inhalt direkt aus dem vom Compositor aufbewahrten Fensterpuffer gelesen, selbst wenn das Fenster verdeckt oder minimiert ist (kein Einblenden, kein Fokusraub). Der interaktive Modus verwendet eine Vollbild-Auswahlüberlagerung und bietet keinen separaten Ein-Klick-Modus „Aktives Fenster" (daher ⭕).
+- **Scroll-/Lang-Screenshot** — Mark Shot ist nativ unter niri und GNOME Wayland nutzbar (bei GNOME ist die offizielle Erweiterung erforderlich); KDE/X11 sind experimentelle Funktionen. ShareX und Snagit (Windows) sowie CleanShot X / Shottr (macOS) haben dies ebenfalls integriert; aus dem Open-Source-Lager unterstützen Flameshot, Spectacle und Snipaste dies nicht.
+- **Zeitgesteuerter / verzögerter Screenshot** — von Mark Shot derzeit nicht angeboten (❌); die meisten gängigen Werkzeuge unterstützen dies, es ist ein später nachrüstbares Element.
+
+**Annotation, Erkennung und Datenschutz** („ob man das Aufgenommene effizient weiterverwenden kann")
+
+- **Annotation-Werkzeugset** — Mark Shot enthält 12+ Werkzeuge: Stift, Textmarker, Linie, Rechteck, Ellipse, Pfeil, Text, Schrittnummern, Mosaik, Doppelrahmen-Lupe, Laserpointer, Farbpipette und Lineal; damit liegt es auf demselben Niveau wie ksnip, Spectacle und ShareX.
+- **Pin** — Mark Shot unterstützt rahmenlose Immer-im-Vordergrund-Pins mit Skalieren, Drehen, OCR-Wortauswahl und LLM-Übersetzung an Ort und Stelle; auch Snipaste, ShareX, CleanShot X und Shottr haben dies integriert.
+- **OCR-Texterkennung** — Mark Shot enthält RapidOCR (PP-OCR-Modell, offline) mit Tesseract als Fallback und ist sofort einsatzbereit; Snipaste, Flameshot und Snagit haben keine (oder benötigen Plugins), Spectacle ist von einem externen Tesseract abhängig.
+- **Übersetzung** — Mark Shot enthält eine LLM-Screenshot-Übersetzung über eine OpenAI-kompatible Schnittstelle (offline / eigener Dienst möglich); **keiner der Wettbewerber hat eine allgemeine Screenshot-Übersetzung integriert** (bei PixPin ist sie eine Mitgliedschaftsfunktion, die Übersetzung von WeChat/QQ ist an deren Clients gebunden). Dies ist derzeit eine der einzigartigsten Unterscheidungsfähigkeiten.
+- **QR- / Barcode-Erkennung** — Mark Shot hat einen integrierten Code-Scanner (QR / eindimensionale Codes / PDF417 usw.), der während der Aufnahme direkt über die `Q`-Taste erreichbar ist; ShareX und Shottr unterstützen dies, die meisten Werkzeuge nicht.
+- **Ein-Klick-AI-Schwärzung** — die 2026 neu hinzugekommene automatische Schwärzung der WeChat-Screenshots ist von Mark Shot noch nicht integriert (❌) und ein möglicher Folgeschritt; die vorhandenen Mosaik-/Milchglas-Werkzeuge von Mark Shot sind manuelle Annotationen.
+
+**Teilen, Zusammenarbeit und Automatisierung** („ob man das Aufgenommene bequem verteilen/festhalten kann")
+
+- **Bild-Hosting-Upload** — Mark Shot enthält ImgURL / sm.ms / imgbb / litterbox / benutzerdefinierte Befehle; mit `Ctrl+U` wird in einem Klick hochgeladen und der Link kopiert. ShareX hat die meisten Upload-Ziele, Flameshot nur Imgur, Snipaste / PixPin haben kein Bild-Hosting.
+- **Headless-CLI / Skripting** — Mark Shot bietet eine vollständige Headless-Pipeline: `--capture-to` für Region-/Monitor-Screenshots, `--list-windows` + `--window` für Fenster-/Komponenten-Screenshots, `--record-region/--record-display` für unbeaufsichtigte Aufnahmen und `--record-wait-json` zum Warten und Ausgeben eines strukturierten Status; durchgängig ohne Fenster, ohne Dialoge, ohne Fokusraub, wobei **PID / Prozessname angegeben** und verdeckte/minimierte Fenster aufgenommen werden können. Der MCP-Server der Enterprise-Edition nutzt dieselbe Pipeline. Unter den Wettbewerbern haben nur ShareX (nur Windows) und Flameshot eine ausgeprägte CLI; PixPin bietet lediglich eine JS-Skript-Aktions-Engine.
+- **Schnellzugriff über die schwebende Kugel** — Mark Shot enthält eine ziehbare Kugel, die an den Bildschirmrändern einrastet und bei Inaktivität automatisch halbtransparent wird; Vergleichbares bietet nur PixPin (Mitgliedschaft).
+
+**Plattform, Lizenz und Ökosystem**
+
+- **Natives Linux-Wayland** — Mark Shot unterstützt nativ das PipeWire-Portal, grim, layer-shell, KDE KWin ScreenShot2 und GNOME-Erweiterungen; aus dem Open-Source-Lager erreicht nur Spectacle (KDE) ein gleichwertiges natives Niveau, während die Wayland-Unterstützung von Flameshot experimentell ist. PixPin / Snipaste (Pro) haben keine Linux-Version.
+- **Open Source / kostenlos** — Mark Shot Community Edition ist MIT-lizenziert, vollständig kostenlos, ohne Werbung, ohne Konto und ohne Netzzwang; Flameshot, ShareX, Spectacle und Shottr sind ebenfalls kostenlos bzw. Open Source, PixPin / Snipaste sind proprietäre kommerzielle Software (Mitgliedschaft/Lizenz), Snagit / CleanShot X sind kostenpflichtige kommerzielle Software.
+- **Plugin-Ökosystem** — Mark Shot bietet ein Qt-Plugin-System und einen GitHub-Plugin-Marktplatz (OCR-/Übersetzungs-/Code-Scan-Provider erweiterbar); ShareX hat Aktions-/Upload-Plugins, ksnip hat ein OCR-Plugin, Flameshot / Spectacle haben kein Plugin-System.
+
+> Hinweis: Der obige Vergleich wurde anhand der offiziellen Websites und Dokumentationen der jeweiligen Produkte (2026-08) erstellt; die Funktionsumfänge können sich mit den Versionen ändern — maßgeblich sind die jeweils neuesten Dokumentationen der Produkte. Einige Werkzeuge (FastStone Capture, Nimbus, Sogou-Screenshot usw.) sind nicht in der Übersichtstabelle enthalten; deren Fähigkeiten entsprechen der oben genannten Erhebungssystematik.
+
 ---
 
 ## Befehlszeilenschnittstelle (CLI)

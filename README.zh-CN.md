@@ -152,6 +152,67 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 
 ---
 
+## 产品功能对比
+
+Mark Shot 社区版是一款**开源（MIT）、跨平台（Linux X11/Wayland 原生 + Windows）、可完全离线**的截图·标注·贴图·OCR·翻译·录屏一体化工具。下表按各产品官方文档与官网整理（截至 **2026 年 8 月**），如实标注能力有无：**✅ 内置支持**；**⭕ 部分支持或依赖外部工具/服务**；**❌ 不支持**。能力一律按"开箱即用"口径统计，不与付费会员、云端服务或实验性分支挂钩。
+
+### 核心能力总览
+
+| 能力 | Mark Shot 社区版 | Flameshot | ShareX | PixPin | Snipaste | Spectacle | Snagit | CleanShot X | Shottr |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 区域截图 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 全屏截图 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 窗口截图 | ⭕ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 滚动长截图 | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| 标注工具集 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 序号 / 放大镜标注 | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| 贴图 Pin 到屏幕 | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| OCR 文字识别 | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| 翻译 | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 二维码 / 条码识别 | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| 录屏 | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ⭕ |
+| 动画 WebP 输出 | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| 图床上传 | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ⭕ |
+| 无头 CLI / 脚本化 | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ | ❌ | ⭕ | ⭕ |
+| 悬浮球快捷入口 | ✅ | ❌ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Linux Wayland 原生 | ✅ | ⭕ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| 定时 / 延时截图 | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| 开源 / 免费 | ✅ | ✅ | ✅ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ✅ |
+
+### 功能详解
+
+**截图质量与覆盖面**（决定"能不能截到想要的东西"）
+
+- **区域 / 全屏 / 显示器截图** — Mark Shot 全支持，多显示器下正确处理负坐标与独立缩放（HiDPI）；主流竞品均已覆盖此基础能力。
+- **窗口截图** — Mark Shot 在无头模式（`--window`）完整支持按 id / 标题 / 类 / PID / 进程名选窗；X11 下即使窗口被遮挡或已最小化，也能从合成器保留的窗口缓冲直接读取真实内容（不弹起、不抢焦点）。交互模式为全屏选区覆盖层，未单独提供"活动窗口"一键模式（故标 ⭕）。
+- **滚动长截图** — Mark Shot 在 niri 与 GNOME Wayland 原生可用（GNOME 需官方扩展），KDE/X11 为实验特性。Windows 的 ShareX、Snagit 与 macOS 的 CleanShot X / Shottr 亦内置；开源阵营中 Flameshot、Spectacle、Snipaste 均不支持。
+- **定时 / 延时截图** — Mark Shot 暂未提供（❌）；多数主流工具支持，属后续可补齐项。
+
+**标注、识别与隐私**（"截完之后能不能高效地用"）
+
+- **标注工具集** — Mark Shot 内置 12+ 工具：画笔、荧光笔、直线、矩形、椭圆、箭头、文本、步骤序号、马赛克、双框放大镜、激光笔、取色器与尺子；与 ksnip、Spectacle、ShareX 处于同一水平。
+- **贴图 Pin** — Mark Shot 支持无边框置顶贴图、缩放、旋转、OCR 取词、LLM 原位翻译；Snipaste、ShareX、CleanShot X、Shottr 亦内置。
+- **OCR 文字识别** — Mark Shot 内置 RapidOCR（PP-OCR 模型，离线）+ Tesseract 回退，开箱即用；Snipaste、Flameshot、Snagit 无（或需插件），Spectacle 依赖外部 Tesseract。
+- **翻译** — Mark Shot 内置 OpenAI 兼容接口的 LLM 截图翻译（可离线/自建服务）；**竞品中无一内置通用截图翻译**（PixPin 为会员功能，微信/QQ 翻译绑定其客户端）。这是当前最独特的差异化能力之一。
+- **二维码 / 条码识别** — Mark Shot 内置扫码（QR / 一维码 / PDF417 等），截图阶段 `Q` 键直达；ShareX、Shottr 支持，多数工具没有。
+- **一键 AI 打码** — 微信截图 2026 年新增的自动打码能力 Mark Shot 暂未内置（❌），属可跟进方向；Mark Shot 现有马赛克/毛玻璃为手动标注。
+
+**分享、协作与自动化**（"截完能不能顺手分发/沉淀"）
+
+- **图床上传** — Mark Shot 内置 ImgURL / sm.ms / imgbb / litterbox / 自定义命令，`Ctrl+U` 一键上传并复制链接；ShareX 上传目标最全，Flameshot 仅 Imgur，Snipaste / PixPin 无图床。
+- **无头 CLI / 脚本化** — Mark Shot 提供完整无头链路：`--capture-to` 区域/显示器截图、`--list-windows` + `--window` 窗口/组件截图、`--record-region/--record-display` 无人值守录制、`--record-wait-json` 等待并输出结构化状态；全程无窗口、无弹窗、无焦点抢占，且**可指定 PID / 进程名**并截取被遮挡/最小化窗口。商业版 MCP server 复用同一链路。竞品中仅 ShareX（仅 Windows）与 Flameshot 有较强 CLI；PixPin 仅有 JS 脚本动作引擎。
+- **悬浮球快捷入口** — Mark Shot 内置可拖动、可吸附屏幕边缘、闲置自动半透明的悬浮球；同类仅 PixPin（会员）提供。
+
+**平台、授权与生态**
+
+- **Linux Wayland 原生** — Mark Shot 原生支持 PipeWire portal、grim、layer-shell、KDE KWin ScreenShot2 与 GNOME 扩展；开源阵营中仅 Spectacle（KDE）达到同等原生水平，Flameshot 的 Wayland 为实验性。PixPin / Snipaste（Pro）无 Linux 版。
+- **开源 / 免费** — Mark Shot 社区版为 MIT 开源、完全免费、无广告、无账号、无需联网；Flameshot、ShareX、Spectacle、Shottr 同为免费开源/免费，PixPin / Snipaste 为闭源商业（会员/授权），Snagit / CleanShot X 为付费商业软件。
+- **插件生态** — Mark Shot 提供 Qt 插件体系与 GitHub 插件市场（OCR / 翻译 / 扫码 provider 可扩展）；ShareX 有动作/上传插件，ksnip 有 OCR 插件，Flameshot / Spectacle 无插件体系。
+
+> 说明：以上对比基于各产品官网与官方文档（2026-08）整理；功能口径随版本演进会变化，请以各产品最新文档为准。部分工具（FastStone Capture、Nimbus、搜狗截图等）未列入总览表，其能力见上文调研口径。
+
+---
+
 ## 命令行接口 (CLI)
 
 ### 常用使用示例
@@ -224,6 +285,26 @@ mark-shot --list-displays
 xdg-desktop-portal、PipeWire、grim、KWin/GNOME 辅助、Windows Graphics Capture），
 因此图像质量与区域裁剪行为完全一致。所有无界面参数与位置图片文件参数互斥。
 
+无界面模式也能**按窗口或组件**截图（全程无窗口、无弹窗、无焦点抢占）：
+```bash
+# 列出窗口（含 pid/process，便于按进程定位）
+mark-shot --list-windows
+
+# 按窗口标题 / 进程名 / 进程 id 捕获
+mark-shot --window "VSCodium" --capture-destination file --capture-to /tmp/shots/
+mark-shot --window-by process --window vscode --capture-destination inline
+
+# 按 PID 捕获，即使窗口被遮挡或已最小化（X11 从合成缓冲直接读取窗口内容）
+mark-shot --window-by pid --window 12345 --capture-destination file --capture-to /tmp/shots/
+
+# 截取窗口顶部 100px 的组件条带
+mark-shot --window "0@0,0,1680,100" --capture-destination stage
+```
+
+无人值守录制（`--record-*`）同样静默执行：不弹桌面通知、不发起交互式 portal
+授权，全程无感、不抢焦点，结束状态经 `--recording-status`/`--record-wait-json`
+查询。
+
 ### CLI 参数说明
 
 | 参数选项 | 功能描述 |
@@ -259,6 +340,10 @@ xdg-desktop-portal、PipeWire、grim、KWin/GNOME 辅助、Windows Graphics Capt
 | `--include-cursor` | 配合 `--capture-to` 使用：将鼠标指针绘制进捕获帧。 |
 | `--output-name <name>` | 配合 `--capture-to` 使用：当捕获路径为目录时使用的基准文件名（不含扩展名）。 |
 | `--list-displays` | 以 JSON 输出当前所有显示器信息并退出。 |
+| `--list-windows` | 以 JSON 输出当前可见窗口（id/title/class/pid/几何）并退出。 |
+| `--window <selector>` | 按选择器捕获窗口，可重复以一次截取多个窗口；选择器后追加 `@x,y,w,h` 截取窗口内组件子区域。 |
+| `--window-by <mode>` | 解释 `--window` 选择器的规则：`auto`/`id`/`title`/`class`/`index`/`pid`/`process`。 |
+| `--capture-destination <mode>` | 窗口图片去向：`inline`（base64）/`file`/`stage`/`clipboard`。 |
 
 ### 快捷键绑定
 
