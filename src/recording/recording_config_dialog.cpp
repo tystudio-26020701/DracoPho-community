@@ -314,6 +314,8 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
     outputLayout->addWidget(m_outputPath, 1);
     outputLayout->addWidget(outputBrowse);
     form->addRow(MS_TR("Output"), outputRow);
+    m_outputRow = outputRow;
+    m_browseButton = outputBrowse;
 
     // 拉伸项吸收窗口放大/最大化后的多余纵向空间，避免表单行被拉伸变形；
     // 与设置页"内容 + 页脚按钮"的布局一致，按钮始终贴底。
@@ -323,6 +325,7 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
     buttons->button(QDialogButtonBox::Ok)->setText(MS_TR("Start"));
     buttons->button(QDialogButtonBox::Cancel)->setText(MS_TR("Cancel"));
     root->addWidget(buttons);
+    m_buttons = buttons;
 
     connect(outputBrowse, &QPushButton::clicked, this, [this] { browseOutputPath(); });
     connect(m_scope, &QComboBox::currentIndexChanged, this, [this] { updateDisplayControls(); });
@@ -356,6 +359,13 @@ RecordingConfigDialog::RecordingConfigDialog(RecordingMode mode, QWidget *parent
 
     updateAudioControls();
     updateDisplayControls();
+
+    // 语言切换即时生效：窗口文案在构造时固化，订阅通知后重新翻译，
+    // 与托盘菜单 / 悬浮球菜单 / 设置窗口保持一致。
+    connect(&i18n::LanguageChangeNotifier::instance(),
+            &i18n::LanguageChangeNotifier::languageChanged,
+            this,
+            &RecordingConfigDialog::retranslateUi);
 }
 
 RecordingOptions RecordingConfigDialog::options() const
@@ -471,6 +481,97 @@ void RecordingConfigDialog::storeCurrentFpsForMode(RecordingMode mode)
         return;
     }
     m_videoFps = value;
+}
+
+/**
+ * 重写表单行标签文本。
+ * @param form 表单布局。
+ * @param field 字段控件。
+ * @param text 新标签文本。
+ * @return 无返回值。
+ */
+void setFormRowLabel(QFormLayout *form, QWidget *field, const QString &text)
+{
+    if (auto *label = qobject_cast<QLabel *>(form->labelForField(field))) {
+        label->setText(text);
+    }
+}
+
+void RecordingConfigDialog::retranslateUi()
+{
+    const QString title = titleForMode(m_mode);
+    setWindowTitle(title);
+    if (m_title) {
+        m_title->setText(title);
+    }
+
+    if (QFormLayout *form = findChild<QFormLayout *>()) {
+        setFormRowLabel(form, m_modeSelector, MS_TR("Recording Type"));
+        setFormRowLabel(form, m_fps, MS_TR("Frame Rate"));
+        setFormRowLabel(form, m_audio, MS_TR("Audio"));
+        setFormRowLabel(form, m_display, MS_TR("Display"));
+        setFormRowLabel(form, m_backend, MS_TR("Recording Backend"));
+        setFormRowLabel(form, m_scope, MS_TR("Capture Area"));
+        if (m_outputRow) {
+            setFormRowLabel(form, m_outputRow, MS_TR("Output"));
+        }
+    }
+
+    // 下拉框选项就地重译，保留当前选中项。
+    if (m_modeSelector) {
+        const int current = m_modeSelector->currentIndex();
+        m_modeSelector->setItemText(0, QStringLiteral("GIF"));
+        if (m_modeSelector->count() > 1) {
+            m_modeSelector->setItemText(1, MS_TR("WebP"));
+        }
+        if (m_modeSelector->count() > 2) {
+            m_modeSelector->setItemText(2, MS_TR("Video"));
+        }
+        m_modeSelector->setCurrentIndex(current);
+    }
+    if (m_fps) {
+        const int current = m_fps->currentData().toInt();
+        for (int i = 0; i < m_fps->count(); ++i) {
+            bool ok = false;
+            const int fps = m_fps->itemData(i).toInt(&ok);
+            if (ok) {
+                m_fps->setItemText(i, MS_TR("%1 fps").arg(fps));
+            }
+        }
+        const int index = m_fps->findData(current);
+        if (index >= 0) {
+            m_fps->setCurrentIndex(index);
+        }
+    }
+    if (m_backend) {
+        const RecordingCaptureBackend backend = backendFromCombo(m_backend);
+        populateBackendOptions(m_backend, backend);
+    }
+    if (m_scope) {
+        const int current = m_scope->currentData().toInt();
+        m_scope->setItemText(m_scope->findData(static_cast<int>(RecordingScope::Display)),
+                             MS_TR("Record selected display"));
+        m_scope->setItemText(m_scope->findData(static_cast<int>(RecordingScope::Region)),
+                             MS_TR("Select region after this dialog"));
+        m_scope->setCurrentIndex(m_scope->findData(current));
+    }
+    if (m_audio) {
+        m_audio->setText(MS_TR("Record system default audio input"));
+    }
+    if (m_browseButton) {
+        m_browseButton->setText(MS_TR("Browse"));
+    }
+    if (m_buttons) {
+        if (QPushButton *ok = m_buttons->button(QDialogButtonBox::Ok)) {
+            ok->setText(MS_TR("Start"));
+        }
+        if (QPushButton *cancel = m_buttons->button(QDialogButtonBox::Cancel)) {
+            cancel->setText(MS_TR("Cancel"));
+        }
+    }
+
+    updateAudioControls();
+    updateDisplayControls();
 }
 
 }  // namespace markshot::recording

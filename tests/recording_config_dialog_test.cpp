@@ -288,6 +288,48 @@ private slots:
         QCOMPARE(markshot::i18n::translate(QStringLiteral("Windows Graphics Capture")), QStringLiteral("Windows 图形捕获"));
         QCOMPARE(markshot::i18n::translate(QStringLiteral("Polling")), QStringLiteral("轮询"));
     }
+
+    /**
+     * 验证语言切换时已打开的录制配置窗口立即重新翻译（回归测试）。
+     * 与托盘菜单 / 悬浮球菜单一致：窗口文案在构造时固化，必须订阅
+     * LanguageChangeNotifier 并在 languageChanged 后更新，无需重启应用。
+     * @return 无返回值。
+     */
+    void retranslatesControlsOnLanguageChange()
+    {
+        markshot::i18n::setLanguage(markshot::i18n::Language::Chinese);
+        markshot::recording::RecordingConfigDialog dialog(markshot::recording::RecordingMode::Video);
+        auto *modeSelector = findControl<QComboBox>(&dialog, QStringLiteral("recordingModeSelector"));
+        auto *fps = findControl<QComboBox>(&dialog, QStringLiteral("recordingFps"));
+        auto *scope = findControl<QComboBox>(&dialog, QStringLiteral("recordingScope"));
+        auto *audio = findControl<QCheckBox>(&dialog, QStringLiteral("recordingAudioCheck"));
+        QVERIFY(modeSelector);
+        QVERIFY(fps);
+        QVERIFY(scope);
+        QVERIFY(audio);
+
+        const QString zhTitle = dialog.windowTitle();
+        QVERIFY(!zhTitle.isEmpty());
+        QCOMPARE(zhTitle, markshot::i18n::translate(QStringLiteral("Video Recording")));
+        QCOMPARE(audio->text(), markshot::i18n::translate(QStringLiteral("Record system default audio input")));
+        const int zhFpsText = fps->currentIndex();
+
+        markshot::i18n::setLanguage(markshot::i18n::Language::English);
+
+        QCOMPARE(dialog.windowTitle(), QStringLiteral("Video Recording"));
+        QCOMPARE(modeSelector->itemText(1), QStringLiteral("WebP"));
+        QCOMPARE(modeSelector->itemText(2), QStringLiteral("Video"));
+        QCOMPARE(scope->itemText(scope->findData(static_cast<int>(markshot::recording::RecordingScope::Display))),
+                 QStringLiteral("Record selected display"));
+        QCOMPARE(scope->itemText(scope->findData(static_cast<int>(markshot::recording::RecordingScope::Region))),
+                 QStringLiteral("Select region after this dialog"));
+        QCOMPARE(audio->text(), QStringLiteral("Record system default audio input"));
+        // 下拉框选中项在重译后保持不变。
+        QCOMPARE(fps->currentIndex(), zhFpsText);
+
+        // 恢复中文，避免污染其他测试。
+        markshot::i18n::setLanguage(markshot::i18n::Language::Chinese);
+    }
 };
 
 QTEST_MAIN(RecordingConfigDialogTest)
