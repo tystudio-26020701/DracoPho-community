@@ -131,14 +131,24 @@ QIcon applicationIcon()
     const QIcon icon(QStringLiteral(":/icons/mark-shot.ico"));
     return icon.isNull() ? makeToolIcon(ShotWindow::Action::ToolSelect) : icon;
 #else
-    // Linux/BSD: prefer the system icon theme (set up by cmake install / distro
-    // packages), fall back to the bundled SVG, then the legacy ICO, and finally
-    // a generated glyph so the tray never shows a blank icon.
-    if (const QIcon themed = QIcon::fromTheme(QStringLiteral("mark-shot")); !themed.isNull()) {
+    // Linux/BSD: prefer the DracoPho icon (bundled SVG / theme icon set up by
+    // cmake install), fall back to the DracoPho PNG, then the legacy upstream
+    // icons and finally a generated glyph so the tray never shows a blank icon.
+    // The upstream mark-shot icons are kept intact as the historical asset.
+    if (const QIcon themed = QIcon::fromTheme(QStringLiteral("dracoPho")); !themed.isNull()) {
         return themed;
     }
-    if (const QIcon svg(QStringLiteral(":/icons/mark-shot.svg")); !svg.isNull()) {
+    if (const QIcon svg(QStringLiteral(":/icons/ty-dracoPho.svg")); !svg.isNull()) {
         return svg;
+    }
+    if (const QIcon png(QStringLiteral(":/icons/dracoPho-logo.png")); !png.isNull()) {
+        return png;
+    }
+    if (const QIcon themedLegacy = QIcon::fromTheme(QStringLiteral("mark-shot")); !themedLegacy.isNull()) {
+        return themedLegacy;
+    }
+    if (const QIcon svgLegacy(QStringLiteral(":/icons/mark-shot.svg")); !svgLegacy.isNull()) {
+        return svgLegacy;
     }
     if (const QIcon ico(QStringLiteral(":/icons/mark-shot.ico")); !ico.isNull()) {
         return ico;
