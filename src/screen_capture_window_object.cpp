@@ -33,11 +33,11 @@ QImage captureWindowObjectContent(const markshot::WindowInfo &window, bool inclu
     Q_UNUSED(includeCursor);
     // Windows：PrintWindow(PW_RENDERFULLCONTENT) 读窗口自身缓冲，遮挡/最小化
     // 窗口也能拿到真实内容；失败回退由调用方做屏幕区域裁剪。
+    // 非十六进制句柄视为"无对象路径可用"，与 Linux 一致地返回空图且不报错，
+    // 由调用方走冻结帧裁剪回退。
     qulonglong hwnd = 0;
     if (parseWindowHexId(window.id, &hwnd)) {
         captured = markshot::windows::captureWindowsWindowContent(hwnd, error);
-    } else if (error && error->isEmpty()) {
-        *error = QStringLiteral("missing Windows window handle");
     }
 #else
     // X11 对象抓取：原生 X11 会话与 Wayland 下的 XWayland（DISPLAY 指向
