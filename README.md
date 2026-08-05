@@ -36,7 +36,7 @@ Read this README in other languages:
 </p>
 </details>
 
-`mark-shot` is a high-performance screenshot and annotation tool built with Qt 6. Originally designed for Wayland compositors such as `niri`, it now supports standard screenshot and annotation workflows on Linux (X11, GNOME, and wlroots/Wayland desktops) as well as Windows environments.
+DracoPho is a high-performance screenshot and annotation tool built with Qt 6. Originally designed for Wayland compositors such as `niri`, it now supports standard screenshot and annotation workflows on Linux (X11, GNOME, and wlroots/Wayland desktops) as well as Windows environments.
 
 It captures screen frames instantly and opens an interactive fullscreen overlay, providing region cropping, rich annotation, clipboard copying, saving, and desktop pinning features.
 

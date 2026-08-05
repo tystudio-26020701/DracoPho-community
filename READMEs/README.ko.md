@@ -36,7 +36,7 @@
 </p>
 </details>
 
-`mark-shot`은 Qt 6 기반의 고성능 스크린샷 주석 도구입니다. 프로젝트는 원래 `niri` 같은 Wayland 창 관리자를 위해 설계되었으며, 현재 Linux(X11, GNOME, wlroots/Wayland 데스크톱)와 Windows 환경에서 일반적인 스크린샷 및 주석 작업 흐름을 지원합니다.
+DracoPho는 Qt 6 기반의 고성능 스크린샷 주석 도구입니다. 프로젝트는 원래 `niri` 같은 Wayland 창 관리자를 위해 설계되었으며, 현재 Linux(X11, GNOME, wlroots/Wayland 데스크톱)와 Windows 환경에서 일반적인 스크린샷 및 주석 작업 흐름을 지원합니다.
 
 화면을 즉시 캡처하고 적응형 전체 화면 주석 오버레이를 열어 영역 선택, 주석, 클립보드 복사, 저장, 데스크톱 핀 등의 기능을 제공합니다.
 
