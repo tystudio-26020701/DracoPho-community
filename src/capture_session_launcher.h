@@ -61,6 +61,7 @@ private:
 /// @param defaultTools 默认工具配置。
 /// @param error 输出错误信息。
 /// @param regionRecordingOptions 区域录制配置，为空时启动普通截图流程。
+/// @param windowCaptureMode 是否以"窗口捕获"模式启动（预选窗口捕获工具）。
 /// @return 创建出的截图窗口列表。
 QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
                                                  bool allOutputs,
@@ -71,6 +72,7 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
                                                  bool fullscreenAnnotation,
                                                  const DefaultTools &defaultTools,
                                                  QString *error,
-                                                 std::optional<recording::RecordingOptions> regionRecordingOptions = std::nullopt);
+                                                 std::optional<recording::RecordingOptions> regionRecordingOptions = std::nullopt,
+                                                 bool windowCaptureMode = false);
 
 }  // namespace markshot

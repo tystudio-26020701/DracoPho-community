@@ -605,6 +605,7 @@ void ShotWindow::setStartupTool(StartupTool tool)
     m_startupTool = tool;
     m_dragging = false;
     m_hoveredWindowRect.reset();
+    m_hoveredWindowIndex.reset();
     hideDisplayCapturePicker();
     m_startupHoverValid = false;
     m_startupRulerDragging = false;
@@ -613,7 +614,11 @@ void ShotWindow::setStartupTool(StartupTool tool)
     if (m_startupColorPanel) {
         m_startupColorPanel->hide();
     }
-    setCursor(tool == StartupTool::Ruler ? QCursor(Qt::SizeAllCursor) : captureCrossCursor());
+    if (tool == StartupTool::WindowCapture) {
+        setCursor(Qt::PointingHandCursor);
+    } else {
+        setCursor(tool == StartupTool::Ruler ? QCursor(Qt::SizeAllCursor) : captureCrossCursor());
+    }
     update();
 }
 
@@ -635,7 +640,6 @@ void ShotWindow::leaveStartupTool()
     setCursor(captureCrossCursor());
     update();
 }
-
 QColor ShotWindow::sampledImageColor(QPointF imagePoint) const
 {
     if (m_frozenFrame.isNull()) {

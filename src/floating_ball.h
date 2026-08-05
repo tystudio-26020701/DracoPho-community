@@ -54,6 +54,10 @@ public:
     /// @param callback 延时截图回调。
     void setTimedCaptureCallback(TimedCaptureCallback callback);
 
+    /// @brief 设置"窗口捕获"回调。设置后悬浮球菜单出现"捕获窗口"项。
+    /// @param callback 窗口捕获回调。
+    void setWindowCaptureCallback(CaptureCallback callback);
+
     /// @brief 设置录制区域回调。
     /// @param callback 区域录制回调。
     void setRecordingRegionCallback(RecordingRegionCallback callback);
@@ -206,10 +210,12 @@ private:
     CaptureCallback m_captureCallback;
     CaptureCallback m_fullscreenCallback;
     TimedCaptureCallback m_timedCaptureCallback;
+    CaptureCallback m_windowCaptureCallback;
     RecordingRegionCallback m_recordingRegionCallback;
     QMenu *m_menu = nullptr;
     QAction *m_captureAction = nullptr;
     QAction *m_fullscreenAction = nullptr;
+    QAction *m_windowCaptureAction = nullptr;
     QMenu *m_delayedCaptureMenu = nullptr;
     QList<QAction *> m_delayedCaptureItems;
     QAction *m_startRecordingAction = nullptr;

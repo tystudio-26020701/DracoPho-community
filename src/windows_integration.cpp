@@ -3,13 +3,24 @@
 #include "debug_log.h"
 
 #include <QGuiApplication>
+#include <QProcessEnvironment>
 #include <QScreen>
 #include <QString>
 #include <QWidget>
 #include <QWindow>
 
+#ifdef MARK_SHOT_WITH_DBUS
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusMessage>
+#endif
+
 #include <algorithm>
 #include <string>
+
+#if defined(Q_OS_WIN)
+#include <cstdint>
+#endif
 
 #if defined(Q_OS_WIN)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -251,7 +262,13 @@ QVector<markshot::WindowInfo> enumerateWindowInfos()
         if (isWindowCandidate(hwnd, &geometry) &&
             !std::any_of(results.begin(), results.end(),
                          [&](const markshot::WindowInfo &info) { return info.rect == geometry; })) {
-            results.append(markshot::WindowInfo{geometry, zOrder++});
+            markshot::WindowInfo info;
+            info.rect = geometry;
+            info.zOrder = zOrder++;
+            // HWND 十六进制 id 供窗口对象抓取（PrintWindow）按句柄定位。
+            info.id = QStringLiteral("0x%1").arg(static_cast<qulonglong>(reinterpret_cast<std::uintptr_t>(hwnd)), 0, 16);
+            info.title = windowTitle(hwnd);
+            results.append(info);
         }
     }
     // Reverse z-order to match Linux convention (higher = topmost)
@@ -260,6 +277,146 @@ QVector<markshot::WindowInfo> enumerateWindowInfos()
     }
 #endif
     return results;
+}
+
+QImage captureWindowsWindowContent(qulonglong hwnd, QString *error)
+{
+#if defined(Q_OS_WIN)
+    if (hwnd == 0 || !::IsWindow(reinterpret_cast<HWND>(hwnd))) {
+        if (error) {
+            *error = QStringLiteral("invalid Windows window handle");
+        }
+        return {};
+    }
+
+    // 捕获尺寸：PrintWindow 渲染窗口的完整外观（含标题栏/边框），按
+    // GetWindowRect 的外框尺寸建位图最匹配渲染结果；DWM 扩展边界仅作
+    // GetWindowRect 失效时的回退。
+    RECT frameRect = {};
+    const HWND target = reinterpret_cast<HWND>(hwnd);
+    BOOL hasFrameBounds = FALSE;
+    if (GetWindowRect(target, &frameRect)
+        && frameRect.right > frameRect.left && frameRect.bottom > frameRect.top) {
+        hasFrameBounds = TRUE;
+    }
+    if (!hasFrameBounds) {
+        if (SUCCEEDED(DwmGetWindowAttribute(target,
+                                            DWMWA_EXTENDED_FRAME_BOUNDS,
+                                            &frameRect,
+                                            sizeof(frameRect)))
+            && frameRect.right > frameRect.left && frameRect.bottom > frameRect.top) {
+            hasFrameBounds = TRUE;
+        }
+    }
+    if (!hasFrameBounds) {
+        if (error) {
+            *error = QStringLiteral("cannot determine the window bounds");
+        }
+        return {};
+    }
+    const int width = frameRect.right - frameRect.left;
+    const int height = frameRect.bottom - frameRect.top;
+    if (width <= 0 || height <= 0 || width > 16384 || height > 16384) {
+        if (error) {
+            *error = QStringLiteral("window bounds are invalid for capture");
+        }
+        return {};
+    }
+
+    HDC screenDC = ::GetDC(nullptr);
+    HDC memoryDC = ::CreateCompatibleDC(screenDC);
+    HBITMAP bitmap = ::CreateCompatibleBitmap(screenDC, width, height);
+    if (!memoryDC || !bitmap) {
+        if (memoryDC) {
+            ::DeleteDC(memoryDC);
+        }
+        ::ReleaseDC(nullptr, screenDC);
+        if (error) {
+            *error = QStringLiteral("failed to create capture surfaces");
+        }
+        return {};
+    }
+    HGDIOBJ previousBitmap = ::SelectObject(memoryDC, bitmap);
+
+    // PW_RENDERFULLCONTENT（0x2）让 DirectComposition/硬件加速窗口也能渲染，
+    // 且不裁剪到可见区域——被遮挡部分一并重绘。部分老驱动/特殊窗口不识别
+    // 该标志时会产生黑帧，因此失败或全黑时无标志重试一次。
+    BOOL printed = ::PrintWindow(target, memoryDC, PW_RENDERFULLCONTENT);
+    QImage image;
+    if (printed) {
+        // 先按 32bpp 读回位图内容再校验是否全黑。GetDIBits 的 BI_RGB 为
+        // BGRX 字节序且保留字节常为 0：用 RGB32 读入（忽略保留字节），
+        // 转换到 Premultiplied 时 Qt 会正确填充 alpha，避免经典"alpha 为 0
+        // 导致整图透明"问题。
+        QImage probe(static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32);
+        bool blackFrame = probe.isNull();
+        if (!probe.isNull()) {
+            BITMAPINFO info = {};
+            info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+            info.bmiHeader.biWidth = width;
+            info.bmiHeader.biHeight = -height;
+            info.bmiHeader.biPlanes = 1;
+            info.bmiHeader.biBitCount = 32;
+            info.bmiHeader.biCompression = BI_RGB;
+            if (::GetDIBits(screenDC, bitmap, 0, static_cast<UINT>(height), probe.bits(), &info, DIB_RGB_COLORS) > 0) {
+                blackFrame = true;
+                const int count = probe.width() * probe.height();
+                const QRgb *pixels = reinterpret_cast<const QRgb *>(probe.constBits());
+                for (int i = 0; i < count; ++i) {
+                    if (pixels[i] != 0xff000000) {
+                        blackFrame = false;
+                        break;
+                    }
+                }
+                if (!blackFrame) {
+                    image = probe;
+                }
+            } else {
+                blackFrame = true;
+            }
+        }
+        if (blackFrame) {
+            printed = FALSE;
+        }
+    }
+    if (!printed) {
+        // 无标志重试：老版本窗口对 WM_PRINT 的兼容路径。仅当重试本身成功
+        // 才读取位图，避免把首次失败残留的未初始化缓冲当作窗口内容。
+        const BOOL retryPrinted = ::PrintWindow(target, memoryDC, 0);
+        if (retryPrinted) {
+            QImage retry(static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32);
+            BITMAPINFO retryInfo = {};
+            retryInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+            retryInfo.bmiHeader.biWidth = width;
+            retryInfo.bmiHeader.biHeight = -height;
+            retryInfo.bmiHeader.biPlanes = 1;
+            retryInfo.bmiHeader.biBitCount = 32;
+            retryInfo.bmiHeader.biCompression = BI_RGB;
+            if (::GetDIBits(screenDC, bitmap, 0, static_cast<UINT>(height), retry.bits(), &retryInfo, DIB_RGB_COLORS) > 0) {
+                image = retry;
+            }
+        }
+        if (image.isNull() && error) {
+            *error = QStringLiteral("PrintWindow could not render the window content");
+        }
+    }
+
+    ::SelectObject(memoryDC, previousBitmap);
+    ::DeleteObject(bitmap);
+    ::DeleteDC(memoryDC);
+    ::ReleaseDC(nullptr, screenDC);
+
+    if (!image.isNull()) {
+        image = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
+    return image;
+#else
+    Q_UNUSED(hwnd);
+    if (error) {
+        *error = QStringLiteral("PrintWindow capture is only available on Windows");
+    }
+    return {};
+#endif
 }
 
 void setExcludedFromCapture(QWidget *widget, bool excluded)

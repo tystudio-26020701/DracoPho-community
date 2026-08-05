@@ -32,6 +32,13 @@ QVector<markshot::startup_hint::ShortcutHintItem> ShotWindow::startupShortcutHin
         };
     }
 
+    if (m_startupTool == StartupTool::WindowCapture) {
+        return {
+            {MS_TR("Click"), MS_TR("Capture the highlighted window"), InputIcon::Mouse},
+            {MS_TR("Right/Esc"), MS_TR("Return to selection"), InputIcon::Mouse},
+        };
+    }
+
     if (m_startupTool != StartupTool::None) {
         return {};
     }
@@ -43,6 +50,7 @@ QVector<markshot::startup_hint::ShortcutHintItem> ShotWindow::startupShortcutHin
 
     QVector<markshot::startup_hint::ShortcutHintItem> items = {
         {MS_TR("Drag"), MS_TR("Select screenshot region"), InputIcon::Mouse},
+        {MS_TR("W"), MS_TR("Capture window"), InputIcon::Keyboard},
         {shortcutTextOr(m_startupColorPickerShortcut, QStringLiteral("C")), MS_TR("Pick color"), InputIcon::Keyboard},
         {shortcutTextOr(m_startupRulerShortcut, QStringLiteral("R")), MS_TR("Measure size"), InputIcon::Keyboard},
         {shortcutTextOr(m_startupCodeScannerShortcut, QStringLiteral("Q")), MS_TR("Scan QR or barcode"), InputIcon::Keyboard},
@@ -483,11 +491,43 @@ void ShotWindow::paintEvent(QPaintEvent *)
         && m_mode == Mode::Selecting
         && (m_startupTool == StartupTool::None
             || m_startupTool == StartupTool::CodeScanner
+            || m_startupTool == StartupTool::WindowCapture
             || recordingModeForStartupTool(m_startupTool).has_value())) {
         const QRectF hoverWidget = imageRectToWidget(QRectF(*m_hoveredWindowRect));
         painter.setPen(QPen(QColor(94, 234, 212), 2.0));
         painter.setBrush(QColor(94, 234, 212, 32));
         painter.drawRect(hoverWidget);
+
+        // 悬停窗口标题徽标：在窗口高亮上缘绘制标题（对标 Windows 截图工具 /
+        // Snipping Tool 的窗口模式标题提示）。仅窗口捕获工具下显示。
+        if (m_startupTool == StartupTool::WindowCapture && m_hoveredWindowIndex.has_value()
+            && m_hoveredWindowIndex.value() >= 0
+            && m_hoveredWindowIndex.value() < m_windowInfos.size()) {
+            const QString title = m_windowInfos.at(m_hoveredWindowIndex.value()).title;
+            if (!title.isEmpty()) {
+                QFont badgeFont = painter.font();
+                badgeFont.setPointSize(qMax(8, qRound(badgeFont.pointSizeF() * 0.9)));
+                painter.setFont(badgeFont);
+                const QFontMetrics badgeMetrics(badgeFont);
+                QString badgeText = title;
+                if (badgeMetrics.horizontalAdvance(badgeText) > 320) {
+                    badgeText = badgeMetrics.elidedText(badgeText, Qt::ElideMiddle, 320);
+                }
+                const qreal badgeHeight = badgeMetrics.height() + 10.0;
+                QRectF badgeRect(hoverWidget.left(),
+                                 hoverWidget.top() - badgeHeight - 4.0,
+                                 badgeMetrics.horizontalAdvance(badgeText) + 16.0,
+                                 badgeHeight);
+                if (badgeRect.top() < 2.0) {
+                    badgeRect.moveTop(hoverWidget.bottom() + 4.0);
+                }
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(QColor(8, 13, 19, 230));
+                painter.drawRoundedRect(badgeRect, 8.0, 8.0);
+                painter.setPen(QColor(204, 251, 241, 238));
+                painter.drawText(badgeRect, Qt::AlignCenter, badgeText);
+            }
+        }
     }
 
     drawStartupToolOverlay(painter);
@@ -670,6 +710,15 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     if (m_mode == Mode::Selecting) {
         if (m_colorPalette) {
             m_colorPalette->hide();
+        }
+        if (m_startupTool == StartupTool::WindowCapture) {
+            // 窗口捕获模式：左键按下只记录点击起点，不进入区域拖选；
+            // 释放时若命中高亮窗口则执行窗口捕获。
+            if (event->button() == Qt::LeftButton) {
+                m_selectionClickStart = event->position();
+            }
+            event->accept();
+            return;
         }
         m_selectionClickStart = event->position();
         beginSelection(imagePoint);

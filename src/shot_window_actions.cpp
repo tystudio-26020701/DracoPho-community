@@ -14,6 +14,93 @@ namespace cfg = markshot::config;
 namespace shortcuts = markshot::shortcut;
 using namespace markshot::shot;
 
+std::optional<int> ShotWindow::windowIndexAtImagePoint(const QPointF &imagePoint) const
+{
+    std::optional<int> best;
+    const QPoint imgPt = imagePoint.toPoint();
+    bool useZOrder = false;
+    for (int i = 0; i < m_windowInfos.size(); ++i) {
+        const markshot::WindowInfo &info = m_windowInfos.at(i);
+        if (!info.rect.contains(imgPt)) {
+            continue;
+        }
+        if (info.zOrder.has_value()) {
+            useZOrder = true;
+        }
+        if (!best.has_value()) {
+            best = i;
+            continue;
+        }
+        if (useZOrder) {
+            const int infoZ = info.zOrder.value_or(-1);
+            const int bestZ = m_windowInfos.at(*best).zOrder.value_or(-1);
+            if (infoZ > bestZ) {
+                best = i;
+            }
+        } else {
+            const qint64 area = static_cast<qint64>(info.rect.width()) * info.rect.height();
+            const qint64 bestArea =
+                static_cast<qint64>(m_windowInfos.at(*best).rect.width()) * m_windowInfos.at(*best).rect.height();
+            if (area < bestArea) {
+                best = i;
+            }
+        }
+    }
+    return best;
+}
+
+void ShotWindow::performWindowCapture(const markshot::WindowInfo &window)
+{
+    commitTextEditor();
+
+    QImage captured;
+    QString error;
+    // 窗口对象抓取：X11 从合成命名 pixmap 读取（遮挡/最小化也真实），
+    // Windows 走 PrintWindow(PW_RENDERFULLCONTENT)，KWin Wayland 由 KWin
+    // 直接渲染窗口缓冲；这些都不弹起窗口、不抢焦点。无对象路径或失败时
+    // 回退为从冻结帧裁剪窗口矩形（Wayland 无合成器接口时的可见内容）。
+    captured = captureWindowObjectContent(window, false, &error);
+    if (captured.isNull()) {
+        const QRect sourceBounds(QPoint(0, 0), m_frozenFrame.size());
+        const QRect rect = window.rect.intersected(sourceBounds);
+        if (!rect.isEmpty()) {
+            captured = m_frozenFrame.copy(rect);
+        }
+    }
+    if (captured.isNull()) {
+        if (error.isEmpty()) {
+            error = MS_TR("Window capture failed");
+        }
+        showToast(error);
+        return;
+    }
+
+    QString name = window.title;
+    if (name.isEmpty()) {
+        name = m_outputName;
+    }
+    if (name.isEmpty()) {
+        name = QStringLiteral("window");
+    }
+    ShotWindow *newWindow = markshot::openImageForAnnotation(captured, name);
+    if (newWindow) {
+        newWindow->setDefaultTools(m_defaultTool, m_fullscreenDefaultTool);
+    }
+    close();
+}
+
+void ShotWindow::preselectWindowCaptureTool()
+{
+    if (m_mode == Mode::Selecting) {
+        setStartupTool(StartupTool::WindowCapture);
+    }
+}
+
+bool ShotWindow::windowCaptureToolActive() const
+{
+    return m_startupTool == StartupTool::WindowCapture;
+}
+
 void ShotWindow::runExtensionCommand(const ExtensionCommand &command)
 {
     commitTextEditor();

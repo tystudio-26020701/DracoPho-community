@@ -191,6 +191,7 @@ qt_add_executable(mark-shot
     src/screen_capture_windows_wgc.cpp
     src/screen_capture_x11.cpp
     src/screen_capture_x11_window.cpp
+    src/screen_capture_window_object.cpp
     src/shell_command.cpp
     src/shell_command.h
     src/ocr_result.cpp
