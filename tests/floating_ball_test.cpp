@@ -11,6 +11,39 @@ class FloatingBallTest : public QObject {
     Q_OBJECT
 
 private slots:
+    void retranslatesMenuOnLanguageChange()
+    {
+        // 构造在中文环境下的悬浮球，随后切回英文，验证菜单文案跟随。
+        markshot::i18n::setLanguage(markshot::i18n::Language::Chinese);
+        markshot::FloatingBall ball;
+        const auto menus = ball.findChildren<QMenu *>();
+        QVERIFY(!menus.isEmpty());
+        const QStringList zhTexts = [&menus] {
+            QStringList result;
+            for (QAction *action : menus.first()->actions()) {
+                if (!action->isSeparator()) {
+                    result.append(action->text());
+                }
+            }
+            return result;
+        }();
+        QVERIFY(zhTexts.contains(markshot::i18n::translate(QStringLiteral("Capture"))));
+
+        markshot::i18n::setLanguage(markshot::i18n::Language::English);
+        const QStringList enTexts = [&menus] {
+            QStringList result;
+            for (QAction *action : menus.first()->actions()) {
+                if (!action->isSeparator()) {
+                    result.append(action->text());
+                }
+            }
+            return result;
+        }();
+        QVERIFY(enTexts.contains(QStringLiteral("Capture")));
+        // 恢复中文，避免污染其他测试。
+        markshot::i18n::setLanguage(markshot::i18n::Language::Chinese);
+    }
+
     void keepsBallFramelessAndAlwaysOnTop()
     {
         markshot::FloatingBall ball;
@@ -19,6 +52,39 @@ private slots:
         QVERIFY(flags.testFlag(Qt::WindowStaysOnTopHint));
         QVERIFY(ball.minimumWidth() == ball.maximumWidth());
         QVERIFY(ball.minimumHeight() == ball.maximumHeight());
+    }
+
+    void exposesDelayedCaptureMenuAfterSettingCallback()
+    {
+        // 回归测试：延时截图回调在构造之后设置，子菜单必须惰性构建并插入。
+        markshot::FloatingBall ball;
+        int triggered = 0;
+        ball.setTimedCaptureCallback([&triggered](int seconds) {
+            Q_UNUSED(seconds);
+            ++triggered;
+        });
+        const auto menus = ball.findChildren<QMenu *>();
+        QMenu *delayed = nullptr;
+        for (QMenu *menu : menus) {
+            if (menu->objectName() == QLatin1String("floatingDelayedCaptureMenu")) {
+                delayed = menu;
+                break;
+            }
+        }
+        QVERIFY2(delayed != nullptr, "Delayed Capture submenu should be created lazily");
+        const QStringList texts = [delayed] {
+            QStringList result;
+            for (QAction *action : delayed->actions()) {
+                result.append(action->text());
+            }
+            return result;
+        }();
+        QCOMPARE(texts.size(), 4);
+        // 触发第一个预设项应调用回调。
+        QAction *first = delayed->actions().isEmpty() ? nullptr : delayed->actions().first();
+        QVERIFY(first != nullptr);
+        first->trigger();
+        QCOMPARE(triggered, 1);
     }
 
     void dragMovesBall()

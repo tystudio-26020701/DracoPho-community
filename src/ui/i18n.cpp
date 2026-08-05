@@ -130,8 +130,18 @@ void initialize()
 
 void setLanguage(Language language)
 {
+    if (g_language == language) {
+        return;
+    }
     g_language = language;
     applyLayoutDirection(language);
+    emit LanguageChangeNotifier::instance().languageChanged();
+}
+
+LanguageChangeNotifier &LanguageChangeNotifier::instance()
+{
+    static LanguageChangeNotifier notifier;
+    return notifier;
 }
 
 Language language()

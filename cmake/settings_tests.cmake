@@ -253,6 +253,18 @@ endif()
 markshot_link_core_test_libraries(mark-shot-floating-ball-test)
 add_test(NAME floating-ball COMMAND mark-shot-floating-ball-test)
 
+qt_add_executable(mark-shot-capture-delay-config-test
+    tests/capture_delay_config_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-capture-delay-config-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-capture-delay-config-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-capture-delay-config-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-capture-delay-config-test)
+add_test(NAME capture-delay-config COMMAND mark-shot-capture-delay-config-test)
+
 qt_add_executable(mark-shot-startup-behavior-config-test
     tests/startup_behavior_config_test.cpp
     src/startup_behavior_config.cpp

@@ -32,6 +32,7 @@ private:
     QCheckBox *m_kdeKwinScreenshot = nullptr;
     QCheckBox *m_hideOwnWindows = nullptr;
     QComboBox *m_freezeScope = nullptr;
+    QComboBox *m_delaySeconds = nullptr;
     SettingsConfig m_saved;
 };
 
