@@ -295,6 +295,10 @@ void writeStorageSettings(QJsonObject *root, const StorageSettings &settings)
     writeHeadlessCaptureConfig(root,
                                HeadlessCaptureConfig{settings.headlessDefaultDestination,
                                                      settings.headlessClipboardAllowed});
+    setNestedValue(root, {QStringLiteral("history"), QStringLiteral("enabled")},
+                   settings.historyEnabled);
+    setNestedValue(root, {QStringLiteral("history"), QStringLiteral("maxEntries")},
+                   std::clamp(settings.historyMaxEntries, 0, 1000));
 }
 
 /// @brief 写入滚动截图设置。

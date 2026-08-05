@@ -116,6 +116,7 @@ private:
     QAction *m_captureAction = nullptr;
     QAction *m_fullscreenAction = nullptr;
     QAction *m_settingsAction = nullptr;
+    QAction *m_historyAction = nullptr;
     QMenu *m_delayedCaptureMenu = nullptr;
     QList<QAction *> m_delayedCaptureItems;
     QAction *m_startRecordingAction = nullptr;

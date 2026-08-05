@@ -1,4 +1,8 @@
 set(MARK_SHOT_WINDOW_SOURCES
+    src/history/capture_history.cpp
+    src/history/capture_history.h
+    src/history/capture_history_dialog.cpp
+    src/history/capture_history_dialog.h
     src/annotation_state_store.cpp
     src/annotation_state_store.h
     src/ocr_result_window.cpp

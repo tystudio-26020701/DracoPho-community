@@ -225,6 +225,25 @@ SettingsPageStorage::SettingsPageStorage(QWidget *parent)
     });
     layout->addWidget(exportCard);
 
+    QFrame *historyCard = createSettingsCard(MS_TR("Capture History"),
+                                             MS_TR("Keep a history of copied, saved and pinned screenshots with quick re-copy, re-edit, save and delete."),
+                                             this);
+    QFormLayout *historyForm = settingsCardForm(historyCard);
+    m_historyEnabled = addSwitchRow(historyForm,
+                                    MS_TR("Record Captures"),
+                                    MS_TR("Store screenshots in the capture history when copying, saving or pinning."));
+    m_historyMaxEntries = addSpinRow(historyForm, MS_TR("Maximum Entries"), 0, 1000, QString());
+    m_historyMaxEntries->setToolTip(MS_TR("0 keeps all captures"));
+    connect(m_historyEnabled, &QCheckBox::toggled, this, [this](bool checked) {
+        m_historyMaxEntries->setEnabled(checked);
+    });
+    addCardRestoreButton(historyCard, [this] {
+        m_historyEnabled->setChecked(m_saved.storage.historyEnabled);
+        m_historyMaxEntries->setValue(m_saved.storage.historyMaxEntries);
+        m_historyMaxEntries->setEnabled(m_saved.storage.historyEnabled);
+    });
+    layout->addWidget(historyCard);
+
     addPageRestoreButton(layout, [this] { setConfig(m_saved); });
     layout->addStretch();
 }
@@ -248,6 +267,9 @@ void SettingsPageStorage::setConfig(const SettingsConfig &config)
     m_exportShadowRadius->setValue(config.storage.exportImageEffect.shadowRadius);
     m_exportShadowOffsetY->setValue(config.storage.exportImageEffect.shadowOffsetY);
     m_exportShadowOpacity->setValue(config.storage.exportImageEffect.shadowOpacity);
+    m_historyEnabled->setChecked(config.storage.historyEnabled);
+    m_historyMaxEntries->setValue(config.storage.historyMaxEntries);
+    m_historyMaxEntries->setEnabled(config.storage.historyEnabled);
     // 归一化"已保存"基线到控件可表达精度：角半径以整数显示、透明度保留两位，
     // 配置若手写了无法在控件中还原的小数（如 cornerRadius 18.5），直接以控件
     // 显示值作为基线，避免"打开即未保存"/改回后仍显示未保存。
@@ -276,6 +298,8 @@ void SettingsPageStorage::updateConfig(SettingsConfig *config) const
     config->storage.exportImageEffect.shadowRadius = m_exportShadowRadius->value();
     config->storage.exportImageEffect.shadowOffsetY = m_exportShadowOffsetY->value();
     config->storage.exportImageEffect.shadowOpacity = m_exportShadowOpacity->value();
+    config->storage.historyEnabled = m_historyEnabled->isChecked();
+    config->storage.historyMaxEntries = m_historyMaxEntries->value();
 }
 
 

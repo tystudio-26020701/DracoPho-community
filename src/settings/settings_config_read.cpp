@@ -298,6 +298,14 @@ StorageSettings readStorageSettings(const QJsonObject &root)
     const HeadlessCaptureConfig headless = headlessCaptureConfigFromRoot(root);
     settings.headlessDefaultDestination = headless.defaultDestination;
     settings.headlessClipboardAllowed = headless.clipboardAllowed;
+
+    const QJsonObject history = root.value(QStringLiteral("history")).toObject();
+    if (history.value(QStringLiteral("enabled")).isBool()) {
+        settings.historyEnabled = history.value(QStringLiteral("enabled")).toBool();
+    }
+    if (history.value(QStringLiteral("maxEntries")).isDouble()) {
+        settings.historyMaxEntries = std::max(0, history.value(QStringLiteral("maxEntries")).toInt());
+    }
     return settings;
 }
 

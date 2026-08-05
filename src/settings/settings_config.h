@@ -91,6 +91,8 @@ struct StorageSettings {
     ExportImageEffectConfig exportImageEffect;
     HeadlessCaptureDestination headlessDefaultDestination = HeadlessCaptureDestination::Inline;
     bool headlessClipboardAllowed = false;
+    bool historyEnabled = true;
+    int historyMaxEntries = 50;
 };
 
 struct ScrollSettings {
@@ -198,7 +200,9 @@ inline bool operator==(const StorageSettings &a, const StorageSettings &b)
         && a.clipboardThresholdM == b.clipboardThresholdM
         && a.exportImageEffect == b.exportImageEffect
         && a.headlessDefaultDestination == b.headlessDefaultDestination
-        && a.headlessClipboardAllowed == b.headlessClipboardAllowed;
+        && a.headlessClipboardAllowed == b.headlessClipboardAllowed
+        && a.historyEnabled == b.historyEnabled
+        && a.historyMaxEntries == b.historyMaxEntries;
 }
 
 inline bool operator==(const ScrollSettings &a, const ScrollSettings &b)

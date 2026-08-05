@@ -1,5 +1,7 @@
 #include "shot_window_module.h"
 
+#include "annotation_launch.h"
+#include "history/capture_history.h"
 #include "notifications/app_notifications.h"
 
 #include "app_config_store.h"
@@ -137,6 +139,7 @@ void ShotWindow::pinSelection()
     if (output.isNull()) {
         return;
     }
+    markshot::capture_history::recordCapture(output, m_outputName);
     const QRect logicalSelection = selectionGlobalRect();
     if (!logicalSelection.isEmpty()) {
         const qreal dprX = static_cast<qreal>(output.width()) / std::max(1, logicalSelection.width());
@@ -345,12 +348,16 @@ void ShotWindow::saveSelection()
 
     const QString path = defaultSavePath();
     if (markshot::ensureSavePathDirectory(path) && output.save(path, "PNG")) {
+        markshot::capture_history::recordCapture(output, m_outputName);
         const QString message = MS_TR("Saved to %1").arg(path);
         // Keyboard save should finish without another dialog round-trip.
         if (!markshot::notifications::notifyScreenshotSaved(path)) {
             showToast(message, 2500);
         }
-        QTimer::singleShot(150, this, [this] { close(); });
+        // 独立编辑器模式：保存后保持窗口打开，继续编辑。
+        if (!m_standaloneEditor) {
+            QTimer::singleShot(150, this, [this] { close(); });
+        }
         return;
     }
 
@@ -407,12 +414,16 @@ void ShotWindow::saveSelectionAs()
         if (!files.isEmpty()
             && markshot::ensureSavePathDirectory(files.first())
             && output.save(files.first(), "PNG")) {
+            markshot::capture_history::recordCapture(output, m_outputName);
             const QString message = MS_TR("Saved to %1").arg(files.first());
             // Prefer desktop notifications because the window may close immediately after saving.
             if (!markshot::notifications::notifyScreenshotSaved(files.first())) {
                 showToast(message, 2500);
             }
-            QTimer::singleShot(150, this, [this] { close(); });
+            // 独立编辑器模式：另存为后保持窗口打开，继续编辑。
+            if (!m_standaloneEditor) {
+                QTimer::singleShot(150, this, [this] { close(); });
+            }
             return;
         }
         showToast(MS_TR("Save failed"), 2500);
@@ -445,7 +456,10 @@ void ShotWindow::copySelection()
         return;
     }
 
+    markshot::capture_history::recordCapture(output, m_outputName);
     markshot::copyImageToClipboard(output);
 
-    close();
+    if (!m_standaloneEditor) {
+        close();
+    }
 }

@@ -214,6 +214,7 @@ private:
     QList<QAction *> m_delayedCaptureItems;
     QAction *m_startRecordingAction = nullptr;
     QAction *m_settingsAction = nullptr;
+    QAction *m_historyAction = nullptr;
     QAction *m_hideBallAction = nullptr;
     QAction *m_quitAction = nullptr;
     QTimer *m_clickTimer = nullptr;
