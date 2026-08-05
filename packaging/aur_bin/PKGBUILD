@@ -6,7 +6,7 @@ pkgver=0.1.41
 pkgrel=1
 pkgdesc='Qt 6 Wayland screenshot selection and annotation tool (prebuilt binary)'
 arch=('x86_64' 'aarch64')
-url='https://github.com/tystudio-26020701/mark-shot-community'
+url='https://github.com/tystudio-26020701/DracoPho-community'
 license=('MIT')
 depends=('qt6-base' 'qt6-wayland' 'pipewire' 'grim' 'wl-clipboard' 'hicolor-icon-theme' 'python' 'libxcomposite')
 # x86_64 由 arch 容器编译，包含 layer-shell-qt 与 ffmpeg 录制支持；aarch64 由 ubuntu 编译，禁用了 layer-shell 和 libav 录制
@@ -25,8 +25,8 @@ conflicts=('mark-shot')
 
 # Release 资产命名规则: mark-shot-bin-${pkgver}-1-${arch}.pkg.tar.zst
 # noextract 阻止 makepkg 自动解压 .pkg.tar.zst，package() 里手动 bsdtar 解压
-source_x86_64=("https://github.com/tystudio-26020701/mark-shot-community/releases/download/v${pkgver}/mark-shot-bin-${pkgver}-1-x86_64.pkg.tar.zst")
-source_aarch64=("https://github.com/tystudio-26020701/mark-shot-community/releases/download/v${pkgver}/mark-shot-bin-${pkgver}-1-aarch64.pkg.tar.zst")
+source_x86_64=("https://github.com/tystudio-26020701/DracoPho-community/releases/download/v${pkgver}/mark-shot-bin-${pkgver}-1-x86_64.pkg.tar.zst")
+source_aarch64=("https://github.com/tystudio-26020701/DracoPho-community/releases/download/v${pkgver}/mark-shot-bin-${pkgver}-1-aarch64.pkg.tar.zst")
 noextract=("mark-shot-bin-${pkgver}-1-x86_64.pkg.tar.zst" "mark-shot-bin-${pkgver}-1-aarch64.pkg.tar.zst")
 sha256sums_x86_64=('SKIP')
 sha256sums_aarch64=('SKIP')

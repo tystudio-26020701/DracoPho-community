@@ -2,8 +2,8 @@
   <img src="../data/icons/DracoPho-logo.png" alt="DracoPho Logo" width="128" />
   <h1>DracoPho</h1>
   <p>
-    <a href="https://github.com/tystudio-26020701/mark-shot-community/releases">
-      <img src="https://img.shields.io/github/v/release/tystudio-26020701/mark-shot-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
+    <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
+      <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
     <a href="https://gitter.im/mark-shot/community">
       <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
@@ -450,7 +450,7 @@ NixOS 사용자는 Flake input을 추가하여 설치할 수 있습니다
 ```nix
 # flake.nix
 mark-shot = {
-  url = "github:tystudio-26020701/mark-shot-community";
+  url = "github:tystudio-26020701/DracoPho-community";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 
@@ -567,11 +567,11 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. OCR 헬퍼 스크립트 복사**
 
-[DracoPho 저장소](https://github.com/tystudio-26020701/mark-shot-community)의 `scripts/mark-shot-ocr`를 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py` 같은 로컬 디렉터리로 복사합니다.
+[DracoPho 저장소](https://github.com/tystudio-26020701/DracoPho-community)의 `scripts/mark-shot-ocr`를 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py` 같은 로컬 디렉터리로 복사합니다.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/mark-shot-community/main/scripts/mark-shot-ocr" `
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/mark-shot-ocr" `
   -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
 ```
 
@@ -902,4 +902,4 @@ DracoPho은 오픈소스 커뮤니티의 어깨 위에 서 있습니다. 진심 
 - **[serendipitywgy](https://github.com/serendipitywgy)**: `serendipitywgy/mark-shot`을 통해 크로스 데스크톱 호환성 개선, OCR 복사 도구 모음 작업, 스마트 사각형 영역 사전 선택 기능을 기여해 주셔서 감사합니다.
 - **DracoPho이 의존하는 모든 오픈소스 프로젝트**: Qt 6, PipeWire, xdg-desktop-portal, layer-shell-qt, wl-clipboard, xclip, grim, RapidOCR, onnxruntime, Tesseract, ZXing-C++ 등.
 
-이 커뮤니티 버전은 [北京太殷造物科技有限公司 (베이징 타이인 자오우 과학기술유한공사)](https://github.com/tystudio-26020701/mark-shot-community) 및 기여자들이 유지관리하며, **MIT 라이선스**로 오픈소스로 제공됩니다.
+이 커뮤니티 버전은 [北京太殷造物科技有限公司 (베이징 타이인 자오우 과학기술유한공사)](https://github.com/tystudio-26020701/DracoPho-community) 및 기여자들이 유지관리하며, **MIT 라이선스**로 오픈소스로 제공됩니다.

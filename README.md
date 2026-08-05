@@ -2,8 +2,8 @@
   <img src="data/icons/DracoPho-logo.png" alt="DracoPho Logo" width="128" />
   <h1>DracoPho</h1>
   <p>
-    <a href="https://github.com/tystudio-26020701/mark-shot-community/releases">
-      <img src="https://img.shields.io/github/v/release/tystudio-26020701/mark-shot-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
+    <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
+      <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
     <a href="https://gitter.im/mark-shot/community">
       <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
@@ -497,7 +497,7 @@ NixOS users can install mark-shot by adding it as a Flake input:
 ```nix
 # flake.nix
 mark-shot = {
-  url = "github:tystudio-26020701/mark-shot-community";
+  url = "github:tystudio-26020701/DracoPho-community";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 
@@ -617,11 +617,11 @@ Download and install Python 3.10 or later from [python.org](https://www.python.o
 
 **2. Copy the OCR helper script**
 
-Copy `scripts/mark-shot-ocr` from the [DracoPho repository](https://github.com/tystudio-26020701/mark-shot-community) to a local directory, for example `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
+Copy `scripts/mark-shot-ocr` from the [DracoPho repository](https://github.com/tystudio-26020701/DracoPho-community) to a local directory, for example `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/mark-shot-community/main/scripts/mark-shot-ocr" `
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/mark-shot-ocr" `
   -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
 ```
 
@@ -841,4 +841,4 @@ DracoPho is built on the shoulders of the open-source community. We would like t
 - **[serendipitywgy](https://github.com/serendipitywgy)** for contributions from `serendipitywgy/mark-shot`, including cross-desktop compatibility improvements, the OCR copy toolbar action, and smart rectangle preselection.
 - **All the open-source projects that DracoPho depends on**, including Qt 6, PipeWire, xdg-desktop-portal, layer-shell-qt, wl-clipboard, xclip, grim, RapidOCR, onnxruntime, Tesseract, and ZXing-C++, among others.
 
-This community edition is maintained by [Beijing Taiyin Zhaowu Technology Co., Ltd.](https://github.com/tystudio-26020701/mark-shot-community) and its contributors, under the **MIT License**.
+This community edition is maintained by [Beijing Taiyin Zhaowu Technology Co., Ltd.](https://github.com/tystudio-26020701/DracoPho-community) and its contributors, under the **MIT License**.

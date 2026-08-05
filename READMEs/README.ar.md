@@ -2,8 +2,8 @@
   <img src="../data/icons/DracoPho-logo.png" alt="DracoPho Logo" width="128" />
   <h1>DracoPho</h1>
   <p>
-    <a href="https://github.com/tystudio-26020701/mark-shot-community/releases">
-      <img src="https://img.shields.io/github/v/release/tystudio-26020701/mark-shot-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
+    <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
+      <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
     <a href="https://gitter.im/mark-shot/community">
       <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
@@ -452,7 +452,7 @@ yay -S mark-shot-bin
 ```nix
 # flake.nix
 mark-shot = {
-  url = "github:tystudio-26020701/mark-shot-community";
+  url = "github:tystudio-26020701/DracoPho-community";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 
@@ -569,11 +569,11 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. انسخ السكربت المساعد لـ OCR**
 
-انسخ `scripts/mark-shot-ocr` من [مستودع DracoPho](https://github.com/tystudio-26020701/mark-shot-community) إلى مجلد محلي، مثل `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
+انسخ `scripts/mark-shot-ocr` من [مستودع DracoPho](https://github.com/tystudio-26020701/DracoPho-community) إلى مجلد محلي، مثل `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/mark-shot-community/main/scripts/mark-shot-ocr" `
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/mark-shot-ocr" `
   -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
 ```
 
@@ -904,4 +904,4 @@ gdbus call --session \
 - **[serendipitywgy](https://github.com/serendipitywgy)**: نشكرهم على المساهمة عبر `serendipitywgy/mark-shot` بتحسينات توافق سطح المكتب، وإجراء نسخ OCR في شريط الأدوات، وميزة التحديد المسبق الذكي للمستطيلات.
 - **جميع المشاريع مفتوحة المصدر التي يعتمد عليها DracoPho**، بما في ذلك Qt 6 وPipeWire وxdg-desktop-portal وlayer-shell-qt وwl-clipboard وxclip وgrim وRapidOCR وonnxruntime وTesseract وZXing-C++ وغيرها.
 
-تُصان هذه النسخة المجتمعية من قِبل [شركة بكين تايين زاوو للتكنولوجيا (Beijing Taiyin Zhaowu Technology Co., Ltd.)](https://github.com/tystudio-26020701/mark-shot-community) والمساهمين، وهي مفتوحة المصدر بموجب **رخصة MIT**.
+تُصان هذه النسخة المجتمعية من قِبل [شركة بكين تايين زاوو للتكنولوجيا (Beijing Taiyin Zhaowu Technology Co., Ltd.)](https://github.com/tystudio-26020701/DracoPho-community) والمساهمين، وهي مفتوحة المصدر بموجب **رخصة MIT**.

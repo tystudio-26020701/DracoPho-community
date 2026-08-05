@@ -2,8 +2,8 @@
   <img src="data/icons/DracoPho-logo.png" alt="太殷龙摄 Logo" width="128" />
   <h1>太殷龙摄</h1>
   <p>
-    <a href="https://github.com/tystudio-26020701/mark-shot-community/releases">
-      <img src="https://img.shields.io/github/v/release/tystudio-26020701/mark-shot-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
+    <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
+      <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
     <a href="https://gitter.im/mark-shot/community">
       <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
@@ -483,7 +483,7 @@ NixOS 用户可以通过添加 Flake input 来进行安装
 ```nix
 # flake.nix
 mark-shot = {
-  url = "github:tystudio-26020701/mark-shot-community";
+  url = "github:tystudio-26020701/DracoPho-community";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 
@@ -600,11 +600,11 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. 复制 OCR 辅助脚本**
 
-将 [太殷龙摄 仓库](https://github.com/tystudio-26020701/mark-shot-community) 中的 `scripts/mark-shot-ocr` 复制到本地目录，例如 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`。
+将 [太殷龙摄 仓库](https://github.com/tystudio-26020701/DracoPho-community) 中的 `scripts/mark-shot-ocr` 复制到本地目录，例如 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`。
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/mark-shot-community/main/scripts/mark-shot-ocr" `
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/mark-shot-ocr" `
   -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
 ```
 
@@ -935,4 +935,4 @@ gdbus call --session \
 - **[serendipitywgy](https://github.com/serendipitywgy)**：感谢通过 `serendipitywgy/mark-shot` 贡献跨桌面兼容性改进、OCR 复制工具栏动作和智能矩形框预选功能。
 - **太殷龙摄 所依赖的全部开源项目**，包括 Qt 6、PipeWire、xdg-desktop-portal、layer-shell-qt、wl-clipboard、xclip、grim、RapidOCR、onnxruntime、Tesseract、ZXing-C++ 等。
 
-本社区版由 [北京太殷造物科技有限公司](https://github.com/tystudio-26020701/mark-shot-community) 及贡献者维护，基于 **MIT 许可证** 开源。
+本社区版由 [北京太殷造物科技有限公司](https://github.com/tystudio-26020701/DracoPho-community) 及贡献者维护，基于 **MIT 许可证** 开源。
