@@ -1,5 +1,53 @@
 # 发版说明
 
+### 26.8.5.0
+
+> **太殷龙摄 社区版**——功能发布。新增**独立图片编辑器**（`--editor`）、
+> **交互式窗口截图**（悬停高亮并显示标题徽标、点击捕获；X11/Windows/KDE
+> Wayland 读取窗口自身内容）与**截图历史**（缩略图网格，支持重新复制 /
+> 重新编辑 / 另存为 / 删除）。
+
+#### 功能
+
+**独立图片编辑器**
+- `--editor` 以空画布打开图片编辑器；"打开图片"（按钮 / `Ctrl+O` / 拖放）
+  导入图片后进入完整标注编辑。`mark-shot-edit.desktop` 桌面入口在不带文件
+  启动时直接打开该编辑器。
+
+**交互式窗口截图**
+- 新增"窗口捕获"启动工具（`W` 键）、托盘 / 悬浮球"捕获窗口"入口与
+  `--capture-window`：悬停高亮窗口（显示实时标题徽标）、点击即捕获并进入
+  编辑器。
+- 只要平台暴露窗口对象接口就读取窗口**自身内容**而非屏幕区域：X11/XWayland
+  走 `XCompositeNameWindowPixmap`（被遮挡/最小化窗口同样真实，不弹起窗口、
+  不抢焦点）、Windows 走 `PrintWindow(PW_RENDERFULLCONTENT)`（遮挡/
+  DirectComposition 窗口）、KDE Wayland 原生窗口走
+  `org.kde.KWin.ScreenShot2.CaptureWindow`（KDE 检测脚本已上报稳定窗口句柄）；
+  仅 GNOME / Hyprland / sway 原生窗口回退为屏幕区域裁剪。
+- 无头 `--window` 截图获得同样的对象抓取后端；Wayland 会话下的交互式
+  XWayland 窗口也从 X11 合成缓冲路径抓取，不再做屏幕裁剪。
+
+**截图历史**
+- 复制、保存、贴图的截图会写入磁盘历史，在缩略图网格窗口（托盘 / 悬浮球
+  "截图历史…"入口）中支持重新复制、重新编辑、另存为、删除与清空。
+- 可在 设置 > 存储 中通过 `history.enabled` / `history.maxEntries`（默认
+  50）开关并限制条目数。
+
+**悬浮球（置顶且永不入画）**
+- 悬浮球每次显示时都重新强化置顶：Windows 走原生 `HWND_TOPMOST` 层级，
+  GNOME Wayland（合成器不遵守置顶提示）通过随软件附带的
+  MarkShotScrollHelper Shell 扩展保持置顶（与贴纸窗口共用该扩展）。
+- 除截图外，录制进行中悬浮球也会自动隐藏：X11 / GNOME·wlroots Wayland
+  的区域录制经 QScreen / grim / portal 抓屏，悬浮球若可见会被录进画面；
+  因此悬浮球在任何平台都不会出现在你自己的截图或录制帧里。
+
+#### 文档
+- 对比矩阵：太殷龙摄 的"窗口截图"与"截图历史"标记 ✅ 并更新说明；
+  CLI 参数表补充 `--editor` / `--capture-window`（中英）；`history.*`
+  写入 `docs/configuration.md`。
+
+---
+
 ### 26.8.4.0
 
 > **太殷龙摄 社区版**——功能发布。项目由 "Mark Shot" 更名为 **DracoPho**

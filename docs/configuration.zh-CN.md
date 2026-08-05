@@ -168,6 +168,8 @@
 | `scrollCapture.frame` | 布尔值/数值/对象 | `5` | 滚动截图外框偏移。数值表示实际捕获区域和外框之间的像素间距；`false` 关闭外框。对象形式支持 `enabled` 和 `gap`。别名：`captureFrame`、`border`、`outline`，也支持平铺的 `frameEnabled` / `frameGap`。 |
 | `scrollCapture.previewGap` | 数值/对象 | `5` | 外框和滚动预览面板之间的像素间距。预览面板会在外框周围选择第一个可用的不重叠位置。别名：`previewDistance`、`previewOffset`、`panelGap`；对象形式支持 `gap`。 |
 | `scrollCapture.hidePreviewDuringCapture` | 布尔值 | `false` | 控制滚动截图运行时是否强制隐藏预览面板。开启后，即使小选区周围有空间，也会隐藏预览面板并显示悬浮拖拽手柄；暂停时仍会显示预览面板。别名：`hidePreviewWhileCapturing`、`hidePanelDuringCapture`、`hideUiDuringCapture`；也支持 `scrollCapture.preview.hideWhileCapturing`。 |
+| `history.enabled` | 布尔值 | `true` | 是否把复制、保存、贴图的截图记录进截图历史（托盘 / 悬浮球"截图历史…"入口）。 |
+| `history.maxEntries` | 整数 | `50` | 截图历史在磁盘上保留的最大条目数；`0` 表示保留全部截图。 |
 | `ocr.enabled` | 布尔值 | `true` | 控制 OCR 功能是否全局可用。本身不控制贴图后台 OCR 的自动触发。 |
 | `ocr.resultPanel` | 布尔值/对象 | `true` | 控制主截图 OCR 流程是否打开可编辑结果窗口。对象形式支持 `enabled`、`show`、`visible` 或 `use`。别名包括 `resultWindow`、`ocrResultPanel`、`ocrResultWindow`。环境变量 `MARK_SHOT_OCR_RESULT_PANEL` 和 `MARK_SHOT_OCR_RESULT_WINDOW` 会覆盖配置文件。 |
 | `translation.autoAfterOcr` | 布尔值 | `false` | 控制贴图窗口 OCR 成功后是否自动启动翻译并缓存翻译结果。开启后，用户在右键菜单选择翻译时会瞬间渲染已缓存的翻译，无需临时发起网络请求。别名：`translation.auto` / `autoAfterOCR` 等。 |

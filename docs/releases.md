@@ -1,5 +1,62 @@
 # Release Notes
 
+### 26.8.5.0
+
+> **DracoPho Community Edition** — feature release. Adds a **standalone image
+> editor** (`--editor`), an **interactive window-capture mode** (hover to
+> highlight, click to capture; X11 reads occluded/minimized window content),
+> and a **capture history** (thumbnail grid with re-copy / re-edit / save-as /
+> delete).
+
+#### Features
+
+**Standalone image editor**
+- `--editor` opens the DracoPho image editor with an empty canvas; "Open
+  Image" (button / `Ctrl+O` / drag & drop) imports an image for annotation
+  editing. The `mark-shot-edit.desktop` entry now launches this editor when
+  opened without a file.
+
+**Interactive window capture**
+- New "Window Capture" startup tool (`W`), tray / floating-ball "Capture
+  Window" entries and `--capture-window`: hover to highlight a window (with a
+  live title badge), click to capture it straight into the editor.
+- The window's **own content** is read instead of the screen region wherever
+  the platform exposes it: X11 / XWayland via `XCompositeNameWindowPixmap`
+  (occluded / minimized windows included, no raising / focus stealing),
+  Windows via `PrintWindow(PW_RENDERFULLCONTENT)` (occluded / DirectComposition
+  windows), and KDE Wayland native windows via
+  `org.kde.KWin.ScreenShot2.CaptureWindow` (the KDE detection script now
+  reports stable window handles). Only GNOME / Hyprland / sway native windows
+  fall back to a screen-region crop.
+- Headless `--window` capture gains the same object-capture backends, and the
+  interactive XWayland windows on Wayland sessions are now captured through the
+  X11 composited-buffer path instead of a screen crop.
+
+**Capture history**
+- Copied, saved and pinned screenshots are recorded to disk and shown in a
+  thumbnail-grid dialog ("Capture History..." in the tray and floating ball)
+  with re-copy, re-edit, save-as, delete and clear-all.
+- Optional and capped via `history.enabled` / `history.maxEntries` (default
+  50) in Settings > Storage.
+
+**Floating ball (always on top, never captured)**
+- The floating ball re-asserts its topmost stacking whenever it is shown:
+  native `HWND_TOPMOST` on Windows, and the bundled `MarkShotScrollHelper`
+  Shell extension on GNOME Wayland (whose compositor ignores stay-on-top
+  hints; shared with pinned sticker windows).
+- The ball hides automatically during recordings in addition to captures, so
+  it never appears in screenshots or recording frames on any platform (region
+  recordings on X11 and GNOME/wlroots Wayland grab the screen via
+  QScreen / grim / portal).
+
+#### Docs
+- Comparison matrix: "Window capture" and "Capture history" marked ✅ for
+  DracoPho with updated notes; `--editor` / `--capture-window` in the CLI
+  argument tables (EN/ZH); `history.*` documented in
+  `docs/configuration.md`.
+
+---
+
 ### 26.8.4.0
 
 > **DracoPho Community Edition** — feature release. The project is rebranded
