@@ -361,6 +361,11 @@ void WindowsTrayController::setTimedCaptureCallback(TimedCaptureCallback callbac
     m_timedCaptureCallback = std::move(callback);
 }
 
+void WindowsTrayController::setWindowCaptureCallback(Callback callback)
+{
+    m_windowCaptureCallback = std::move(callback);
+}
+
 void WindowsTrayController::setFloatingBallVisibilityControl(Callback toggle, FloatingBallVisibility visible)
 {
     m_floatingBallToggle = std::move(toggle);
@@ -383,6 +388,14 @@ bool WindowsTrayController::start()
         m_menu = new QMenu;
         m_captureAction = m_menu->addAction(MS_TR("Capture"), this, [this] { triggerCapture(); });
         m_fullscreenAction = m_menu->addAction(MS_TR("Fullscreen Capture"), this, [this] { triggerFullscreenCapture(); });
+        if (m_windowCaptureCallback) {
+            m_windowCaptureAction = m_menu->addAction(MS_TR("Capture Window"), this, [this] {
+                if (m_windowCaptureCallback) {
+                    m_windowCaptureCallback();
+                }
+            });
+            m_windowCaptureAction->setObjectName(QStringLiteral("trayWindowCaptureAction"));
+        }
         if (m_timedCaptureCallback) {
             // 延时截图子菜单：倒计时结束后按当前选区进入截图。
             m_delayedCaptureMenu = m_menu->addMenu(MS_TR("Delayed Capture"));
@@ -615,11 +628,17 @@ void WindowsTrayController::retranslateUi()
     if (m_fullscreenAction) {
         m_fullscreenAction->setText(MS_TR("Fullscreen Capture"));
     }
+    if (m_windowCaptureAction) {
+        m_windowCaptureAction->setText(MS_TR("Capture Window"));
+    }
     if (m_startRecordingAction) {
         m_startRecordingAction->setText(MS_TR("Start Recording"));
     }
     if (m_settingsAction) {
         m_settingsAction->setText(MS_TR("Settings"));
+    }
+    if (m_historyAction) {
+        m_historyAction->setText(MS_TR("Capture History..."));
     }
     if (m_delayedCaptureMenu) {
         m_delayedCaptureMenu->setTitle(MS_TR("Delayed Capture"));

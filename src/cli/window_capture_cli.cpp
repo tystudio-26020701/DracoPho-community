@@ -6,6 +6,7 @@
 #include "headless_capture_config.h"
 #include "screen_capture.h"
 #include "window_detection.h"
+#include "windows_integration.h"
 
 #include <QBuffer>
 #include <QCommandLineOption>
@@ -64,6 +65,17 @@ bool isX11SessionLike()
 #endif
 }
 
+// X11 对象抓取可用：原生 X11 会话，以及 Wayland 会话下的 XWayland
+// （DISPLAY 指向 XWayland 服务，XWayland 窗口仍可从合成缓冲读取）。
+bool canAttemptX11ObjectCapture()
+{
+#if defined(Q_OS_WIN)
+    return false;
+#else
+    return !qEnvironmentVariable("DISPLAY").isEmpty();
+#endif
+}
+
 // Reads the process name behind a pid from /proc (Linux). Empty on other
 // platforms or when the process is gone. Results are memoized: the name is
 // stable for the lifetime of a pid, and the headless path reads it once per
@@ -118,14 +130,22 @@ QVector<WindowInfo> collectWindowInfos(QString *source)
         return scripted;
     }
 
-    if (isX11SessionLike()) {
+    if (isX11SessionLike() || canAttemptX11ObjectCapture()) {
         // includeHidden=true：最小化/隐藏窗口也要列出，供按 PID/进程名定位截图。
+        // Wayland 会话下 DISPLAY 存在时同样枚举 XWayland 窗口作为无检测脚本的回退。
         const QVector<WindowInfo> x11 = enumerateX11WindowInfos(true, true);
         if (source) {
-            *source = QStringLiteral("x11");
+            *source = isX11SessionLike() ? QStringLiteral("x11") : QStringLiteral("xwayland");
         }
         return x11;
     }
+#if defined(Q_OS_WIN)
+    // Windows：进程内 EnumWindows 枚举（含 HWND 句柄，供 PrintWindow 抓取）。
+    if (source) {
+        *source = QStringLiteral("windows");
+    }
+    return markshot::windows::enumerateWindowInfos();
+#endif
 
     if (source) {
         *source = QStringLiteral("none");
@@ -439,38 +459,29 @@ QJsonObject captureOne(const WindowInfo &info,
     QImage capturedImage;
     QString captureError;
     QString windowCaptureError;
-    bool attemptedWindowCapture = false;
-    const bool objectCaptureAvailable =
-        isX11SessionLike() && info.id.startsWith(QLatin1String("0x"));
-    if (objectCaptureAvailable) {
-        // X11 窗口对象抓取：即使目标被其他窗口遮挡或已最小化，也从合成命名
-        // pixmap 读取窗口自身内容，不弹起窗口、不抢焦点；失败回退区域抓屏。
-        bool ok = false;
-        const qulonglong windowId = info.id.mid(2).toULongLong(&ok, 16);
-        if (ok && windowId != 0) {
-            attemptedWindowCapture = true;
-            capturedImage = captureX11WindowContent(windowId, &windowCaptureError);
-            if (!capturedImage.isNull()) {
-                entry.insert(QStringLiteral("windowCapture"), true);
-                // 组件子区域：先取窗口对象抓取图，再按窗口内偏移裁剪，
-                // 使遮挡/最小化窗口的子区域也能拿到真实内容（装饰边距
-                // 与抓取缓冲坐标系近似，子区域超出缓冲时被裁掉并回退）。
-                if (subRect.has_value()) {
-                    capturedImage = capturedImage.copy(QRect(subRect->x(),
-                                                             subRect->y(),
-                                                             subRect->width(),
-                                                             subRect->height())
-                                                           .intersected(capturedImage.rect()));
-                    if (capturedImage.isNull()) {
-                        windowCaptureError =
-                            QStringLiteral("component sub-region is outside the window content buffer");
-                    }
-                }
+    // 平台窗口对象抓取：X11（含 Wayland 下的 XWayland）读合成命名 pixmap，
+    // Windows 走 PrintWindow(PW_RENDERFULLCONTENT)，KWin Wayland 由 KWin 渲染
+    // 原生窗口缓冲。无可用对象路径或抓取失败时回退为区域抓屏。
+    capturedImage = captureWindowObjectContent(info, includeCursor, &windowCaptureError);
+    if (!capturedImage.isNull()) {
+        entry.insert(QStringLiteral("windowCapture"), true);
+        // 组件子区域：先取窗口对象抓取图，再按窗口内偏移裁剪，
+        // 使遮挡/最小化窗口的子区域也能拿到真实内容（装饰边距
+        // 与抓取缓冲坐标系近似，子区域超出缓冲时被裁掉并回退）。
+        if (subRect.has_value()) {
+            capturedImage = capturedImage.copy(QRect(subRect->x(),
+                                                     subRect->y(),
+                                                     subRect->width(),
+                                                     subRect->height())
+                                                   .intersected(capturedImage.rect()));
+            if (capturedImage.isNull()) {
+                windowCaptureError =
+                    QStringLiteral("component sub-region is outside the window content buffer");
             }
         }
     } else {
-        // 平台/选择器不支持窗口对象抓取（Wayland 无访问窗口内容的接口，
-        // 或非 X11 窗口 id）：任何结果都是"窗口矩形内的屏幕区域抓取"，
+        // 平台/选择器不支持窗口对象抓取（GNOME 等无窗口内容接口的 Wayland，
+        // 或窗口无对象 id）：任何结果都是"窗口矩形内的屏幕区域抓取"，
         // 对遮挡/最小化窗口不能保证得到目标窗口内容。如实标注，供脚本/
         // Agent 判别，绝不伪装成"拿到窗口自身内容"。
         entry.insert(QStringLiteral("windowObjectCapture"), false);
@@ -491,7 +502,7 @@ QJsonObject captureOne(const WindowInfo &info,
     // 窗口对象抓取失败后回退到区域抓屏时如实标注：被遮挡/最小化窗口若没有
     // 保留的合成缓冲，区域抓屏得到的是该区域当前内容（可能是另一个窗口），
     // 必须让调用方（CLI/MCP）知道这是回退产物而非目标窗口本身。
-    if (attemptedWindowCapture && !windowCaptureError.isEmpty()) {
+    if (!windowCaptureError.isEmpty()) {
         entry.insert(QStringLiteral("windowCaptureError"), windowCaptureError);
         if (!capturedImage.isNull()) {
             entry.insert(QStringLiteral("windowCaptureFallback"), true);

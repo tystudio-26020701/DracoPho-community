@@ -296,6 +296,14 @@ def script_source(token):
         if (typeof pid === "number" && pid > 0) {{
             item.pid = pid;
         }}
+        const internalId = value(window, "internalId");
+        if (typeof internalId === "string" && internalId.length > 0) {{
+            item.internalId = internalId;
+        }}
+        const windowId = value(window, "windowId");
+        if (typeof windowId === "number" && windowId > 0) {{
+            item.windowId = windowId;
+        }}
         const desktops = desktopNames(window);
         if (desktops.length > 0) {{
             item.desktops = desktops;
@@ -547,6 +555,15 @@ def normalize_window(window):
         "width": rect[2],
         "height": rect[3],
     }
+    # 稳定窗口句柄：X11 客户端用 X11 窗口 id（0x 前缀，供合成缓冲抓取），
+    # Wayland 原生客户端用 KWin internalId（uuid，供 ScreenShot2.CaptureWindow）。
+    if window.get("x11Client") and window.get("windowId"):
+        try:
+            result["id"] = "0x%x" % int(window["windowId"])
+        except (TypeError, ValueError):
+            pass
+    elif window.get("internalId"):
+        result["id"] = window["internalId"]
     for key in (
         "title",
         "class",

@@ -186,6 +186,19 @@ public:
      * @return 无返回值。
      */
     void beginRegionRecordingSelection(markshot::recording::RecordingOptions options);
+    /// @brief 预选"窗口捕获"启动工具（截图会话以窗口捕获模式开始）。
+    /// @return 无返回值。
+    void preselectWindowCaptureTool();
+    /// @brief 是否启用了"窗口捕获"启动工具。
+    /// @return 已启用时返回 true。
+    bool windowCaptureToolActive() const;
+    /// @brief 查找图像坐标点命中的窗口下标（m_windowInfos 索引）。
+    /// @param imagePoint 图像坐标系点。
+    /// @return 命中的窗口下标；未命中时返回空 optional。
+    std::optional<int> windowIndexAtImagePoint(const QPointF &imagePoint) const;
+    /// @brief 供测试读取当前冻结帧（窗口捕获回退裁剪的来源）。
+    /// @return 冻结帧图像。
+    QImage frozenFrameForTest() const { return m_frozenFrame; }
 
 signals:
     void selectionActivated(ShotWindow *window);
@@ -806,5 +819,7 @@ private:
     QVector<HistorySnapshot> m_redoStack;
     QVector<markshot::WindowInfo> m_windowInfos;
     std::optional<QRect> m_hoveredWindowRect;
+    // 当前悬停窗口在 m_windowInfos 中的下标（用于绘制标题徽标）。
+    std::optional<int> m_hoveredWindowIndex;
     QPointF m_selectionClickStart;
 };

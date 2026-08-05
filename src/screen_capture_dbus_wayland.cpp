@@ -81,6 +81,68 @@ bool isKWinScreenShotAvailable()
     return kwin.isValid();
 }
 
+/// @brief 从 KWin ScreenShot2 的管道文件描述符读回原始帧并包装为 QImage。
+/// @param readFd 管道读端（调用方负责在返回后关闭）。
+/// @param results KWin 返回的元数据（type/width/height/stride/format/scale）。
+/// @param error 输出错误信息。
+/// @return 读取成功时返回图像，失败返回空图像。
+QImage readKWinScreenshotPipe(int readFd, const QVariantMap &results, QString *error)
+{
+    const int width = results.value(QStringLiteral("width")).toInt();
+    const int height = results.value(QStringLiteral("height")).toInt();
+    const int stride = results.value(QStringLiteral("stride")).toInt();
+    const uint format = results.value(QStringLiteral("format")).toUInt();
+    if (width <= 0 || height <= 0 || stride < width * 4) {
+        if (error) {
+            *error = QStringLiteral("KWin ScreenShot2 returned invalid buffer metadata (%1x%2 stride=%3)")
+                         .arg(width).arg(height).arg(stride);
+        }
+        return {};
+    }
+
+    const qulonglong total = static_cast<qulonglong>(stride) * static_cast<qulonglong>(height);
+    QByteArray buffer(static_cast<int>(total), Qt::Uninitialized);
+    qulonglong received = 0;
+    while (received < total) {
+        struct pollfd pfd { readFd, POLLIN, 0 };
+        const int polled = ::poll(&pfd, 1, 2000);
+        if (polled <= 0) {
+            break;  // timeout or poll error
+        }
+        const ssize_t bytes = ::read(readFd, buffer.data() + received, total - received);
+        if (bytes <= 0) {
+            break;  // EOF or read error
+        }
+        received += static_cast<qulonglong>(bytes);
+    }
+
+    if (received < total) {
+        markshot::debugLog("kwin", "short-read got=%llu want=%llu %dx%d stride=%d",
+                           received, total, width, height, stride);
+        if (error) {
+            *error = QStringLiteral("KWin ScreenShot2 delivered a truncated frame (%1/%2 bytes)")
+                         .arg(received).arg(total);
+        }
+        return {};
+    }
+
+    const QImage::Format imageFormat =
+        format != 0 ? static_cast<QImage::Format>(format) : QImage::Format_ARGB32_Premultiplied;
+    const QImage view(reinterpret_cast<const uchar *>(buffer.constData()),
+                      width, height, stride, imageFormat);
+    if (view.isNull()) {
+        if (error) {
+            *error = QStringLiteral("KWin ScreenShot2 frame could not be wrapped as an image");
+        }
+        return {};
+    }
+    // 读取的 scale 写入 devicePixelRatio，保证 HiDPI 下窗口/区域尺寸与逻辑坐标一致。
+    const double scale = results.value(QStringLiteral("scale")).toDouble();
+    QImage copy = view.copy();
+    copy.setDevicePixelRatio(scale > 0.0 && scale < 8.0 ? scale : 1.0);
+    return copy.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+}
+
 /// @brief 使用 KWin ScreenShot2 接口截取指定 Wayland 区域。
 /// @param request 捕获请求，包含源区域、输出名称和鼠标包含策略。
 /// @return 捕获成功时返回图像，失败时返回错误信息供后续回退链路使用。
@@ -139,63 +201,103 @@ CaptureResult captureWithKWinScreenShot(const CaptureRequest &request)
     }
 
     const QVariantMap results = reply.value();
-    const int width = results.value(QStringLiteral("width")).toInt();
-    const int height = results.value(QStringLiteral("height")).toInt();
-    const int stride = results.value(QStringLiteral("stride")).toInt();
-    const uint format = results.value(QStringLiteral("format")).toUInt();
-    if (width <= 0 || height <= 0 || stride < width * 4) {
-        ::close(fds[0]);
-        return {{},
-                QStringLiteral("KWin ScreenShot2 returned invalid buffer metadata (%1x%2 stride=%3)")
-                    .arg(width).arg(height).arg(stride),
-                {},
-                request.sourceGeometry};
-    }
-
-    const qulonglong total = static_cast<qulonglong>(stride) * static_cast<qulonglong>(height);
-    QByteArray buffer(static_cast<int>(total), Qt::Uninitialized);
-    qulonglong received = 0;
-    while (received < total) {
-        struct pollfd pfd { fds[0], POLLIN, 0 };
-        const int polled = ::poll(&pfd, 1, 2000);
-        if (polled <= 0) {
-            break;  // timeout or poll error
-        }
-        const ssize_t bytes = ::read(fds[0], buffer.data() + received, total - received);
-        if (bytes <= 0) {
-            break;  // EOF or read error
-        }
-        received += static_cast<qulonglong>(bytes);
-    }
+    QString pipeError;
+    const QImage frame = readKWinScreenshotPipe(fds[0], results, &pipeError);
     ::close(fds[0]);
 
-    if (received < total) {
-        markshot::debugLog("kwin", "short-read got=%llu want=%llu %dx%d stride=%d",
-                           received, total, width, height, stride);
-        return {{},
-                QStringLiteral("KWin ScreenShot2 delivered a truncated frame (%1/%2 bytes)")
-                    .arg(received).arg(total),
-                {},
-                request.sourceGeometry};
-    }
-
-    const QImage::Format imageFormat =
-        format != 0 ? static_cast<QImage::Format>(format) : QImage::Format_ARGB32_Premultiplied;
-    const QImage view(reinterpret_cast<const uchar *>(buffer.constData()),
-                      width, height, stride, imageFormat);
-    if (view.isNull()) {
-        return {{}, QStringLiteral("KWin ScreenShot2 frame could not be wrapped as an image"), {}, request.sourceGeometry};
+    if (frame.isNull()) {
+        markshot::debugLog("kwin", "capture-area-error geom=%d,%d %dx%d err=%s",
+                           geometry.x(), geometry.y(), geometry.width(), geometry.height(),
+                           pipeError.toUtf8().constData());
+        return {{}, pipeError, {}, request.sourceGeometry};
     }
 
     markshot::debugLog("kwin", "capture-area-ok geom=%d,%d %dx%d -> frame=%dx%d stride=%d format=%u",
                        geometry.x(), geometry.y(), geometry.width(), geometry.height(),
-                       width, height, stride, format);
+                       frame.width(), frame.height(), static_cast<int>(frame.bytesPerLine()),
+                       results.value(QStringLiteral("format")).toUInt());
     // Detach from the soon-to-be-freed buffer and normalize the format.
-    return {view.copy().convertToFormat(QImage::Format_ARGB32_Premultiplied),
+    return {frame,
             {},
             request.allOutputs ? QString() : request.preferredOutputName,
             request.sourceGeometry,
             request.includeCursor};
+}
+
+/// @brief 使用 KWin ScreenShot2.CaptureWindow 抓取 Wayland 原生窗口自身内容。
+/// 与区域抓屏不同，该接口由 KWin 直接渲染目标窗口的合成缓冲，遮挡/最小化
+/// 窗口也能拿到真实内容（对标 Spectacle 的 Wayland 窗口捕获）。
+/// @param windowHandle KWin 窗口的 internalId（uuid，窗口检测脚本提供）。
+/// @param includeCursor 是否包含鼠标。
+/// @param error 输出错误信息。
+/// @return 抓取成功时返回窗口图像，失败返回空图像。
+QImage captureKWinWindowContent(const QString &windowHandle, bool includeCursor, QString *error)
+{
+    if (windowHandle.isEmpty()) {
+        if (error) {
+            *error = QStringLiteral("KWin window handle is empty");
+        }
+        return {};
+    }
+
+    QDBusInterface kwin(QStringLiteral("org.kde.KWin.ScreenShot2"),
+                        QStringLiteral("/org/kde/KWin/ScreenShot2"),
+                        QStringLiteral("org.kde.KWin.ScreenShot2"),
+                        QDBusConnection::sessionBus());
+    if (!kwin.isValid()) {
+        if (error) {
+            *error = QStringLiteral("org.kde.KWin.ScreenShot2 interface is not available");
+        }
+        return {};
+    }
+
+    int fds[2];
+    if (::pipe2(fds, O_CLOEXEC) != 0) {
+        if (error) {
+            *error = QStringLiteral("failed to create pipe for KWin window capture");
+        }
+        return {};
+    }
+
+    QVariantMap options;
+    options.insert(QStringLiteral("include-cursor"), includeCursor);
+    // 包含窗口装饰：与交互式高亮的窗口边界（含标题栏）一致。
+    options.insert(QStringLiteral("include-decoration"), true);
+    options.insert(QStringLiteral("include-shadow"), true);
+    options.insert(QStringLiteral("native-resolution"), true);
+
+    QDBusReply<QVariantMap> reply =
+        kwin.call(QStringLiteral("CaptureWindow"),
+                  windowHandle,
+                  options,
+                  QVariant::fromValue(QDBusUnixFileDescriptor(fds[1])));
+    ::close(fds[1]);
+
+    if (!reply.isValid()) {
+        ::close(fds[0]);
+        markshot::debugLog("kwin", "capture-window-error handle=%s name=%s msg=%s",
+                           windowHandle.toUtf8().constData(),
+                           reply.error().name().toUtf8().constData(),
+                           reply.error().message().toUtf8().constData());
+        if (error) {
+            *error = QStringLiteral("KWin ScreenShot2 CaptureWindow failed: %1: %2")
+                         .arg(reply.error().name(), reply.error().message());
+        }
+        return {};
+    }
+
+    const QVariantMap results = reply.value();
+    QString pipeError;
+    const QImage image = readKWinScreenshotPipe(fds[0], results, &pipeError);
+    ::close(fds[0]);
+    if (image.isNull() && error) {
+        *error = pipeError;
+    }
+    markshot::debugLog("kwin", "capture-window-ok handle=%s frame=%dx%d dpr=%.3f",
+                       windowHandle.toUtf8().constData(),
+                       image.width(), image.height(),
+                       image.devicePixelRatio());
+    return image;
 }
 
 CaptureResult captureWaylandFrame(const CaptureRequest &request)

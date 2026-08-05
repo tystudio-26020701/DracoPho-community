@@ -71,6 +71,7 @@ QByteArray encodeCommand(const SingleInstanceCommand &command)
     object.insert(QStringLiteral("fullscreen"), command.fullscreen);
     object.insert(QStringLiteral("allOutputs"), command.allOutputs);
     object.insert(QStringLiteral("delaySeconds"), command.delaySeconds);
+    object.insert(QStringLiteral("windowCapture"), command.windowCapture);
     object.insert(QStringLiteral("recordingStatus"), command.recordingStatus);
     object.insert(QStringLiteral("stopRecording"), command.stopRecording);
     object.insert(QStringLiteral("startRecording"), command.startRecording);
@@ -108,6 +109,7 @@ std::optional<SingleInstanceCommand> decodeCommand(const QByteArray &payload)
     command.delaySeconds = std::clamp(object.value(QStringLiteral("delaySeconds")).toInt(0),
                                       0,
                                       3600);
+    command.windowCapture = object.value(QStringLiteral("windowCapture")).toBool(false);
     command.recordingStatus = object.value(QStringLiteral("recordingStatus")).toBool(false);
     command.stopRecording = object.value(QStringLiteral("stopRecording")).toBool(false);
     command.startRecording = object.value(QStringLiteral("startRecording")).toBool(false);

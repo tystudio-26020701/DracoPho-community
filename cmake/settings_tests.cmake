@@ -229,6 +229,55 @@ markshot_link_core_test_libraries(mark-shot-shot-window-backdrop-test)
 add_test(NAME shot-window-backdrop COMMAND mark-shot-shot-window-backdrop-test)
 
 
+qt_add_executable(mark-shot-shot-window-editor-test
+    tests/shot_window_editor_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-shot-window-editor-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-shot-window-editor-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-shot-window-editor-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-shot-window-editor-test)
+add_test(NAME shot-window-editor COMMAND mark-shot-shot-window-editor-test)
+
+qt_add_executable(mark-shot-shot-window-window-capture-test
+    tests/shot_window_window_capture_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-shot-window-window-capture-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-shot-window-window-capture-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-shot-window-window-capture-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-shot-window-window-capture-test)
+add_test(NAME shot-window-window-capture COMMAND mark-shot-shot-window-window-capture-test)
+
+qt_add_executable(mark-shot-capture-history-test
+    tests/capture_history_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-capture-history-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-capture-history-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-capture-history-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-capture-history-test)
+add_test(NAME capture-history COMMAND mark-shot-capture-history-test)
+
+qt_add_executable(mark-shot-capture-history-dialog-test
+    tests/capture_history_dialog_test.cpp
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+)
+target_include_directories(mark-shot-capture-history-dialog-test PRIVATE src plugin-sdk)
+target_compile_definitions(mark-shot-capture-history-dialog-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+if(MSVC)
+    target_compile_options(mark-shot-capture-history-dialog-test PRIVATE /utf-8)
+endif()
+markshot_link_core_test_libraries(mark-shot-capture-history-dialog-test)
+add_test(NAME capture-history-dialog COMMAND mark-shot-capture-history-dialog-test)
+
+
 qt_add_executable(mark-shot-settings-dirty-roundtrip-test
     tests/settings_dirty_roundtrip_test.cpp
     $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>

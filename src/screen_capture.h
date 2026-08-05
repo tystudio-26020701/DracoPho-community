@@ -42,6 +42,15 @@ struct CaptureRequest {
 
 // Captures one frame and normalizes the image for downstream painting/stitching.
 CaptureResult captureScreenFrame(const CaptureRequest &request);
+// Captures a single window's own content (not the screen region) when the
+// platform exposes a window-object path: X11 uses the XComposite named pixmap,
+// Windows uses PrintWindow(PW_RENDERFULLCONTENT), and KWin Wayland uses
+// ScreenShot2.CaptureWindow for native windows. Returns a null image when no
+// object path applies or it fails; callers then fall back to cropping the
+// frozen frame at the window rectangle.
+QImage captureWindowObjectContent(const markshot::WindowInfo &window,
+                                  bool includeCursor,
+                                  QString *error = nullptr);
 // X11: captures a window's own composited content (via XComposite named pixmap)
 // so occluded or minimized windows still yield their real content without being
 // brought to the front. Returns a null image on failure.

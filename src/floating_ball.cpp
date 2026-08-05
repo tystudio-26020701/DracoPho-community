@@ -280,6 +280,33 @@ void FloatingBall::setRecordingRegionCallback(RecordingRegionCallback callback)
     m_recordingRegionCallback = std::move(callback);
 }
 
+void FloatingBall::setWindowCaptureCallback(CaptureCallback callback)
+{
+    m_windowCaptureCallback = std::move(callback);
+    if (!m_windowCaptureCallback) {
+        return;
+    }
+    if (m_windowCaptureAction) {
+        m_menu->removeAction(m_windowCaptureAction);
+        m_windowCaptureAction->deleteLater();
+        m_windowCaptureAction = nullptr;
+    }
+    m_windowCaptureAction = m_menu->addAction(MS_TR("Capture Window"));
+    m_windowCaptureAction->setObjectName(QStringLiteral("floatingWindowCaptureAction"));
+    QObject::connect(m_windowCaptureAction, &QAction::triggered, this, [this] {
+        if (m_windowCaptureCallback) {
+            m_windowCaptureCallback();
+        }
+    });
+    QAction *before = m_startRecordingAction;
+    if (!before) {
+        before = m_fullscreenAction;
+    }
+    if (before) {
+        m_menu->insertAction(before, m_windowCaptureAction);
+    }
+}
+
 void FloatingBall::retranslateUi()
 {
     if (m_captureAction) {
@@ -288,11 +315,17 @@ void FloatingBall::retranslateUi()
     if (m_fullscreenAction) {
         m_fullscreenAction->setText(MS_TR("Fullscreen Capture"));
     }
+    if (m_windowCaptureAction) {
+        m_windowCaptureAction->setText(MS_TR("Capture Window"));
+    }
     if (m_startRecordingAction) {
         m_startRecordingAction->setText(MS_TR("Start Recording"));
     }
     if (m_settingsAction) {
         m_settingsAction->setText(MS_TR("Settings"));
+    }
+    if (m_historyAction) {
+        m_historyAction->setText(MS_TR("Capture History..."));
     }
     if (m_hideBallAction) {
         m_hideBallAction->setText(MS_TR("Hide Floating Ball"));

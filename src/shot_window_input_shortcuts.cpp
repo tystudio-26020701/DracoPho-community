@@ -204,6 +204,7 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
                 || eventMatchesStartupShortcut(event, StartupTool::ColorPicker)
                 || eventMatchesStartupShortcut(event, StartupTool::Ruler)
                 || eventMatchesStartupShortcut(event, StartupTool::CodeScanner)
+                || eventMatchesStartupShortcut(event, StartupTool::WindowCapture)
                 || eventMatchesStartupShortcut(event, StartupTool::GifRecorder)
                 || eventMatchesStartupShortcut(event, StartupTool::VideoRecorder))) {
             event->accept();
@@ -212,6 +213,11 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
         if (activeRecordingAvailable()
             && (eventMatchesStartupShortcut(event, StartupTool::GifRecorder)
                 || eventMatchesStartupShortcut(event, StartupTool::VideoRecorder))) {
+            event->accept();
+            return;
+        }
+        if (eventMatchesStartupShortcut(event, StartupTool::WindowCapture)) {
+            setStartupTool(StartupTool::WindowCapture);
             event->accept();
             return;
         }

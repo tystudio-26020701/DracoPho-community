@@ -53,10 +53,12 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
 
     if (m_mode == Mode::Selecting && !m_dragging) {
         std::optional<markshot::WindowInfo> best;
+        std::optional<int> bestIndex;
         const QPoint imgPt = imagePoint.toPoint();
         bool useZOrder = false;
 
-        for (const markshot::WindowInfo &info : std::as_const(m_windowInfos)) {
+        for (int i = 0; i < m_windowInfos.size(); ++i) {
+            const markshot::WindowInfo &info = m_windowInfos.at(i);
             if (!info.rect.contains(imgPt)) {
                 continue;
             }
@@ -69,6 +71,7 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
 
             if (!best.has_value()) {
                 best = info;
+                bestIndex = i;
                 continue;
             }
 
@@ -77,12 +80,14 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
                 const int bestZ = best->zOrder.value_or(-1);
                 if (infoZ > bestZ) {
                     best = info;
+                    bestIndex = i;
                 }
             } else {
                 qint64 area = static_cast<qint64>(info.rect.width()) * info.rect.height();
                 qint64 bestArea = static_cast<qint64>(best->rect.width()) * best->rect.height();
                 if (area < bestArea) {
                     best = info;
+                    bestIndex = i;
                 }
             }
         }
@@ -90,6 +95,7 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         const std::optional<QRect> bestRect = best ? std::optional(best->rect) : std::nullopt;
         if (bestRect != m_hoveredWindowRect) {
             m_hoveredWindowRect = bestRect;
+            m_hoveredWindowIndex = bestIndex;
             update();
         }
     }
@@ -417,6 +423,24 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
+    if (m_mode == Mode::Selecting && m_startupTool == StartupTool::WindowCapture) {
+        if (event->button() != Qt::LeftButton) {
+            event->accept();
+            return;
+        }
+        // 窗口捕获：以命中判定为唯一数据源（矩形/id/标题同源），避免
+        // m_hoveredWindowRect 与按下点之间因鼠标移动产生的错位。
+        const qreal clickDistance = QLineF(m_selectionClickStart, event->position()).length();
+        if (clickDistance < 5.0) {
+            const std::optional<int> windowIndex = windowIndexAtImagePoint(widgetToImage(event->position()));
+            if (windowIndex.has_value() && windowIndex.value() < m_windowInfos.size()) {
+                performWindowCapture(m_windowInfos.at(windowIndex.value()));
+            }
+        }
+        event->accept();
+        return;
+    }
+
     if ((event->button() == Qt::LeftButton || event->button() == Qt::MiddleButton) && m_imagePanning) {
         m_imagePanning = false;
         updateCursor();
@@ -472,6 +496,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
         if (clickDistance < 5.0 && m_hoveredWindowRect.has_value()) {
             m_selection = QRectF(*m_hoveredWindowRect);
             m_hoveredWindowRect.reset();
+            m_hoveredWindowIndex.reset();
             m_dragging = false;
             if (!hasUsableSelection()) {
                 m_selection = {};
@@ -501,6 +526,7 @@ void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
             return;
         }
         m_hoveredWindowRect.reset();
+        m_hoveredWindowIndex.reset();
         m_selection = normalizedSelection();
         if (!hasUsableSelection()) {
             m_selection = {};

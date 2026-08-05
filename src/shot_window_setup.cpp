@@ -733,6 +733,8 @@ void ShotWindow::initializeWindowDetection(QVector<markshot::WindowInfo> windowI
             markshot::WindowInfo converted;
             converted.rect = imageRect;
             converted.zOrder = info.zOrder;
+            converted.id = info.id;
+            converted.title = info.title;
             m_windowInfos.append(converted);
         }
     }

@@ -59,6 +59,9 @@ public:
     /// @brief 关联"延时截图"回调（秒数入参）。设置后托盘菜单出现延时截图子菜单。
     /// @param callback 延时截图回调。
     void setTimedCaptureCallback(TimedCaptureCallback callback);
+    /// @brief 关联"窗口捕获"回调。设置后托盘菜单出现"捕获窗口"项。
+    /// @param callback 窗口捕获回调。
+    void setWindowCaptureCallback(Callback callback);
 
     /// @brief 关联悬浮球的"显示/隐藏"开关。
     ///
@@ -109,12 +112,14 @@ private:
     Callback m_fullscreenCaptureCallback;
     RecordingRegionCallback m_recordingRegionCallback;
     TimedCaptureCallback m_timedCaptureCallback;
+    Callback m_windowCaptureCallback;
     Callback m_floatingBallToggle;
     FloatingBallVisibility m_floatingBallVisible;
     QMenu *m_menu = nullptr;
     QSystemTrayIcon *m_tray = nullptr;
     QAction *m_captureAction = nullptr;
     QAction *m_fullscreenAction = nullptr;
+    QAction *m_windowCaptureAction = nullptr;
     QAction *m_settingsAction = nullptr;
     QAction *m_historyAction = nullptr;
     QMenu *m_delayedCaptureMenu = nullptr;

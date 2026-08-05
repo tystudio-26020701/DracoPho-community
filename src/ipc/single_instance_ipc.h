@@ -18,6 +18,7 @@ struct SingleInstanceCommand {
     bool fullscreen = false;
     bool allOutputs = false;
     int delaySeconds = 0;          // 延时截图秒数（0 = 立即）
+    bool windowCapture = false;    // 交互式窗口捕获模式（悬停高亮+点击捕获）
     bool recordingStatus = false;
     bool stopRecording = false;
     // 无人值守录制请求（供 CLI / MCP 智能体调用）：

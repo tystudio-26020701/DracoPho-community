@@ -183,6 +183,7 @@ int main(int argc, char *argv[])
     parser.addOption(noDebugOption);
     parser.addOption(debugLogOption);
     parser.addOption(delayOption);
+    parser.addOption(windowCaptureOption);
     markshot::cli::addHeadlessCaptureOptions(&parser);
     markshot::cli::addWindowCaptureOptions(&parser);
     parser.process(app);
@@ -307,6 +308,14 @@ int main(int argc, char *argv[])
         QMessageBox::critical(nullptr,
                               QStringLiteral("DracoPho"),
                               MS_TR("--debug and --no-debug cannot be used together."));
+        return 1;
+    }
+
+    // 窗口捕获与全屏标注互斥：全屏标注会立即进入编辑态，窗口捕获工具将失效。
+    if (parser.isSet(windowCaptureOption) && parser.isSet(fullscreenAnnotationOption)) {
+        QMessageBox::critical(nullptr,
+                              QStringLiteral("DracoPho"),
+                              MS_TR("--capture-window and --fullscreen cannot be used together."));
         return 1;
     }
 
@@ -527,6 +536,7 @@ int main(int argc, char *argv[])
     duplicateCommand.fullscreen = fullscreenAnnotation;
     duplicateCommand.allOutputs = allOutputs;
     duplicateCommand.delaySeconds = captureDelaySeconds;
+    duplicateCommand.windowCapture = windowCaptureRequested;
     if (markshot::ipc::sendSingleInstanceCommand(duplicateCommand, nullptr, nullptr)) {
         return 0;
     }
@@ -554,7 +564,8 @@ int main(int argc, char *argv[])
                        &floatingBall,
                        useRegularWindow](bool startFullscreen,
                                          bool requestAllOutputs,
-                                         std::optional<markshot::recording::RecordingOptions> regionRecordingOptions = std::nullopt) -> bool {
+                                         std::optional<markshot::recording::RecordingOptions> regionRecordingOptions = std::nullopt,
+                                         bool windowCaptureMode = false) -> bool {
         if (captureActive) {
             return true;
         }
@@ -631,7 +642,8 @@ int main(int argc, char *argv[])
                                          startFullscreen,
                                          defaultTools,
                                          &captureError,
-                                         std::move(regionRecordingOptions));
+                                         std::move(regionRecordingOptions),
+                                         windowCaptureMode);
         if (windows.isEmpty()) {
             if (floatingBall && !ballHiddenByUser) {
                 floatingBall->show();
@@ -677,9 +689,14 @@ int main(int argc, char *argv[])
                           &startCountdown](bool startFullscreen,
                                            bool requestAllOutputs,
                                            std::optional<markshot::recording::RecordingOptions> regionRecordingOptions = std::nullopt,
-                                           std::optional<int> delayOverride = std::nullopt) -> bool {
+                                           std::optional<int> delayOverride = std::nullopt,
+                                           bool windowCaptureMode = false) -> bool {
         if (captureActive) {
             return true;
+        }
+        // 窗口捕获模式不走倒计时遮罩，直接进入窗口选择覆盖层。
+        if (windowCaptureMode) {
+            return captureNow(startFullscreen, requestAllOutputs, std::move(regionRecordingOptions), true);
         }
         const int effectiveDelay = delayOverride.value_or(captureDelaySeconds);
         if (effectiveDelay > 0 && !regionRecordingOptions.has_value()) {
@@ -882,7 +899,11 @@ int main(int argc, char *argv[])
 
             if (command.capture) {
                 QTimer::singleShot(0, &app, [launchCapture, command] {
-                    launchCapture(command.fullscreen, command.allOutputs, std::nullopt, command.delaySeconds);
+                    launchCapture(command.fullscreen,
+                                  command.allOutputs,
+                                  std::nullopt,
+                                  command.delaySeconds,
+                                  command.windowCapture);
                 });
                 response.message = QStringLiteral("capture requested");
             } else {
@@ -899,6 +920,9 @@ int main(int argc, char *argv[])
         floatingBall->setCaptureCallbacks([launchCapture, allOutputs] { launchCapture(false, allOutputs); },
                                           [launchCapture, allOutputs] { launchCapture(true, allOutputs); });
         floatingBall->setTimedCaptureCallback(launchTimedCapture);
+        floatingBall->setWindowCaptureCallback([launchCapture, allOutputs] {
+            launchCapture(false, allOutputs, std::nullopt, std::nullopt, true);
+        });
         floatingBall->setRecordingRegionCallback([launchCapture, allOutputs](markshot::recording::RecordingOptions options) {
             launchCapture(false, allOutputs, std::move(options));
         });
@@ -914,6 +938,9 @@ int main(int argc, char *argv[])
         trayController->setCaptureCallbacks([launchCapture, allOutputs] { launchCapture(false, allOutputs); },
                                             [launchCapture, allOutputs] { launchCapture(true, allOutputs); });
         trayController->setTimedCaptureCallback(launchTimedCapture);
+        trayController->setWindowCaptureCallback([launchCapture, allOutputs] {
+            launchCapture(false, allOutputs, std::nullopt, std::nullopt, true);
+        });
         trayController->setRecordingRegionCallback([launchCapture, allOutputs](markshot::recording::RecordingOptions options) {
             launchCapture(false, allOutputs, std::move(options));
         });
@@ -940,7 +967,11 @@ int main(int argc, char *argv[])
     }
 
     if (wantCapture) {
-        if (!launchCapture(fullscreenAnnotation, allOutputs)) {
+        if (!launchCapture(fullscreenAnnotation,
+                           allOutputs,
+                           std::nullopt,
+                           std::nullopt,
+                           windowCaptureRequested)) {
             return 1;
         }
     }

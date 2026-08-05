@@ -112,6 +112,10 @@ bool ShotWindow::eventMatchesStartupShortcut(const QKeyEvent *event, StartupTool
     if (tool == StartupTool::VideoRecorder) {
         return shortcutMatchesEvent(m_startupVideoRecorderShortcut, event);
     }
+    if (tool == StartupTool::WindowCapture) {
+        // 窗口捕获使用固定的 W 键（不占用可配置的快捷键表）。
+        return event && event->key() == Qt::Key_W && event->modifiers() == Qt::NoModifier;
+    }
     return false;
 }
 

@@ -265,6 +265,10 @@ QRect streamGeometryFromProperties(const QVariantMap &properties, const QSize &f
 CaptureResult captureWithGrim(const CaptureRequest &request);
 bool isKWinScreenShotAvailable();
 CaptureResult captureWithKWinScreenShot(const CaptureRequest &request);
+// KWin ScreenShot2.CaptureWindow: captures a native Wayland window's own
+// composited content (occluded/minimized included). windowHandle is the KWin
+// window internalId (uuid) reported by the KDE window-detection script.
+QImage captureKWinWindowContent(const QString &windowHandle, bool includeCursor, QString *error = nullptr);
 CaptureResult captureWaylandFrame(const CaptureRequest &request);
 CaptureResult captureWithPortalScreencast(const CaptureRequest &request);
 void stopPortalScreencast();
