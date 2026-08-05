@@ -1,8 +1,51 @@
 # Release Notes
 
+### 26.8.4.0
+
+> **DracoPho Community Edition** — feature release. The project is rebranded
+> from "Mark Shot" to **DracoPho** (太殷龙摄) while keeping full
+> acknowledgment of the original upstream project, the product logo is
+> replaced, **timed / delayed capture** is added (countdown overlay before
+> capture, via `--delay`, the tray/floating-ball "Delayed Capture" submenu and
+> the Capture settings page), and the tray menu, floating ball menu and
+> recording window re-translate immediately when the UI language changes.
+
+#### Features
+
+**Timed / delayed capture**
+- `--delay <seconds>` CLI option with a fullscreen countdown overlay (Esc to
+  cancel) before entering capture.
+- Tray menu and floating ball "Delayed Capture" submenu with 1/3/5/10 second
+  presets.
+- Capture settings "Capture Delay" option persisted as `capture.delaySeconds`
+  (default 0 = immediate).
+- The countdown overlay never enters the captured frame.
+
+**Rebranding to DracoPho**
+- Product name changed to **DracoPho** (Latin) / **太殷龙摄** (Chinese) across
+  runtime strings, the 11 i18n tables, desktop entries, flatpak metainfo,
+  autostart entries, READMEs and docs; technical identifiers stay unchanged.
+- Product logo replaced (SVG + PNG + WebP) and the Windows `.ico` regenerated.
+
+**Live language switching**
+- New `i18n::LanguageChangeNotifier`; the tray menu, floating ball menu and
+  open recording configuration window re-translate immediately on language
+  change instead of after restart.
+
+#### Docs
+- Comparison matrix: "Timed / delayed capture" marked ✅; `--delay` in the CLI
+  argument tables; `capture.delaySeconds` in `docs/configuration.md`.
+
+#### Fixes
+- Tray / floating ball menus and the open recording window now follow the UI
+  language immediately.
+
+#### Tests
+- Community: 52/52 passing; Enterprise: 53/53 passing (offscreen).
+
 ### 26.8.3.1
 
-> **Mark Shot Community Edition** — maintenance release. The floating ball no
+> **DracoPho Community Edition** — maintenance release. The floating ball no
 > longer attempts edge docking on native Wayland (clients cannot read reliable
 > absolute window coordinates), eliminating ghost trails and wrong-edge
 > docking; `capture.hideOwnWindows=false` now genuinely lets your own windows
@@ -66,7 +109,7 @@
 
 ### 26.8.3.0
 
-> **Mark Shot Community Edition** — feature release focused on recording
+> **DracoPho Community Edition** — feature release focused on recording
 > reliability and formats: crash-safe MP4 recording (temp MKV + remux), a new
 > animated WebP output, an unattended-recording CLI/IPC channel, per-mode
 > frame-rate persistence, negative-coordinate display support, and explicit
@@ -116,7 +159,7 @@
 
 ### 26.8.2.0
 
-> **Mark Shot Community Edition** — feature release adding configurable
+> **DracoPho Community Edition** — feature release adding configurable
 > startup behavior (tray icon / floating ball / settings window / direct
 > capture, combinable) and a new draggable floating ball, so launching Mark
 > Shot no longer opens the screenshot overlay by default.
@@ -124,7 +167,7 @@
 #### Features
 
 **Configurable startup behavior**
-- Clicking the Mark Shot icon no longer opens the capture overlay by default.
+- Clicking the DracoPho icon no longer opens the capture overlay by default.
 - New **Startup Behavior** settings (Settings → General) with four combinable
   modes: **Direct Capture** (enter screenshot mode immediately), **Tray Icon**
   (keep running in the system tray), **Floating Ball** (show the quick-access
@@ -149,7 +192,7 @@
 
 ### 26.8.1.1
 
-> **Mark Shot Community Edition** — maintenance release fixing settings-window
+> **DracoPho Community Edition** — maintenance release fixing settings-window
 > unsaved-changes reporting and multi-screen freeze behavior, with ten new
 > localized README editions and documentation fixes.
 
@@ -169,7 +212,7 @@
 
 ### 26.8.1.0
 
-> **Mark Shot Community Edition** — the first release under the new
+> **DracoPho Community Edition** — the first release under the new
 > `年.月.版.微调` versioning scheme, built on top of the original upstream
 > project `jswysnemc/mark-shot`. Release packages: Linux `.tar.gz` / `.deb` /
 > `.rpm` / `.AppImage` / `.flatpak`, Windows `.zip`, and Arch packages.
@@ -231,7 +274,7 @@
 
 ### 0.1.40
 
-- **Runtime Capture Settings**: Cursor inclusion, freeze scope, and default annotation tools are now read for every capture, so settings changes apply without restarting Mark Shot.
+- **Runtime Capture Settings**: Cursor inclusion, freeze scope, and default annotation tools are now read for every capture, so settings changes apply without restarting DracoPho.
 - **Default Move Tool**: New installations now start annotation editing with the Move tool instead of Pen unless an explicit default is configured.
 - **Draggable Toolbars**: The annotation toolbar and right-side action toolbar now include drag grips and retain their user-selected positions during editing.
 - **Cursor Feedback**: The Move tool uses an arrow outside the selection, while toolbars, property panels, color controls, font lists, extension panels, and combo box popups no longer inherit drawing crosshairs.
@@ -297,7 +340,7 @@
 - **Window Z-Order Selection**: Improved window ordering across GNOME, KDE Plasma, Hyprland, X11, and Windows so region selection prefers the visually topmost matching window.
 - **Wayland Fcitx5 Candidate Support**: Adjusted layer-shell cursor-rectangle handling so fcitx5 candidate windows appear correctly under Wayland capture overlays.
 - **Settings Gear Icons**: Redrew the settings toolbar and General settings navigation icons as clearer gear glyphs instead of sun-like radial icons.
-- **Tray Mode Compatibility**: Fixed startup behavior when Mark Shot is launched directly into tray mode on environments without an immediately available system tray.
+- **Tray Mode Compatibility**: Fixed startup behavior when DracoPho is launched directly into tray mode on environments without an immediately available system tray.
 - **Wayland Text Editor Width**: Prevented the annotation text editor from shrinking unexpectedly on fractional-scale Wayland displays.
 
 ### 0.1.31
@@ -305,7 +348,7 @@
 - **CLI Image Pinning**: Added `--pin-image <path>` to open an existing local image directly as a pinned sticker window, skipping capture and selection.
 - **Color Picker History**: The startup Color Picker now remembers recently picked colors, persisted in `config.json` under `colorPicker.history` (capped at 7 `#RRGGBBAA` entries) and shown as swatches in the color panel.
 - **Interface Language Setting**: Added a configurable `ui.language` option (`system` / `english` / `chinese`) selectable from the General settings page; supersedes the legacy root-level `language` key.
-- **Desktop-Aware Window Detection**: Mark Shot now auto-selects the matching window detection script at runtime (GNOME, KDE Plasma, Hyprland, Niri), falling back to the niri script on other Wayland sessions and native X11 detection on X11. Mismatched configured commands are corrected in memory without touching `config.json`.
+- **Desktop-Aware Window Detection**: DracoPho now auto-selects the matching window detection script at runtime (GNOME, KDE Plasma, Hyprland, Niri), falling back to the niri script on other Wayland sessions and native X11 detection on X11. Mismatched configured commands are corrected in memory without touching `config.json`.
 - **GNOME Occluded Window Filtering**: The GNOME Shell scroll helper extension now filters fully occluded windows from detection results.
 - **Prebuilt AUR Package**: Added a `mark-shot-bin` AUR package installing prebuilt pacman packages from GitHub Releases, alongside the source-based `mark-shot` package.
 - **GNOME Adwaita Palette Fix**: Overrode the application palette at the `qApp` level so the dark palette fully replaces the libqtk3 base palette under GNOME Adwaita.
