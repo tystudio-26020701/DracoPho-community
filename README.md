@@ -61,6 +61,7 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **Mosaic**: Applies high-fidelity acrylic frost blur to obscure sensitive information.
 - **Magnifier with Independent Frames**: The magnifier loupe exposes resize handles on both the inner source viewfinder and the outer lens. Rectangle lenses get 8 corner/edge handles per frame, circular lenses get 4. Resizing either frame keeps the magnification ratio constant by scaling the other frame proportionally; translating one frame leaves the other untouched.
 - **Startup Code Scan**: Press `Q` before selecting a region, drag around a QR code or barcode, and open the decoded result in a copyable window.
+- **Interactive Window Capture**: Press `W` (or use the tray / floating-ball "Capture Window" entry, or `--capture-window`) to enter window-capture mode: hover highlights each window, click captures it straight into the editor. On X11 the window's own composited buffer is read, so even occluded or minimized windows produce their real content.
 - **Quick Display Capture**: Press `D` before selecting a region to instantly capture all outputs, crop them by display, and hover a thumbnail to copy, edit, or save that display image.
 - **GIF, MP4 and Animated WebP Recording**: Press the configured startup recording shortcuts or use the tray menu to record a selected display or a custom region as GIF, MP4 or animated WebP. Recording is crash-safe: MP4 is written to a temporary MKV and remuxed on finish, so an interrupted recording stays recoverable. Active recordings show tray and frozen-frame status, can be stopped with `S`, the overlay button, the tray menu, or `--stop-recording`, and send desktop notifications when recording starts or saves. On Wayland, recording prefers the PipeWire portal backend and can fall back to wlroots screencopy or polling capture when portal capture is unavailable.
 - **Image Host Upload**: Press `Ctrl+U` or click the toolbar upload button after selecting a region to upload the screenshot to a custom image host (ImgURL, sm.ms, imgbb, litterbox, etc.). The returned URL is automatically copied to the clipboard. Configure the host via `upload.env`, or plug in any custom uploader via `upload.command`.
@@ -104,16 +105,19 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **Floating ball**: a small draggable always-on-top ball (bottom-right by
   default) offers quick access to capture, fullscreen capture, recording and
   settings. Single click opens the menu, double click captures, drag to move
-  (position is remembered), and it hides automatically during a capture.
+  (position is remembered), and it hides automatically during a capture or
+  recording so it never appears in your own screenshots or recordings.
   Dropping it near a screen edge snaps and docks it with **half of the ball
   sliding off-screen** (hover to reveal, move away to re-hide) on
   X11/Windows/macOS; on native Wayland the compositor controls window
-  positions so the ball stays free-floating (protocol limitation). It fades
-  to semi-transparent after a few idle seconds, returning to full opacity on
-  hover.
+  positions so the ball stays free-floating (protocol limitation). On GNOME
+  Wayland, where the compositor ignores stay-on-top hints, the ball is kept
+  above other windows through the bundled MarkShotScrollHelper Shell
+  extension. It fades to semi-transparent after a few idle seconds, returning
+  to full opacity on hover.
 - **Desktop Entries**:
   - `mark-shot.desktop`: Configures the utility system-wide, triggerable by custom shortcuts.
-  - `mark-shot-edit.desktop`: Registers as an image editor, enabling users to right-click local files in file managers (Dolphin, Nautilus, etc.) and open them directly in annotation mode.
+  - `mark-shot-edit.desktop`: Registers as an image editor, enabling users to right-click local files in file managers (Dolphin, Nautilus, etc.) and open them directly in annotation mode. Launching the entry without a file opens the DracoPho Image Editor with an empty canvas (Open / Ctrl+O / drag & drop).
 - Ships with scalable vector icons (`dracoPho.svg`, plus the upstream `mark-shot.svg` and `mark-shot-edit.svg`).
 
 ### KDE KWin ScreenShot2 Authorization
@@ -175,7 +179,7 @@ DracoPho Community Edition is an **open source (MIT), cross-platform (native Lin
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Region capture | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Fullscreen / multi-monitor capture | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Window capture | ⭕ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Window capture | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Occluded / minimized window content | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Scrolling / long screenshot | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ⭕ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Timed / delayed capture | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ |
@@ -200,7 +204,7 @@ DracoPho Community Edition is an **open source (MIT), cross-platform (native Lin
 | Image upload / cloud | ✅ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ❌ |
 | Headless CLI / scripting | ✅ | ✅ | ⭕ | ⭕ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ⭕ | ❌ | ❌ |
 | Floating ball launcher | ✅ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Capture history | ❌ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ❌ | ⭕ | ❌ | ✅ | ✅ | ⭕ | ❌ | ⭕ |
+| Capture history | ✅ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ❌ | ⭕ | ❌ | ✅ | ✅ | ⭕ | ❌ | ⭕ |
 
 #### IV. Platform and ecosystem
 
@@ -216,8 +220,8 @@ DracoPho Community Edition is an **open source (MIT), cross-platform (native Lin
 **I. Capture** (can you get what you need)
 
 - **Region / fullscreen / multi-monitor capture** — built into all 15 tools listed; DracoPho additionally handles negative-coordinate displays and per-display HiDPI scaling correctly, with no ghosting when stitching multi-monitor captures.
-- **Window capture** — DracoPho's interactive mode uses a fullscreen selection overlay (no dedicated "active window" one-click mode, hence ⭕), while its headless mode (`--window`) selects windows precisely by id, title, class, **PID or process name**; Flameshot has no window mode at all, every other tool ships one.
-- **Occluded / minimized window content** — on X11, DracoPho reads the window's own composited buffer via XComposite, capturing real content even when the window is fully occluded or minimized (without raising it or stealing focus); among similar tools only scrot's `--stack` can do this. Wayland's protocol prevents every tool from reading minimized-window content.
+- **Window capture** — DracoPho ships an interactive window-capture mode (hover to highlight with a live title badge, click to capture) reachable from the capture overlay (`W`), the tray/floating-ball "Capture Window" entries, and `--capture-window`; it reads the window's **own content** (not the screen region) on X11 (including XWayland-on-Wayland) via the composited buffer, on Windows via `PrintWindow(PW_RENDERFULLCONTENT)`, and on KDE Wayland via `org.kde.KWin.ScreenShot2.CaptureWindow` for native windows — falling back to the window's screen region only where the compositor exposes nothing (GNOME/Hyprland/sway native windows). Its headless mode (`--window`) selects windows precisely by id, title, class, **PID or process name**. Flameshot has no window mode at all, every other tool ships one.
+- **Occluded / minimized window content** — DracoPho reads the window's own composited buffer so fully occluded windows (and minimized windows on X11/Windows) yield their real content without being raised or stealing focus: X11/XWayland via `XCompositeNameWindowPixmap`, Windows via `PrintWindow(PW_RENDERFULLCONTENT)`, and KDE Wayland native windows via KWin ScreenShot2 `CaptureWindow`. Among similar tools only scrot's `--stack` and Spectacle (X11/KWin only) reach this depth; ShareX/Greenshot need `PW_RENDERFULLCONTENT` on Windows too, and no tool can read minimized native Wayland windows because the protocol does not expose their pixels.
 - **Scrolling / long screenshot** — DracoPho works natively on niri and GNOME Wayland (official extension), with KDE/X11 as experimental. ShareX, PixPin, PicPick, Snagit, CleanShot X, Shottr, Xnip and iShot ship it built-in; Greenshot only for legacy IE scenarios; Snipaste, Flameshot, ksnip, Spectacle and Windows Snipping Tool do not.
 - **Timed / delayed capture** — DracoPho waits a configurable number of seconds with a fullscreen countdown overlay (Esc to cancel) before entering capture, via `--delay`, the tray/floating-ball "Delayed Capture" submenu, or the Capture settings page; Flameshot, ksnip, Spectacle and most others support a plain delayed start, ShareX a timed capture, and PixPin, Snipaste and Xnip none.
 
@@ -237,8 +241,8 @@ DracoPho Community Edition is an **open source (MIT), cross-platform (native Lin
 - **Animated GIF / WebP output** — DracoPho natively records **animated WebP** (smaller files, alpha support); no competitor produces animated WebP natively. PixPin and iShot record GIF, ShareX records GIF (WebP static-save only), Snagit and CleanShot X export GIF; the rest have no animated output.
 - **Image upload / cloud** — DracoPho ships ImgURL / sm.ms / imgbb / litterbox / custom-command upload (`Ctrl+U`); ShareX has the most targets; Greenshot, PicPick, Snagit and CleanShot X have built-in cloud upload; Flameshot only Imgur, ksnip Imgur/FTP/scripts, Shottr S3 after activation; Snipaste, PixPin, Snipping Tool, Xnip and iShot have none.
 - **Headless CLI / scripting** — DracoPho provides a complete headless pipeline: `--capture-to` region/display screenshots, `--list-windows` + `--window` window/component captures, `--record-region` / `--record-display` unattended recording and `--record-wait-json` structured status output — all without windows, dialogs or focus stealing, with **PID/process-name targeting and occluded/minimized window capture**. The enterprise MCP server reuses the same pipeline. ShareX (Windows-only), Flameshot, ksnip and Spectacle have solid CLIs; Snipaste's CLI is a paid-tier feature; PixPin only offers a JS action engine.
-- **Floating ball launcher** — DracoPho has a draggable ball that snaps to screen edges (X11/Windows/macOS; Wayland keeps it free-floating due to protocol limits) and fades out when idle; only PixPin offers something similar.
-- **Capture history** — DracoPho has no dedicated history panel yet; ShareX, Snipaste, Flameshot, Snagit and CleanShot X do, ksnip / PicPick / Shottr / iShot have lightweight alternatives (tabs / gallery / pinned stash), the rest none.
+- **Floating ball launcher** — DracoPho has a draggable ball that snaps to screen edges (X11/Windows/macOS; Wayland keeps it free-floating due to protocol limits) and fades out when idle. It stays above other windows everywhere (GNOME Wayland via the bundled Shell extension) and hides automatically during captures and recordings so it never appears in your own media; only PixPin offers something similar.
+- **Capture history** — DracoPho records every copied, saved and pinned screenshot into an on-disk history (thumbnail grid) with quick **Re-copy**, **Re-edit** (open in the image editor), **Save As**, delete and clear-all, reachable from the tray/floating-ball "Capture History..." entries; the history is optional (Settings > Storage) and capped by a configurable maximum entry count. ShareX, Snipaste, Flameshot, Snagit and CleanShot X have similar history panels; ksnip / PicPick / Shottr / iShot have lightweight alternatives (tabs / gallery / pinned stash), the rest none.
 
 **IV. Platform and ecosystem**
 
@@ -270,6 +274,13 @@ mark-shot --default-tool move --fullscreen-default-tool laser --default-color '#
 
 # Open and annotate an existing local image file
 mark-shot path/to/image.png
+
+# Open the DracoPho image editor with an empty canvas (Open / Ctrl+O / drag & drop an image to start editing)
+mark-shot --editor
+
+# Interactive window capture: hover to highlight a window, click to capture it
+# (X11 reads occluded/minimized window content; elsewhere the window region is captured)
+mark-shot --capture-window
 
 # Open an existing image directly as a pinned sticker window
 mark-shot --pin-image path/to/image.png
@@ -359,6 +370,8 @@ no interactive portal prompt, no focus stealing; the outcome is queried via
 | `--all-outputs` | Captures all screens on the virtual display environment instead of only the active one. |
 | `--xdg-window` | Forces the use of a standard XDG fullscreen window (xdg-shell) instead of layer-shell. |
 | `--fullscreen` | Skips region selection and opens annotation mode on the full screen frame directly. |
+| `--editor` | Opens the DracoPho image editor with an empty canvas. Use Open (Ctrl+O) or drag & drop to import an image for annotation editing. |
+| `--capture-window` | Starts an interactive window capture: hover to highlight a window (title badge shown), click to capture it. Reads the window's own content on X11/XWayland, Windows (PrintWindow) and KDE Wayland (KWin ScreenShot2); elsewhere the window's screen region is captured. |
 | `--tray` | Keeps DracoPho running in the system tray and registers global capture hotkeys when supported. |
 | `--capture` | Forces one-shot capture when tray autostart is enabled in the config. |
 | `--delay <seconds>` | Waits the given number of seconds with a fullscreen countdown overlay (Esc to cancel) before entering capture. |
@@ -402,7 +415,7 @@ mark-shot --tray
 Tray mode registers these global hotkeys by default:
 - `Ctrl+Alt+S`: start region capture.
 
-The tray menu also provides Capture, Fullscreen Capture, Start Recording, live recording status, Stop Recording, Settings, and Quit actions.
+The tray menu also provides Capture, Capture Window, Fullscreen Capture, Delayed Capture, Start Recording, live recording status, Stop Recording, Capture History..., Settings, and Quit actions.
 
 **niri** (`~/.config/niri/config.kdl`):
 ```kdl

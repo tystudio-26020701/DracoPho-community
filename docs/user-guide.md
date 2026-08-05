@@ -26,6 +26,15 @@ Or start in the configured startup mode (see § 1.3). Press a desktop hotkey
 focused display. Move the mouse to draw a selection rectangle, then release to
 enter the annotation editor.
 
+To open the **image editor** with an empty canvas (no screenshot), run:
+
+```bash
+mark-shot --editor
+```
+
+Use the "Open Image" button, `Ctrl+O`, or drag & drop to import an image for
+annotation editing.
+
 ### 1.2 Portable builds
 
 If you use a portable bundle (`mark-shot-upstream`, `mark-shot-community`,
@@ -49,7 +58,7 @@ and tick any combination of:
 | Option | What happens at startup |
 | :--- | :--- |
 | **Tray Icon** (default) | DracoPho keeps running in the system tray. Left-click the tray icon for a quick capture, right-click for the menu. |
-| **Floating Ball** (default) | A small draggable always-on-top ball appears (bottom-right by default). Single click opens a quick menu, double click captures, drag to move it — its position is remembered. The ball hides automatically while a capture is active. |
+| **Floating Ball** (default) | A small draggable always-on-top ball appears (bottom-right by default). Single click opens a quick menu, double click captures, drag to move it — its position is remembered. The ball hides automatically while a capture or recording is active, so it never appears in your own screenshots or recordings. |
 | **Direct Capture** | Enters screenshot mode immediately. |
 | **Settings Window** | Opens the settings window when DracoPho starts. |
 
@@ -61,7 +70,9 @@ entry point.
 The floating ball and tray menus offer the same quick actions: **Capture**,
 **Fullscreen Capture**, **Start Recording**, **Settings**, and **Quit**. The
 ball's menu also has **Hide Floating Ball** to dismiss it until the next
-launch.
+launch. The ball stays on top of other windows on every platform; on GNOME
+Wayland — whose compositor ignores stay-on-top hints — the bundled
+MarkShotScrollHelper Shell extension keeps it above.
 
 ---
 
@@ -178,6 +189,7 @@ Before the region is committed you can use the startup overlay tools:
 | `C` | Color Picker | Sample a pixel; wheel resizes the loupe; left click opens a color panel (HEX / RGB / HSL / HSV / Qt formats); right click or `Esc` exits |
 | `R` | Ruler | Hover reads pixel coordinates; left-drag measures a rectangle with width, height, diagonal and area; right click or `Esc` exits |
 | `Q` | Code Scanner | Drag a region around a QR / barcode; the decoded result opens in a copyable window |
+| `W` | Window Capture | Hover highlights each window (with a title badge); click captures it straight into the editor. The window's **own content** is read on X11 / XWayland (XComposite composited buffer), Windows (`PrintWindow(PW_RENDERFULLCONTENT)`) and KDE Wayland native windows (KWin ScreenShot2 `CaptureWindow`), so occluded/minimized windows yield real content; elsewhere the window's screen region is captured |
 | `D` | Display Capture | Captures all outputs, crops per display, shows hoverable thumbnails (copy / edit / save) |
 | `S` | Stop active GIF / video recording | stops the recording shown in the overlay |
 
@@ -471,8 +483,10 @@ error on stderr and exits with code `1` instead of silently capturing nothing.
 ## 8. Desktop Hotkeys & Tray
 
 Tray mode (enabled by default, see § 1.3) registers `Ctrl+Alt+S` for region
-capture and provides capture / recording / settings / quit menu entries. The
-tray icon stays out of your way until you need it. Desktop hotkeys:
+capture and provides capture, **capture window**, fullscreen capture, delayed
+capture, recording, **capture history**, settings and quit menu entries. The
+tray icon stays out of your way until you need it. The floating ball menu
+offers the same actions. Desktop hotkeys:
 
 - **GNOME**: Settings → Keyboard → Shortcuts → Custom Shortcuts → bind to `mark-shot`.
 - **KDE**: custom shortcut bound to `mark-shot` (plus the KWin ScreenShot2

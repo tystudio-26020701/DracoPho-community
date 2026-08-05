@@ -99,13 +99,15 @@
   直接截图为可选项。
 - **悬浮球**：置顶小圆形控件（默认屏幕右下角），提供截图 / 全屏截图 /
   录制 / 设置的快捷入口。单击弹出菜单，双击直接截图，拖动可移动（位置
-  会被记住），截图进行中自动隐藏。拖到屏幕边缘附近会自动吸附并**隐入靠
-  边缘的一半**（鼠标悬停滑出、移开再隐回；X11 / Windows / macOS 支持边缘
-  吸附，Wayland 受协议限制保持自由漂浮）；闲置数秒后自动淡出为半透明，
+  会被记住），截图或录制进行中自动隐藏，绝不会出现在你自己的截图或录制
+  画面里。拖到屏幕边缘附近会自动吸附并**隐入靠边缘的一半**（鼠标悬停滑出、
+  移开再隐回；X11 / Windows / macOS 支持边缘吸附，Wayland 受协议限制保持
+  自由漂浮）；GNOME Wayland 合成器不遵守置顶提示，悬浮球通过随软件附带的
+  MarkShotScrollHelper Shell 扩展保持置顶。闲置数秒后自动淡出为半透明，
   悬停立即恢复，避免遮挡内容。
-- **桌面快捷方式**：
-  - `mark-shot.desktop`：配置为系统全局截图工具，支持系统快捷键直接调用。
-  - `mark-shot-edit.desktop`：注册为独立的图像编辑器，可集成到文件管理器（如 Dolphin、Nautilus）的右键"打开方式"菜单中。
+ - **桌面快捷方式**：
+   - `mark-shot.desktop`：配置为系统全局截图工具，支持系统快捷键直接调用。
+   - `mark-shot-edit.desktop`：注册为独立的图像编辑器，可集成到文件管理器（如 Dolphin、Nautilus）的右键"打开方式"菜单中；直接启动该入口（不带文件）会以空画布打开图片编辑器（打开 / Ctrl+O / 拖放导入）。
 - 附带高分辨率的 `dracoPho.svg` 以及上游 `mark-shot.svg` 与 `mark-shot-edit.svg` 系统矢量图标。
 
 ### KDE KWin ScreenShot2 授权
@@ -167,7 +169,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 区域截图 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 全屏 / 多显示器截图 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 窗口截图 | ⭕ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 窗口截图 | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 被遮挡 / 最小化窗口内容捕获 | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 滚动长截图 | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ⭕ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 定时 / 延时截图 | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ |
@@ -192,7 +194,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 | 图床 / 云上传 | ✅ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ❌ |
 | 无头 CLI / 脚本化 | ✅ | ✅ | ⭕ | ⭕ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ⭕ | ❌ | ❌ |
 | 悬浮球快捷入口 | ✅ | ❌ | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 截图历史 | ❌ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ❌ | ⭕ | ❌ | ✅ | ✅ | ⭕ | ❌ | ⭕ |
+| 截图历史 | ✅ | ✅ | ❌ | ✅ | ✅ | ⭕ | ❌ | ❌ | ⭕ | ❌ | ✅ | ✅ | ⭕ | ❌ | ⭕ |
 
 #### 四、平台与生态
 
@@ -208,8 +210,8 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 **一、截图获取**（"能不能截到想要的东西"）
 
 - **区域 / 全屏 / 多显示器截图** — 表内全部 15 款工具均内置；太殷龙摄 额外正确处理负坐标显示器与每屏独立 HiDPI 缩放，多屏拼接不重影。
-- **窗口截图** — 太殷龙摄 交互模式为全屏选区覆盖层（未单独提供"活动窗口"一键模式，故标 ⭕），但无头模式（`--window`）可按 id / 标题 / 类 / PID / 进程名精确选窗；Flameshot 完全没有窗口模式，其余工具均内置。
-- **被遮挡 / 最小化窗口内容捕获** — 太殷龙摄 在 X11 下通过 XComposite 读取合成器保留的窗口缓冲，即使窗口被完全遮挡或已最小化也能拿到真实内容（不弹起、不抢焦点）；同类仅 scrot `--stack` 具备。Wayland 受协议限制，任何工具都无法读取最小化窗口内容。
+- **窗口截图** — 太殷龙摄 提供交互式窗口捕获模式（悬停高亮并显示窗口标题徽标、点击捕获），可从截图覆盖层（`W` 键）、托盘 / 悬浮球"捕获窗口"入口或 `--capture-window` 进入；它读取窗口**自身内容**（而非屏幕区域）：X11（含 Wayland 下的 XWayland）走合成缓冲、Windows 走 `PrintWindow(PW_RENDERFULLCONTENT)`、KDE Wayland 原生窗口走 `org.kde.KWin.ScreenShot2.CaptureWindow`，仅在合成器不提供任何接口（GNOME / Hyprland / sway 原生窗口）时才回退为窗口所在屏幕区域。无头模式（`--window`）仍可按 id / 标题 / 类 / PID / 进程名精确选窗。Flameshot 完全没有窗口模式，其余工具均内置。
+- **被遮挡 / 最小化窗口内容捕获** — 太殷龙摄 读取窗口自身合成缓冲，即使窗口被完全遮挡（X11/Windows/KDE Wayland，最小化窗口在 X11/Windows 亦然）也能拿到真实内容（不弹起、不抢焦点）：X11/XWayland 走 `XCompositeNameWindowPixmap`，Windows 走 `PrintWindow(PW_RENDERFULLCONTENT)`，KDE Wayland 原生窗口走 KWin ScreenShot2 `CaptureWindow`。同类仅 scrot `--stack` 与 Spectacle（仅 X11/KWin）达到该深度；ShareX/Greenshot 在 Windows 同样依赖 `PW_RENDERFULLCONTENT`；Wayland 受协议限制，任何工具都无法读取最小化原生窗口内容。
 - **滚动长截图** — 太殷龙摄 在 niri / GNOME Wayland 原生可用（GNOME 需官方扩展），KDE/X11 为实验特性；ShareX、PixPin、PicPick、Snagit、CleanShot X、Shottr、Xnip、iShot 内置；Greenshot 仅对旧 IE 场景有效，Snipaste、Flameshot、ksnip、Spectacle、Windows 截图工具不支持。
 - **定时 / 延时截图** — 太殷龙摄支持按配置秒数延时截图：全屏倒计时遮罩（Esc 取消）结束后进入选区截图，可通过 `--delay`、托盘 / 悬浮球"延时截图"子菜单或截图设置页配置；Flameshot、ksnip、Spectacle 等支持普通延时启动，ShareX 支持定时截图，PixPin、Snipaste、Xnip 不支持。
 
@@ -229,8 +231,8 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 - **动画 GIF / WebP 输出** — 太殷龙摄 原生录制**动画 WebP**（体积更小、支持透明度），竞品均无法原生输出动画 WebP；PixPin、iShot 支持 GIF 录制，ShareX 支持 GIF（WebP 仅静态保存），Snagit、CleanShot X 支持 GIF 导出。
 - **图床 / 云上传** — 太殷龙摄 内置 ImgURL / sm.ms / imgbb / litterbox / 自定义命令，`Ctrl+U` 上传并复制链接；ShareX 上传目标最全；Greenshot、PicPick、Snagit、CleanShot X 内置云上传；Flameshot 仅 Imgur，ksnip 仅 Imgur / FTP / 脚本，Shottr 需激活 S3；Snipaste、PixPin、Windows 截图工具、Xnip、iShot 无。
 - **无头 CLI / 脚本化** — 太殷龙摄 提供完整无头链路：`--capture-to` 区域 / 显示器截图、`--list-windows` + `--window` 窗口 / 组件截图、`--record-region` / `--record-display` 无人值守录制、`--record-wait-json` 等待并输出结构化状态；全程无窗口、无弹窗、无焦点抢占，可指定 **PID / 进程名**并截取被遮挡 / 最小化窗口。商业版 MCP server 复用同一链路。ShareX（仅 Windows）、Flameshot、ksnip、Spectacle 有较强 CLI；Snipaste 的 CLI 为付费版功能；PixPin 仅有 JS 脚本动作引擎。
-- **悬浮球快捷入口** — 太殷龙摄 内置可拖动、可吸附屏幕边缘、闲置自动半透明的悬浮球（X11 / Windows / macOS 支持边缘吸附，Wayland 受协议限制保持自由漂浮）；同类仅 PixPin 提供。
-- **截图历史** — 太殷龙摄 暂未提供独立历史面板；ShareX、Snipaste、Flameshot、Snagit、CleanShot X 内置历史，ksnip / PicPick / Shottr / iShot 有轻量替代（多标签 / 图库 / 置顶暂存），其余无。
+- **悬浮球快捷入口** — 太殷龙摄 内置可拖动、可吸附屏幕边缘、闲置自动半透明的悬浮球（X11 / Windows / macOS 支持边缘吸附，Wayland 受协议限制保持自由漂浮），在所有平台上都保持置顶（GNOME Wayland 通过随附的 Shell 扩展实现），截图与录制进行中自动隐藏、绝不进入你自己的截图或录制画面；同类仅 PixPin 提供。
+- **截图历史** — 太殷龙摄 会把每次复制、保存、贴图的截图写入磁盘历史（缩略图网格），支持快速**重新复制**、**重新编辑**（在图片编辑器中打开）、**另存为**、删除与清空，从托盘 / 悬浮球"截图历史…"入口进入；可在 设置 > 存储 中开关并设置最大条目数。ShareX、Snipaste、Flameshot、Snagit、CleanShot X 内置历史，ksnip / PicPick / Shottr / iShot 有轻量替代（多标签 / 图库 / 置顶暂存），其余无。
 
 **四、平台与生态**
 
@@ -262,6 +264,13 @@ mark-shot --default-tool move --fullscreen-default-tool laser --default-color '#
 
 # 打开一个已有的本地图片文件并直接进入标注模式
 mark-shot path/to/image.png
+
+# 以空画布打开 太殷龙摄 图片编辑器（打开 / Ctrl+O / 拖放图片开始编辑）
+mark-shot --editor
+
+# 交互式窗口捕获：悬停高亮窗口、点击捕获
+#（X11 读取被遮挡/最小化窗口的真实内容，其余平台截取窗口所在屏幕区域）
+mark-shot --capture-window
 
 # 直接将本地图片作为贴图窗口打开
 mark-shot --pin-image path/to/image.png
@@ -345,6 +354,8 @@ mark-shot --window "0@0,0,1680,100" --capture-destination stage
 | `--all-outputs` | 捕获虚拟显示桌面的所有输出屏幕，而不是仅捕获当前的活动屏幕。 |
 | `--xdg-window` | 强制使用标准的 XDG 全屏普通窗口（xdg-shell）替代默认的 Wayland 覆盖层（layer-shell）。 |
 | `--fullscreen` | 跳过选区步骤，直接对捕获的完整屏幕截图进行标注。 |
+| `--editor` | 以空画布打开 太殷龙摄 图片编辑器，可用"打开"（Ctrl+O）或拖放导入图片后标注编辑。 |
+| `--capture-window` | 启动交互式窗口捕获：悬停高亮窗口（显示标题徽标）、点击捕获；X11/XWayland、Windows（PrintWindow）、KDE Wayland（KWin ScreenShot2）读取窗口自身内容，其余平台截取窗口所在屏幕区域。 |
 | `--default-tool <tool>` | 指定普通选区完成后的默认标注工具；未设置 `--fullscreen-default-tool` 时也作为全屏模式默认工具。 |
 | `--fullscreen-default-tool <tool>` | 指定全屏标注模式的默认工具。 |
 | `--default-color <color>` | 指定默认标注颜色。支持 `#RRGGBB` 与 `#RRGGBBAA`。 |
