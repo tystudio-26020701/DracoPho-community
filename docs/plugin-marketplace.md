@@ -1,6 +1,6 @@
 # GitHub 插件市场方案
 
-Mark Shot 插件市场不需要自建后端，也不需要 Python 环境。一个公开 GitHub 仓库即可承载市场索引，插件二进制文件放在各插件仓库的 GitHub Release 资产中。
+DracoPho 插件市场不需要自建后端，也不需要 Python 环境。一个公开 GitHub 仓库即可承载市场索引，插件二进制文件放在各插件仓库的 GitHub Release 资产中。
 
 ## 仓库结构
 
@@ -12,7 +12,7 @@ mark-shot-plugin-index/
 └── README.md
 ```
 
-`plugins.json` 使用 `docs/plugin-index-schema.md` 定义的结构。Mark Shot 下载该文件后，用内置 C++/Qt 解析器校验字段、筛选当前平台资产、下载动态库并校验 SHA-256。
+`plugins.json` 使用 `docs/plugin-index-schema.md` 定义的结构。DracoPho 下载该文件后，用内置 C++/Qt 解析器校验字段、筛选当前平台资产、下载动态库并校验 SHA-256。
 
 ## 发布流程
 
@@ -30,13 +30,13 @@ mark-shot-plugin-sample-ocr/
 
 ## 安装链路
 
-1. Mark Shot 读取 GitHub 上的 `plugins.json`。
+1. DracoPho 读取 GitHub 上的 `plugins.json`。
 2. 内置索引解析器校验 schema、插件字段和资产字段。
 3. 应用筛选当前平台和架构，例如 `windows` + `x86_64`。
 4. 应用下载对应 Release 资产到临时文件。
 5. 应用校验 SHA-256。
 6. 应用把动态库安装到用户级插件目录。
-7. 重启 Mark Shot 后，Provider 插件注册器扫描目录并加载插件。
+7. 重启 DracoPho 后，Provider 插件注册器扫描目录并加载插件。
 
 用户级插件目录以设置页 `Plugins` 显示为准。Windows 通常位于 `%LOCALAPPDATA%` 下，Linux 默认位于 `~/.local/share/mark-shot/plugins`。
 
@@ -50,7 +50,7 @@ mark-shot-plugin-sample-ocr/
 | Linux | `.so` |
 | macOS | `.dylib` |
 
-压缩包仍可作为手工分发格式，但不作为市场一键安装格式。需要压缩包安装时，应在 Mark Shot 内实现 C++ 解压模块，而不是要求用户安装外部脚本环境。
+压缩包仍可作为手工分发格式，但不作为市场一键安装格式。需要压缩包安装时，应在 DracoPho 内实现 C++ 解压模块，而不是要求用户安装外部脚本环境。
 
 ## 安全边界
 

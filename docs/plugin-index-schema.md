@@ -1,6 +1,6 @@
 # 插件市场索引 Schema
 
-插件市场索引文件名推荐为 `plugins.json`。索引由 GitHub 托管，Mark Shot 使用 C++/Qt 内置解析器读取，不依赖 Python。
+插件市场索引文件名推荐为 `plugins.json`。索引由 GitHub 托管，DracoPho 使用 C++/Qt 内置解析器读取，不依赖 Python。
 
 ## 顶层结构
 
@@ -28,7 +28,7 @@
     "name": "mark-shot-sample-ocr",
     "version": "0.1.0",
     "vendor": "example",
-    "description": "Sample OCR provider for Mark Shot.",
+    "description": "Sample OCR provider for DracoPho.",
     "markShotMinVersion": "0.1.38",
     "homepage": "https://github.com/example/mark-shot-sample-ocr",
     "license": "MIT",
@@ -46,7 +46,7 @@
 | `version` | 是 | 插件版本，使用 SemVer |
 | `vendor` | 是 | 发布方标识 |
 | `description` | 否 | 插件简介 |
-| `markShotMinVersion` | 是 | 最低兼容 Mark Shot 版本 |
+| `markShotMinVersion` | 是 | 最低兼容 DracoPho 版本 |
 | `homepage` | 否 | 插件主页，必须是 HTTP 或 HTTPS |
 | `license` | 否 | 许可证标识 |
 | `capabilities` | 是 | 插件能力数组 |
@@ -101,7 +101,7 @@
 
 ## 校验方式
 
-Mark Shot 构建测试会校验索引解析器和 fixture：
+DracoPho 构建测试会校验索引解析器和 fixture：
 
 ```bash
 cmake -S . -B build -DBUILD_TESTING=ON

@@ -1,6 +1,6 @@
 # OCR Provider Template
 
-This template builds a minimal Mark Shot OCR provider plugin. Replace the sample implementation with your OCR engine, keep `providerId()` stable, and update `metadata.json` before distribution.
+This template builds a minimal DracoPho OCR provider plugin. Replace the sample implementation with your OCR engine, keep `providerId()` stable, and update `metadata.json` before distribution.
 
 ## Build
 
@@ -16,4 +16,4 @@ mkdir -p ~/.local/share/mark-shot/plugins
 cp build/libmark-shot-sample-ocr.so ~/.local/share/mark-shot/plugins/
 ```
 
-Set `ocr.provider` to `plugin:sample-ocr` in Mark Shot settings, or choose it from the Plugins settings page.
+Set `ocr.provider` to `plugin:sample-ocr` in DracoPho settings, or choose it from the Plugins settings page.

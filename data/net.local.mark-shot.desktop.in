@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Mark Shot Shortcut Service
-Comment=KDE command shortcut service for Mark Shot
+Name=DracoPho Shortcut Service
+Comment=KDE command shortcut service for DracoPho
 Exec=@MARK_SHOT_DESKTOP_EXEC@
-Icon=mark-shot
+Icon=dracoPho
 Terminal=false
 NoDisplay=true
 StartupNotify=false

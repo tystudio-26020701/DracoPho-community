@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=Mark Shot Image Editor
-Name[zh_CN]=Mark Shot 图片编辑器
-Comment=Annotate and edit image files with Mark Shot
-Comment[zh_CN]=使用 Mark Shot 标注和编辑图片文件
+Name=DracoPho Image Editor
+Name[zh_CN]=太殷龙摄 图片编辑器
+Comment=Annotate and edit image files with DracoPho
+Comment[zh_CN]=使用太殷龙摄标注和编辑图片文件
 Exec=@MARK_SHOT_DESKTOP_EXEC@ %F
-Icon=mark-shot-edit
+Icon=dracoPho
 Terminal=false
 Categories=Graphics;2DGraphics;RasterGraphics;
 Keywords=image;photo;picture;annotation;markup;screenshot;

@@ -1,6 +1,6 @@
 # Code Scan Provider Template
 
-This template builds a minimal Mark Shot QR code and barcode scan provider plugin. Replace the sample empty result with your scanner implementation.
+This template builds a minimal DracoPho QR code and barcode scan provider plugin. Replace the sample empty result with your scanner implementation.
 
 ## Build
 
@@ -16,4 +16,4 @@ mkdir -p ~/.local/share/mark-shot/plugins
 cp build/libmark-shot-sample-code-scan.so ~/.local/share/mark-shot/plugins/
 ```
 
-Set `codeScan.provider` to `plugin:sample-code-scan` in Mark Shot settings, or choose it from the Plugins settings page.
+Set `codeScan.provider` to `plugin:sample-code-scan` in DracoPho settings, or choose it from the Plugins settings page.

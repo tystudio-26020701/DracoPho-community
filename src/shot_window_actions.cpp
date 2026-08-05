@@ -251,7 +251,7 @@ void ShotWindow::ocrCopySelection()
     }
 
     markshot::copyTextToClipboard(result);
-    if (!sendDesktopNotification(QStringLiteral("Mark Shot"), MS_TR("OCR text copied"), 2500)) {
+    if (!sendDesktopNotification(QStringLiteral("DracoPho"), MS_TR("OCR text copied"), 2500)) {
         showToast(MS_TR("OCR text copied"));
     }
     QTimer::singleShot(150, this, [this] { close(); });

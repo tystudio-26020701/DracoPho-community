@@ -1,5 +1,5 @@
 {
-  description = "Mark Shot - a Qt6 screenshot & annotation tool";
+  description = "DracoPho - a Qt6 screenshot & annotation tool";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -26,7 +26,7 @@
 
         mark-shot = pkgs.stdenv.mkDerivation {
           pname = "mark-shot";
-          version = "26.8.3.1";
+          version = "26.8.4.0";
 
           src = self;
 

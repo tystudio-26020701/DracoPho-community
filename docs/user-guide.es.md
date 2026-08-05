@@ -1,6 +1,6 @@
-# Guía de usuario de Mark Shot
+# Guía de usuario de DracoPho
 
-Este manual cubre el funcionamiento diario de Mark Shot, con un enfoque en la
+Este manual cubre el funcionamiento diario de DracoPho, con un enfoque en la
 característica de **selección por flotación sobre ventanas / componentes**
 (mover el mouse automáticamente rastrea y resalta la ventana bajo el cursor; un
 clic la selecciona), el flujo de anotación, la captura sin interfaz
@@ -44,20 +44,20 @@ los scripts auxiliares de detección de ventanas
 
 ### 1.3 Comportamiento al inicio (bola flotante / bandeja / ventana de configuración / captura directa)
 
-Lo que ocurre al iniciar Mark Shot (por ejemplo al hacer clic en el icono del
+Lo que ocurre al iniciar DracoPho (por ejemplo al hacer clic en el icono del
 escritorio) es configurable. Abra **Configuración → General → Comportamiento al
 inicio** y marque cualquier combinación:
 
 | Opción | Comportamiento al inicio |
 | :--- | :--- |
-| **Icono de bandeja** (predeterminado) | Mark Shot permanece en ejecución en la bandeja del sistema. Un clic izquierdo en el icono captura; un clic derecho abre el menú. |
+| **Icono de bandeja** (predeterminado) | DracoPho permanece en ejecución en la bandeja del sistema. Un clic izquierdo en el icono captura; un clic derecho abre el menú. |
 | **Bola flotante** (predeterminado) | Una pequeña bola siempre encima (abajo a la derecha por defecto). Un clic abre un menú rápido, doble clic captura, arrastrar la mueve (recuerda la posición) y se oculta automáticamente durante una captura. |
 | **Captura directa** | Entra en modo de captura inmediatamente. |
-| **Ventana de configuración** | Abre la ventana de configuración al iniciar Mark Shot. |
+| **Ventana de configuración** | Abre la ventana de configuración al iniciar DracoPho. |
 
 Puede combinar varias opciones. **La captura directa está desactivada por defecto**;
-si no la selecciona, iniciar Mark Shot nunca abre una superposición de captura por sí
-mismo. Si desmarca todas las opciones, Mark Shot vuelve a la bandeja para que siempre
+si no la selecciona, iniciar DracoPho nunca abre una superposición de captura por sí
+mismo. Si desmarca todas las opciones, DracoPho vuelve a la bandeja para que siempre
 haya un punto de entrada.
 
 La bola flotante y el menú de la bandeja ofrecen las mismas acciones rápidas:
@@ -69,7 +69,7 @@ La bola flotante y el menú de la bandeja ofrecen las mismas acciones rápidas:
 
 ## 2. Selección por flotación sobre ventanas / componentes
 
-Mark Shot puede detectar las ventanas del escritorio actual antes de que elija
+DracoPho puede detectar las ventanas del escritorio actual antes de que elija
 una región. Mientras la superposición de selección está abierta, **mover el
 mouse resalta la ventana bajo el cursor** con un marco verde azulado (teal).
 **Un clic izquierdo simple (sin arrastre) selecciona esa ventana completa**
@@ -298,7 +298,7 @@ diseño originales.
    grandes).
 2. La superposición desplaza la ventana objetivo; los fotogramas capturados se
    unen en una imagen larga.
-3. GNOME Wayland requiere la extensión Mark Shot Scroll Helper (§ 2.1).
+3. GNOME Wayland requiere la extensión DracoPho Scroll Helper (§ 2.1).
 
 La captura con desplazamiento está lista para producción en niri y compositores
 wlroots/Wayland similares; en KDE, X11 y otras pilas es una característica de
@@ -345,7 +345,7 @@ grabar hasta `--stop-recording`.
 
 ### 7.1 Captura sin interfaz de ventanas / componentes
 
-Mark Shot puede capturar **ventanas específicas — o un componente (subregión)
+DracoPho puede capturar **ventanas específicas — o un componente (subregión)
 dentro de una ventana — sin abrir ninguna interfaz de usuario**, desde un
 script, una canalización de compilación o un agente. El proceso sale en cuanto
 las imágenes se escriben o se devuelven, y nunca crea una ventana, nunca muestra
@@ -362,7 +362,7 @@ Salida de ejemplo (GNOME Wayland):
 
 ```json
 {"count":2,"platform":"wayland","source":"compositor-script","windows":[
-  {"index":0,"id":"0x3c00007","title":"Mark Shot - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
+  {"index":0,"id":"0x3c00007","title":"DracoPho - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
   {"index":1,"title":"Terminal","class":"org.gnome.Terminal","x":67,"y":32,"width":800,"height":600}
 ]}
 ```
@@ -381,7 +381,7 @@ sola llamada**. Cada selector se interpreta automáticamente (`--window-by auto`
 | `0`, `1`, … | `index` de la lista |
 | `0x3c00007` | `id` de la ventana |
 | `VSCodium` | `class` o `instance`, luego `title` (exacto, luego subcadena) |
-| `Mark Shot - VSCodium` | `title` |
+| `DracoPho - VSCodium` | `title` |
 
 Fuerce una regla de coincidencia con `--window-by id|title|class|index`. Un
 selector que coincide con varias ventanas captura **todas ellas**.

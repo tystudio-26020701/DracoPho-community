@@ -1,7 +1,7 @@
 {
   "uuid": "mark-shot-scroll-helper@snemc.org",
-  "name": "Mark Shot Scroll Helper",
-  "description": "Helper extension for Mark Shot to support scrolling screenshot on GNOME Wayland session by exposing a private DBus interface.",
+  "name": "DracoPho Scroll Helper",
+  "description": "Helper extension for DracoPho to support scrolling screenshot on GNOME Wayland session by exposing a private DBus interface.",
   "shell-version": [
     "45",
     "46",

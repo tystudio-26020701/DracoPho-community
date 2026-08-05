@@ -89,7 +89,7 @@ void ShotWindow::beginStartupRecording(markshot::recording::RecordingMode mode)
     request.showError = [this, restoreOverlay](const QString &message) {
         m_recordingConfigDialogOpen = false;
         restoreOverlay();
-        QMessageBox::warning(this, QStringLiteral("Mark Shot"), message);
+        QMessageBox::warning(this, QStringLiteral("DracoPho"), message);
     };
     request.cancelled = [this, restoreOverlay] {
         m_recordingConfigDialogOpen = false;
@@ -179,7 +179,7 @@ void ShotWindow::startRecording(markshot::recording::RecordingOptions options)
         show();
         raise();
         QMessageBox::warning(this,
-                             QStringLiteral("Mark Shot"),
+                             QStringLiteral("DracoPho"),
                              error.isEmpty() ? MS_TR("Recording failed to start") : error);
         return;
     }

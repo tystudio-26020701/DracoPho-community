@@ -20,7 +20,7 @@ QString autostartDirPath()
     return configDir.isEmpty() ? QString() : QDir(configDir).filePath(QStringLiteral("autostart"));
 }
 
-/// @brief 返回 Mark Shot 桌面自启动文件路径。
+/// @brief 返回 DracoPho 桌面自启动文件路径。
 /// @return mark-shot.desktop 完整路径。
 QString autostartDesktopPath()
 {
@@ -57,8 +57,8 @@ bool writeDesktopFile(const QString &path, QString *error)
     QTextStream stream(&file);
     stream << QStringLiteral("[Desktop Entry]\n");
     stream << QStringLiteral("Type=Application\n");
-    stream << QStringLiteral("Name=Mark Shot\n");
-    stream << QStringLiteral("Comment=Start Mark Shot in the system tray\n");
+    stream << QStringLiteral("Name=DracoPho\n");
+    stream << QStringLiteral("Comment=Start DracoPho in the system tray\n");
     stream << QStringLiteral("Exec=%1 --tray\n").arg(desktopQuoted(QCoreApplication::applicationFilePath()));
     stream << QStringLiteral("Terminal=false\n");
     stream << QStringLiteral("X-GNOME-Autostart-enabled=true\n");

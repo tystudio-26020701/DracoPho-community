@@ -22,7 +22,7 @@ assignees: []
 
 ## 运行环境
 请提供以下系统环境信息（可运行 `mark-shot --version` 获取部分信息）：
-- Mark Shot 版本: 
+ - 太殷龙摄 版本: 
 - 操作系统 (OS): 
 - 窗口管理器 (Window Manager, 如 niri, sway) / 桌面环境 (Desktop, 如 GNOME): 
 - 显示服务器类型 (Display Server): Wayland / X11

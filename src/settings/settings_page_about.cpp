@@ -63,7 +63,7 @@ SettingsPageAbout::SettingsPageAbout(QWidget *parent)
     contentLayout->setSpacing(14);
     contentLayout->setSizeConstraint(QLayout::SetFixedSize);
 
-    // 1. Mark Shot 软件图标（不是公司 logo）：位于产品名称上方，
+    // 1. DracoPho 软件图标（不是公司 logo）：位于产品名称上方，
     //    与"维护者"区的公司 logo 明确区分。
     auto *appIcon = new QLabel(this);
     appIcon->setObjectName(QStringLiteral("settingsAboutAppIcon"));
@@ -74,7 +74,7 @@ SettingsPageAbout::SettingsPageAbout(QWidget *parent)
     }
     contentLayout->addWidget(appIcon);
 
-    auto *title = new QLabel(QStringLiteral("Mark Shot"), this);
+    auto *title = new QLabel(MS_TR("DracoPho"), this);
     title->setObjectName(QStringLiteral("settingsAboutTitle"));
     title->setAlignment(Qt::AlignCenter);
     contentLayout->addWidget(title);
@@ -112,7 +112,7 @@ SettingsPageAbout::SettingsPageAbout(QWidget *parent)
     contentLayout->addWidget(maintained);
 
     auto *repository = createLinkLabel(
-        MS_TR("This is the open-source community edition of Mark Shot. Source code and issue tracking: %1")
+        MS_TR("This is the open-source community edition of DracoPho. Source code and issue tracking: %1")
             .arg(QStringLiteral("<a href=\"%1\">%1</a>").arg(QString::fromLatin1(kCommunityRepository))),
         this);
     contentLayout->addWidget(repository);
@@ -126,7 +126,7 @@ SettingsPageAbout::SettingsPageAbout(QWidget *parent)
     contentLayout->addWidget(ackTitle);
 
     auto *ack = createLinkLabel(
-        MS_TR("Mark Shot is based on the original upstream project %1. We sincerely thank its author and all contributors for their outstanding work.")
+        MS_TR("DracoPho is based on the original upstream project %1. We sincerely thank its author and all contributors for their outstanding work.")
             .arg(QStringLiteral("<a href=\"%1\">%1</a>").arg(QString::fromLatin1(kUpstreamRepository))),
         this);
     contentLayout->addWidget(ack);

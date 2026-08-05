@@ -1,6 +1,6 @@
-# Mark Shot User Guide
+# DracoPho User Guide
 
-This manual covers day-to-day operation of Mark Shot, with a focus on the
+This manual covers day-to-day operation of DracoPho, with a focus on the
 **window / component hover selection** feature (moving the mouse automatically
 tracks and highlights the window under the cursor; a click selects it), the
 annotation workflow, headless capture, and configuration.
@@ -42,20 +42,20 @@ upload helpers.
 
 ### 1.3 Startup behavior (floating ball, tray, settings, direct capture)
 
-When you launch Mark Shot (for example by clicking the desktop icon), what
+When you launch DracoPho (for example by clicking the desktop icon), what
 happens next is configurable. Open **Settings → General → Startup Behavior**
 and tick any combination of:
 
 | Option | What happens at startup |
 | :--- | :--- |
-| **Tray Icon** (default) | Mark Shot keeps running in the system tray. Left-click the tray icon for a quick capture, right-click for the menu. |
+| **Tray Icon** (default) | DracoPho keeps running in the system tray. Left-click the tray icon for a quick capture, right-click for the menu. |
 | **Floating Ball** (default) | A small draggable always-on-top ball appears (bottom-right by default). Single click opens a quick menu, double click captures, drag to move it — its position is remembered. The ball hides automatically while a capture is active. |
 | **Direct Capture** | Enters screenshot mode immediately. |
-| **Settings Window** | Opens the settings window when Mark Shot starts. |
+| **Settings Window** | Opens the settings window when DracoPho starts. |
 
 Multiple options can be combined. Direct capture is **off by default**; unless
-you select it, launching Mark Shot never opens a capture overlay by itself. If
-you clear every option, Mark Shot falls back to the tray so there is always an
+you select it, launching DracoPho never opens a capture overlay by itself. If
+you clear every option, DracoPho falls back to the tray so there is always an
 entry point.
 
 The floating ball and tray menus offer the same quick actions: **Capture**,
@@ -67,7 +67,7 @@ launch.
 
 ## 2. Window / Component Hover Selection
 
-Mark Shot can detect the windows of the current desktop before you pick a
+DracoPho can detect the windows of the current desktop before you pick a
 region. While the selection overlay is open, **moving the mouse highlights the
 window under the cursor** with a teal frame. **A plain left click (no drag)
 selects that whole window** as the capture region; you can then annotate, copy,
@@ -278,7 +278,7 @@ text back onto the image at the original layout positions.
 1. Select a region (or use the floating drag handle for very large regions).
 2. The overlay scrolls the target window; captured frames are stitched into a
    long image.
-3. GNOME Wayland requires the Mark Shot Scroll Helper extension (§ 2.1).
+3. GNOME Wayland requires the DracoPho Scroll Helper extension (§ 2.1).
 
 Scrolling capture is production-ready on niri and similar wlroots/Wayland
 compositors; on KDE, X11 and other stacks it is a test feature. If it fails,
@@ -323,7 +323,7 @@ and `--record-duration 0` to record until `--stop-recording`.
 
 ### 7.1 Headless window / component capture
 
-Mark Shot can capture **specific windows — or a component (sub-region) inside
+DracoPho can capture **specific windows — or a component (sub-region) inside
 a window — without opening any UI**, from a script, a build pipeline, or an
 agent. The process exits as soon as the images are written or returned, and it
 never creates a window, never pops a dialog, and never steals focus, so the
@@ -339,7 +339,7 @@ Example output (GNOME Wayland):
 
 ```json
 {"count":2,"platform":"wayland","source":"compositor-script","windows":[
-  {"index":0,"id":"0x3c00007","title":"Mark Shot - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
+  {"index":0,"id":"0x3c00007","title":"DracoPho - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
   {"index":1,"title":"Terminal","class":"org.gnome.Terminal","x":67,"y":32,"width":800,"height":600}
 ]}
 ```
@@ -362,7 +362,7 @@ Each selector is interpreted automatically (`--window-by auto`):
 | `0x3c00007`               | window `id`                                         |
 | `12345`                   | process `pid`                                       |
 | `VSCodium`                | `class` or `instance`, then `title` (exact, then substring) |
-| `Mark Shot - VSCodium`    | `title`                                             |
+| `DracoPho - VSCodium`    | `title`                                             |
 
 Force one matching rule with `--window-by id|title|class|index|pid|process`.
 `pid` matches the process id exactly; `process` matches the process name

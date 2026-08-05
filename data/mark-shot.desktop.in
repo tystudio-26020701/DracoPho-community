@@ -1,10 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=Mark Shot
+Name=DracoPho
+Name[zh_CN]=太殷龙摄
 Comment=Wayland screenshot selection and annotation tool
 Comment[zh_CN]=Wayland 截图选区和标注工具
 Exec=@MARK_SHOT_DESKTOP_EXEC@
-Icon=mark-shot
+Icon=dracoPho
 Terminal=false
 Categories=Graphics;Utility;
 Keywords=screenshot;screen capture;wayland;niri;grim;

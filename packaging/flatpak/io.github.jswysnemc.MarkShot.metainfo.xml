@@ -3,12 +3,12 @@
   <id>io.github.jswysnemc.MarkShot</id>
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
-  <name>Mark Shot</name>
+  <name>DracoPho</name>
   <summary>Wayland screenshot selection and annotation tool</summary>
   <summary xml:lang="zh-CN">Wayland 截图选区和标注工具</summary>
   <description>
-    <p>Mark Shot captures screenshots, annotates image regions, pins floating image stickers, and provides OCR and translation helpers for pinned image text.</p>
-    <p xml:lang="zh-CN">Mark Shot 支持截图选区、图像标注、置顶贴图，以及针对置顶图像文字的 OCR 与翻译辅助功能。</p>
+    <p>DracoPho captures screenshots, annotates image regions, pins floating image stickers, and provides OCR and translation helpers for pinned image text.</p>
+    <p xml:lang="zh-CN">太殷龙摄支持截图选区、图像标注、置顶贴图，以及针对置顶图像文字的 OCR 与翻译辅助功能。</p>
   </description>
   <launchable type="desktop-id">io.github.jswysnemc.MarkShot.desktop</launchable>
   <url type="homepage">https://github.com/tystudio-26020701/mark-shot-community</url>
@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="26.8.4.0" date="2026-08-05">
+      <description>
+        <p>Feature release: brand update (DracoPho), timed/delayed capture with countdown, and live language switching for tray, floating ball and recording windows.</p>
+      </description>
+    </release>
     <release version="26.8.3.1" date="2026-08-04">
       <description>
         <p>Maintenance release: Wayland-safe floating ball (edge docking disabled on native Wayland to remove ghost trails), honest hideOwnWindows toggle, headless recording CLI display-id normalization and argument validation, and a rebuilt 12-language feature comparison matrix.</p>

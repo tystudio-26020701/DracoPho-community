@@ -1,6 +1,6 @@
 # 插件分发规范
 
-本文定义第三方 Mark Shot Provider 插件的发布格式。该规范面向 GitHub Release、系统包、用户手工安装三种分发方式。
+本文定义第三方 DracoPho Provider 插件的发布格式。该规范面向 GitHub Release、系统包、用户手工安装三种分发方式。
 
 ## 包命名
 
@@ -56,7 +56,7 @@ Linux 安装目标目录为 `~/.local/share/mark-shot/plugins`。系统包可以
 | `name` | 是 | 插件包名，建议与动态库 target 对齐 |
 | `version` | 是 | 插件版本，建议 SemVer |
 | `vendor` | 是 | 发布方标识 |
-| `markShotMinVersion` | 是 | 最低兼容 Mark Shot 版本 |
+| `markShotMinVersion` | 是 | 最低兼容 DracoPho 版本 |
 | `capabilities` | 是 | 能力列表 |
 | `capabilities[].type` | 是 | `ocr`、`translation`、`code-scan` |
 | `capabilities[].providerId` | 是 | 与 C++ `providerId()` 完全一致 |
@@ -68,7 +68,7 @@ Linux 安装目标目录为 `~/.local/share/mark-shot/plugins`。系统包可以
 ## 兼容策略
 
 - Provider 接口通过 IID 版本区分，例如 `dev.mark-shot.OcrProviderPlugin/1.0`。
-- 如果接口发生不兼容变更，Mark Shot 会提升 IID 版本号。
+- 如果接口发生不兼容变更，DracoPho 会提升 IID 版本号。
 - 插件必须声明 `markShotMinVersion`，避免用户安装到过旧版本后无法诊断。
 - `providerId` 发布后应保持稳定，不要把品牌名、模型版本或地区写成会频繁变化的值。
 

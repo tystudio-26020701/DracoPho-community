@@ -246,7 +246,7 @@ void SettingsPagePlugins::updateConfig(SettingsConfig *config) const
 void SettingsPagePlugins::buildProviderCard(QVBoxLayout *layout)
 {
     QFrame *card = createSettingsCard(MS_TR("Plugin Providers"),
-                                      MS_TR("Choose which provider Mark Shot uses for OCR, translation, and code scanning."),
+                                      MS_TR("Choose which provider DracoPho uses for OCR, translation, and code scanning."),
                                       this);
     QFormLayout *form = settingsCardForm(card);
     m_ocrProvider = addComboRow(form, MS_TR("OCR Provider"));
@@ -267,7 +267,7 @@ void SettingsPagePlugins::buildProviderCard(QVBoxLayout *layout)
 void SettingsPagePlugins::buildDirectoriesCard(QVBoxLayout *layout)
 {
     QFrame *card = createSettingsCard(MS_TR("Plugin Directories"),
-                                      MS_TR("Provider plugins are loaded from these directories when Mark Shot starts."),
+                                      MS_TR("Provider plugins are loaded from these directories when DracoPho starts."),
                                       this);
     QFormLayout *form = settingsCardForm(card);
     m_directories = new QPlainTextEdit(card);

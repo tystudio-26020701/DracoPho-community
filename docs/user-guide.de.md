@@ -1,6 +1,6 @@
-# Mark Shot Benutzerhandbuch
+# DracoPho Benutzerhandbuch
 
-Dieses Handbuch behandelt den täglichen Betrieb von Mark Shot mit einem
+Dieses Handbuch behandelt den täglichen Betrieb von DracoPho mit einem
 Schwerpunkt auf der **Fenster-/Komponenten-Hover-Auswahl** (beim Bewegen der
 Maus wird das Fenster unter dem Cursor automatisch verfolgt und hervorgehoben;
 ein Klick wählt es aus), dem Annotation-Workflow, Headless-Erfassung und der
@@ -44,20 +44,20 @@ OCR-/Upload-Helfer erforderlich ist.
 
 ### 1.3 Startverhalten (Schwebende Kugel / Tray / Einstellungsfenster / direkte Aufnahme)
 
-Was beim Start von Mark Shot (z. B. durch Klicken auf das Desktop-Symbol) passiert,
+Was beim Start von DracoPho (z. B. durch Klicken auf das Desktop-Symbol) passiert,
 ist konfigurierbar. Öffnen Sie **Einstellungen → Allgemein → Startverhalten** und
 kombinieren Sie die Optionen nach Belieben:
 
 | Option | Verhalten beim Start |
 | :--- | :--- |
-| **Tray-Symbol** (Standard) | Mark Shot läuft im System Tray weiter. Linksklick auf das Tray-Symbol: schnelle Aufnahme; Rechtsklick: Menü. |
+| **Tray-Symbol** (Standard) | DracoPho läuft im System Tray weiter. Linksklick auf das Tray-Symbol: schnelle Aufnahme; Rechtsklick: Menü. |
 | **Schwebende Kugel** (Standard) | Eine kleine immer oben liegende Kugel (standardmäßig unten rechts). Einzelklick öffnet ein Schnellmenü, Doppelklick erstellt eine Aufnahme, Ziehen bewegt sie (Position wird gemerkt). Während einer Aufnahme wird sie automatisch ausgeblendet. |
 | **Direkte Aufnahme** | Startet sofort im Aufnahmemodus. |
-| **Einstellungsfenster** | Öffnet das Einstellungsfenster beim Start von Mark Shot. |
+| **Einstellungsfenster** | Öffnet das Einstellungsfenster beim Start von DracoPho. |
 
 Mehrere Optionen können kombiniert werden. **Direkte Aufnahme ist standardmäßig aus**;
 sofern Sie sie nicht wählen, wird beim Start nie von selbst ein Aufnahme-Overlay
-geöffnet. Wenn alle Optionen abgewählt sind, fällt Mark Shot auf den Tray zurück,
+geöffnet. Wenn alle Optionen abgewählt sind, fällt DracoPho auf den Tray zurück,
 damit immer ein Einstiegspunkt bleibt.
 
 Die schwebende Kugel und das Tray-Menü bieten dieselben Schnellaktionen:
@@ -68,7 +68,7 @@ Die schwebende Kugel und das Tray-Menü bieten dieselben Schnellaktionen:
 
 ## 2. Fenster-/Komponenten-Hover-Auswahl
 
-Mark Shot kann die Fenster des aktuellen Desktops erkennen, bevor Sie eine
+DracoPho kann die Fenster des aktuellen Desktops erkennen, bevor Sie eine
 Region auswählen. Während das Auswahl-Overlay geöffnet ist, **wird beim Bewegen
 der Maus das Fenster unter dem Cursor mit einem petrolfarbenen Rahmen
 hervorgehoben**. **Ein einfacher Linksklick (ohne Ziehen) wählt das gesamte
@@ -295,7 +295,7 @@ Text an den ursprünglichen Layout-Positionen wieder auf das Bild.
    Zieh-Griff verwenden).
 2. Das Overlay scrollt das Zielfenster; erfasste Frames werden zu einem langen
    Bild zusammengenäht.
-3. GNOME Wayland erfordert die Mark Shot Scroll Helper-Erweiterung (§ 2.1).
+3. GNOME Wayland erfordert die DracoPho Scroll Helper-Erweiterung (§ 2.1).
 
 Die Scroll-Erfassung ist auf niri und ähnlichen wlroots/Wayland-Compositoren
 produktionsreif; auf KDE, X11 und anderen Stacks ist sie eine Testfunktion.
@@ -343,7 +343,7 @@ aufzunehmen.
 
 ### 7.1 Headless-Fenster-/Komponentenerfassung
 
-Mark Shot kann **bestimmte Fenster – oder eine Komponente (Teilregion) innerhalb
+DracoPho kann **bestimmte Fenster – oder eine Komponente (Teilregion) innerhalb
 eines Fensters – ohne Öffnen einer Benutzeroberfläche erfassen**, aus einem
 Skript, einer Build-Pipeline oder einem Agenten. Der Prozess beendet sich,
 sobald die Bilder geschrieben oder zurückgegeben sind, und er erstellt niemals
@@ -360,7 +360,7 @@ Beispielausgabe (GNOME Wayland):
 
 ```json
 {"count":2,"platform":"wayland","source":"compositor-script","windows":[
-  {"index":0,"id":"0x3c00007","title":"Mark Shot - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
+  {"index":0,"id":"0x3c00007","title":"DracoPho - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
   {"index":1,"title":"Terminal","class":"org.gnome.Terminal","x":67,"y":32,"width":800,"height":600}
 ]}
 ```
@@ -381,7 +381,7 @@ einem Aufruf zu erfassen**. Jeder Selektor wird automatisch interpretiert
 | `0`, `1`, …             | Listen-`index`                                        |
 | `0x3c00007`             | Fenster-`id`                                          |
 | `VSCodium`              | `class` oder `instance`, dann `title` (exakt, dann Teilstring) |
-| `Mark Shot - VSCodium`  | `title`                                               |
+| `DracoPho - VSCodium`  | `title`                                               |
 
 Eine einzelne Abgleichregel mit `--window-by id|title|class|index` erzwingen.
 Ein Selektor, der mehrere Fenster abgleicht, erfasst **alle davon**.

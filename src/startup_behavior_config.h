@@ -10,7 +10,7 @@ namespace markshot {
 
 /// @brief 启动行为模式。
 ///
-/// 用户点击 Mark Shot 图标启动应用后执行的动作。允许多选组合：
+/// 用户点击 DracoPho 图标启动应用后执行的动作。允许多选组合：
 /// - DirectCapture：直接进入截图模式；
 /// - Tray：显示系统托盘图标并保持后台运行；
 /// - FloatingBall：显示可拖动的悬浮球快捷入口；

@@ -405,7 +405,7 @@ void connectCaptureWindowSession(QApplication *app,
                 activeWindow->showDisplayCaptureTargets(targets);
             } else {
                 QMessageBox::warning(nullptr,
-                                     QStringLiteral("Mark Shot"),
+                                     QStringLiteral("DracoPho"),
                                      error.isEmpty()
                                          ? QStringLiteral("Display capture failed")
                                          : error);
@@ -450,7 +450,7 @@ void connectCaptureWindowSession(QApplication *app,
             } else {
                 showCaptureWindows(windows);
                 QMessageBox::warning(nullptr,
-                                     QStringLiteral("Mark Shot"),
+                                     QStringLiteral("DracoPho"),
                                      error.isEmpty()
                                          ? QStringLiteral("Display capture failed")
                                          : error);
