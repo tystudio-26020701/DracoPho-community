@@ -2,11 +2,13 @@
 
 #include "recording/recording_options.h"
 
+#include <QList>
 #include <QPoint>
 #include <QWidget>
 
 #include <functional>
 
+class QAction;
 class QMenu;
 class QMouseEvent;
 class QPaintEvent;
@@ -36,6 +38,7 @@ class FloatingBall final : public QWidget {
 
 public:
     using CaptureCallback = std::function<void()>;
+    using TimedCaptureCallback = std::function<void(int seconds)>;
     using RecordingRegionCallback = std::function<void(recording::RecordingOptions)>;
 
     /// @brief 创建悬浮球。
@@ -46,6 +49,10 @@ public:
     /// @param capture 区域截图回调。
     /// @param fullscreen 全屏截图回调。
     void setCaptureCallbacks(CaptureCallback capture, CaptureCallback fullscreen);
+
+    /// @brief 设置延时截图回调（秒数入参）。设置后悬浮球菜单出现延时截图子菜单。
+    /// @param callback 延时截图回调。
+    void setTimedCaptureCallback(TimedCaptureCallback callback);
 
     /// @brief 设置录制区域回调。
     /// @param callback 区域录制回调。
@@ -116,6 +123,9 @@ private:
     /// @brief 显示悬浮球快捷菜单。
     /// @param globalPos 菜单出现位置（全局坐标）。
     void showBallMenu(const QPoint &globalPos);
+
+    /// @brief 语言切换后重新翻译菜单文案。
+    void retranslateUi();
 
     /// @brief 从悬浮球启动录制（复用托盘菜单的录制流程）。
     void startRecordingFromBall();
@@ -195,8 +205,17 @@ private:
 
     CaptureCallback m_captureCallback;
     CaptureCallback m_fullscreenCallback;
+    TimedCaptureCallback m_timedCaptureCallback;
     RecordingRegionCallback m_recordingRegionCallback;
     QMenu *m_menu = nullptr;
+    QAction *m_captureAction = nullptr;
+    QAction *m_fullscreenAction = nullptr;
+    QMenu *m_delayedCaptureMenu = nullptr;
+    QList<QAction *> m_delayedCaptureItems;
+    QAction *m_startRecordingAction = nullptr;
+    QAction *m_settingsAction = nullptr;
+    QAction *m_hideBallAction = nullptr;
+    QAction *m_quitAction = nullptr;
     QTimer *m_clickTimer = nullptr;
     QTimer *m_fadeTickTimer = nullptr;
     QTimer *m_autoHideTimer = nullptr;

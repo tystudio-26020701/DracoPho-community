@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(mark-shot VERSION 26.8.3.1 LANGUAGES C CXX)
+project(mark-shot VERSION 26.8.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -146,6 +146,12 @@ qt_add_executable(mark-shot
     src/capture_geometry.h
     src/capture_session_launcher.cpp
     src/capture_session_launcher.h
+    src/capture_delay_config.cpp
+    src/capture_delay_config.h
+    src/delayed_capture.cpp
+    src/delayed_capture.h
+    src/delayed_capture_options.cpp
+    src/delayed_capture_options.h
     src/layer_shell_plugin_interface.h
     src/layer_shell_runtime.cpp
     src/layer_shell_runtime.h
@@ -266,7 +272,7 @@ if(MSVC)
 endif()
 if(WIN32)
     set_property(TARGET mark-shot PROPERTY CXX_STANDARD 20)
-    set(MARK_SHOT_WINDOWS_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/mark-shot.ico")
+    set(MARK_SHOT_WINDOWS_ICON "${CMAKE_CURRENT_SOURCE_DIR}/data/icons/DracoPho-logo.ico")
     configure_file(packaging/windows/mark-shot.rc.in "${CMAKE_CURRENT_BINARY_DIR}/mark-shot.rc" @ONLY)
     target_sources(mark-shot PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/mark-shot.rc")
     set_target_properties(mark-shot PROPERTIES WIN32_EXECUTABLE TRUE)

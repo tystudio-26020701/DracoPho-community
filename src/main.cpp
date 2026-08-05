@@ -1,5 +1,6 @@
 #include "annotation_launch.h"
 #include "capture_cursor_policy.h"
+#include "capture_delay_config.h"
 #include "capture_freeze_scope.h"
 #include "capture_own_windows_policy.h"
 #include "capture_session_launcher.h"
@@ -9,6 +10,7 @@
 #include "cli/recording_cli.h"
 #include "cli/window_capture_cli.h"
 #include "debug_log.h"
+#include "delayed_capture.h"
 #include "floating_ball.h"
 #include "ipc/single_instance_ipc.h"
 #include "recording/recording_dialog_config.h"
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
 
     QApplication app(argc, argv);
     QApplication::setApplicationName(QStringLiteral("mark-shot"));
-    QApplication::setApplicationDisplayName(QStringLiteral("Mark Shot"));
+    QApplication::setApplicationDisplayName(QStringLiteral("DracoPho"));
     QApplication::setApplicationVersion(QStringLiteral(MARK_SHOT_VERSION));
     QApplication::setWindowIcon(markshot::ui::applicationIcon());
     QFont applicationFont = app.font();
@@ -149,6 +151,9 @@ int main(int argc, char *argv[])
     QCommandLineOption debugLogOption(QStringLiteral("debug-log"),
                                       QStringLiteral("Write debug logs to the specified file path."),
                                       QStringLiteral("path"));
+    QCommandLineOption delayOption(QStringLiteral("delay"),
+                                   QStringLiteral("Wait the given number of seconds before capturing (countdown overlay, Esc to cancel)."),
+                                   QStringLiteral("seconds"));
     parser.addOption(allOutputsOption);
     parser.addOption(xdgWindowOption);
     parser.addOption(fullscreenAnnotationOption);
@@ -172,6 +177,7 @@ int main(int argc, char *argv[])
     parser.addOption(debugOption);
     parser.addOption(noDebugOption);
     parser.addOption(debugLogOption);
+    parser.addOption(delayOption);
     markshot::cli::addHeadlessCaptureOptions(&parser);
     markshot::cli::addWindowCaptureOptions(&parser);
     parser.process(app);
@@ -288,13 +294,13 @@ int main(int argc, char *argv[])
     // 从这里开始才允许交互式 UI 与对话框。
     const QStringList positionalArguments = parser.positionalArguments();
     if (positionalArguments.size() > 1) {
-        QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), MS_TR("Only one image file can be opened at a time."));
+        QMessageBox::critical(nullptr, QStringLiteral("DracoPho"), MS_TR("Only one image file can be opened at a time."));
         return 1;
     }
 
     if (parser.isSet(debugOption) && parser.isSet(noDebugOption)) {
         QMessageBox::critical(nullptr,
-                              QStringLiteral("Mark Shot"),
+                              QStringLiteral("DracoPho"),
                               MS_TR("--debug and --no-debug cannot be used together."));
         return 1;
     }
@@ -309,7 +315,7 @@ int main(int argc, char *argv[])
         const std::optional<ShotWindow::Tool> parsedTool = parseRuntimeTool(optionValue);
         if (!parsedTool.has_value()) {
             QMessageBox::critical(nullptr,
-                                  QStringLiteral("Mark Shot"),
+                                  QStringLiteral("DracoPho"),
                                   MS_TR("Unsupported default tool: %1\nSupported tools: %2")
                                       .arg(optionValue, ShotWindow::supportedToolNames().join(QStringLiteral(", "))));
             return 1;
@@ -324,7 +330,7 @@ int main(int argc, char *argv[])
         const std::optional<ShotWindow::Tool> parsedTool = parseRuntimeTool(optionValue);
         if (!parsedTool.has_value()) {
             QMessageBox::critical(nullptr,
-                                  QStringLiteral("Mark Shot"),
+                                  QStringLiteral("DracoPho"),
                                   MS_TR("Unsupported fullscreen default tool: %1\nSupported tools: %2")
                                       .arg(optionValue, ShotWindow::supportedToolNames().join(QStringLiteral(", "))));
             return 1;
@@ -337,7 +343,7 @@ int main(int argc, char *argv[])
         const std::optional<ShotWindow::Tool> parsedTool = parseRuntimeTool(optionValue);
         if (!parsedTool.has_value()) {
             QMessageBox::critical(nullptr,
-                                  QStringLiteral("Mark Shot"),
+                                  QStringLiteral("DracoPho"),
                                   MS_TR("Unsupported file default tool: %1\nSupported tools: %2")
                                       .arg(optionValue, ShotWindow::supportedToolNames().join(QStringLiteral(", "))));
             return 1;
@@ -349,7 +355,7 @@ int main(int argc, char *argv[])
         const std::optional<QColor> parsedColor = markshot::colorFromString(optionValue);
         if (!parsedColor.has_value()) {
             QMessageBox::critical(nullptr,
-                                  QStringLiteral("Mark Shot"),
+                                  QStringLiteral("DracoPho"),
                                   MS_TR("Unsupported default color: %1\nSupported color formats: #RRGGBB or #RRGGBBAA")
                                       .arg(optionValue));
             return 1;
@@ -358,14 +364,14 @@ int main(int argc, char *argv[])
         defaultTools.colorSource = markshot::DefaultColorSource::CommandLine;
     }
     if (!configDefaultToolWarning.isEmpty()) {
-        QMessageBox::warning(nullptr, QStringLiteral("Mark Shot"), configDefaultToolWarning);
+        QMessageBox::warning(nullptr, QStringLiteral("DracoPho"), configDefaultToolWarning);
     }
 
     const QString imagePath = positionalArguments.isEmpty() ? QString() : positionalArguments.first();
     if (parser.isSet(pinImageOption)) {
         if (!positionalArguments.isEmpty()) {
             QMessageBox::critical(nullptr,
-                                  QStringLiteral("Mark Shot"),
+                                  QStringLiteral("DracoPho"),
                                   MS_TR("Only one image file can be opened at a time."));
             return 1;
         }
@@ -373,7 +379,7 @@ int main(int argc, char *argv[])
         QString error;
         QWidget *window = markshot::cli::launchPinnedImageFromPath(parser.value(pinImageOption), &error);
         if (!window) {
-            QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), error);
+            QMessageBox::critical(nullptr, QStringLiteral("DracoPho"), error);
             return 1;
         }
         return QApplication::exec();
@@ -383,7 +389,7 @@ int main(int argc, char *argv[])
     if (fileMode) {
         QFileInfo imageFile(imagePath);
         if (!imageFile.exists() || !imageFile.isFile()) {
-            QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), MS_TR("Image file does not exist: %1").arg(imagePath));
+            QMessageBox::critical(nullptr, QStringLiteral("DracoPho"), MS_TR("Image file does not exist: %1").arg(imagePath));
             return 1;
         }
 
@@ -392,7 +398,7 @@ int main(int argc, char *argv[])
         const QImage image = reader.read();
         if (image.isNull()) {
             QMessageBox::critical(nullptr,
-                                  QStringLiteral("Mark Shot"),
+                                  QStringLiteral("DracoPho"),
                                   MS_TR("Failed to load image: %1\n%2").arg(imageFile.absoluteFilePath(), reader.errorString()));
             return 1;
         }
@@ -471,10 +477,26 @@ int main(int argc, char *argv[])
         QApplication::setQuitOnLastWindowClosed(false);
     }
 
+    // 延时截图：CLI --delay 显式指定时覆盖配置，否则读取配置中的 capture.delaySeconds。
+    // 延时仅在普通截图（区域/全屏）时生效，区域录制不走倒计时遮罩。
+    int captureDelaySeconds = markshot::configuredCaptureDelaySeconds();
+    if (parser.isSet(delayOption)) {
+        bool delayOk = false;
+        const int cliDelay = parser.value(delayOption).trimmed().toInt(&delayOk);
+        if (!delayOk || cliDelay < 0 || cliDelay > 3600) {
+            QMessageBox::critical(nullptr,
+                                  QStringLiteral("DracoPho"),
+                                  MS_TR("Invalid --delay value (expected 0-3600)."));
+            return 1;
+        }
+        captureDelaySeconds = cliDelay;
+    }
+
     markshot::ipc::SingleInstanceCommand duplicateCommand;
     duplicateCommand.capture = wantCapture;
     duplicateCommand.fullscreen = fullscreenAnnotation;
     duplicateCommand.allOutputs = allOutputs;
+    duplicateCommand.delaySeconds = captureDelaySeconds;
     if (markshot::ipc::sendSingleInstanceCommand(duplicateCommand, nullptr, nullptr)) {
         return 0;
     }
@@ -490,19 +512,19 @@ int main(int argc, char *argv[])
     }
     if (!singleInstanceServer) {
         QMessageBox::critical(nullptr,
-                              QStringLiteral("Mark Shot"),
+                              QStringLiteral("DracoPho"),
                               MS_TR("Failed to start single-instance guard: %1").arg(singleInstanceError));
         return 1;
     }
 
     bool captureActive = false;
     markshot::FloatingBall *floatingBall = nullptr;
-    auto launchCapture = [&app,
-                          &captureActive,
-                          &floatingBall,
-                          useRegularWindow](bool startFullscreen,
-                                            bool requestAllOutputs,
-                                            std::optional<markshot::recording::RecordingOptions> regionRecordingOptions = std::nullopt) -> bool {
+    auto captureNow = [&app,
+                       &captureActive,
+                       &floatingBall,
+                       useRegularWindow](bool startFullscreen,
+                                         bool requestAllOutputs,
+                                         std::optional<markshot::recording::RecordingOptions> regionRecordingOptions = std::nullopt) -> bool {
         if (captureActive) {
             return true;
         }
@@ -586,13 +608,70 @@ int main(int argc, char *argv[])
             }
             markshot::settings::restoreSettingsWindowAfterCapture();
             QMessageBox::critical(nullptr,
-                                  QStringLiteral("Mark Shot"),
+                                  QStringLiteral("DracoPho"),
                                   captureError.isEmpty() ? MS_TR("Failed to start capture session.") : captureError);
             return false;
         }
 
         captureActive = true;
         return true;
+    };
+
+    // 倒计时进行中标记：延时截图期间置位，避免托盘/悬浮球/热键/IPC 在
+    // 倒计时未结束前再次触发第二个倒计时遮罩（叠加遮罩且可能进入截图画面）。
+    bool delayedCaptureActive = false;
+    // 启动一次倒计时，统一管理进行中标记；取消回调同样清除标记。
+    auto startCountdown = [&delayedCaptureActive](int seconds,
+                                                  std::function<void()> onComplete) {
+        if (delayedCaptureActive) {
+            return;
+        }
+        delayedCaptureActive = true;
+        markshot::runDelayedCapture(
+            seconds,
+            [&delayedCaptureActive, onComplete] {
+                delayedCaptureActive = false;
+                onComplete();
+            },
+            [&delayedCaptureActive] {
+                delayedCaptureActive = false;
+            });
+    };
+
+    // 延时截图入口：配置或 --delay 指定秒数大于 0 时，先显示倒计时遮罩，
+    // 倒计时结束（或取消）后再进入真实截图流程。区域录制不走延时。
+    // delayOverride 由 IPC 命令携带（运行实例处理外部 --delay 请求时使用）。
+    auto launchCapture = [&captureNow,
+                          &captureActive,
+                          &captureDelaySeconds,
+                          &startCountdown](bool startFullscreen,
+                                           bool requestAllOutputs,
+                                           std::optional<markshot::recording::RecordingOptions> regionRecordingOptions = std::nullopt,
+                                           std::optional<int> delayOverride = std::nullopt) -> bool {
+        if (captureActive) {
+            return true;
+        }
+        const int effectiveDelay = delayOverride.value_or(captureDelaySeconds);
+        if (effectiveDelay > 0 && !regionRecordingOptions.has_value()) {
+            startCountdown(effectiveDelay,
+                           [captureNow, startFullscreen, requestAllOutputs] {
+                               captureNow(startFullscreen, requestAllOutputs);
+                           });
+            return true;
+        }
+        return captureNow(startFullscreen, requestAllOutputs, std::move(regionRecordingOptions));
+    };
+
+    // 延时截图（托盘/悬浮球子菜单）：以菜单选择的秒数显式触发，覆盖配置默认值。
+    auto launchTimedCapture = [&app, &captureActive, &startCountdown, captureNow](int seconds) {
+        if (captureActive) {
+            return;
+        }
+        startCountdown(seconds, [&app, captureNow] {
+            QTimer::singleShot(0, &app, [captureNow] {
+                captureNow(false, false);
+            });
+        });
     };
 
     // 会话级恢复：整场截图会话（含"显示器快速截取"编辑目标时替换出的新窗口）
@@ -773,7 +852,7 @@ int main(int argc, char *argv[])
 
             if (command.capture) {
                 QTimer::singleShot(0, &app, [launchCapture, command] {
-                    launchCapture(command.fullscreen, command.allOutputs);
+                    launchCapture(command.fullscreen, command.allOutputs, std::nullopt, command.delaySeconds);
                 });
                 response.message = QStringLiteral("capture requested");
             } else {
@@ -789,6 +868,7 @@ int main(int argc, char *argv[])
         floatingBall->setQuitWhenHidden(!wantTray);
         floatingBall->setCaptureCallbacks([launchCapture, allOutputs] { launchCapture(false, allOutputs); },
                                           [launchCapture, allOutputs] { launchCapture(true, allOutputs); });
+        floatingBall->setTimedCaptureCallback(launchTimedCapture);
         floatingBall->setRecordingRegionCallback([launchCapture, allOutputs](markshot::recording::RecordingOptions options) {
             launchCapture(false, allOutputs, std::move(options));
         });
@@ -803,6 +883,7 @@ int main(int argc, char *argv[])
         auto *trayController = new markshot::WindowsTrayController(&app, trayConfig, &app, wantTray);
         trayController->setCaptureCallbacks([launchCapture, allOutputs] { launchCapture(false, allOutputs); },
                                             [launchCapture, allOutputs] { launchCapture(true, allOutputs); });
+        trayController->setTimedCaptureCallback(launchTimedCapture);
         trayController->setRecordingRegionCallback([launchCapture, allOutputs](markshot::recording::RecordingOptions options) {
             launchCapture(false, allOutputs, std::move(options));
         });
@@ -813,7 +894,7 @@ int main(int argc, char *argv[])
                 [floatingBall] { return floatingBall->isVisible(); });
         }
         if (!trayController->start()) {
-            QMessageBox::critical(nullptr, QStringLiteral("Mark Shot"), trayController->errorString());
+            QMessageBox::critical(nullptr, QStringLiteral("DracoPho"), trayController->errorString());
             return 1;
         }
     }

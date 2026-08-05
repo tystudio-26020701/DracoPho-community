@@ -3,6 +3,7 @@
 #include "app_config_store.h"
 #include "autostart/autostart_manager.h"
 #include "capture_cursor_policy.h"
+#include "capture_delay_config.h"
 #include "capture_own_windows_policy.h"
 #include "config_value.h"
 #include "headless_capture_config.h"
@@ -569,6 +570,7 @@ SettingsConfig readSettingsConfig(QString *error)
     settings.capture.freezeScope = captureFreezeScopeFromConfigRoot(root);
     settings.capture.kdeKwinScreenshotEnabled = kdeKWinScreenshotEnabledFromConfigRoot(root);
     settings.capture.hideOwnWindows = hideOwnWindowsDuringCaptureFromConfigRoot(root);
+    settings.capture.delaySeconds = captureDelaySecondsFromConfigRoot(root);
     settings.shortcuts = readShortcutSettings();
     settings.annotation = readAnnotationSettings(root);
     settings.pinned = readPinnedSettings(root);

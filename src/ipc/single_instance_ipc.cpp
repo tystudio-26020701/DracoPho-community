@@ -7,6 +7,8 @@
 #include <QLocalSocket>
 #include <QObject>
 
+#include <algorithm>
+
 namespace markshot::ipc {
 namespace {
 
@@ -68,6 +70,7 @@ QByteArray encodeCommand(const SingleInstanceCommand &command)
     object.insert(QStringLiteral("capture"), command.capture);
     object.insert(QStringLiteral("fullscreen"), command.fullscreen);
     object.insert(QStringLiteral("allOutputs"), command.allOutputs);
+    object.insert(QStringLiteral("delaySeconds"), command.delaySeconds);
     object.insert(QStringLiteral("recordingStatus"), command.recordingStatus);
     object.insert(QStringLiteral("stopRecording"), command.stopRecording);
     object.insert(QStringLiteral("startRecording"), command.startRecording);
@@ -102,6 +105,9 @@ std::optional<SingleInstanceCommand> decodeCommand(const QByteArray &payload)
     command.capture = object.value(QStringLiteral("capture")).toBool(false);
     command.fullscreen = object.value(QStringLiteral("fullscreen")).toBool(false);
     command.allOutputs = object.value(QStringLiteral("allOutputs")).toBool(false);
+    command.delaySeconds = std::clamp(object.value(QStringLiteral("delaySeconds")).toInt(0),
+                                      0,
+                                      3600);
     command.recordingStatus = object.value(QStringLiteral("recordingStatus")).toBool(false);
     command.stopRecording = object.value(QStringLiteral("stopRecording")).toBool(false);
     command.startRecording = object.value(QStringLiteral("startRecording")).toBool(false);

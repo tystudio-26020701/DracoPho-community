@@ -2,6 +2,7 @@
 
 #include <QAbstractNativeEventFilter>
 #include <QKeySequence>
+#include <QList>
 #include <QObject>
 #include <QString>
 
@@ -34,6 +35,7 @@ public:
     };
 
     using Callback = std::function<void()>;
+    using TimedCaptureCallback = std::function<void(int seconds)>;
     using RecordingRegionCallback = std::function<void(recording::RecordingOptions)>;
     using FloatingBallVisibility = std::function<bool()>;
 
@@ -54,6 +56,9 @@ public:
 
     void setCaptureCallbacks(Callback capture, Callback fullscreen);
     void setRecordingRegionCallback(RecordingRegionCallback callback);
+    /// @brief 关联"延时截图"回调（秒数入参）。设置后托盘菜单出现延时截图子菜单。
+    /// @param callback 延时截图回调。
+    void setTimedCaptureCallback(TimedCaptureCallback callback);
 
     /// @brief 关联悬浮球的"显示/隐藏"开关。
     ///
@@ -89,6 +94,12 @@ private:
      * @return 无返回值。
      */
     void updateRecordingState();
+
+    /**
+     * 语言切换后重新翻译菜单与提示文案。
+     * @return 无返回值。
+     */
+    void retranslateUi();
     void registerHotkeys();
     void unregisterHotkeys();
 
@@ -97,13 +108,20 @@ private:
     Callback m_captureCallback;
     Callback m_fullscreenCaptureCallback;
     RecordingRegionCallback m_recordingRegionCallback;
+    TimedCaptureCallback m_timedCaptureCallback;
     Callback m_floatingBallToggle;
     FloatingBallVisibility m_floatingBallVisible;
     QMenu *m_menu = nullptr;
     QSystemTrayIcon *m_tray = nullptr;
+    QAction *m_captureAction = nullptr;
+    QAction *m_fullscreenAction = nullptr;
+    QAction *m_settingsAction = nullptr;
+    QMenu *m_delayedCaptureMenu = nullptr;
+    QList<QAction *> m_delayedCaptureItems;
     QAction *m_startRecordingAction = nullptr;
     QAction *m_recordingStatusAction = nullptr;
     QAction *m_stopRecordingAction = nullptr;
+    QAction *m_quitAction = nullptr;
     QAction *m_floatingBallToggleAction = nullptr;
     QTimer *m_recordingStatusTimer = nullptr;
     QString m_errorString;

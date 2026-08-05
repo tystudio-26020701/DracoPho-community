@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QObject>
 #include <QString>
 
 namespace markshot::i18n {
@@ -17,6 +18,30 @@ enum class Language {
     German,             // Deutsch
     Spanish,            // Español
     Portuguese,         // Português
+};
+
+/// @brief 语言切换通知器。
+///
+/// 语言在设置页切换后会立即应用，但常驻 UI（系统托盘菜单、悬浮球菜单、
+/// 已打开的录制配置窗口等）的文案是在构造时固化的。这些窗口订阅
+/// languageChanged 信号即可在切换后立即重新翻译，无需重启应用。
+class LanguageChangeNotifier final : public QObject {
+    Q_OBJECT
+
+public:
+    /// @brief 返回全局唯一的语言切换通知器。
+    /// @return 通知器实例。
+    static LanguageChangeNotifier &instance();
+
+signals:
+    /// @brief 语言已切换（每次 setLanguage 生效后发出）。
+    void languageChanged();
+
+private:
+    explicit LanguageChangeNotifier(QObject *parent = nullptr)
+        : QObject(parent)
+    {
+    }
 };
 
 // Detects the UI language from the MARK_SHOT_LANG environment variable, then

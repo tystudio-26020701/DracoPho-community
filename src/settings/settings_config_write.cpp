@@ -177,6 +177,8 @@ void writeCaptureSettings(QJsonObject *root, const CaptureSettings &settings)
                    settings.kdeKwinScreenshotEnabled);
     setNestedValue(root, {QStringLiteral("capture"), QStringLiteral("hideOwnWindows")},
                    settings.hideOwnWindows);
+    setNestedValue(root, {QStringLiteral("capture"), QStringLiteral("delaySeconds")},
+                   settings.delaySeconds);
 }
 
 /// @brief 写入快捷键设置。

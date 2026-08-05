@@ -2,6 +2,7 @@
 
 #include "config_value.h"
 #include "debug_log.h"
+#include "delayed_capture_options.h"
 #if defined(MARK_SHOT_WITH_DBUS)
 #include "global_shortcut_portal.h"
 #endif
@@ -354,6 +355,11 @@ void WindowsTrayController::setRecordingRegionCallback(RecordingRegionCallback c
     m_recordingRegionCallback = std::move(callback);
 }
 
+void WindowsTrayController::setTimedCaptureCallback(TimedCaptureCallback callback)
+{
+    m_timedCaptureCallback = std::move(callback);
+}
+
 void WindowsTrayController::setFloatingBallVisibilityControl(Callback toggle, FloatingBallVisibility visible)
 {
     m_floatingBallToggle = std::move(toggle);
@@ -374,12 +380,27 @@ bool WindowsTrayController::start()
 
     if (m_showTrayIcon) {
         m_menu = new QMenu;
-        m_menu->addAction(MS_TR("Capture"), this, [this] { triggerCapture(); });
-        m_menu->addAction(MS_TR("Fullscreen Capture"), this, [this] { triggerFullscreenCapture(); });
+        m_captureAction = m_menu->addAction(MS_TR("Capture"), this, [this] { triggerCapture(); });
+        m_fullscreenAction = m_menu->addAction(MS_TR("Fullscreen Capture"), this, [this] { triggerFullscreenCapture(); });
+        if (m_timedCaptureCallback) {
+            // 延时截图子菜单：倒计时结束后按当前选区进入截图。
+            m_delayedCaptureMenu = m_menu->addMenu(MS_TR("Delayed Capture"));
+            m_delayedCaptureMenu->setObjectName(QStringLiteral("trayDelayedCaptureMenu"));
+            m_delayedCaptureItems.clear();
+            for (int seconds : kDelayedCapturePresets) {
+                QAction *item = m_delayedCaptureMenu->addAction(delayedCapturePresetLabel(seconds));
+                m_delayedCaptureItems.append(item);
+                QObject::connect(item, &QAction::triggered, this, [this, seconds] {
+                    if (m_timedCaptureCallback) {
+                        m_timedCaptureCallback(seconds);
+                    }
+                });
+            }
+        }
         m_startRecordingAction = m_menu->addAction(MS_TR("Start Recording"), this, [this] {
             startRecordingFromTray();
         });
-        m_menu->addAction(MS_TR("Settings"), this, [] { settings::showSettingsDialog(); });
+        m_settingsAction = m_menu->addAction(MS_TR("Settings"), this, [] { settings::showSettingsDialog(); });
         if (m_floatingBallToggle) {
             // 悬浮球显示/隐藏开关：用户主动隐藏的状态会持久，截图会话不会覆盖。
             m_floatingBallToggleAction =
@@ -404,7 +425,7 @@ bool WindowsTrayController::start()
         m_stopRecordingAction = m_menu->addAction(MS_TR("Stop Recording"), this, [this] { stopRecordingFromTray(); });
         m_stopRecordingAction->setEnabled(false);
         m_menu->addSeparator();
-        m_menu->addAction(MS_TR("Quit"), m_application, [this] {
+        m_quitAction = m_menu->addAction(MS_TR("Quit"), m_application, [this] {
             unregisterHotkeys();
             if (m_tray) {
                 m_tray->hide();
@@ -413,7 +434,7 @@ bool WindowsTrayController::start()
         });
 
         m_tray = new QSystemTrayIcon(icon, this);
-        m_tray->setToolTip(QStringLiteral("Mark Shot"));
+        m_tray->setToolTip(QStringLiteral("DracoPho"));
         m_tray->setContextMenu(m_menu);
         connect(m_tray, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
             if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
@@ -422,6 +443,12 @@ bool WindowsTrayController::start()
         });
         m_tray->show();
     }
+
+    // 语言切换即时生效：菜单文案在构造时固化，订阅通知后重新翻译。
+    connect(&i18n::LanguageChangeNotifier::instance(),
+            &i18n::LanguageChangeNotifier::languageChanged,
+            this,
+            &WindowsTrayController::retranslateUi);
 
     m_recordingStatusTimer = new QTimer(this);
     m_recordingStatusTimer->setInterval(1000);
@@ -497,7 +524,7 @@ void WindowsTrayController::startRecordingFromTray()
         QString error;
         if (!manager.start(options, m_application, &error)) {
             if (m_tray) {
-                m_tray->showMessage(QStringLiteral("Mark Shot"),
+                m_tray->showMessage(QStringLiteral("DracoPho"),
                                     error.isEmpty() ? MS_TR("Recording failed to start") : error,
                                     QSystemTrayIcon::Warning,
                                     3000);
@@ -512,7 +539,7 @@ void WindowsTrayController::startRecordingFromTray()
             return;
         }
         if (m_tray) {
-            m_tray->showMessage(QStringLiteral("Mark Shot"),
+            m_tray->showMessage(QStringLiteral("DracoPho"),
                                 MS_TR("Failed to start capture session."),
                                 QSystemTrayIcon::Warning,
                                 3000);
@@ -520,7 +547,7 @@ void WindowsTrayController::startRecordingFromTray()
     };
     request.showError = [this](const QString &message) {
         if (m_tray) {
-            m_tray->showMessage(QStringLiteral("Mark Shot"), message, QSystemTrayIcon::Warning, 3000);
+            m_tray->showMessage(QStringLiteral("DracoPho"), message, QSystemTrayIcon::Warning, 3000);
         }
     };
 
@@ -536,7 +563,7 @@ void WindowsTrayController::stopRecordingFromTray()
         return;
     }
     if (m_tray && !error.isEmpty()) {
-        m_tray->showMessage(QStringLiteral("Mark Shot"), error, QSystemTrayIcon::Information, 3000);
+        m_tray->showMessage(QStringLiteral("DracoPho"), error, QSystemTrayIcon::Information, 3000);
     }
 }
 
@@ -556,8 +583,8 @@ void WindowsTrayController::updateRecordingState()
     }
     if (m_tray) {
         m_tray->setToolTip(status.active
-                               ? QStringLiteral("Mark Shot - %1").arg(statusText)
-                               : QStringLiteral("Mark Shot"));
+                               ? QStringLiteral("DracoPho - %1").arg(statusText)
+                               : QStringLiteral("DracoPho"));
     }
     if (m_recordingStatusTimer) {
         if (status.active && !m_recordingStatusTimer->isActive()) {
@@ -566,6 +593,41 @@ void WindowsTrayController::updateRecordingState()
             m_recordingStatusTimer->stop();
         }
     }
+}
+
+void WindowsTrayController::retranslateUi()
+{
+    if (m_captureAction) {
+        m_captureAction->setText(MS_TR("Capture"));
+    }
+    if (m_fullscreenAction) {
+        m_fullscreenAction->setText(MS_TR("Fullscreen Capture"));
+    }
+    if (m_startRecordingAction) {
+        m_startRecordingAction->setText(MS_TR("Start Recording"));
+    }
+    if (m_settingsAction) {
+        m_settingsAction->setText(MS_TR("Settings"));
+    }
+    if (m_delayedCaptureMenu) {
+        m_delayedCaptureMenu->setTitle(MS_TR("Delayed Capture"));
+        const QStringList labels = delayedCapturePresetLabels();
+        for (int i = 0; i < m_delayedCaptureItems.size() && i < labels.size(); ++i) {
+            m_delayedCaptureItems.at(i)->setText(labels.at(i));
+        }
+    }
+    if (m_recordingStatusAction) {
+        m_recordingStatusAction->setText(recordingStatusText(
+            recording::RecordingSessionManager::instance().status()));
+    }
+    if (m_stopRecordingAction) {
+        m_stopRecordingAction->setText(MS_TR("Stop Recording"));
+    }
+    if (m_quitAction) {
+        m_quitAction->setText(MS_TR("Quit"));
+    }
+    // 悬浮球开关文案在 aboutToShow 中按可见性刷新，这里无需处理。
+    updateRecordingState();
 }
 
 void WindowsTrayController::registerHotkeys()
@@ -599,7 +661,7 @@ void WindowsTrayController::registerHotkeys()
                             .arg(static_cast<unsigned long>(GetLastError()));
         markshot::debugLog("windows", "%s", m_errorString.toUtf8().constData());
         if (m_tray) {
-            m_tray->showMessage(QStringLiteral("Mark Shot"), m_errorString, QSystemTrayIcon::Warning, 5000);
+            m_tray->showMessage(QStringLiteral("DracoPho"), m_errorString, QSystemTrayIcon::Warning, 5000);
         }
     };
 
@@ -661,7 +723,7 @@ void WindowsTrayController::registerHotkeys()
                        "【托盘】【全局快捷键】registration failed: %s",
                        m_errorString.toUtf8().constData());
     if (m_tray) {
-        m_tray->showMessage(QStringLiteral("Mark Shot"), m_errorString, QSystemTrayIcon::Information, 5000);
+        m_tray->showMessage(QStringLiteral("DracoPho"), m_errorString, QSystemTrayIcon::Information, 5000);
     }
 #else
     m_errorString = MS_TR("Global hotkeys are not supported on this platform. "
@@ -670,7 +732,7 @@ void WindowsTrayController::registerHotkeys()
                        "【托盘】【全局快捷键】registration failed: %s",
                        m_errorString.toUtf8().constData());
     if (m_tray) {
-        m_tray->showMessage(QStringLiteral("Mark Shot"), m_errorString, QSystemTrayIcon::Information, 4000);
+        m_tray->showMessage(QStringLiteral("DracoPho"), m_errorString, QSystemTrayIcon::Information, 4000);
     }
 #endif
 }

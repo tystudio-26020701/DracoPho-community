@@ -39,6 +39,8 @@ struct CaptureSettings {
     CaptureFreezeScope freezeScope = CaptureFreezeScope::AllScreens;
     bool kdeKwinScreenshotEnabled = true;
     bool hideOwnWindows = true;
+    /// 延时截图秒数（0 = 立即截图）。
+    int delaySeconds = 0;
 };
 
 struct ShortcutSettings {
@@ -151,7 +153,7 @@ inline bool operator==(const CaptureSettings &a, const CaptureSettings &b)
 {
     return a.includeCursor == b.includeCursor && a.freezeScope == b.freezeScope
         && a.kdeKwinScreenshotEnabled == b.kdeKwinScreenshotEnabled
-        && a.hideOwnWindows == b.hideOwnWindows;
+        && a.hideOwnWindows == b.hideOwnWindows && a.delaySeconds == b.delaySeconds;
 }
 
 inline bool operator==(const ShortcutSettings &a, const ShortcutSettings &b)

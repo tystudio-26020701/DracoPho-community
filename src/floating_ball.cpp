@@ -2,6 +2,7 @@
 
 #include "app_config_store.h"
 #include "debug_log.h"
+#include "delayed_capture_options.h"
 #include "recording/recording_session_manager.h"
 #include "recording/recording_start_flow.h"
 #include "settings/settings_dialog.h"
@@ -116,7 +117,7 @@ FloatingBall::FloatingBall(QWidget *parent)
     setAttribute(Qt::WA_ShowWithoutActivating);
     setFixedSize(kBallSize + kShadowRadius * 2, kBallSize + kShadowRadius * 2);
     setCursor(Qt::PointingHandCursor);
-    setToolTip(QStringLiteral("Mark Shot"));
+    setToolTip(QStringLiteral("DracoPho"));
     setObjectName(QStringLiteral("floatingBall"));
 
     markshot::windows::setExcludedFromTaskbar(this);
@@ -177,25 +178,25 @@ FloatingBall::FloatingBall(QWidget *parent)
     });
 
     m_menu = new QMenu(this);
-    m_menu->addAction(MS_TR("Capture"), this, [this] {
+    m_captureAction = m_menu->addAction(MS_TR("Capture"), this, [this] {
         if (m_captureCallback) {
             m_captureCallback();
         }
     });
-    m_menu->addAction(MS_TR("Fullscreen Capture"), this, [this] {
+    m_fullscreenAction = m_menu->addAction(MS_TR("Fullscreen Capture"), this, [this] {
         if (m_fullscreenCallback) {
             m_fullscreenCallback();
         }
     });
-    m_menu->addAction(MS_TR("Start Recording"), this, [this] {
+    m_startRecordingAction = m_menu->addAction(MS_TR("Start Recording"), this, [this] {
         startRecordingFromBall();
     });
     m_menu->addSeparator();
-    m_menu->addAction(MS_TR("Settings"), this, [] {
+    m_settingsAction = m_menu->addAction(MS_TR("Settings"), this, [] {
         markshot::settings::showSettingsDialog();
     });
     m_menu->addSeparator();
-    m_menu->addAction(MS_TR("Hide Floating Ball"), this, [this] {
+    m_hideBallAction = m_menu->addAction(MS_TR("Hide Floating Ball"), this, [this] {
         if (m_quitWhenHidden) {
             // 无托盘入口时，隐藏悬浮球等于失去唯一入口，直接退出应用。
             savePosition();
@@ -206,10 +207,16 @@ FloatingBall::FloatingBall(QWidget *parent)
         m_hiddenByUser = true;
         hide();
     });
-    m_menu->addAction(MS_TR("Quit"), qApp, [this] {
+    m_quitAction = m_menu->addAction(MS_TR("Quit"), qApp, [this] {
         savePosition();
         qApp->quit();
     });
+
+    // 语言切换即时生效：菜单文案在构造时固化，订阅通知后重新翻译。
+    connect(&i18n::LanguageChangeNotifier::instance(),
+            &i18n::LanguageChangeNotifier::languageChanged,
+            this,
+            &FloatingBall::retranslateUi);
 
     markshot::debugLog("floating", "ball constructed platform=%s",
                        QGuiApplication::platformName().toUtf8().constData());
@@ -221,9 +228,75 @@ void FloatingBall::setCaptureCallbacks(CaptureCallback capture, CaptureCallback 
     m_fullscreenCallback = std::move(fullscreen);
 }
 
+void FloatingBall::setTimedCaptureCallback(TimedCaptureCallback callback)
+{
+    m_timedCaptureCallback = std::move(callback);
+    // 回调在构造之后才设置（悬浮球菜单在构造时固化），这里惰性构建
+    // "延时截图"子菜单并插入到全屏截图之后、开始录制之前。
+    if (!m_timedCaptureCallback) {
+        return;
+    }
+    if (m_delayedCaptureMenu) {
+        m_menu->removeAction(m_delayedCaptureMenu->menuAction());
+        m_delayedCaptureMenu->deleteLater();
+        m_delayedCaptureMenu = nullptr;
+    }
+    m_delayedCaptureMenu = new QMenu(MS_TR("Delayed Capture"), m_menu);
+    m_delayedCaptureMenu->setObjectName(QStringLiteral("floatingDelayedCaptureMenu"));
+    m_delayedCaptureItems.clear();
+    for (int seconds : kDelayedCapturePresets) {
+        QAction *item = m_delayedCaptureMenu->addAction(delayedCapturePresetLabel(seconds));
+        m_delayedCaptureItems.append(item);
+        QObject::connect(item, &QAction::triggered, this, [this, seconds] {
+            if (m_timedCaptureCallback) {
+                m_timedCaptureCallback(seconds);
+            }
+        });
+    }
+    QAction *before = m_startRecordingAction;
+    if (!before) {
+        before = m_fullscreenAction;
+    }
+    if (before) {
+        m_menu->insertMenu(before, m_delayedCaptureMenu);
+    } else {
+        m_menu->addMenu(m_delayedCaptureMenu);
+    }
+}
+
 void FloatingBall::setRecordingRegionCallback(RecordingRegionCallback callback)
 {
     m_recordingRegionCallback = std::move(callback);
+}
+
+void FloatingBall::retranslateUi()
+{
+    if (m_captureAction) {
+        m_captureAction->setText(MS_TR("Capture"));
+    }
+    if (m_fullscreenAction) {
+        m_fullscreenAction->setText(MS_TR("Fullscreen Capture"));
+    }
+    if (m_startRecordingAction) {
+        m_startRecordingAction->setText(MS_TR("Start Recording"));
+    }
+    if (m_settingsAction) {
+        m_settingsAction->setText(MS_TR("Settings"));
+    }
+    if (m_hideBallAction) {
+        m_hideBallAction->setText(MS_TR("Hide Floating Ball"));
+    }
+    if (m_quitAction) {
+        m_quitAction->setText(MS_TR("Quit"));
+    }
+    if (m_delayedCaptureMenu) {
+        m_delayedCaptureMenu->setTitle(MS_TR("Delayed Capture"));
+        const QStringList labels = delayedCapturePresetLabels();
+        for (int i = 0; i < m_delayedCaptureItems.size() && i < labels.size(); ++i) {
+            m_delayedCaptureItems.at(i)->setText(labels.at(i));
+        }
+    }
+    // 悬浮球 tooltip 使用产品名，无需翻译。
 }
 
 void FloatingBall::setQuitWhenHidden(bool quitWhenHidden)
@@ -541,11 +614,28 @@ void FloatingBall::hideEvent(QHideEvent *event)
 void FloatingBall::showBallMenu(const QPoint &globalPos)
 {
     // 悬浮球菜单每次现建现用（菜单关闭后不持有动作），动作复用 m_menu。
+    // 子菜单（延时截图）一并克隆：克隆菜单里的子菜单动作仍绑定原动作，
+    // 保证触发走 m_timedCaptureCallback 且语言切换后文案一致。
     m_menuOpen = true;
     QMenu menu;
     for (QAction *action : m_menu->actions()) {
         if (action->isSeparator()) {
             menu.addSeparator();
+        } else if (QMenu *submenu = action->menu()) {
+            QMenu *clonedSubmenu = menu.addMenu(action->text());
+            for (QAction *subAction : submenu->actions()) {
+                if (subAction->isSeparator()) {
+                    clonedSubmenu->addSeparator();
+                    continue;
+                }
+                QAction *cloned = clonedSubmenu->addAction(subAction->text());
+                cloned->setEnabled(subAction->isEnabled());
+                QObject::connect(cloned, &QAction::triggered, subAction, [subAction] {
+                    if (subAction->isEnabled()) {
+                        subAction->trigger();
+                    }
+                });
+            }
         } else {
             QAction *cloned = menu.addAction(action->text());
             cloned->setEnabled(action->isEnabled());
@@ -576,7 +666,7 @@ void FloatingBall::startRecordingFromBall()
         if (!manager.start(options, QApplication::instance(), &error)) {
             // 悬浮球无托盘通知可用，录制失败必须弹窗告知，避免静默无反应。
             QMessageBox::warning(nullptr,
-                                 QStringLiteral("Mark Shot"),
+                                 QStringLiteral("DracoPho"),
                                  error.isEmpty() ? MS_TR("Recording failed to start") : error);
         }
     };
@@ -586,11 +676,11 @@ void FloatingBall::startRecordingFromBall()
             return;
         }
         QMessageBox::warning(nullptr,
-                             QStringLiteral("Mark Shot"),
+                             QStringLiteral("DracoPho"),
                              MS_TR("Failed to start capture session."));
     };
     request.showError = [](const QString &message) {
-        QMessageBox::warning(nullptr, QStringLiteral("Mark Shot"), message);
+        QMessageBox::warning(nullptr, QStringLiteral("DracoPho"), message);
     };
 
     recording::runRecordingStartFlow(request);

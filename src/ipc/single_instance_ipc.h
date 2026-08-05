@@ -17,6 +17,7 @@ struct SingleInstanceCommand {
     bool capture = false;
     bool fullscreen = false;
     bool allOutputs = false;
+    int delaySeconds = 0;          // 延时截图秒数（0 = 立即）
     bool recordingStatus = false;
     bool stopRecording = false;
     // 无人值守录制请求（供 CLI / MCP 智能体调用）：
