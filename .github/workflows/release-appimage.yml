@@ -135,7 +135,7 @@ jobs:
             --appdir "$APPDIR" \
             --executable "$APPDIR/usr/bin/mark-shot" \
             --desktop-file "$APPDIR/usr/share/applications/mark-shot.desktop" \
-            --icon-file data/icons/hicolor/scalable/apps/mark-shot.svg \
+            --icon-file data/icons/TY-DracoPho.svg \
             --plugin qt \
             --output appimage
 

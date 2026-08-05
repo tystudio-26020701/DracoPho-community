@@ -86,7 +86,7 @@ jobs:
           rsvg-convert \
             -w 128 \
             -h 128 \
-            data/icons/hicolor/scalable/apps/mark-shot.svg \
+            data/icons/TY-DracoPho.svg \
             -o packaging/flatpak/io.github.jswysnemc.MarkShot.png
 
           cd packaging/flatpak

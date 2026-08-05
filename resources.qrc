@@ -1,9 +1,12 @@
 <RCC>
   <qresource prefix="/icons">
-    <file alias="mark-shot.ico">packaging/windows/mark-shot.ico</file>
+    <file alias="mark-shot.ico">data/icons/DracoPho-logo.ico</file>
     <file alias="mark-shot.svg">data/icons/hicolor/scalable/apps/mark-shot.svg</file>
     <file alias="chevron-down.svg">data/icons/chevron-down.svg</file>
     <file alias="chevron-up.svg">data/icons/chevron-up.svg</file>
     <file alias="company-logo.png">data/icons/company-logo.png</file>
+    <file alias="dracoPho-logo.png">data/icons/DracoPho-logo.png</file>
+    <file alias="dracoPho-logo.webp">data/icons/DracoPho-logo.webp</file>
+    <file alias="ty-dracoPho.svg">data/icons/TY-DracoPho.svg</file>
   </qresource>
 </RCC>
