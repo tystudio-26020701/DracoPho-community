@@ -152,7 +152,9 @@ void ShotWindow::pinSelection()
     window->show();
     window->raise();
     window->activateWindow();
-    close();
+    if (!m_standaloneEditor) {
+        close();
+    }
 }
 
 void ShotWindow::ocrCopySelection()
@@ -246,7 +248,9 @@ void ShotWindow::ocrCopySelection()
         window->show();
         window->raise();
         window->activateWindow();
-        close();
+        if (!m_standaloneEditor) {
+            close();
+        }
         return;
     }
 
@@ -254,7 +258,9 @@ void ShotWindow::ocrCopySelection()
     if (!sendDesktopNotification(QStringLiteral("DracoPho"), MS_TR("OCR text copied"), 2500)) {
         showToast(MS_TR("OCR text copied"));
     }
-    QTimer::singleShot(150, this, [this] { close(); });
+    if (!m_standaloneEditor) {
+        QTimer::singleShot(150, this, [this] { close(); });
+    }
 }
 
 void ShotWindow::showToast(const QString &text, int durationMs)

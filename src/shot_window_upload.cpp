@@ -91,5 +91,8 @@ void ShotWindow::uploadSelection()
     if (!sendDesktopNotification(QStringLiteral("DracoPho"), MS_TR("Image URL copied"), 2500)) {
         showToast(MS_TR("Image URL copied"));
     }
-    QTimer::singleShot(150, this, [this] { close(); });
+    // 独立编辑器模式：上传后保持窗口打开，继续编辑。
+    if (!m_standaloneEditor) {
+        QTimer::singleShot(150, this, [this] { close(); });
+    }
 }

@@ -62,6 +62,10 @@ void ShotWindow::wheelEvent(QWheelEvent *event)
         event->accept();
         return;
     }
+    if (hasEmptyEditorCanvas()) {
+        event->accept();
+        return;
+    }
     if (m_mode == Mode::Selecting && m_startupTool == StartupTool::ColorPicker) {
         const int delta = event->angleDelta().y() != 0 ? event->angleDelta().y() : event->pixelDelta().y();
         if (delta == 0) {
@@ -160,6 +164,20 @@ void ShotWindow::keyPressEvent(QKeyEvent *event)
 
     if (m_mode == Mode::Selecting && activeRecordingAvailable() && event->key() == Qt::Key_S) {
         stopActiveRecordingFromOverlay();
+        event->accept();
+        return;
+    }
+
+    if (m_standaloneEditor && m_frozenFrame.isNull()
+        && event->key() == Qt::Key_O && event->modifiers().testFlag(Qt::ControlModifier)) {
+        openImageForEditor();
+        event->accept();
+        return;
+    }
+
+    if (m_standaloneEditor && m_frozenFrame.isNull()
+        && (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)) {
+        openImageForEditor();
         event->accept();
         return;
     }

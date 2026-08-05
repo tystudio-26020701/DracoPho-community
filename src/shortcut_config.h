@@ -9,7 +9,7 @@
 
 namespace markshot::shortcut {
 
-using ActionShortcuts = std::array<QKeySequence, static_cast<int>(ShotWindow::Action::Cancel) + 1>;
+using ActionShortcuts = std::array<QKeySequence, static_cast<int>(ShotWindow::Action::Count)>;
 using ToolShortcuts = std::array<QKeySequence, static_cast<int>(ShotWindow::Tool::Laser) + 1>;
 
 struct ShortcutConfig {

@@ -38,6 +38,10 @@ void ShotWindow::hideTransientPanels()
 void ShotWindow::enterFullscreenAnnotation(bool resetAnnotations)
 {
     commitTextEditor();
+    if (m_frozenFrame.isNull()) {
+        // 独立编辑器空画布：没有图片时不能进入标注编辑状态。
+        return;
+    }
     emit selectionActivated(this);
     if (m_colorPalette) {
         m_colorPalette->hide();
