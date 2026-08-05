@@ -10,6 +10,10 @@ void ShotWindow::mouseMoveEvent(QMouseEvent *event)
         event->accept();
         return;
     }
+    if (hasEmptyEditorCanvas()) {
+        event->accept();
+        return;
+    }
     if (m_imagePanning) {
         panImageTo(event->position());
         event->accept();
@@ -288,6 +292,10 @@ void ShotWindow::mouseDoubleClickEvent(QMouseEvent *event)
         event->accept();
         return;
     }
+    if (hasEmptyEditorCanvas()) {
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::RightButton && m_mode == Mode::Editing) {
         toggleColorPalette(event->pos());
         event->accept();
@@ -387,6 +395,10 @@ void ShotWindow::mouseDoubleClickEvent(QMouseEvent *event)
 void ShotWindow::mouseReleaseEvent(QMouseEvent *event)
 {
     if (m_frozenBackdrop) {
+        event->accept();
+        return;
+    }
+    if (hasEmptyEditorCanvas()) {
         event->accept();
         return;
     }
@@ -680,4 +692,54 @@ void ShotWindow::setTool(Tool tool)
     updateCursor();
     updateToolbarState();
     update();
+}
+
+void ShotWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (!m_standaloneEditor || !event || !event->mimeData()) {
+        event->ignore();
+        return;
+    }
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+        return;
+    }
+    if (event->mimeData()->hasImage()) {
+        event->acceptProposedAction();
+        return;
+    }
+    event->ignore();
+}
+
+void ShotWindow::dropEvent(QDropEvent *event)
+{
+    if (!m_standaloneEditor || !event || !event->mimeData()) {
+        event->ignore();
+        return;
+    }
+
+    const QList<QUrl> urls = event->mimeData()->urls();
+    for (const QUrl &url : urls) {
+        if (!url.isLocalFile()) {
+            continue;
+        }
+        const QString path = url.toLocalFile();
+        QImageReader reader(path);
+        reader.setAutoTransform(true);
+        const QImage image = reader.read();
+        if (image.isNull()) {
+            continue;
+        }
+        if (loadEditorImage(image, QFileInfo(path).fileName())) {
+            event->acceptProposedAction();
+            return;
+        }
+    }
+
+    const QImage image = qvariant_cast<QImage>(event->mimeData()->imageData());
+    if (!image.isNull() && loadEditorImage(image, QStringLiteral("clipboard-image"))) {
+        event->acceptProposedAction();
+        return;
+    }
+    event->ignore();
 }

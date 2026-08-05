@@ -91,6 +91,8 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addVersionOption();
     parser.addPositionalArgument(QStringLiteral("file"), QStringLiteral("Open an existing image file for annotation instead of capturing the screen."), QStringLiteral("[file]"));
+    QCommandLineOption editorOption(QStringLiteral("editor"),
+                                    QStringLiteral("Open the DracoPho image editor with an empty canvas. Use Open (Ctrl+O) or drag & drop to import an image for annotation editing."));
     QCommandLineOption allOutputsOption({QStringLiteral("all-outputs"), QStringLiteral("all-output")},
                                         QStringLiteral("Capture all outputs instead of the current Qt screen."));
     QCommandLineOption xdgWindowOption(QStringLiteral("xdg-window"), QStringLiteral("Use a regular fullscreen xdg window instead of layer-shell."));
@@ -154,9 +156,12 @@ int main(int argc, char *argv[])
     QCommandLineOption delayOption(QStringLiteral("delay"),
                                    QStringLiteral("Wait the given number of seconds before capturing (countdown overlay, Esc to cancel)."),
                                    QStringLiteral("seconds"));
+    QCommandLineOption windowCaptureOption(QStringLiteral("capture-window"),
+                                           QStringLiteral("Start an interactive window capture: hover to highlight a window, click to capture it (X11 reads occluded/minimized window content; elsewhere the window's screen region is captured)."));
     parser.addOption(allOutputsOption);
     parser.addOption(xdgWindowOption);
     parser.addOption(fullscreenAnnotationOption);
+    parser.addOption(editorOption);
     parser.addOption(trayOption);
     parser.addOption(captureOption);
     parser.addOption(pinImageOption);
@@ -386,53 +391,78 @@ int main(int argc, char *argv[])
     }
 
     const bool fileMode = !imagePath.isEmpty();
-    if (fileMode) {
-        QFileInfo imageFile(imagePath);
-        if (!imageFile.exists() || !imageFile.isFile()) {
-            QMessageBox::critical(nullptr, QStringLiteral("DracoPho"), MS_TR("Image file does not exist: %1").arg(imagePath));
-            return 1;
+    const bool editorMode = parser.isSet(editorOption);
+    if (fileMode || editorMode) {
+        QImage image;
+        QString fileName;
+        if (fileMode) {
+            QFileInfo imageFile(imagePath);
+            if (!imageFile.exists() || !imageFile.isFile()) {
+                QMessageBox::critical(nullptr, QStringLiteral("DracoPho"), MS_TR("Image file does not exist: %1").arg(imagePath));
+                return 1;
+            }
+
+            QImageReader reader(imageFile.absoluteFilePath());
+            reader.setAutoTransform(true);
+            image = reader.read();
+            if (image.isNull()) {
+                QMessageBox::critical(nullptr,
+                                      QStringLiteral("DracoPho"),
+                                      MS_TR("Failed to load image: %1\n%2").arg(imageFile.absoluteFilePath(), reader.errorString()));
+                return 1;
+            }
+            fileName = imageFile.fileName();
         }
 
-        QImageReader reader(imageFile.absoluteFilePath());
-        reader.setAutoTransform(true);
-        const QImage image = reader.read();
-        if (image.isNull()) {
-            QMessageBox::critical(nullptr,
-                                  QStringLiteral("DracoPho"),
-                                  MS_TR("Failed to load image: %1\n%2").arg(imageFile.absoluteFilePath(), reader.errorString()));
-            return 1;
-        }
-
-        ShotWindow *window = new ShotWindow(image, imageFile.fileName());
+        ShotWindow *window = new ShotWindow(image, fileName);
         window->setDefaultTools(defaultTools.normal, defaultTools.file);
         if (markshot::shouldApplyDefaultColor(defaultTools)) {
             window->setDefaultColor(defaultTools.color);
         }
+        window->setStandaloneEditorMode(editorMode);
         QScreen *screen = markshot::focusedScreen();
         if (screen) {
             window->setScreen(screen);
         }
         window->setWindowFlags(Qt::Window);
-        const QRect windowGeometry = markshot::centeredImageWindowGeometry(image.size(), screen);
-        if (windowGeometry.isValid() && !windowGeometry.isEmpty()) {
-            window->setGeometry(windowGeometry);
+        if (image.isNull()) {
+            // 独立编辑器空画布：使用一个常规大小的编辑窗口。
+            const QRect availableGeometry = screen
+                ? screen->availableGeometry()
+                : QRect(QPoint(0, 0), QSize(1200, 800));
+            const QSize editorSize(qMax(480, qRound(availableGeometry.width() * 0.8)),
+                                   qMax(360, qRound(availableGeometry.height() * 0.8)));
+            // 先设最小尺寸再 resize：resize 会在最小尺寸之上生效。
+            window->setMinimumSize(400, 300);
+            window->resize(editorSize);
+            window->setWindowTitle(MS_TR("DracoPho Image Editor"));
+        } else {
+            const QRect windowGeometry = markshot::centeredImageWindowGeometry(image.size(), screen);
+            if (windowGeometry.isValid() && !windowGeometry.isEmpty()) {
+                window->setGeometry(windowGeometry);
+            }
+            window->setWindowTitle(fileName);
         }
         window->setImageNavigationEnabled(true);
         window->show();
         window->raise();
         window->activateWindow();
-        QTimer::singleShot(0, window, [window] {
-            window->startFullscreenAnnotation();
-        });
+        if (!image.isNull()) {
+            QTimer::singleShot(0, window, [window] {
+                window->startFullscreenAnnotation();
+            });
+        }
         return QApplication::exec();
     }
 
     const bool allOutputs = parser.isSet(allOutputsOption);
     const bool useRegularWindow = parser.isSet(xdgWindowOption);
     const bool fullscreenAnnotation = parser.isSet(fullscreenAnnotationOption);
+    const bool windowCaptureRequested = parser.isSet(windowCaptureOption);
     const markshot::WindowsTrayController::Config trayConfig = markshot::WindowsTrayController::readConfig();
     const bool explicitCaptureRequest =
-        parser.isSet(captureOption) || parser.isSet(allOutputsOption) || parser.isSet(fullscreenAnnotationOption);
+        parser.isSet(captureOption) || parser.isSet(allOutputsOption) || parser.isSet(fullscreenAnnotationOption)
+        || windowCaptureRequested;
 
     // 解析启动行为（多选组合）：直接截图 / 托盘图标 / 悬浮球 / 设置窗口。
     // 显式 CLI 请求（--capture/--all-outputs/--fullscreen/--tray）始终优先于配置。

@@ -91,6 +91,9 @@ public:
         Upload,
         Settings,
         Cancel,
+        // 独立图片编辑器（--editor）专用动作：导入一张图片开始编辑。
+        OpenImage,
+        Count,  // 动作枚举数量哨兵：所有新动作必须加在 Count 之前。
     };
 
     // Editing tools available after a region is selected. These values are also
@@ -145,6 +148,26 @@ public:
     void setDefaultTool(Tool tool);
     void setDefaultTools(Tool tool, Tool fullscreenTool);
     void setDefaultColor(QColor color);
+    /**
+     * 切换到"独立图片编辑器"模式：允许以空画布启动（无冻结帧），
+     * 提供"打开图片"按钮、Ctrl+O 与拖放导入，导入后进入常规标注编辑。
+     * @param enabled 是否启用独立编辑器模式。
+     */
+    void setStandaloneEditorMode(bool enabled);
+    /// @brief 独立编辑器模式是否已启用。
+    /// @return 已启用时返回 true。
+    bool isStandaloneEditor() const;
+    /// @brief 是否处于"空画布"状态（独立编辑器模式且尚未导入图片）。
+    /// @return 空画布时返回 true。
+    bool hasEmptyEditorCanvas() const;
+    /// @brief 从文件对话框导入图片到编辑器。
+    /// @return 无返回值。
+    void openImageForEditor();
+    /// @brief 直接把一张图片载入编辑器画布。
+    /// @param image 待编辑的图片。
+    /// @param name 图片名称（窗口标题/保存文件名）。
+    /// @return 载入成功返回 true。
+    bool loadEditorImage(const QImage &image, const QString &name);
     void showDisplayCaptureTargets(QVector<markshot::display_capture::Target> targets);
     /**
      * 进入"冻结背景"状态：本窗口继续显示冻结画面并拦截全部输入，
@@ -182,6 +205,8 @@ protected:
     void showEvent(QShowEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 private:
     // High-level interaction mode: first pick a capture region, then edit the
@@ -197,6 +222,7 @@ private:
         ColorPicker,
         Ruler,
         CodeScanner,
+        WindowCapture,
         GifRecorder,
         VideoRecorder,
     };
@@ -570,8 +596,19 @@ private:
     QRectF activeRecordingStopButtonRect() const;
     void drawStartupColorLoupe(QPainter &painter, QPointF imagePoint) const;
     void drawStartupRuler(QPainter &painter) const;
+    /// 执行窗口捕获：优先从 X11 合成缓冲抓取窗口自身内容（支持遮挡/最小化
+    /// 窗口），否则回退为从冻结帧裁剪窗口矩形；成功后打开编辑器窗口。
+    /// @param window 命中的窗口信息（rect 为图像坐标，含 X11 id 与标题）。
+    /// @return 无返回值。
+    void performWindowCapture(const markshot::WindowInfo &window);
     QVector<markshot::startup_hint::ShortcutHintItem> startupShortcutHintItems() const;
     bool updateStartupShortcutHintAnchor(QPointF pointer);
+    /// 绘制独立编辑器空画布占位界面（logo、提示文案、导入入口）。
+    /// @param painter 当前绘图对象。
+    void drawStandaloneEditorPlaceholder(QPainter &painter) const;
+    /// 显示/隐藏独立编辑器空画布的"打开图片"按钮。
+    /// @param visible 是否显示。
+    void setEditorOpenButtonVisible(bool visible);
     QKeySequence shortcutForAction(Action action) const;
     QKeySequence shortcutForTool(Tool tool) const;
     QString shortcutText(Action action, const QString &fallback = {}) const;
@@ -589,6 +626,9 @@ private:
     QRect m_sourceGeometry;
     QRectF m_frozenImageRect;
     bool m_imageNavigationEnabled = false;
+    // 独立图片编辑器模式：以空画布启动，允许导入图片后进入标注编辑。
+    bool m_standaloneEditor = false;
+    QPushButton *m_editorOpenButton = nullptr;
     qreal m_imageZoom = 1.0;
     QPointF m_imageCenter;
     bool m_imageCenterInitialized = false;
@@ -627,7 +667,7 @@ private:
     Tool m_tool = Tool::Pen;
     Tool m_defaultTool = Tool::Pen;
     Tool m_fullscreenDefaultTool = Tool::Pen;
-    std::array<QKeySequence, static_cast<int>(Action::Cancel) + 1> m_actionShortcuts;
+    std::array<QKeySequence, static_cast<int>(Action::Count)> m_actionShortcuts;
     std::array<QKeySequence, static_cast<int>(Tool::Laser) + 1> m_toolShortcuts;
     QKeySequence m_startupColorPickerShortcut;
     QKeySequence m_startupRulerShortcut;

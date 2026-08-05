@@ -113,6 +113,8 @@ QString actionName(ShotWindow::Action action)
         return QStringLiteral("Settings");
     case ShotWindow::Action::Cancel:
         return QStringLiteral("Cancel");
+    case ShotWindow::Action::OpenImage:
+        return QStringLiteral("Open Image");
     }
     return {};
 }
@@ -567,6 +569,23 @@ QIcon makeToolIcon(ShotWindow::Action action)
         p.setPen(makePen(kInk, 1.6));
         p.drawLine(QPointF(10, 10), QPointF(22, 22));
         p.drawLine(QPointF(22, 10), QPointF(10, 22));
+        break;
+    }
+    case ShotWindow::Action::OpenImage: {
+        // Folder-open glyph: rounded tray with an open flap pointing inward.
+        p.setPen(makePen(kInk, 1.6));
+        QPainterPath tray;
+        tray.moveTo(7.0, 10.5);
+        tray.lineTo(10.5, 8.0);
+        tray.lineTo(21.5, 8.0);
+        tray.lineTo(24.0, 10.5);
+        tray.lineTo(24.0, 23.5);
+        tray.lineTo(8.0, 23.5);
+        tray.closeSubpath();
+        p.drawPath(tray);
+        p.drawLine(QPointF(7.0, 10.5), QPointF(8.0, 23.5));
+        p.setPen(makePen(kInkSoft, 1.4));
+        p.drawLine(QPointF(11.0, 17.0), QPointF(20.0, 17.0));
         break;
     }
     }

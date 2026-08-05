@@ -195,6 +195,13 @@ bool ShotWindow::handleConfiguredActionShortcut(QKeyEvent *event)
         clearAnnotations();
         return true;
     }
+    if (eventMatchesShortcut(event, Action::OpenImage)) {
+        if (m_standaloneEditor) {
+            openImageForEditor();
+            return true;
+        }
+        return false;
+    }
     return false;
 }
 

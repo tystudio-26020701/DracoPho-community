@@ -53,7 +53,7 @@ private:
     QList<ShortcutKeySequenceEdit *> allShortcutEdits() const;
 
     std::array<ShortcutKeySequenceEdit *, static_cast<int>(ShotWindow::Tool::Laser) + 1> m_toolEdits = {};
-    std::array<ShortcutKeySequenceEdit *, static_cast<int>(ShotWindow::Action::Cancel) + 1> m_actionEdits = {};
+    std::array<ShortcutKeySequenceEdit *, static_cast<int>(ShotWindow::Action::Count)> m_actionEdits = {};
     ShortcutKeySequenceEdit *m_startupColorPicker = nullptr;
     ShortcutKeySequenceEdit *m_startupRuler = nullptr;
     ShortcutKeySequenceEdit *m_startupCodeScanner = nullptr;

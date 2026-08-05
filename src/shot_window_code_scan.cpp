@@ -83,5 +83,7 @@ void ShotWindow::scanCodeSelection()
     window->show();
     window->raise();
     window->activateWindow();
-    close();
+    if (!m_standaloneEditor) {
+        close();
+    }
 }

@@ -38,6 +38,8 @@
 #endif
 #include <QDir>
 #include <QDirIterator>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QEvent>
 #include <QFile>
 #include <QFileDialog>
@@ -52,6 +54,7 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QJsonValue>
+#include <QImageReader>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
@@ -62,6 +65,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -89,6 +93,7 @@
 #include <QToolButton>
 #include <QTransform>
 #include <QUrl>
+#include <QVariant>
 #include <QVBoxLayout>
 #include <QWindow>
 #include <QWheelEvent>

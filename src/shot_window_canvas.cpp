@@ -281,6 +281,73 @@ void ShotWindow::drawStartupToolOverlay(QPainter &painter)
         drawStartupColorLoupe(painter, m_startupHoverImagePoint);
     } else if (m_startupTool == StartupTool::Ruler) {
         drawStartupRuler(painter);
+    } else if (m_startupTool == StartupTool::WindowCapture) {
+        const QString text = MS_TR("Hover a window and click to capture it");
+        painter.setFont(markshot::theme::uiFont(12, QFont::DemiBold));
+        const QFontMetrics metrics(painter.font());
+        const QRectF labelRect((width() - metrics.horizontalAdvance(text) - 28.0) / 2.0,
+                               height() - 64.0,
+                               metrics.horizontalAdvance(text) + 28.0,
+                               metrics.height() + 14.0);
+        drawRoundedLabel(painter, labelRect, text);
+    }
+}
+
+void ShotWindow::drawStandaloneEditorPlaceholder(QPainter &painter) const
+{
+    const QRectF area = QRectF(rect());
+    const QPointF center = area.center();
+    const QFont titleFont = markshot::theme::uiFont(24, QFont::DemiBold);
+    const QFont subtitleFont = markshot::theme::uiFont(13, QFont::Normal);
+    const QFont hintFont = markshot::theme::uiFont(11, QFont::DemiBold);
+
+    // 应用图标（龙徽 logo）。
+    const int logoSize = 96;
+    const QIcon logo = markshot::ui::applicationIcon();
+    const QPixmap logoPixmap = logo.isNull()
+        ? QPixmap()
+        : logo.pixmap(QSize(logoSize, logoSize));
+    qreal y = center.y() - logoSize - 56.0;
+    if (!logoPixmap.isNull()) {
+        painter.drawPixmap(QRectF(center.x() - logoSize / 2.0, y, logoSize, logoSize).toAlignedRect(),
+                           logoPixmap);
+        y += logoSize + 18.0;
+    } else {
+        y += logoSize / 2.0 + 18.0;
+    }
+
+    painter.setFont(titleFont);
+    painter.setPen(QColor(229, 231, 235));
+    const QString title = MS_TR("DracoPho Image Editor");
+    const QRectF titleRect(0, y, width(), 36.0);
+    painter.drawText(titleRect, Qt::AlignHCenter | Qt::AlignTop, title);
+    y += 36.0 + 10.0;
+
+    painter.setFont(subtitleFont);
+    painter.setPen(QColor(148, 163, 184));
+    const QString subtitle = MS_TR("Open an image to start editing, or drop one anywhere in this window.");
+    const QRectF subtitleRect(0, y, width(), 26.0);
+    painter.drawText(subtitleRect, Qt::AlignHCenter | Qt::AlignTop, subtitle);
+    y += 26.0 + 26.0;
+
+    painter.setFont(hintFont);
+    painter.setPen(QColor(94, 234, 212, 200));
+    const QString hint = QStringLiteral("Ctrl+O  ·  %1").arg(MS_TR("drag & drop"));
+    const QFontMetrics hintMetrics(hintFont);
+    const QRectF hintRect(0, y, width(), hintMetrics.height() + 8.0);
+    painter.drawText(hintRect, Qt::AlignHCenter | Qt::AlignTop, hint);
+
+    if (m_editorOpenButton) {
+        m_editorOpenButton->adjustSize();
+        const QSize buttonSize = m_editorOpenButton->sizeHint();
+        const QRect target(qRound(center.x() - buttonSize.width() / 2.0),
+                           qRound(y + hintRect.height() + 16.0),
+                           buttonSize.width(),
+                           buttonSize.height());
+        // 只在几何变化时设置，避免每次重绘重复触发布局。
+        if (m_editorOpenButton->geometry() != target) {
+            m_editorOpenButton->setGeometry(target);
+        }
     }
 }
 
@@ -289,6 +356,11 @@ void ShotWindow::paintEvent(QPaintEvent *)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.fillRect(rect(), QColor(0, 0, 0));
+    if (hasEmptyEditorCanvas()) {
+        drawStandaloneEditorPlaceholder(painter);
+        drawActiveRecordingStatus(painter);
+        return;
+    }
     const qreal imageScale = m_frozenFrame.isNull()
         ? 1.0
         : m_frozenImageRect.width() / std::max<qreal>(1.0, m_frozenFrame.width());
@@ -461,6 +533,10 @@ void ShotWindow::showEvent(QShowEvent *event)
 void ShotWindow::mousePressEvent(QMouseEvent *event)
 {
     if (m_frozenBackdrop) {
+        event->accept();
+        return;
+    }
+    if (hasEmptyEditorCanvas()) {
         event->accept();
         return;
     }

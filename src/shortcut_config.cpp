@@ -22,6 +22,7 @@ ActionShortcuts defaultActionShortcuts()
     shortcuts[actionIndex(ShotWindow::Action::Pin)] = QKeySequence(Qt::CTRL | Qt::Key_P);
     shortcuts[actionIndex(ShotWindow::Action::Copy)] = QKeySequence(Qt::CTRL | Qt::Key_C);
     shortcuts[actionIndex(ShotWindow::Action::Save)] = QKeySequence(Qt::CTRL | Qt::Key_S);
+    shortcuts[actionIndex(ShotWindow::Action::OpenImage)] = QKeySequence(Qt::CTRL | Qt::Key_O);
     shortcuts[actionIndex(ShotWindow::Action::Upload)] = QKeySequence(Qt::CTRL | Qt::Key_U);
     shortcuts[actionIndex(ShotWindow::Action::Cancel)] = QKeySequence(Qt::Key_Escape);
     shortcuts[actionIndex(ShotWindow::Action::Undo)] = QKeySequence(Qt::CTRL | Qt::Key_Z);
@@ -205,6 +206,10 @@ std::optional<ShotWindow::Action> actionFromConfigName(QString name)
     if (key == QStringLiteral("undo")) return ShotWindow::Action::Undo;
     if (key == QStringLiteral("redo")) return ShotWindow::Action::Redo;
     if (key == QStringLiteral("open") || key == QStringLiteral("openwith")) return ShotWindow::Action::OpenWith;
+    if (key == QStringLiteral("openimage") || key == QStringLiteral("open-image")
+        || key == QStringLiteral("import")) {
+        return ShotWindow::Action::OpenImage;
+    }
     if (key == QStringLiteral("extension") || key == QStringLiteral("extensions")) return ShotWindow::Action::Extensions;
     if (key == QStringLiteral("pin")) return ShotWindow::Action::Pin;
     if (key == QStringLiteral("scroll") || key == QStringLiteral("scrollcapture")) return ShotWindow::Action::ScrollCapture;

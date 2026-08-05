@@ -469,6 +469,20 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     initializeTextEditor();
     initializeLaserTimer();
     initializeWindowDetection(std::move(windowInfos), windowDetectionEnabled);
+
+    // 独立图片编辑器的"打开图片"按钮：仅在 --editor 空画布时显示。
+    m_editorOpenButton = new QPushButton(this);
+    m_editorOpenButton->setObjectName(QStringLiteral("editorOpenButton"));
+    m_editorOpenButton->setFocusPolicy(Qt::NoFocus);
+    m_editorOpenButton->setCursor(Qt::PointingHandCursor);
+    m_editorOpenButton->setIcon(markshot::ui::makeToolIcon(Action::OpenImage));
+    m_editorOpenButton->setIconSize(QSize(20, 20));
+    m_editorOpenButton->setText(MS_TR("Open Image"));
+    m_editorOpenButton->setToolTip(MS_TR("Open an image to start editing"));
+    m_editorOpenButton->setAccessibleName(MS_TR("Open Image"));
+    m_editorOpenButton->setStyleSheet(m_toolbar->styleSheet());
+    m_editorOpenButton->hide();
+    connect(m_editorOpenButton, &QPushButton::clicked, this, &ShotWindow::openImageForEditor);
 }
 
 void ShotWindow::initializeToolbar()
@@ -804,4 +818,119 @@ void ShotWindow::setDefaultTools(Tool tool, Tool fullscreenTool)
 void ShotWindow::setDefaultColor(QColor color)
 {
     setCurrentColor(color);
+}
+
+void ShotWindow::setStandaloneEditorMode(bool enabled)
+{
+    m_standaloneEditor = enabled;
+    setAcceptDrops(enabled);
+    if (enabled) {
+        setImageNavigationEnabled(true);
+        // 空画布时只显示导入入口，隐藏选区/标注工具栏。
+        if (m_frozenFrame.isNull()) {
+            setEditorOpenButtonVisible(true);
+            if (m_toolbar) {
+                m_toolbar->hide();
+            }
+            if (m_actionToolbar) {
+                m_actionToolbar->hide();
+            }
+            if (m_mode == Mode::Editing) {
+                m_mode = Mode::Selecting;
+            }
+            m_selection = {};
+            m_dragging = false;
+        } else {
+            setEditorOpenButtonVisible(false);
+        }
+        updateFrozenImageRect();
+        refreshViewGeometry();
+        update();
+    }
+}
+
+bool ShotWindow::isStandaloneEditor() const
+{
+    return m_standaloneEditor;
+}
+
+bool ShotWindow::hasEmptyEditorCanvas() const
+{
+    return m_standaloneEditor && m_frozenFrame.isNull();
+}
+
+void ShotWindow::setEditorOpenButtonVisible(bool visible)
+{
+    if (!m_editorOpenButton) {
+        return;
+    }
+    m_editorOpenButton->setVisible(visible);
+    if (visible) {
+        m_editorOpenButton->raise();
+    }
+}
+
+void ShotWindow::openImageForEditor()
+{
+    if (!m_standaloneEditor) {
+        return;
+    }
+    commitTextEditor();
+
+    auto *dialog = new QFileDialog(this, MS_TR("Open Image"));
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setAcceptMode(QFileDialog::AcceptOpen);
+    dialog->setFileMode(QFileDialog::ExistingFile);
+    dialog->setNameFilter(MS_TR("Image Files (*.png *.jpg *.jpeg *.bmp *.webp *.gif *.tiff *.svg)"));
+    dialog->setOption(QFileDialog::DontUseNativeDialog, true);
+
+    connect(dialog, &QFileDialog::fileSelected, this, [this](const QString &path) {
+        if (path.isEmpty()) {
+            return;
+        }
+        QImageReader reader(path);
+        reader.setAutoTransform(true);
+        const QImage image = reader.read();
+        if (image.isNull()) {
+            QMessageBox::warning(this,
+                                 QStringLiteral("DracoPho"),
+                                 MS_TR("Failed to load image: %1\n%2").arg(path, reader.errorString()));
+            return;
+        }
+        loadEditorImage(image, QFileInfo(path).fileName());
+    });
+    dialog->open();
+}
+
+bool ShotWindow::loadEditorImage(const QImage &image, const QString &name)
+{
+    if (image.isNull()) {
+        return false;
+    }
+
+    m_frozenFrame = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    m_frozenFrame.setDevicePixelRatio(1.0);
+    if (!name.isEmpty()) {
+        m_outputName = name;
+    }
+    m_annotations.clear();
+    m_undoStack.clear();
+    m_redoStack.clear();
+    m_laserStrokes.clear();
+    m_laserDraft.reset();
+    m_draft.reset();
+    m_nextNumber = 1;
+    m_nextAnnotationId = 1;
+    setSelectedAnnotations({});
+    setEditorOpenButtonVisible(false);
+    setWindowTitle(m_outputName.isEmpty() ? QStringLiteral("DracoPho") : m_outputName);
+    // 新图片重新从原始缩放与居中开始，避免沿用上一张图片的缩放/平移状态。
+    m_imageZoom = 1.0;
+    m_imageCenterInitialized = false;
+    updateFrozenImageRect();
+    refreshViewGeometry();
+    update();
+    // 标注属于旧图片，载入后总是重置为整幅画面的标注编辑状态。
+    startFullscreenAnnotation();
+    return true;
 }
