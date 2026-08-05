@@ -31,7 +31,7 @@
 </p>
 </details>
 
-`mark-shot` 是一款基於 Qt 6 開發的高效能截圖標註工具。專案最初針對 `niri` 等 Wayland 視窗管理員設計，目前支援在 Linux（X11、GNOME、wlroots/Wayland 桌面）以及 Windows 環境中完成一般截圖與標註工作流程。
+太殷龍攝-DracoPho 是一款基於 Qt 6 開發的高效能截圖標註工具。專案最初針對 `niri` 等 Wayland 視窗管理員設計，目前支援在 Linux（X11、GNOME、wlroots/Wayland 桌面）以及 Windows 環境中完成一般截圖與標註工作流程。
 
 它可以瞬間擷取螢幕畫面，並開啟自適應全螢幕標註覆蓋層，為使用者提供區域裁切、標註、複製到剪貼簿、儲存以及桌面貼圖等功能。
 
