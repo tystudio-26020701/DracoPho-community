@@ -41,5 +41,13 @@ void setWindowTopMost(QWidget *widget, bool alwaysOnTop);
 /// @brief 使用 Windows 原生置顶层级提升窗口。
 /// @param widget 要提升的窗口。
 void raiseTopMostWindow(QWidget *widget);
+/// @brief GNOME Shell 下将匹配标题的窗口置顶/取消置顶。
+///
+/// GNOME (mutter) 不遵守 Qt::WindowStaysOnTopHint（Wayland 无标准置顶协议），
+/// 悬浮球与贴纸窗口需借助随软件安装的 MarkShotScrollHelper 扩展的
+/// SetWindowsAbove 实现置顶。非 GNOME 会话或扩展不可用时为空操作。
+/// @param title 匹配的窗口标题（扩展按标题精确匹配）。
+/// @param alwaysOnTop 置顶或取消置顶。
+void setGnomeWindowAbove(const QString &title, bool alwaysOnTop);
 
 } // namespace markshot::windows

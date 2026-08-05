@@ -1,6 +1,5 @@
 #include "pinned_window_top.h"
 
-#include "debug_log.h"
 #include "layer_shell_runtime.h"
 #include "pinned_window/pinned_layer_shell_geometry.h"
 #include "pinned_window/pinned_layer_shell_screen_binding.h"
@@ -16,22 +15,10 @@
 #include <QWindow>
 #include <QVector>
 
-#ifdef MARK_SHOT_WITH_DBUS
-#include <QDBusConnection>
-#include <QDBusInterface>
-#include <QDBusMessage>
-#endif
-
 namespace {
 
 constexpr int kPinnedLayerShellMinimumVisibleExtent = 24;
 constexpr const char *kPinnedLayerShellScreenNameProperty = "markShotPinnedLayerShellScreenName";
-
-#ifdef MARK_SHOT_WITH_DBUS
-constexpr const char *kGnomeShellService = "org.gnome.Shell";
-constexpr const char *kGnomeHelperPath = "/org/gnome/Shell/Extensions/MarkShotScrollHelper";
-constexpr const char *kGnomeHelperInterface = "org.gnome.Shell.Extensions.MarkShotScrollHelper";
-#endif
 
 /// @brief Checks whether the current process appears to run in GNOME.
 /// @return True when GNOME-specific D-Bus helpers should be attempted.
@@ -58,34 +45,6 @@ bool isKdeSession()
     return desktop.contains(QStringLiteral("kde"))
         || desktop.contains(QStringLiteral("plasma"));
 }
-
-#ifdef MARK_SHOT_WITH_DBUS
-/// @brief Requests the GNOME Shell helper extension to set matching windows above or normal.
-/// @param title Window title used to locate pinned image windows.
-/// @param alwaysOnTop Whether matching windows should be kept above normal windows.
-void applyGnomePinnedWindowsAbove(const QString &title, bool alwaysOnTop)
-{
-    if (!isGnomeSession() || title.trimmed().isEmpty()) {
-        return;
-    }
-
-    QDBusInterface helper(QString::fromLatin1(kGnomeShellService),
-                          QString::fromLatin1(kGnomeHelperPath),
-                          QString::fromLatin1(kGnomeHelperInterface),
-                          QDBusConnection::sessionBus());
-    if (!helper.isValid()) {
-        markshot::debugLog("pinned-window", "GNOME helper D-Bus interface is not available");
-        return;
-    }
-
-    const QDBusMessage reply = helper.call(QStringLiteral("SetWindowsAbove"), title, alwaysOnTop);
-    if (reply.type() == QDBusMessage::ErrorMessage) {
-        markshot::debugLog("pinned-window",
-                           "GNOME helper SetWindowsAbove failed: %s",
-                           reply.errorMessage().toUtf8().constData());
-    }
-}
-#endif
 
 /// @brief Checks whether the current process is running on Wayland.
 /// @return True when Wayland-specific protocols can be used.
@@ -319,9 +278,7 @@ void applyPinnedWindowTopState(QWidget *window, bool alwaysOnTop)
         raisePinnedWindowOnPlatform(window);
     }
 
-#ifdef MARK_SHOT_WITH_DBUS
-    applyGnomePinnedWindowsAbove(window->windowTitle(), alwaysOnTop);
-#endif
+    markshot::windows::setGnomeWindowAbove(window->windowTitle(), alwaysOnTop);
 }
 
 void raisePinnedWindowOnPlatform(QWidget *window)
@@ -337,9 +294,7 @@ void raisePinnedWindowOnPlatform(QWidget *window)
     markshot::windows::raiseTopMostWindow(window);
     updatePinnedLayerShell(window);
 
-#ifdef MARK_SHOT_WITH_DBUS
-    applyGnomePinnedWindowsAbove(window->windowTitle(), true);
-#endif
+    markshot::windows::setGnomeWindowAbove(window->windowTitle(), true);
 }
 
 void syncPinnedWindowTopGeometry(QWidget *window)
