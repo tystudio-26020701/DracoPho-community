@@ -7,8 +7,11 @@
 
 class QCheckBox;
 class QComboBox;
+class QDialogButtonBox;
 class QLabel;
 class QLineEdit;
+class QPushButton;
+class QWidget;
 
 namespace markshot::recording {
 
@@ -60,6 +63,12 @@ private:
      */
     void storeCurrentFpsForMode(RecordingMode mode);
 
+    /**
+     * 语言切换后立即重新翻译界面文案（订阅 i18n 通知）。
+     * @return 无返回值。
+     */
+    void retranslateUi();
+
     RecordingMode m_mode = RecordingMode::Gif;
     int m_videoFps = 30;
     int m_gifFps = 12;
@@ -72,6 +81,9 @@ private:
     QComboBox *m_backend = nullptr;
     QComboBox *m_scope = nullptr;
     QLineEdit *m_outputPath = nullptr;
+    QWidget *m_outputRow = nullptr;
+    QPushButton *m_browseButton = nullptr;
+    QDialogButtonBox *m_buttons = nullptr;
     bool m_outputPathTouched = false;
 };
 
