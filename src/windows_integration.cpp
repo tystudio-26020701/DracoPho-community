@@ -577,6 +577,46 @@ void raiseTopMostWindow(QWidget *widget)
 #endif
 }
 
+void setGnomeWindowAbove(const QString &title, bool alwaysOnTop)
+{
+    // GNOME (mutter) 在 Wayland 下不遵守 Qt::WindowStaysOnTopHint，没有标准的
+    // 置顶协议；只有通过随软件安装的 GNOME Shell 扩展 MarkShotScrollHelper 的
+    // SetWindowsAbove 方法把窗口提升到顶层（make_above）。非 GNOME 会话或
+    // 扩展未启用时为空操作（DBus 接口不可用直接返回，无副作用）。
+    if (title.trimmed().isEmpty()) {
+        return;
+    }
+#ifdef MARK_SHOT_WITH_DBUS
+    const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    const QString desktop = env.value(QStringLiteral("XDG_CURRENT_DESKTOP")).toLower();
+    const QString sessionDesktop = env.value(QStringLiteral("XDG_SESSION_DESKTOP")).toLower();
+    const bool gnomeSession = desktop.contains(QStringLiteral("gnome"))
+        || sessionDesktop.contains(QStringLiteral("gnome"))
+        || env.contains(QStringLiteral("GNOME_DESKTOP_SESSION_ID"));
+    if (!gnomeSession) {
+        return;
+    }
+
+    QDBusInterface helper(QStringLiteral("org.gnome.Shell"),
+                          QStringLiteral("/org/gnome/Shell/Extensions/MarkShotScrollHelper"),
+                          QStringLiteral("org.gnome.Shell.Extensions.MarkShotScrollHelper"),
+                          QDBusConnection::sessionBus());
+    if (!helper.isValid()) {
+        return;
+    }
+
+    const QDBusMessage reply = helper.call(QStringLiteral("SetWindowsAbove"), title, alwaysOnTop);
+    if (reply.type() == QDBusMessage::ErrorMessage) {
+        markshot::debugLog("windows",
+                           "GNOME helper SetWindowsAbove failed: %s",
+                           reply.errorMessage().toUtf8().constData());
+    }
+#else
+    Q_UNUSED(title);
+    Q_UNUSED(alwaysOnTop);
+#endif
+}
+
 bool isX11QtPlatform()
 {
 #if defined(Q_OS_LINUX) && defined(HAVE_XCB)

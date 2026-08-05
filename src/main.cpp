@@ -721,6 +721,8 @@ int main(int argc, char *argv[])
         });
     };
 
+    auto &recordingManager = markshot::recording::RecordingSessionManager::instance();
+
     // 会话级恢复：整场截图会话（含"显示器快速截取"编辑目标时替换出的新窗口）
     // 的最后一个截图覆盖窗口销毁时，统一恢复被临时隐藏的本软件 UI。连接一次、
     // 跨多次截图复用。若按"最初那批窗口的销毁数"判断，会话内替换窗口会提前
@@ -728,16 +730,34 @@ int main(int argc, char *argv[])
     QObject::connect(&markshot::CaptureSessionMonitor::instance(),
                      &markshot::CaptureSessionMonitor::sessionEnded,
                      &app,
-                     [&captureActive, &floatingBall] {
+                     [&captureActive, &floatingBall, &recordingManager] {
                          captureActive = false;
                          // 用户主动隐藏的悬浮球不被截图会话重新唤起。
-                         if (floatingBall && !floatingBall->isHiddenByUser()) {
+                         if (floatingBall && !floatingBall->isHiddenByUser()
+                             && !recordingManager.status().active) {
                              floatingBall->show();
                          }
                          markshot::settings::restoreSettingsWindowAfterCapture();
                      });
 
-    auto &recordingManager = markshot::recording::RecordingSessionManager::instance();
+    // 录制期间隐藏悬浮球：区域录制确认选区后截图会话结束会恢复悬浮球，若不
+    // 再次隐藏，X11 / GNOME·wlroots Wayland 的抓屏（QScreen grabWindow / grim /
+    // portal）会把悬浮球录进画面。录制结束（status().active 转 false）时恢复
+    // 显示；用户主动隐藏的状态不被覆盖。
+    QObject::connect(&recordingManager,
+                     &markshot::recording::RecordingSessionManager::statusChanged,
+                     &app,
+                     [&floatingBall, &recordingManager] {
+                         const bool recordingActive = recordingManager.status().active;
+                         if (recordingActive) {
+                             if (floatingBall && !floatingBall->isHiddenByUser()) {
+                                 floatingBall->hide();
+                             }
+                         } else if (floatingBall && !floatingBall->isHiddenByUser()) {
+                             floatingBall->show();
+                         }
+                     });
+
     // 限时录制的自动停止定时器：任何录制结束/停止时都必须取消，
     // 否则上一个录制遗留的定时器会误停新开启的录制。
     QPointer<QTimer> recordingAutoStopTimer;

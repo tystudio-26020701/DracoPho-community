@@ -119,6 +119,9 @@ FloatingBall::FloatingBall(QWidget *parent)
     setFixedSize(kBallSize + kShadowRadius * 2, kBallSize + kShadowRadius * 2);
     setCursor(Qt::PointingHandCursor);
     setToolTip(QStringLiteral("DracoPho"));
+    // 固定窗口标题：GNOME Shell 扩展 MarkShotScrollHelper 的 SetWindowsAbove
+    // 按标题精确匹配窗口后置顶（GNOME/mutter 不遵守 WindowStaysOnTopHint）。
+    setWindowTitle(QStringLiteral("DracoPho"));
     setObjectName(QStringLiteral("floatingBall"));
 
     markshot::windows::setExcludedFromTaskbar(this);
@@ -619,6 +622,12 @@ void FloatingBall::leaveEvent(QEvent *event)
 void FloatingBall::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
+    // 置顶兜底：窗口标志已含 Qt::WindowStaysOnTopHint，但每次显示时仍显式
+    // 强化——Windows 用原生 HWND_TOPMOST 层级（不依赖 Qt 内部映射），GNOME
+    // Wayland 走 MarkShotScrollHelper 扩展 SetWindowsAbove（合成器不遵守
+    // WindowStaysOnTopHint）。其余平台无操作。
+    markshot::windows::setWindowTopMost(this, true);
+    markshot::windows::setGnomeWindowAbove(windowTitle(), true);
     setBallOpacity(1.0);
     // 显示即视为一次交互：鼠标在球上则不淡出，否则 tick 会在
     // fadeSeconds 后自然淡出。
