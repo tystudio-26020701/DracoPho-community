@@ -181,7 +181,7 @@ jobs:
           pkgname = mark-shot-bin
           pkgver = ${VERSION}-${PKGREL}
           pkgdesc = Qt 6 Wayland screenshot selection and annotation tool (prebuilt binary)
-          url = https://github.com/tystudio-26020701/mark-shot-community
+          url = https://github.com/tystudio-26020701/DracoPho-community
           builddate = ${BUILD_DATE}
           packager = GitHub Actions <github-actions[bot]@users.noreply.github.com>
           size = ${PKG_SIZE}
