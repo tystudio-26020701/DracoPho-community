@@ -3,6 +3,7 @@
 #include "config_value.h"
 #include "debug_log.h"
 #include "delayed_capture_options.h"
+#include "history/capture_history_dialog.h"
 #if defined(MARK_SHOT_WITH_DBUS)
 #include "global_shortcut_portal.h"
 #endif
@@ -401,6 +402,17 @@ bool WindowsTrayController::start()
             startRecordingFromTray();
         });
         m_settingsAction = m_menu->addAction(MS_TR("Settings"), this, [] { settings::showSettingsDialog(); });
+        m_historyAction = m_menu->addAction(MS_TR("Capture History..."), this, [this] {
+            auto *dialog = new markshot::capture_history::CaptureHistoryDialog();
+            dialog->setNewCaptureCallback([this] {
+                if (m_captureCallback) {
+                    m_captureCallback();
+                }
+            });
+            dialog->show();
+            dialog->raise();
+            dialog->activateWindow();
+        });
         if (m_floatingBallToggle) {
             // 悬浮球显示/隐藏开关：用户主动隐藏的状态会持久，截图会话不会覆盖。
             m_floatingBallToggleAction =

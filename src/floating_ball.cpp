@@ -3,6 +3,7 @@
 #include "app_config_store.h"
 #include "debug_log.h"
 #include "delayed_capture_options.h"
+#include "history/capture_history_dialog.h"
 #include "recording/recording_session_manager.h"
 #include "recording/recording_start_flow.h"
 #include "settings/settings_dialog.h"
@@ -195,6 +196,17 @@ FloatingBall::FloatingBall(QWidget *parent)
     m_settingsAction = m_menu->addAction(MS_TR("Settings"), this, [] {
         markshot::settings::showSettingsDialog();
     });
+    m_historyAction = m_menu->addAction(MS_TR("Capture History..."), this, [this] {
+        auto *dialog = new markshot::capture_history::CaptureHistoryDialog();
+        dialog->setNewCaptureCallback([this] {
+            if (m_captureCallback) {
+                m_captureCallback();
+            }
+        });
+        dialog->show();
+        dialog->raise();
+        dialog->activateWindow();
+    });
     m_menu->addSeparator();
     m_hideBallAction = m_menu->addAction(MS_TR("Hide Floating Ball"), this, [this] {
         if (m_quitWhenHidden) {
@@ -235,8 +247,7 @@ void FloatingBall::setTimedCaptureCallback(TimedCaptureCallback callback)
     // "延时截图"子菜单并插入到全屏截图之后、开始录制之前。
     if (!m_timedCaptureCallback) {
         return;
-    }
-    if (m_delayedCaptureMenu) {
+    }    if (m_delayedCaptureMenu) {
         m_menu->removeAction(m_delayedCaptureMenu->menuAction());
         m_delayedCaptureMenu->deleteLater();
         m_delayedCaptureMenu = nullptr;

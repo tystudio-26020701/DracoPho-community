@@ -44,6 +44,8 @@ private:
     QSpinBox *m_exportShadowRadius = nullptr;
     QSpinBox *m_exportShadowOffsetY = nullptr;
     QDoubleSpinBox *m_exportShadowOpacity = nullptr;
+    QCheckBox *m_historyEnabled = nullptr;
+    QSpinBox *m_historyMaxEntries = nullptr;
     SettingsConfig m_saved;
 };
 
