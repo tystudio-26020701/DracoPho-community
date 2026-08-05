@@ -35,7 +35,7 @@ Suggests:       tesseract-langpack-chi_sim
 Suggests:       gnome-shell
 
 %description
-Mark Shot captures screenshots, annotates image regions, pins floating image
+DracoPho captures screenshots, annotates image regions, pins floating image
 stickers, and provides OCR and translation helpers for pinned image text.
 
 %prep
@@ -76,6 +76,7 @@ sed -i '1s|^#!/usr/bin/env python3$|#!/usr/bin/python3|' \
 %{_datadir}/applications/mark-shot.desktop
 %{_datadir}/applications/mark-shot-edit.desktop
 %{_datadir}/applications/net.local.mark-shot.desktop
+%{_datadir}/icons/hicolor/scalable/apps/dracoPho.svg
 %{_datadir}/icons/hicolor/scalable/apps/mark-shot.svg
 %{_datadir}/icons/hicolor/scalable/apps/mark-shot-edit.svg
 %{_datadir}/gnome-shell/extensions/mark-shot-scroll-helper@snemc.org/

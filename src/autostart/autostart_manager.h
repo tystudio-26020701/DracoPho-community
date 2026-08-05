@@ -8,11 +8,11 @@ namespace markshot::autostart {
 /// @return 支持系统自启动返回 true。
 bool isSupported();
 
-/// @brief 查询 Mark Shot 当前是否已注册开机启动。
+/// @brief 查询 DracoPho 当前是否已注册开机启动。
 /// @return 已注册开机启动返回 true。
 bool isEnabled();
 
-/// @brief 启用或禁用 Mark Shot 开机启动。
+/// @brief 启用或禁用 DracoPho 开机启动。
 /// @param enabled 是否启用开机启动。
 /// @param error 操作失败时输出错误信息。
 /// @return 操作成功返回 true。

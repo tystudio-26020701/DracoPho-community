@@ -22,7 +22,7 @@ A clear and concise description of what actually happened.
 
 ## Environment Information
 Please provide the following system environment details (run `mark-shot --version` to obtain some info):
-- Mark Shot Version: 
+- DracoPho Version: 
 - Operating System (OS): 
 - Window Manager (e.g. niri, sway) / Desktop Environment (e.g. GNOME): 
 - Display Server Type: Wayland / X11

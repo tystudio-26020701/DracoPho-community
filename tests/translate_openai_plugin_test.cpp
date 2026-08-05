@@ -124,7 +124,7 @@ private:
 };
 
 /**
- * 写入临时 Mark Shot 配置。
+ * 写入临时 DracoPho 配置。
  * @param apiBase API 根地址。
  * @return 临时配置文件。
  */

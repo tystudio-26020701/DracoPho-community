@@ -88,7 +88,7 @@ void ShotWindow::uploadSelection()
     }
 
     markshot::copyTextToClipboard(url);
-    if (!sendDesktopNotification(QStringLiteral("Mark Shot"), MS_TR("Image URL copied"), 2500)) {
+    if (!sendDesktopNotification(QStringLiteral("DracoPho"), MS_TR("Image URL copied"), 2500)) {
         showToast(MS_TR("Image URL copied"));
     }
     QTimer::singleShot(150, this, [this] { close(); });

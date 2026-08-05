@@ -270,7 +270,7 @@ SettingsNavigation::SettingsNavigation(QWidget *parent)
 
 void SettingsNavigation::buildHeader()
 {
-    auto *title = new QLabel(QStringLiteral("Mark Shot"), this);
+    auto *title = new QLabel(MS_TR("DracoPho"), this);
     title->setObjectName(QStringLiteral("settingsHeroTitle"));
     layout()->addWidget(title);
     auto *subtitle = new QLabel(MS_TR("Settings Center"), this);

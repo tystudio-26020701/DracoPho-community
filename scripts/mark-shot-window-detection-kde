@@ -30,7 +30,7 @@ def env_int(name):
 
 
 def capture_rect():
-    """读取 Mark Shot 传入的截图区域。
+    """读取太殷龙摄传入的截图区域。
     参数:
         无
     返回:
@@ -567,7 +567,7 @@ def normalize_window(window):
 
 
 def selected_windows(payload):
-    """按 Mark Shot 截图上下文筛选窗口。
+    """按太殷龙摄截图上下文筛选窗口。
     参数:
         payload: KWin 脚本返回的根 JSON 对象
     返回:

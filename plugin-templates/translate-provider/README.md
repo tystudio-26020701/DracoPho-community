@@ -1,6 +1,6 @@
 # Translation Provider Template
 
-This template builds a minimal Mark Shot translation provider plugin. Replace the sample passthrough implementation with your model or API client.
+This template builds a minimal DracoPho translation provider plugin. Replace the sample passthrough implementation with your model or API client.
 
 ## Build
 
@@ -16,4 +16,4 @@ mkdir -p ~/.local/share/mark-shot/plugins
 cp build/libmark-shot-sample-translate.so ~/.local/share/mark-shot/plugins/
 ```
 
-Set `translation.provider` to `plugin:sample-translate` in Mark Shot settings, or choose it from the Plugins settings page.
+Set `translation.provider` to `plugin:sample-translate` in DracoPho settings, or choose it from the Plugins settings page.

@@ -146,7 +146,7 @@ jobs:
           Architecture: any
           Depends: \${shlibs:Depends}
           Description: Qt 6 screenshot selection and annotation tool
-           Mark Shot captures screenshots and annotates image regions.
+           DracoPho captures screenshots and annotates image regions.
           EOF
 
           SHLIB_DEPS="$(dpkg-shlibdeps -O -e"$PACKAGE_DIR/usr/bin/mark-shot" | sed 's/^shlibs:Depends=//')"
@@ -176,7 +176,7 @@ jobs:
           Recommends: $RECOMMENDS
           Suggests: $SUGGESTS
           Description: Qt 6 screenshot selection and annotation tool
-           Mark Shot captures screenshots, annotates image regions, pins floating
+           DracoPho captures screenshots, annotates image regions, pins floating
            image stickers, and provides OCR and translation helpers for pinned
            image text.
           EOF

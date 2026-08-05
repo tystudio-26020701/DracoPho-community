@@ -58,7 +58,7 @@ SettingsPageAdvanced::SettingsPageAdvanced(QWidget *parent)
     layout->addWidget(windowCard);
 
     QFrame *envCard = createSettingsCard(MS_TR("Application Environment"),
-                                         MS_TR("Environment variables applied when Mark Shot starts."),
+                                         MS_TR("Environment variables applied when DracoPho starts."),
                                          this);
     QFormLayout *envForm = settingsCardForm(envCard);
     m_appEnv = addPlainTextRow(envForm, MS_TR("Application Environment"), QStringLiteral("KEY=value"));

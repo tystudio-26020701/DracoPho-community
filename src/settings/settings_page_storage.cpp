@@ -170,7 +170,7 @@ SettingsPageStorage::SettingsPageStorage(QWidget *parent)
     layout->addWidget(clipboardCard);
 
     QFrame *headlessCard = createSettingsCard(MS_TR("Headless Mode"),
-                                              MS_TR("Control where window captures go when Mark Shot runs without a UI. "
+                                              MS_TR("Control where window captures go when DracoPho runs without a UI. "
                                                     "The clipboard is never modified unless you explicitly enable it here."),
                                               this);
     QFormLayout *headlessForm = settingsCardForm(headlessCard);

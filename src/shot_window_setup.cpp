@@ -120,7 +120,7 @@ ShotWindow::ShotWindow(QImage frozenFrame,
         commitAnnotationWidthWheelHistory();
     });
 
-    setWindowTitle(MS_TR("Mark Shot"));
+    setWindowTitle(MS_TR("DracoPho"));
     setCursor(captureCrossCursor());
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);

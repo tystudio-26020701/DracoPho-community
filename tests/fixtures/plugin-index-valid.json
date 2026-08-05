@@ -7,7 +7,7 @@
             "name": "mark-shot-sample-ocr",
             "version": "0.1.0",
             "vendor": "example",
-            "description": "Sample OCR provider for Mark Shot.",
+            "description": "Sample OCR provider for DracoPho.",
             "markShotMinVersion": "0.1.37",
             "homepage": "https://github.com/example/mark-shot-sample-ocr",
             "license": "MIT",

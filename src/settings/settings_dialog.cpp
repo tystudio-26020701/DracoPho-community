@@ -145,7 +145,7 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     footer->setObjectName(QStringLiteral("settingsFooter"));
     auto *footerLayout = new QHBoxLayout(footer);
     footerLayout->setContentsMargins(18, 10, 18, 10);
-    m_statusLabel = new QLabel(MS_TR("Some changes take effect after restarting Mark Shot."), footer);
+    m_statusLabel = new QLabel(MS_TR("Some changes take effect after restarting DracoPho."), footer);
     m_statusLabel->setObjectName(QStringLiteral("settingsStatus"));
     footerLayout->addWidget(m_statusLabel, 1);
     auto *buttons = new QDialogButtonBox(footer);
@@ -403,7 +403,7 @@ bool SettingsDialog::saveConfig(bool closeAfterSave)
     // 刷新各页"已保存"基线，保证 Apply 后"还原配置"还原的是刚保存的值。
     applyConfigToPages(nextConfig);
     applyTheme(m_config.general.uiThemeMode);
-    m_statusLabel->setText(MS_TR("Settings saved. Some changes take effect after restarting Mark Shot."));
+    m_statusLabel->setText(MS_TR("Settings saved. Some changes take effect after restarting DracoPho."));
     refreshDirtyState();
     if (closeAfterSave) {
         close();
@@ -516,7 +516,7 @@ void SettingsDialog::refreshDirtyState()
         m_statusLabel->setText(MS_TR("You have unsaved changes."));
         setWindowTitle(QStringLiteral("%1 *").arg(MS_TR("Settings")));
     } else {
-        m_statusLabel->setText(MS_TR("Some changes take effect after restarting Mark Shot."));
+        m_statusLabel->setText(MS_TR("Some changes take effect after restarting DracoPho."));
         setWindowTitle(MS_TR("Settings"));
     }
 }

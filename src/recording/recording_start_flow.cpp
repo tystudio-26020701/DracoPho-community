@@ -27,7 +27,7 @@ void showStartFlowError(const RecordingStartFlowRequest &request, const QString 
         request.showError(message);
         return;
     }
-    QMessageBox::warning(request.parent, QStringLiteral("Mark Shot"), message);
+    QMessageBox::warning(request.parent, QStringLiteral("DracoPho"), message);
 }
 
 /**

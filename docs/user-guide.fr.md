@@ -1,6 +1,6 @@
-# Guide utilisateur de Mark Shot
+# Guide utilisateur de DracoPho
 
-Ce manuel couvre l'utilisation quotidienne de Mark Shot, avec un accent sur la
+Ce manuel couvre l'utilisation quotidienne de DracoPho, avec un accent sur la
 fonctionnalité de **sélection par survol des fenêtres / composants** (le
 déplacement de la souris suit et met automatiquement en évidence la fenêtre
 sous le curseur ; un clic la sélectionne), le flux de travail d'annotation, la
@@ -44,20 +44,20 @@ pour les scripts d'aide à la détection de fenêtres
 
 ### 1.3 Comportement au démarrage (boule flottante / barre / fenêtre des paramètres / capture directe)
 
-Ce qui se passe au démarrage de Mark Shot (par exemple en cliquant sur l'icône du
+Ce qui se passe au démarrage de DracoPho (par exemple en cliquant sur l'icône du
 bureau) est configurable. Ouvrez **Paramètres → Général → Comportement au démarrage**
 et cochez n'importe quelle combinaison :
 
 | Option | Comportement au démarrage |
 | :--- | :--- |
-| **Icône dans la barre** (par défaut) | Mark Shot reste actif dans la barre d'état système. Un clic gauche sur l'icône capture, un clic droit ouvre le menu. |
+| **Icône dans la barre** (par défaut) | DracoPho reste actif dans la barre d'état système. Un clic gauche sur l'icône capture, un clic droit ouvre le menu. |
 | **Boule flottante** (par défaut) | Une petite boule toujours au premier plan (en bas à droite par défaut). Un clic ouvre un menu rapide, un double-clic capture, le glisser la déplace (la position est mémorisée). Elle se masque automatiquement pendant une capture. |
 | **Capture directe** | Entre immédiatement en mode capture. |
-| **Fenêtre des paramètres** | Ouvre la fenêtre des paramètres au démarrage de Mark Shot. |
+| **Fenêtre des paramètres** | Ouvre la fenêtre des paramètres au démarrage de DracoPho. |
 
 Plusieurs options peuvent être combinées. **La capture directe est désactivée par
 défaut** ; si vous ne la sélectionnez pas, aucun overlay de capture ne s'ouvre
-automatiquement au démarrage. Si toutes les options sont décochées, Mark Shot
+automatiquement au démarrage. Si toutes les options sont décochées, DracoPho
 retombe sur la barre pour qu'il y ait toujours un point d'entrée.
 
 La boule flottante et le menu de la barre offrent les mêmes actions rapides :
@@ -69,7 +69,7 @@ La boule flottante et le menu de la barre offrent les mêmes actions rapides :
 
 ## 2. Sélection par survol des fenêtres / composants
 
-Mark Shot peut détecter les fenêtres du bureau actuel avant que vous choisissiez
+DracoPho peut détecter les fenêtres du bureau actuel avant que vous choisissiez
 une région. Lorsque la superposition de sélection est ouverte, **déplacer la
 souris met en évidence la fenêtre sous le curseur** avec un cadre turquoise.
 **Un simple clic gauche (sans glisser) sélectionne toute cette fenêtre** comme
@@ -302,7 +302,7 @@ page d'origine.
    les très grandes régions).
 2. La superposition fait défiler la fenêtre cible ; les images capturées sont
    assemblées en une longue image.
-3. GNOME Wayland nécessite l'extension Mark Shot Scroll Helper (§ 2.1).
+3. GNOME Wayland nécessite l'extension DracoPho Scroll Helper (§ 2.1).
 
 La capture à défilement est prête pour la production sur niri et les
 compositeurs wlroots/Wayland similaires ; sur KDE, X11 et d'autres piles, c'est
@@ -350,7 +350,7 @@ l'audio système et `--record-duration 0` pour enregistrer jusqu'à
 
 ### 7.1 Capture sans interface de fenêtre / composant
 
-Mark Shot peut capturer **des fenêtres spécifiques — ou un composant
+DracoPho peut capturer **des fenêtres spécifiques — ou un composant
 (sous-région) à l'intérieur d'une fenêtre — sans ouvrir aucune interface**, à
 partir d'un script, d'un pipeline de compilation ou d'un agent. Le processus se
 termine dès que les images sont écrites ou renvoyées, et il ne crée jamais de
@@ -368,7 +368,7 @@ Exemple de sortie (GNOME Wayland) :
 
 ```json
 {"count":2,"platform":"wayland","source":"compositor-script","windows":[
-  {"index":0,"id":"0x3c00007","title":"Mark Shot - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
+  {"index":0,"id":"0x3c00007","title":"DracoPho - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
   {"index":1,"title":"Terminal","class":"org.gnome.Terminal","x":67,"y":32,"width":800,"height":600}
 ]}
 ```
@@ -388,7 +388,7 @@ en un seul appel**. Chaque sélecteur est interprété automatiquement
 | `0`, `1`, …               | `index` de la liste                                 |
 | `0x3c00007`               | `id` de la fenêtre                                  |
 | `VSCodium`                | `class` ou `instance`, puis `title` (exact, puis sous-chaîne) |
-| `Mark Shot - VSCodium`    | `title`                                             |
+| `DracoPho - VSCodium`    | `title`                                             |
 
 Forcez une règle de correspondance avec `--window-by id|title|class|index`. Un
 sélecteur qui correspond à plusieurs fenêtres les capture **toutes**.

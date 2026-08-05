@@ -36,7 +36,7 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
     auto *layout = createSettingsPageLayout(this);
 
     QFrame *startupCard = createSettingsCard(MS_TR("Startup Behavior"),
-                                             MS_TR("Choose what happens when Mark Shot starts. Multiple options can be combined."),
+                                             MS_TR("Choose what happens when DracoPho starts. Multiple options can be combined."),
                                              this);
     QFormLayout *startupForm = settingsCardForm(startupCard);
     m_uiLanguage = addComboRow(startupForm, MS_TR("Interface Language"));
@@ -63,19 +63,19 @@ SettingsPageGeneral::SettingsPageGeneral(QWidget *parent)
                        QVariant::fromValue(static_cast<int>(markshot::ui::UiThemeMode::Light)));
     m_startupCapture = addSwitchRow(startupForm,
                                     MS_TR("Direct Capture"),
-                                    MS_TR("Enter screenshot mode immediately when Mark Shot starts."));
+                                    MS_TR("Enter screenshot mode immediately when DracoPho starts."));
     m_startupTray = addSwitchRow(startupForm,
                                  MS_TR("Tray Icon"),
-                                 MS_TR("Keep Mark Shot running in the system tray."));
+                                 MS_TR("Keep DracoPho running in the system tray."));
     m_startupFloatingBall = addSwitchRow(startupForm,
                                          MS_TR("Floating Ball"),
                                          MS_TR("Show a draggable floating ball for quick access to capture and settings."));
     m_startupSettings = addSwitchRow(startupForm,
                                      MS_TR("Settings Window"),
-                                     MS_TR("Open the settings window when Mark Shot starts."));
+                                     MS_TR("Open the settings window when DracoPho starts."));
     m_launchOnStartup = addSwitchRow(startupForm,
                                      MS_TR("Launch on Startup"),
-                                     MS_TR("Start Mark Shot automatically after signing in."));
+                                     MS_TR("Start DracoPho automatically after signing in."));
     m_hotkeysEnabled = addSwitchRow(startupForm,
                                     MS_TR("Global Hotkeys"),
                                     MS_TR("Register global capture shortcuts when the tray starts."));

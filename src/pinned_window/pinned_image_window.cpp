@@ -93,7 +93,7 @@ PinnedImageWindow::PinnedImageWindow(QImage image, std::optional<QPoint> initial
     , m_displayBaseSize(displayBaseSizeForPixmap())
     , m_config(pinnedWindowConfig())
 {
-    setWindowTitle(MS_TR("Pinned Mark Shot"));
+    setWindowTitle(MS_TR("Pinned DracoPho"));
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_ShowWithoutActivating);
     Qt::WindowFlags flags = Qt::Window | Qt::FramelessWindowHint;
@@ -473,7 +473,7 @@ void PinnedImageWindow::setAlwaysOnTop(bool alwaysOnTop)
             QJsonValue(alwaysOnTop),
             &error)) {
         m_config.alwaysOnTop = previous;
-        sendDesktopNotification(QStringLiteral("Mark Shot"),
+        sendDesktopNotification(QStringLiteral("DracoPho"),
                                 MS_TR("Failed to save pinned window setting."));
         if (!error.isEmpty()) {
             markshot::debugLog("config",
@@ -505,7 +505,7 @@ void PinnedImageWindow::setTextSelectionCopyEnabled(bool enabled)
             {QStringLiteral("pinnedWindow"), QStringLiteral("textSelectionCopyEnabled")},
             QJsonValue(enabled),
             &error)) {
-        sendDesktopNotification(QStringLiteral("Mark Shot"),
+        sendDesktopNotification(QStringLiteral("DracoPho"),
                                 MS_TR("Failed to save pinned text selection setting."));
         if (!error.isEmpty()) {
             markshot::debugLog("config",

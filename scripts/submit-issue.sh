@@ -64,7 +64,7 @@ if [ "$lang_choice" = "1" ]; then
         TEMP_ISSUE=$(mktemp)
         
         sed \
-            -e "s/- Mark Shot 版本:.*/- Mark Shot 版本: $MS_VERSION/" \
+            -e "s/- 太殷龙摄 版本:.*/- 太殷龙摄 版本: $MS_VERSION/" \
             -e "s/- 操作系统 (OS):.*/- 操作系统 (OS): $OS_NAME/" \
             -e "s/- 窗口管理器 (Window Manager,.*) \/ 桌面环境 (Desktop,.*):.*/- 窗口管理器 (Window Manager) \/ 桌面环境 (Desktop): $DESKTOP_ENV/" \
             -e "s/- 显示服务器类型 (Display Server):.*/- 显示服务器类型 (Display Server): $DISPLAY_TYPE/" \
@@ -129,7 +129,7 @@ elif [ "$lang_choice" = "2" ]; then
         TEMP_ISSUE=$(mktemp)
         
         sed \
-            -e "s/- Mark Shot Version:.*/- Mark Shot Version: $MS_VERSION/" \
+            -e "s/- DracoPho Version:.*/- DracoPho Version: $MS_VERSION/" \
             -e "s/- Operating System (OS):.*/- Operating System (OS): $OS_NAME/" \
             -e "s/- Window Manager (e.g. niri, sway) \/ Desktop Environment (e.g. GNOME):.*/- Window Manager (e.g. niri, sway) \/ Desktop Environment (e.g. GNOME): $DESKTOP_ENV/" \
             -e "s/- Display Server Type:.*/- Display Server Type: $DISPLAY_TYPE/" \

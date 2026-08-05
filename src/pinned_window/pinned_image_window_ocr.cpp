@@ -164,7 +164,7 @@ void PinnedImageWindow::notifyMissingOcrBackend()
         return;
     }
     m_ocrBackendWarningShown = true;
-    sendDesktopNotification(QStringLiteral("Mark Shot"),
+    sendDesktopNotification(QStringLiteral("DracoPho"),
                             MS_TR("OCR backend not installed. Install rapidocr or tesseract."));
 }
 

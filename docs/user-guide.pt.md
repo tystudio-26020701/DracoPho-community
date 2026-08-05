@@ -1,6 +1,6 @@
-# Guia do usuário do Mark Shot
+# Guia do usuário do DracoPho
 
-Este manual cobre a operação diária do Mark Shot, com foco no recurso de
+Este manual cobre a operação diária do DracoPho, com foco no recurso de
 **seleção por hover de janela / componente** (mover o mouse automaticamente
 rastreia e destaca a janela sob o cursor; um clique a seleciona), no fluxo de
 anotação, na captura headless e na configuração.
@@ -42,20 +42,20 @@ para os auxiliares de OCR / upload.
 
 ### 1.3 Comportamento na inicialização (bola flutuante / bandeja / janela de configurações / captura direta)
 
-O que acontece ao iniciar o Mark Shot (por exemplo, clicando no ícone da área de
+O que acontece ao iniciar o DracoPho (por exemplo, clicando no ícone da área de
 trabalho) é configurável. Abra **Configurações → Geral → Comportamento na
 inicialização** e marque qualquer combinação:
 
 | Opção | Comportamento na inicialização |
 | :--- | :--- |
-| **Ícone na bandeja** (padrão) | O Mark Shot permanece em execução na bandeja do sistema. Um clique esquerdo no ícone captura; um clique direito abre o menu. |
+| **Ícone na bandeja** (padrão) | O DracoPho permanece em execução na bandeja do sistema. Um clique esquerdo no ícone captura; um clique direito abre o menu. |
 | **Bola flutuante** (padrão) | Uma pequena bola sempre no topo (canto inferior direito por padrão). Um clique abre um menu rápido, duplo clique captura, arrastar a move (a posição é lembrada) e ela se oculta automaticamente durante uma captura. |
 | **Captura direta** | Entra no modo de captura imediatamente. |
-| **Janela de configurações** | Abre a janela de configurações ao iniciar o Mark Shot. |
+| **Janela de configurações** | Abre a janela de configurações ao iniciar o DracoPho. |
 
 Várias opções podem ser combinadas. **A captura direta está desativada por padrão**;
-se você não a selecionar, iniciar o Mark Shot nunca abre uma sobreposição de captura
-por conta própria. Se desmarcar todas as opções, o Mark Shot volta para a bandeja,
+se você não a selecionar, iniciar o DracoPho nunca abre uma sobreposição de captura
+por conta própria. Se desmarcar todas as opções, o DracoPho volta para a bandeja,
 para que sempre haja um ponto de entrada.
 
 A bola flutuante e o menu da bandeja oferecem as mesmas ações rápidas: **Captura**,
@@ -66,7 +66,7 @@ O menu da bola também inclui **Ocultar bola flutuante**.
 
 ## 2. Seleção por Hover de Janela / Componente
 
-O Mark Shot pode detectar as janelas do desktop atual antes de você escolher
+O DracoPho pode detectar as janelas do desktop atual antes de você escolher
 uma região. Enquanto a sobreposição de seleção está aberta, **mover o mouse
 destaca a janela sob o cursor** com um contorno ciano. **Um clique esquerdo
 simples (sem arrastar) seleciona a janela inteira** como região de captura;
@@ -292,7 +292,7 @@ texto traduzido de volta na imagem nas posições originais do layout.
    grandes).
 2. A sobreposição rola a janela de destino; os quadros capturados são
    costurados em uma imagem longa.
-3. O GNOME Wayland requer a extensão Mark Shot Scroll Helper (§ 2.1).
+3. O GNOME Wayland requer a extensão DracoPho Scroll Helper (§ 2.1).
 
 A captura com rolagem está pronta para produção no niri e em compositores
 wlroots/Wayland semelhantes; no KDE, X11 e outras pilhas, é um recurso de
@@ -339,7 +339,7 @@ suportados), `--record-audio` para incluir o áudio do sistema e
 
 ### 7.1 Captura headless de janela / componente
 
-O Mark Shot pode capturar **janelas específicas — ou um componente (sub-região)
+O DracoPho pode capturar **janelas específicas — ou um componente (sub-região)
 dentro de uma janela — sem abrir nenhuma interface**, a partir de um script, de
 um pipeline de build ou de um agente. O processo sai assim que as imagens são
 gravadas ou retornadas, e nunca cria uma janela, nunca abre um diálogo e nunca
@@ -356,7 +356,7 @@ Exemplo de saída (GNOME Wayland):
 
 ```json
 {"count":2,"platform":"wayland","source":"compositor-script","windows":[
-  {"index":0,"id":"0x3c00007","title":"Mark Shot - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
+  {"index":0,"id":"0x3c00007","title":"DracoPho - VSCodium","class":"codium","instance":"codium","x":1920,"y":0,"width":1680,"height":1050,"zOrder":1},
   {"index":1,"title":"Terminal","class":"org.gnome.Terminal","x":67,"y":32,"width":800,"height":600}
 ]}
 ```
@@ -376,7 +376,7 @@ e `instance`, além de `x`/`y`/`width`/`height` e um `zOrder` opcional.
 | `0`, `1`, …               | `index` da lista                                   |
 | `0x3c00007`               | `id` da janela                                      |
 | `VSCodium`                | `class` ou `instance`, depois `title` (exato, depois substring) |
-| `Mark Shot - VSCodium`    | `title`                                             |
+| `DracoPho - VSCodium`    | `title`                                             |
 
 Force uma regra de correspondência com `--window-by id|title|class|index`. Um
 seletor que corresponde a várias janelas captura **todas elas**.
