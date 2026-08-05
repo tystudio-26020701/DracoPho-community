@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="data/icons/hicolor/scalable/apps/mark-shot.svg" alt="Mark Shot Logo" width="128" />
-  <h1>Mark Shot</h1>
+  <img src="data/icons/DracoPho-logo.png" alt="DracoPho Logo" width="128" />
+  <h1>DracoPho</h1>
   <p>
     <a href="https://github.com/tystudio-26020701/mark-shot-community/releases">
       <img src="https://img.shields.io/github/v/release/tystudio-26020701/mark-shot-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
@@ -82,21 +82,21 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **Floating Drag Handle for Large Regions**: When the selected capture region is too large to fit the preview panel on the screen, the preview panel is hidden, and a **floating drag handle** (a small floating button with direction arrows) is shown near the selection edge instead.
   - **Drag to reposition selection**: Press and drag the floating handle to slide the capture region along the active scroll axis. This allows adjusting the target area and reaching off-screen content.
   - **Click to toggle axis**: Click the handle directly before capture starts to switch between vertical and horizontal scroll directions.
-- **GNOME Wayland**: scrolling capture requires the bundled `mark-shot-scroll-helper@snemc.org` GNOME Shell extension. GNOME does not expose the capture and preview hooks Mark Shot needs to normal desktop applications, so the extension provides a private D-Bus helper for area screenshots and the scroll preview panel.
+- **GNOME Wayland**: scrolling capture requires the bundled `mark-shot-scroll-helper@snemc.org` GNOME Shell extension. GNOME does not expose the capture and preview hooks DracoPho needs to normal desktop applications, so the extension provides a private D-Bus helper for area screenshots and the scroll preview panel.
 - **Compatibility notice**: scrolling capture on KDE, X11, and other non-`niri` environments is a test feature and is not complete yet. Portal backends, shell policies, window geometry behavior, frame timing, and scroll event handling differ substantially across these desktop stacks.
-- If scrolling capture fails, use normal screenshots or configure an external long-screenshot command through Mark Shot extension commands.
+- If scrolling capture fails, use normal screenshots or configure an external long-screenshot command through DracoPho extension commands.
 - To report a scrolling capture issue, run `mark-shot --debug --debug-log /path/to/mark-shot.log`, reproduce the failure, then attach the log to a GitHub issue. The same logging can be enabled through `debug.enabled` and `debug.logPath` in `config.json`; `DEBUG=1` and `MARK_SHOT_DEBUG_LOG=/path/to/log` remain supported.
 
 ### Cross-Platform Display Server Support
 - **Wayland**: Uses PipeWire portal screencast for recording and experimental scrolling capture, including shared-memory and DMA-BUF frame paths, `grim` for wlroots screenshot capture, `layer-shell-qt` for native overlay, and `wl-copy` for clipboard persistence.
-- **GNOME Wayland**: Uses the Mark Shot Scroll Helper GNOME Shell extension for scrolling capture. Without the extension, Mark Shot disables the scrolling capture action on GNOME Wayland.
+- **GNOME Wayland**: Uses the DracoPho Scroll Helper GNOME Shell extension for scrolling capture. Without the extension, DracoPho disables the scrolling capture action on GNOME Wayland.
 - **X11**: Uses `QScreen::grabWindow` for screen capture, fullscreen top-level window for overlay, and `xclip` for clipboard persistence.
 - **Windows**: Uses Qt's native screen capture and clipboard APIs for the core screenshot, annotation, copy, save, and pin workflows. Linux-specific backends such as PipeWire, xdg-desktop-portal, `grim`, XCB window detection, LayerShellQt, and GNOME Shell helpers are disabled at build time.
 - Linux display server backends are detected at runtime via `$XDG_SESSION_TYPE`; Windows uses Qt's native platform backend.
 - **Multi-monitor freeze scope**: by default, region selection freezes every connected display (single virtual-desktop window when DPRs match on X11/Windows), and after committing a selection on one monitor the other displays stay frozen and non-interactive until the session ends. The **Cursor Screen** scope freezes only the monitor under the cursor.
 
 ### Desktop Integration
-- **Configurable startup behavior**: launching Mark Shot no longer opens the
+- **Configurable startup behavior**: launching DracoPho no longer opens the
   capture overlay by default. In Settings → General → **Startup Behavior** you
   can combine **Tray Icon**, **Floating Ball**, **Settings Window** and
   **Direct Capture** modes. Fresh installs default to Tray Icon + Floating
@@ -114,11 +114,11 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 - **Desktop Entries**:
   - `mark-shot.desktop`: Configures the utility system-wide, triggerable by custom shortcuts.
   - `mark-shot-edit.desktop`: Registers as an image editor, enabling users to right-click local files in file managers (Dolphin, Nautilus, etc.) and open them directly in annotation mode.
-- Ships with scalable vector icons (`mark-shot.svg` and `mark-shot-edit.svg`).
+- Ships with scalable vector icons (`dracoPho.svg`, plus the upstream `mark-shot.svg` and `mark-shot-edit.svg`).
 
 ### KDE KWin ScreenShot2 Authorization
 
-On KDE Wayland, Mark Shot can use KWin's `org.kde.KWin.ScreenShot2` interface for exact area capture. KWin treats this as a restricted D-Bus interface, so the application must have a desktop entry that declares the permission.
+On KDE Wayland, DracoPho can use KWin's `org.kde.KWin.ScreenShot2` interface for exact area capture. KWin treats this as a restricted D-Bus interface, so the application must have a desktop entry that declares the permission.
 
 <details>
 <summary>KDE KWin ScreenShot2 Authorization Details (Click to expand)</summary>
@@ -133,23 +133,23 @@ Distribution packages and `cmake --install` install the required desktop entries
 ```ini
 [Desktop Entry]
 Type=Application
-Name=Mark Shot
+Name=DracoPho
 Comment=Wayland screenshot selection and annotation tool
 Exec=/absolute/path/to/mark-shot
-Icon=mark-shot
+Icon=dracoPho
 Terminal=false
 Categories=Graphics;Utility;
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
-If you bind Mark Shot through KDE's command shortcut service, also create `~/.local/share/applications/net.local.mark-shot.desktop`:
+If you bind DracoPho through KDE's command shortcut service, also create `~/.local/share/applications/net.local.mark-shot.desktop`:
 
 ```ini
 [Desktop Entry]
 Type=Application
-Name=Mark Shot Shortcut Service
+Name=DracoPho Shortcut Service
 Exec=/absolute/path/to/mark-shot
-Icon=mark-shot
+Icon=dracoPho
 Terminal=false
 NoDisplay=true
 StartupNotify=false
@@ -165,24 +165,24 @@ After changing desktop entries, refresh KDE's desktop file cache by logging out 
 
 ## Product Comparison
 
-Mark Shot Community Edition is an **open source (MIT), cross-platform (native Linux X11/Wayland + Windows), fully offline** all-in-one screenshot, annotation, pin, OCR, translation and recording tool. The tables below are compiled from each product's official documentation and website (as of **August 2026**) and cover the most popular screenshot tools — open source and commercial — across every major desktop platform. Capabilities are honestly marked: **✅ built-in**; **⭕ partial (limited by paid tier, platform or external tool/service)**; **❌ not available**. They are counted on an "out of the box" basis — not tied to paid tiers, cloud services or experimental branches; the exact ⭕ limitations are explained in the detailed notes below.
+DracoPho Community Edition is an **open source (MIT), cross-platform (native Linux X11/Wayland + Windows), fully offline** all-in-one screenshot, annotation, pin, OCR, translation and recording tool. The tables below are compiled from each product's official documentation and website (as of **August 2026**) and cover the most popular screenshot tools — open source and commercial — across every major desktop platform. Capabilities are honestly marked: **✅ built-in**; **⭕ partial (limited by paid tier, platform or external tool/service)**; **❌ not available**. They are counted on an "out of the box" basis — not tied to paid tiers, cloud services or experimental branches; the exact ⭕ limitations are explained in the detailed notes below.
 
 ### Core capability matrix
 
 #### I. Capture (can you get what you need)
 
-| Capability | Mark Shot CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| Capability | DracoPho CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Region capture | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Fullscreen / multi-monitor capture | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Window capture | ⭕ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Occluded / minimized window content | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Scrolling / long screenshot | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ⭕ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Timed / delayed capture | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ |
+| Timed / delayed capture | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ |
 
 #### II. Annotation and intelligence (can you work efficiently after capture)
 
-| Capability | Mark Shot CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| Capability | DracoPho CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Annotation toolset | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Pin to screen | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
@@ -193,7 +193,7 @@ Mark Shot Community Edition is an **open source (MIT), cross-platform (native Li
 
 #### III. Output and automation (can you share / archive the result)
 
-| Capability | Mark Shot CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| Capability | DracoPho CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Screen recording | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | Animated GIF / WebP output | ✅ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ❌ | ❌ | ✅ |
@@ -204,7 +204,7 @@ Mark Shot Community Edition is an **open source (MIT), cross-platform (native Li
 
 #### IV. Platform and ecosystem
 
-| Capability | Mark Shot CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| Capability | DracoPho CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Native Linux Wayland | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Cross-platform (≥2 desktop OS) | ⭕ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -215,37 +215,37 @@ Mark Shot Community Edition is an **open source (MIT), cross-platform (native Li
 
 **I. Capture** (can you get what you need)
 
-- **Region / fullscreen / multi-monitor capture** — built into all 15 tools listed; Mark Shot additionally handles negative-coordinate displays and per-display HiDPI scaling correctly, with no ghosting when stitching multi-monitor captures.
-- **Window capture** — Mark Shot's interactive mode uses a fullscreen selection overlay (no dedicated "active window" one-click mode, hence ⭕), while its headless mode (`--window`) selects windows precisely by id, title, class, **PID or process name**; Flameshot has no window mode at all, every other tool ships one.
-- **Occluded / minimized window content** — on X11, Mark Shot reads the window's own composited buffer via XComposite, capturing real content even when the window is fully occluded or minimized (without raising it or stealing focus); among similar tools only scrot's `--stack` can do this. Wayland's protocol prevents every tool from reading minimized-window content.
-- **Scrolling / long screenshot** — Mark Shot works natively on niri and GNOME Wayland (official extension), with KDE/X11 as experimental. ShareX, PixPin, PicPick, Snagit, CleanShot X, Shottr, Xnip and iShot ship it built-in; Greenshot only for legacy IE scenarios; Snipaste, Flameshot, ksnip, Spectacle and Windows Snipping Tool do not.
-- **Timed / delayed capture** — not yet available in Mark Shot (❌); supported by most mainstream tools except PixPin, Snipaste and Xnip — a natural follow-up item.
+- **Region / fullscreen / multi-monitor capture** — built into all 15 tools listed; DracoPho additionally handles negative-coordinate displays and per-display HiDPI scaling correctly, with no ghosting when stitching multi-monitor captures.
+- **Window capture** — DracoPho's interactive mode uses a fullscreen selection overlay (no dedicated "active window" one-click mode, hence ⭕), while its headless mode (`--window`) selects windows precisely by id, title, class, **PID or process name**; Flameshot has no window mode at all, every other tool ships one.
+- **Occluded / minimized window content** — on X11, DracoPho reads the window's own composited buffer via XComposite, capturing real content even when the window is fully occluded or minimized (without raising it or stealing focus); among similar tools only scrot's `--stack` can do this. Wayland's protocol prevents every tool from reading minimized-window content.
+- **Scrolling / long screenshot** — DracoPho works natively on niri and GNOME Wayland (official extension), with KDE/X11 as experimental. ShareX, PixPin, PicPick, Snagit, CleanShot X, Shottr, Xnip and iShot ship it built-in; Greenshot only for legacy IE scenarios; Snipaste, Flameshot, ksnip, Spectacle and Windows Snipping Tool do not.
+- **Timed / delayed capture** — DracoPho waits a configurable number of seconds with a fullscreen countdown overlay (Esc to cancel) before entering capture, via `--delay`, the tray/floating-ball "Delayed Capture" submenu, or the Capture settings page; Flameshot, ksnip, Spectacle and most others support a plain delayed start, ShareX a timed capture, and PixPin, Snipaste and Xnip none.
 
 **II. Annotation and intelligence** (can you work efficiently after capture)
 
-- **Annotation toolset** — Mark Shot ships 12+ tools: pen, highlighter, line, rectangle, ellipse, arrow, text, step numbers, mosaic, dual-frame magnifier, laser pointer, color picker and ruler; all 15 tools have built-in annotation with varying depth.
-- **Pin to screen** — Mark Shot offers frameless always-on-top stickers with scale, rotate, OCR word picking and on-sticker LLM translation; Snipaste, PixPin, ShareX, ksnip, CleanShot X, Shottr, Xnip and iShot include it too; Flameshot, Spectacle, Greenshot, PicPick, Snipping Tool and Snagit do not.
-- **OCR text recognition** — Mark Shot bundles RapidOCR (offline PP-OCR models) with a Tesseract fallback, working out of the box; Windows Snipping Tool (local Text Actions), ShareX, Snagit, CleanShot X, Shottr, Xnip and iShot ship it; Snipaste gates it behind a paid tier, ksnip via a plugin and Spectacle via an external Tesseract install; Flameshot, Greenshot and PicPick have none.
-- **Translation** — Mark Shot bundles OpenAI-compatible LLM screenshot translation (offline / self-hosted supported). Only iShot ships screenshot translation, PixPin gates it behind membership and no other tool offers it. This remains one of the strongest differentiators.
-- **QR / barcode recognition** — Mark Shot scans QR, 1D codes and PDF417 with `Q` during capture; ShareX and PixPin support it; Snipaste (paid) plus CleanShot X / Shottr / iShot read QR only, via their OCR engines.
-- **Color picker** — Mark Shot has a built-in screen color picker with a history palette; most tools ship one except Spectacle and Snagit; Windows Snipping Tool only on Copilot+ AI PCs.
-- **One-click AI redaction** — WeChat's 2026 auto-redaction is not built in yet (❌); Mark Shot's mosaic / blur is manual. Snagit (AI Smart Redact) and Snipping Tool's text redaction are comparable implementations; automated redaction is a possible follow-up.
+- **Annotation toolset** — DracoPho ships 12+ tools: pen, highlighter, line, rectangle, ellipse, arrow, text, step numbers, mosaic, dual-frame magnifier, laser pointer, color picker and ruler; all 15 tools have built-in annotation with varying depth.
+- **Pin to screen** — DracoPho offers frameless always-on-top stickers with scale, rotate, OCR word picking and on-sticker LLM translation; Snipaste, PixPin, ShareX, ksnip, CleanShot X, Shottr, Xnip and iShot include it too; Flameshot, Spectacle, Greenshot, PicPick, Snipping Tool and Snagit do not.
+- **OCR text recognition** — DracoPho bundles RapidOCR (offline PP-OCR models) with a Tesseract fallback, working out of the box; Windows Snipping Tool (local Text Actions), ShareX, Snagit, CleanShot X, Shottr, Xnip and iShot ship it; Snipaste gates it behind a paid tier, ksnip via a plugin and Spectacle via an external Tesseract install; Flameshot, Greenshot and PicPick have none.
+- **Translation** — DracoPho bundles OpenAI-compatible LLM screenshot translation (offline / self-hosted supported). Only iShot ships screenshot translation, PixPin gates it behind membership and no other tool offers it. This remains one of the strongest differentiators.
+- **QR / barcode recognition** — DracoPho scans QR, 1D codes and PDF417 with `Q` during capture; ShareX and PixPin support it; Snipaste (paid) plus CleanShot X / Shottr / iShot read QR only, via their OCR engines.
+- **Color picker** — DracoPho has a built-in screen color picker with a history palette; most tools ship one except Spectacle and Snagit; Windows Snipping Tool only on Copilot+ AI PCs.
+- **One-click AI redaction** — WeChat's 2026 auto-redaction is not built in yet (❌); DracoPho's mosaic / blur is manual. Snagit (AI Smart Redact) and Snipping Tool's text redaction are comparable implementations; automated redaction is a possible follow-up.
 
 **III. Output and automation** (can you share / archive the result)
 
-- **Screen recording** — Mark Shot records MP4 / GIF / animated WebP with silent unattended region/display recording (no windows, no dialogs, no focus stealing); ShareX, PixPin, Spectacle (Plasma 6), PicPick, Snipping Tool, Snagit, CleanShot X and iShot ship it; Snipaste, Flameshot, ksnip, Greenshot, Shottr and Xnip do not.
-- **Animated GIF / WebP output** — Mark Shot natively records **animated WebP** (smaller files, alpha support); no competitor produces animated WebP natively. PixPin and iShot record GIF, ShareX records GIF (WebP static-save only), Snagit and CleanShot X export GIF; the rest have no animated output.
-- **Image upload / cloud** — Mark Shot ships ImgURL / sm.ms / imgbb / litterbox / custom-command upload (`Ctrl+U`); ShareX has the most targets; Greenshot, PicPick, Snagit and CleanShot X have built-in cloud upload; Flameshot only Imgur, ksnip Imgur/FTP/scripts, Shottr S3 after activation; Snipaste, PixPin, Snipping Tool, Xnip and iShot have none.
-- **Headless CLI / scripting** — Mark Shot provides a complete headless pipeline: `--capture-to` region/display screenshots, `--list-windows` + `--window` window/component captures, `--record-region` / `--record-display` unattended recording and `--record-wait-json` structured status output — all without windows, dialogs or focus stealing, with **PID/process-name targeting and occluded/minimized window capture**. The enterprise MCP server reuses the same pipeline. ShareX (Windows-only), Flameshot, ksnip and Spectacle have solid CLIs; Snipaste's CLI is a paid-tier feature; PixPin only offers a JS action engine.
-- **Floating ball launcher** — Mark Shot has a draggable ball that snaps to screen edges (X11/Windows/macOS; Wayland keeps it free-floating due to protocol limits) and fades out when idle; only PixPin offers something similar.
-- **Capture history** — Mark Shot has no dedicated history panel yet; ShareX, Snipaste, Flameshot, Snagit and CleanShot X do, ksnip / PicPick / Shottr / iShot have lightweight alternatives (tabs / gallery / pinned stash), the rest none.
+- **Screen recording** — DracoPho records MP4 / GIF / animated WebP with silent unattended region/display recording (no windows, no dialogs, no focus stealing); ShareX, PixPin, Spectacle (Plasma 6), PicPick, Snipping Tool, Snagit, CleanShot X and iShot ship it; Snipaste, Flameshot, ksnip, Greenshot, Shottr and Xnip do not.
+- **Animated GIF / WebP output** — DracoPho natively records **animated WebP** (smaller files, alpha support); no competitor produces animated WebP natively. PixPin and iShot record GIF, ShareX records GIF (WebP static-save only), Snagit and CleanShot X export GIF; the rest have no animated output.
+- **Image upload / cloud** — DracoPho ships ImgURL / sm.ms / imgbb / litterbox / custom-command upload (`Ctrl+U`); ShareX has the most targets; Greenshot, PicPick, Snagit and CleanShot X have built-in cloud upload; Flameshot only Imgur, ksnip Imgur/FTP/scripts, Shottr S3 after activation; Snipaste, PixPin, Snipping Tool, Xnip and iShot have none.
+- **Headless CLI / scripting** — DracoPho provides a complete headless pipeline: `--capture-to` region/display screenshots, `--list-windows` + `--window` window/component captures, `--record-region` / `--record-display` unattended recording and `--record-wait-json` structured status output — all without windows, dialogs or focus stealing, with **PID/process-name targeting and occluded/minimized window capture**. The enterprise MCP server reuses the same pipeline. ShareX (Windows-only), Flameshot, ksnip and Spectacle have solid CLIs; Snipaste's CLI is a paid-tier feature; PixPin only offers a JS action engine.
+- **Floating ball launcher** — DracoPho has a draggable ball that snaps to screen edges (X11/Windows/macOS; Wayland keeps it free-floating due to protocol limits) and fades out when idle; only PixPin offers something similar.
+- **Capture history** — DracoPho has no dedicated history panel yet; ShareX, Snipaste, Flameshot, Snagit and CleanShot X do, ksnip / PicPick / Shottr / iShot have lightweight alternatives (tabs / gallery / pinned stash), the rest none.
 
 **IV. Platform and ecosystem**
 
-- **Native Linux Wayland** — Mark Shot natively supports PipeWire portal, grim, layer-shell, KDE KWin ScreenShot2 and GNOME extensions; among open source tools only Spectacle (KDE) matches that depth, while Flameshot / ksnip are experimental or portal-dependent.
-- **Cross-platform** — Snipaste, Flameshot, ksnip and Snagit cover all three major desktop OSes (Windows + macOS + Linux); Mark Shot covers Linux + Windows (macOS planned); ShareX, PicPick, Snipping Tool, Spectacle, CleanShot X, Shottr, Xnip and iShot are single-platform.
-- **Plugin / extension mechanism** — Mark Shot provides a Qt plugin system with a GitHub plugin marketplace (extensible OCR / translation / code-scan providers); ksnip and Greenshot have plugin APIs; ShareX, Spectacle, Snagit, CleanShot X and Shottr substitute custom actions / integrations.
-- **Open source / free** — Mark Shot CE is MIT licensed, fully free, ad-free, account-free and network-optional; ShareX, Flameshot, ksnip, Spectacle and Greenshot (Windows) are open-source free too; Shottr and Snipping Tool are free; PixPin / Snipaste / PicPick / Xnip / iShot are closed-source freemium; Snagit / CleanShot X are paid commercial software.
+- **Native Linux Wayland** — DracoPho natively supports PipeWire portal, grim, layer-shell, KDE KWin ScreenShot2 and GNOME extensions; among open source tools only Spectacle (KDE) matches that depth, while Flameshot / ksnip are experimental or portal-dependent.
+- **Cross-platform** — Snipaste, Flameshot, ksnip and Snagit cover all three major desktop OSes (Windows + macOS + Linux); DracoPho covers Linux + Windows (macOS planned); ShareX, PicPick, Snipping Tool, Spectacle, CleanShot X, Shottr, Xnip and iShot are single-platform.
+- **Plugin / extension mechanism** — DracoPho provides a Qt plugin system with a GitHub plugin marketplace (extensible OCR / translation / code-scan providers); ksnip and Greenshot have plugin APIs; ShareX, Spectacle, Snagit, CleanShot X and Shottr substitute custom actions / integrations.
+- **Open source / free** — DracoPho CE is MIT licensed, fully free, ad-free, account-free and network-optional; ShareX, Flameshot, ksnip, Spectacle and Greenshot (Windows) are open-source free too; Shottr and Snipping Tool are free; PixPin / Snipaste / PicPick / Xnip / iShot are closed-source freemium; Snagit / CleanShot X are paid commercial software.
 
 > Note: compiled from each product's official website and documentation (2026-08); capability changes with each release, so refer to the latest docs. FastStone Capture, Nimbus, Lightshot, Sogou Capture and WeChat / QQ screenshot are not in the matrix above (WeChat's 2026 one-click AI redaction leads the segment).
 
@@ -359,8 +359,9 @@ no interactive portal prompt, no focus stealing; the outcome is queried via
 | `--all-outputs` | Captures all screens on the virtual display environment instead of only the active one. |
 | `--xdg-window` | Forces the use of a standard XDG fullscreen window (xdg-shell) instead of layer-shell. |
 | `--fullscreen` | Skips region selection and opens annotation mode on the full screen frame directly. |
-| `--tray` | Keeps Mark Shot running in the system tray and registers global capture hotkeys when supported. |
+| `--tray` | Keeps DracoPho running in the system tray and registers global capture hotkeys when supported. |
 | `--capture` | Forces one-shot capture when tray autostart is enabled in the config. |
+| `--delay <seconds>` | Waits the given number of seconds with a fullscreen countdown overlay (Esc to cancel) before entering capture. |
 | `--pin-image <path>` | Opens an existing local image directly as a pinned sticker window, skipping capture and region selection. |
 | `--recording-status` | Prints the current recording status as JSON through the running instance. |
 | `--stop-recording` | Requests the running instance to stop the active recording. |
@@ -450,7 +451,7 @@ The right-side action toolbar includes an **Extensions** button. It reads user-d
 }
 ```
 
-`command` is executed through `$SHELL -c` on Unix-like systems and `%COMSPEC% /C` on Windows, so shell features work. Use `{slurp}` to pass the current selection as `x,y widthxheight` geometry. Use `{image}` or `{imagePath}` to pass the current rendered selection as a temporary PNG path, or `{imageUrl}` for a `file://` URL. These placeholders are shell-quoted automatically. Set `saveImage` or `needsImage` to `true` to append the temporary PNG path when no image placeholder is present. `workingDirectory` and `cwd` are aliases. `closeOnStart` defaults to `true`, hiding and closing Mark Shot before the command starts.
+`command` is executed through `$SHELL -c` on Unix-like systems and `%COMSPEC% /C` on Windows, so shell features work. Use `{slurp}` to pass the current selection as `x,y widthxheight` geometry. Use `{image}` or `{imagePath}` to pass the current rendered selection as a temporary PNG path, or `{imageUrl}` for a `file://` URL. These placeholders are shell-quoted automatically. Set `saveImage` or `needsImage` to `true` to append the temporary PNG path when no image placeholder is present. `workingDirectory` and `cwd` are aliases. `closeOnStart` defaults to `true`, hiding and closing DracoPho before the command starts.
 
 ### Application Configuration
 
@@ -520,7 +521,7 @@ For other distributions (such as Debian, Ubuntu, or Fedora), download the compil
 
 The official `.deb` package is built on a Debian 12 compatibility baseline. It intentionally avoids linking the optional LayerShellQt plugin so that Deepin and other Debian-derived systems with Qt 6.8-era packages can install it without Ubuntu `t64` or newer GCC runtime dependencies.
 
-> **Ubuntu 26.04 LTS**: Mark Shot is verified and supported on Ubuntu 26.04 LTS
+> **Ubuntu 26.04 LTS**: DracoPho is verified and supported on Ubuntu 26.04 LTS
 > ("Resolute"). Building from source on Ubuntu 26.04 uses the distro Qt 6.10
 > packages directly (no `aqtinstall` step needed):
 >
@@ -581,7 +582,7 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 
 #### OCR Backend (Optional)
 
-Mark Shot delegates text recognition to the bundled `mark-shot-ocr` Python script. It supports **RapidOCR** (primary, based on PaddleOCR PP-OCR models) and **Tesseract** (fallback). On Linux the script is installed automatically; on Windows it must be configured manually.
+DracoPho delegates text recognition to the bundled `mark-shot-ocr` Python script. It supports **RapidOCR** (primary, based on PaddleOCR PP-OCR models) and **Tesseract** (fallback). On Linux the script is installed automatically; on Windows it must be configured manually.
 
 <details>
 <summary><b>Linux</b></summary>
@@ -616,7 +617,7 @@ Download and install Python 3.10 or later from [python.org](https://www.python.o
 
 **2. Copy the OCR helper script**
 
-Copy `scripts/mark-shot-ocr` from the [Mark Shot repository](https://github.com/tystudio-26020701/mark-shot-community) to a local directory, for example `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
+Copy `scripts/mark-shot-ocr` from the [DracoPho repository](https://github.com/tystudio-26020701/mark-shot-community) to a local directory, for example `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
@@ -648,7 +649,7 @@ Open `%LOCALAPPDATA%\mark-shot\config.json` (create it if it does not exist) and
 }
 ```
 
-Replace `%LOCALAPPDATA%` with the actual expanded path (e.g. `C:\Users\YourName\AppData\Local`). The `{image}` placeholder is replaced with the temporary screenshot path at runtime; if omitted, Mark Shot appends it automatically.
+Replace `%LOCALAPPDATA%` with the actual expanded path (e.g. `C:\Users\YourName\AppData\Local`). The `{image}` placeholder is replaced with the temporary screenshot path at runtime; if omitted, DracoPho appends it automatically.
 
 > **Tip**: Set the environment variable `MARK_SHOT_OCR_NO_VENV=1` to skip the script's built-in venv auto-detection, since the venv Python is already invoked directly.
 
@@ -667,7 +668,7 @@ The code scanner helper prefers `zxing-cpp` for QR Code, Data Matrix, Aztec, PDF
 
 The image upload feature uses the bundled `mark-shot-upload` Python script by default. It has no third-party dependencies (Python 3 standard library only) and is configured entirely through environment variables in `upload.env`. See the [Image Upload Configuration](#image-upload-configuration) section above for supported keys and provider examples.
 
-For providers that return a plain-text URL instead of JSON (e.g. litterbox), set `upload.command` to a custom `curl` invocation—Mark Shot auto-detects any stdout line starting with `http://` or `https://` as the upload result.
+For providers that return a plain-text URL instead of JSON (e.g. litterbox), set `upload.command` to a custom `curl` invocation—DracoPho auto-detects any stdout line starting with `http://` or `https://` as the upload result.
 
 #### Windows
 
@@ -713,7 +714,7 @@ This installs the binary, helper scripts (`mark-shot-ocr`, `mark-shot-code-scan`
 
 ### GNOME Wayland Scrolling Capture Extension
 
-GNOME Wayland scrolling capture requires the **Mark Shot Scroll Helper** extension. Without it, Mark Shot cannot perform silent repeated area screenshots or display the GNOME-native scroll preview panel, causing the scrolling capture action to be disabled on GNOME Wayland.
+GNOME Wayland scrolling capture requires the **DracoPho Scroll Helper** extension. Without it, DracoPho cannot perform silent repeated area screenshots or display the GNOME-native scroll preview panel, causing the scrolling capture action to be disabled on GNOME Wayland.
 
 The extension files are bundled in the project repository at `packaging/gnome-extension/mark-shot-scroll-helper@snemc.org`.
 
@@ -721,7 +722,7 @@ The extension files are bundled in the project repository at `packaging/gnome-ex
 <summary><b>Expand/Collapse GNOME Wayland Scrolling Capture Extension Installation & Enable Guide</b></summary>
 
 ##### Method A: Installed from Distribution Package
-If Mark Shot was installed via a distribution package, the extension is already installed system-wide. Enable it with:
+If DracoPho was installed via a distribution package, the extension is already installed system-wide. Enable it with:
 ```bash
 gnome-extensions enable mark-shot-scroll-helper@snemc.org
 ```
@@ -834,10 +835,10 @@ This project is licensed under the **MIT License**. For details, please refer to
 
 ## Acknowledgements
 
-Mark Shot is built on the shoulders of the open-source community. We would like to express our sincere gratitude to:
+DracoPho is built on the shoulders of the open-source community. We would like to express our sincere gratitude to:
 
 - **The original upstream project [jswysnemc/mark-shot](https://github.com/jswysnemc/mark-shot) and its author and all contributors.** This community edition is developed on top of the original upstream project, whose outstanding design and sustained contributions made everything here possible. We sincerely thank them for their great work.
 - **[serendipitywgy](https://github.com/serendipitywgy)** for contributions from `serendipitywgy/mark-shot`, including cross-desktop compatibility improvements, the OCR copy toolbar action, and smart rectangle preselection.
-- **All the open-source projects that Mark Shot depends on**, including Qt 6, PipeWire, xdg-desktop-portal, layer-shell-qt, wl-clipboard, xclip, grim, RapidOCR, onnxruntime, Tesseract, and ZXing-C++, among others.
+- **All the open-source projects that DracoPho depends on**, including Qt 6, PipeWire, xdg-desktop-portal, layer-shell-qt, wl-clipboard, xclip, grim, RapidOCR, onnxruntime, Tesseract, and ZXing-C++, among others.
 
 This community edition is maintained by [Beijing Taiyin Zhaowu Technology Co., Ltd.](https://github.com/tystudio-26020701/mark-shot-community) and its contributors, under the **MIT License**.

@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="../data/icons/hicolor/scalable/apps/mark-shot.svg" alt="Mark Shot Logo" width="128" />
-  <h1>Mark Shot</h1>
+  <img src="../data/icons/DracoPho-logo.png" alt="太殷龍攝 Logo" width="128" />
+  <h1>太殷龍攝</h1>
   <p>
     <a href="https://github.com/tystudio-26020701/mark-shot-community/releases">
       <img src="https://img.shields.io/github/v/release/tystudio-26020701/mark-shot-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
@@ -77,7 +77,7 @@
   - **拖曳調整選區**：可按住並拖曳該懸浮把手，將截圖選區沿捲動軸方向平移，以擷取超出初始螢幕範圍的內容；
   - **點擊切換軸向**：在尚未開始擷取前，點擊懸浮把手可直接切換捲動方向（垂直/水平）。
 - **相容性說明**：KDE、GNOME、X11 以及其他非 `niri` 環境中的捲動截圖仍是測試功能，尚未完善。這些桌面棧的 portal 後端策略、Shell 或視窗管理員行為、視窗幾何回饋、幀時序和捲動事件處理存在差異。
-- 如果捲動截圖無法使用，請使用一般截圖流程，或者透過 Mark Shot 擴充指令接入外部長截圖工具。
+- 如果捲動截圖無法使用，請使用一般截圖流程，或者透過 太殷龍攝 擴充指令接入外部長截圖工具。
 - 如果需要提交捲動截圖問題，請先執行 `mark-shot --debug --debug-log /path/to/mark-shot.log` 並重現問題，然後把日誌附到 GitHub issue 中。也可以在 `config.json` 中透過 `debug.enabled` 與 `debug.logPath` 開啟；`DEBUG=1` 與 `MARK_SHOT_DEBUG_LOG=/path/to/log` 仍然可用。
 
 ### 跨顯示伺服器支援
@@ -88,17 +88,17 @@
 - **Multi-monitor freeze scope**：預設情況下，區域選取會凍結所有已連接的顯示器（在 X11/Windows 上 DPR 相符時，顯示為單一虛擬桌面視窗）；在一個顯示器上確定選取後，其他顯示器會保持凍結且無法互動，直到工作階段結束。**Cursor Screen** 範圍只會凍結滑鼠游標所在的顯示器。
 
 ### 桌面整合
-- **可配置的啟動行為**：啟動 Mark Shot 不再預設彈出截圖覆蓋層。在 設定 → 通用 → **啟動行為** 中可任意組合 **托盤圖示**、**懸浮球**、**設定視窗**、**直接截圖** 四種模式。全新安裝預設托盤圖示 + 懸浮球，直接截圖為可選項。
+- **可配置的啟動行為**：啟動 太殷龍攝 不再預設彈出截圖覆蓋層。在 設定 → 通用 → **啟動行為** 中可任意組合 **托盤圖示**、**懸浮球**、**設定視窗**、**直接截圖** 四種模式。全新安裝預設托盤圖示 + 懸浮球，直接截圖為可選項。
 - **懸浮球**：置頂小圓形控制項（預設螢幕右下角），提供截圖 / 全屏截圖 / 錄製 / 設定的快捷入口。單擊彈出選單，雙擊直接截圖，拖動可移動（位置會被記住），截圖進行中自動隱藏。
   拖到螢幕邊緣附近會自動吸附並**隱入靠邊緣的一半**（滑鼠懸停滑出、移開再隱回；X11 / Windows / macOS 支援邊緣吸附，Wayland 受協定限制保持自由漂浮）；閒置數秒後自動淡出為半透明，懸停立即恢復，避免遮擋內容。
 - **桌面捷徑**：
   - `mark-shot.desktop`：設定為系統全域截圖工具，支援系統快捷鍵直接呼叫。
   - `mark-shot-edit.desktop`：註冊為獨立的影像編輯器，可整合到檔案管理員（如 Dolphin、Nautilus）的右鍵「開啟方式」選單中。
-- 附帶高解析度的 `mark-shot.svg` 與 `mark-shot-edit.svg` 系統向量圖示。
+- 附帶高解析度的 `dracoPho.svg` 與 `mark-shot-edit.svg` 系統向量圖示。
 
 ### KDE KWin ScreenShot2 授權
 
-在 KDE Wayland 中，Mark Shot 可以使用 KWin 的 `org.kde.KWin.ScreenShot2` 介面執行精確區域截圖。KWin 將該介面視為受限 D-Bus 介面，因此應用程式對應的桌面檔案必須宣告授權欄位。
+在 KDE Wayland 中，太殷龍攝 可以使用 KWin 的 `org.kde.KWin.ScreenShot2` 介面執行精確區域截圖。KWin 將該介面視為受限 D-Bus 介面，因此應用程式對應的桌面檔案必須宣告授權欄位。
 
 <details>
 <summary>KDE KWin ScreenShot2 授權與桌面檔案設定說明 (點擊展開)</summary>
@@ -113,23 +113,23 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```ini
 [Desktop Entry]
 Type=Application
-Name=Mark Shot
+Name=太殷龍攝
 Comment=Wayland screenshot selection and annotation tool
 Exec=/absolute/path/to/mark-shot
-Icon=mark-shot
+Icon=dracoPho
 Terminal=false
 Categories=Graphics;Utility;
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
-如果是透過 KDE 的命令快捷鍵服務繫結 Mark Shot，還需要建立 `~/.local/share/applications/net.local.mark-shot.desktop`：
+如果是透過 KDE 的命令快捷鍵服務繫結 太殷龍攝，還需要建立 `~/.local/share/applications/net.local.mark-shot.desktop`：
 
 ```ini
 [Desktop Entry]
 Type=Application
-Name=Mark Shot Shortcut Service
+Name=太殷龍攝 Shortcut Service
 Exec=/absolute/path/to/mark-shot
-Icon=mark-shot
+Icon=dracoPho
 Terminal=false
 NoDisplay=true
 StartupNotify=false
@@ -146,24 +146,24 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 
 ## 產品功能對比
 
-Mark Shot 社群版是一款**開源（MIT）、跨平台（Linux X11/Wayland 原生 + Windows）、可完全離線**的截圖·標註·貼圖·OCR·翻譯·螢幕錄製一體化工具。下表按各產品官網與官方文件整理（截至 **2026 年 8 月**），涵蓋全球開源與商用、各主流平台的高關注度截圖工具。能力如實標註：**✅ 內建支援**；**⭕ 部分支援（受付費層級、平台或外部工具/服務限制）**；**❌ 不支援**。一律按「開箱即用」口徑統計，不與付費會員、雲端服務或實驗性分支掛鉤；⭕ 的具體限制見下方「功能詳解」。
+太殷龍攝 社群版是一款**開源（MIT）、跨平台（Linux X11/Wayland 原生 + Windows）、可完全離線**的截圖·標註·貼圖·OCR·翻譯·螢幕錄製一體化工具。下表按各產品官網與官方文件整理（截至 **2026 年 8 月**），涵蓋全球開源與商用、各主流平台的高關注度截圖工具。能力如實標註：**✅ 內建支援**；**⭕ 部分支援（受付費層級、平台或外部工具/服務限制）**；**❌ 不支援**。一律按「開箱即用」口徑統計，不與付費會員、雲端服務或實驗性分支掛鉤；⭕ 的具體限制見下方「功能詳解」。
 
 ### 核心能力總覽
 
 #### 一、截圖獲取（「能不能截到想要的東西」）
 
-| 能力 | Mark Shot 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| 能力 | 太殷龍攝 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 區域截圖 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 全螢幕 / 多顯示器截圖 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 視窗截圖 | ⭕ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 被遮擋 / 最小化視窗內容捕獲 | ⭕ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 捲動長截圖 | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ⭕ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 定時 / 延遲截圖 | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ |
+| 定時 / 延遲截圖 | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⭕ | ❌ | ✅ |
 
 #### 二、標註與智能（「截完之後能不能高效地用」）
 
-| 能力 | Mark Shot 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| 能力 | 太殷龍攝 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 標註工具集 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 貼圖 Pin 到螢幕 | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
@@ -174,7 +174,7 @@ Mark Shot 社群版是一款**開源（MIT）、跨平台（Linux X11/Wayland �
 
 #### 三、輸出與自動化（「截完能不能順手分發 / 沉澱」）
 
-| 能力 | Mark Shot 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| 能力 | 太殷龍攝 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 螢幕錄製 | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | 動畫 GIF / WebP 輸出 | ✅ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ❌ | ❌ | ✅ |
@@ -185,7 +185,7 @@ Mark Shot 社群版是一款**開源（MIT）、跨平台（Linux X11/Wayland �
 
 #### 四、平台與生態
 
-| 能力 | Mark Shot 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
+| 能力 | 太殷龍攝 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 原生 Linux Wayland | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 跨平台（涵蓋 ≥2 個桌面 OS） | ⭕ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -196,37 +196,37 @@ Mark Shot 社群版是一款**開源（MIT）、跨平台（Linux X11/Wayland �
 
 **一、截圖獲取**（「能不能截到想要的東西」）
 
-- **區域 / 全螢幕 / 多顯示器截圖** — 表內全部 15 款工具均內建；Mark Shot 額外正確處理負座標顯示器與每台顯示器獨立 HiDPI 縮放，多螢幕拼接不重影。
-- **視窗截圖** — Mark Shot 互動模式為全螢幕選區覆蓋層（未單獨提供「活動視窗」一鍵模式，故標 ⭕），但無頭模式（`--window`）可按 id / 標題 / 類別 / PID / 行程名稱精確選窗；Flameshot 完全沒有視窗模式，其餘工具均內建。
-- **被遮擋 / 最小化視窗內容捕獲** — Mark Shot 在 X11 下透過 XComposite 讀取合成器保留的視窗緩衝，即使視窗被完全遮擋或已最小化也能取得真實內容（不彈起、不搶焦點）；同類僅 scrot `--stack` 具備。Wayland 受協定限制，任何工具都無法讀取最小化視窗內容。
-- **捲動長截圖** — Mark Shot 在 niri / GNOME Wayland 原生可用（GNOME 需官方擴充套件），KDE/X11 為實驗特性；ShareX、PixPin、PicPick、Snagit、CleanShot X、Shottr、Xnip、iShot 內建；Greenshot 僅對舊版 IE 場景有效，Snipaste、Flameshot、ksnip、Spectacle、Windows 截圖工具不支援。
-- **定時 / 延遲截圖** — Mark Shot 暫未提供（❌）；除 PixPin、Snipaste、Xnip 外的主流工具普遍支援，屬後續可補齊項。
+- **區域 / 全螢幕 / 多顯示器截圖** — 表內全部 15 款工具均內建；太殷龍攝 額外正確處理負座標顯示器與每台顯示器獨立 HiDPI 縮放，多螢幕拼接不重影。
+- **視窗截圖** — 太殷龍攝 互動模式為全螢幕選區覆蓋層（未單獨提供「活動視窗」一鍵模式，故標 ⭕），但無頭模式（`--window`）可按 id / 標題 / 類別 / PID / 行程名稱精確選窗；Flameshot 完全沒有視窗模式，其餘工具均內建。
+- **被遮擋 / 最小化視窗內容捕獲** — 太殷龍攝 在 X11 下透過 XComposite 讀取合成器保留的視窗緩衝，即使視窗被完全遮擋或已最小化也能取得真實內容（不彈起、不搶焦點）；同類僅 scrot `--stack` 具備。Wayland 受協定限制，任何工具都無法讀取最小化視窗內容。
+- **捲動長截圖** — 太殷龍攝 在 niri / GNOME Wayland 原生可用（GNOME 需官方擴充套件），KDE/X11 為實驗特性；ShareX、PixPin、PicPick、Snagit、CleanShot X、Shottr、Xnip、iShot 內建；Greenshot 僅對舊版 IE 場景有效，Snipaste、Flameshot、ksnip、Spectacle、Windows 截圖工具不支援。
+- **定時 / 延遲截圖** — 太殷龍攝 依設定秒數等待後再進入截圖，等待期間顯示全螢幕倒數遮罩（Esc 取消），可透過 `--delay`、托盤 / 懸浮球「延遲截圖」子選單或截圖設定頁設定；Flameshot、ksnip、Spectacle 等僅支援單純延遲啟動，ShareX 支援定時截圖，PixPin、Snipaste、Xnip 不支援。
 
 **二、標註與智能**（「截完之後能不能高效地用」）
 
-- **標註工具集** — Mark Shot 內建 12+ 工具：畫筆、螢光筆、直線、矩形、橢圓、箭頭、文字、步驟序號、馬賽克、雙框放大鏡、雷射筆、取色器與尺子；表內全部工具均內建標註，深度略有差異。
-- **貼圖 Pin** — Mark Shot 支援無邊框置頂貼圖、縮放、旋轉、OCR 取詞、LLM 原位翻譯；Snipaste、PixPin、ShareX、ksnip、CleanShot X、Shottr、Xnip、iShot 亦內建；Flameshot、Spectacle、Greenshot、PicPick、Windows 截圖工具、Snagit 不支援。
-- **OCR 文字辨識** — Mark Shot 內建 RapidOCR（離線 PP-OCR 模型）+ Tesseract 回退，開箱即用；Windows 截圖工具（本機文字操作）、ShareX、Snagit、CleanShot X、Shottr、Xnip、iShot 內建；Snipaste 需付費版，ksnip 依賴外掛，Spectacle 依賴外部 Tesseract 安裝；Flameshot、Greenshot、PicPick 無。
-- **翻譯** — Mark Shot 內建 OpenAI 相容介面的 LLM 截圖翻譯（可離線 / 自建服務）；僅 iShot 內建截圖翻譯，PixPin 為會員功能，其餘工具均無。這是目前最獨特的差異化能力之一。
-- **二維碼 / 條碼辨識** — Mark Shot 內建掃碼（QR / 一維碼 / PDF417 等），截圖階段 `Q` 鍵直達；ShareX、PixPin 支援；Snipaste 付費版、CleanShot X / Shottr / iShot 僅能辨識 QR 且依賴 OCR 引擎。
-- **取色器** — Mark Shot 內建螢幕取色與歷史色板；除 Spectacle、Snagit 外主流工具普遍內建，Windows 截圖工具僅限 Copilot+ AI PC。
-- **一鍵 AI 打碼** — 微信截圖 2026 年新增的自動打碼能力 Mark Shot 暫未內建（❌），現有馬賽克 / 毛玻璃為手動標註；Snagit（AI Smart Redact）與 Windows 截圖工具的文字打碼是同類實作，AI 自動去敏屬可跟進方向。
+- **標註工具集** — 太殷龍攝 內建 12+ 工具：畫筆、螢光筆、直線、矩形、橢圓、箭頭、文字、步驟序號、馬賽克、雙框放大鏡、雷射筆、取色器與尺子；表內全部工具均內建標註，深度略有差異。
+- **貼圖 Pin** — 太殷龍攝 支援無邊框置頂貼圖、縮放、旋轉、OCR 取詞、LLM 原位翻譯；Snipaste、PixPin、ShareX、ksnip、CleanShot X、Shottr、Xnip、iShot 亦內建；Flameshot、Spectacle、Greenshot、PicPick、Windows 截圖工具、Snagit 不支援。
+- **OCR 文字辨識** — 太殷龍攝 內建 RapidOCR（離線 PP-OCR 模型）+ Tesseract 回退，開箱即用；Windows 截圖工具（本機文字操作）、ShareX、Snagit、CleanShot X、Shottr、Xnip、iShot 內建；Snipaste 需付費版，ksnip 依賴外掛，Spectacle 依賴外部 Tesseract 安裝；Flameshot、Greenshot、PicPick 無。
+- **翻譯** — 太殷龍攝 內建 OpenAI 相容介面的 LLM 截圖翻譯（可離線 / 自建服務）；僅 iShot 內建截圖翻譯，PixPin 為會員功能，其餘工具均無。這是目前最獨特的差異化能力之一。
+- **二維碼 / 條碼辨識** — 太殷龍攝 內建掃碼（QR / 一維碼 / PDF417 等），截圖階段 `Q` 鍵直達；ShareX、PixPin 支援；Snipaste 付費版、CleanShot X / Shottr / iShot 僅能辨識 QR 且依賴 OCR 引擎。
+- **取色器** — 太殷龍攝 內建螢幕取色與歷史色板；除 Spectacle、Snagit 外主流工具普遍內建，Windows 截圖工具僅限 Copilot+ AI PC。
+- **一鍵 AI 打碼** — 微信截圖 2026 年新增的自動打碼能力 太殷龍攝 暫未內建（❌），現有馬賽克 / 毛玻璃為手動標註；Snagit（AI Smart Redact）與 Windows 截圖工具的文字打碼是同類實作，AI 自動去敏屬可跟進方向。
 
 **三、輸出與自動化**（「截完能不能順手分發 / 沉澱」）
 
-- **螢幕錄製** — Mark Shot 支援 MP4 / GIF / 動畫 WebP，無人值守錄製（區域 / 顯示器）靜默執行、不彈窗不搶焦點；ShareX、PixPin、Spectacle（Plasma 6）、PicPick、Windows 截圖工具、Snagit、CleanShot X、iShot 內建；Snipaste、Flameshot、ksnip、Greenshot、Shottr、Xnip 不支援。
-- **動畫 GIF / WebP 輸出** — Mark Shot 原生錄製**動畫 WebP**（體積更小、支援透明度），競品均無法原生輸出動畫 WebP；PixPin、iShot 支援 GIF 錄製，ShareX 支援 GIF（WebP 僅靜態儲存），Snagit、CleanShot X 支援 GIF 匯出。
-- **圖床 / 雲端上傳** — Mark Shot 內建 ImgURL / sm.ms / imgbb / litterbox / 自訂指令，`Ctrl+U` 上傳並複製連結；ShareX 上傳目標最齊全；Greenshot、PicPick、Snagit、CleanShot X 內建雲端上傳；Flameshot 僅 Imgur，ksnip 僅 Imgur / FTP / 腳本，Shottr 需啟用 S3；Snipaste、PixPin、Windows 截圖工具、Xnip、iShot 無。
-- **無頭 CLI / 腳本化** — Mark Shot 提供完整無頭鏈路：`--capture-to` 區域 / 顯示器截圖、`--list-windows` + `--window` 視窗 / 元件截圖、`--record-region` / `--record-display` 無人值守錄製、`--record-wait-json` 等待並輸出結構化狀態；全程無視窗、無彈窗、無焦點搶佔，可指定 **PID / 行程名稱**並截取被遮擋 / 最小化視窗。商業版 MCP server 複用同一鏈路。ShareX（僅 Windows）、Flameshot、ksnip、Spectacle 有較強 CLI；Snipaste 的 CLI 為付費版功能；PixPin 僅有 JS 腳本動作引擎。
-- **懸浮球快捷入口** — Mark Shot 內建可拖曳、可吸附螢幕邊緣、閒置自動半透明的懸浮球（X11 / Windows / macOS 支援邊緣吸附，Wayland 受協定限制保持自由漂浮）；同類僅 PixPin 提供。
-- **截圖歷史** — Mark Shot 暫未提供獨立歷史面板；ShareX、Snipaste、Flameshot、Snagit、CleanShot X 內建歷史，ksnip / PicPick / Shottr / iShot 有輕量替代（多標籤 / 圖庫 / 置頂暫存），其餘無。
+- **螢幕錄製** — 太殷龍攝 支援 MP4 / GIF / 動畫 WebP，無人值守錄製（區域 / 顯示器）靜默執行、不彈窗不搶焦點；ShareX、PixPin、Spectacle（Plasma 6）、PicPick、Windows 截圖工具、Snagit、CleanShot X、iShot 內建；Snipaste、Flameshot、ksnip、Greenshot、Shottr、Xnip 不支援。
+- **動畫 GIF / WebP 輸出** — 太殷龍攝 原生錄製**動畫 WebP**（體積更小、支援透明度），競品均無法原生輸出動畫 WebP；PixPin、iShot 支援 GIF 錄製，ShareX 支援 GIF（WebP 僅靜態儲存），Snagit、CleanShot X 支援 GIF 匯出。
+- **圖床 / 雲端上傳** — 太殷龍攝 內建 ImgURL / sm.ms / imgbb / litterbox / 自訂指令，`Ctrl+U` 上傳並複製連結；ShareX 上傳目標最齊全；Greenshot、PicPick、Snagit、CleanShot X 內建雲端上傳；Flameshot 僅 Imgur，ksnip 僅 Imgur / FTP / 腳本，Shottr 需啟用 S3；Snipaste、PixPin、Windows 截圖工具、Xnip、iShot 無。
+- **無頭 CLI / 腳本化** — 太殷龍攝 提供完整無頭鏈路：`--capture-to` 區域 / 顯示器截圖、`--list-windows` + `--window` 視窗 / 元件截圖、`--record-region` / `--record-display` 無人值守錄製、`--record-wait-json` 等待並輸出結構化狀態；全程無視窗、無彈窗、無焦點搶佔，可指定 **PID / 行程名稱**並截取被遮擋 / 最小化視窗。商業版 MCP server 複用同一鏈路。ShareX（僅 Windows）、Flameshot、ksnip、Spectacle 有較強 CLI；Snipaste 的 CLI 為付費版功能；PixPin 僅有 JS 腳本動作引擎。
+- **懸浮球快捷入口** — 太殷龍攝 內建可拖曳、可吸附螢幕邊緣、閒置自動半透明的懸浮球（X11 / Windows / macOS 支援邊緣吸附，Wayland 受協定限制保持自由漂浮）；同類僅 PixPin 提供。
+- **截圖歷史** — 太殷龍攝 暫未提供獨立歷史面板；ShareX、Snipaste、Flameshot、Snagit、CleanShot X 內建歷史，ksnip / PicPick / Shottr / iShot 有輕量替代（多標籤 / 圖庫 / 置頂暫存），其餘無。
 
 **四、平台與生態**
 
-- **原生 Linux Wayland** — Mark Shot 原生支援 PipeWire portal、grim、layer-shell、KDE KWin ScreenShot2 與 GNOME 擴充套件；開源陣營僅 Spectacle（KDE）達到同等原生水準，Flameshot / ksnip 的 Wayland 為實驗性或依賴 portal。
-- **跨平台** — Snipaste、Flameshot、ksnip、Snagit 涵蓋 Windows + macOS + Linux 三大桌面 OS；Mark Shot 涵蓋 Linux + Windows（macOS 在規劃中）；ShareX、PicPick、Windows 截圖工具、Spectacle、CleanShot X、Shottr、Xnip、iShot 為單平台工具。
-- **外掛 / 擴充機制** — Mark Shot 提供 Qt 外掛體系與 GitHub 外掛市集（OCR / 翻譯 / 掃碼 provider 可擴充）；ksnip、Greenshot 有外掛 API；ShareX、Spectacle、Snagit、CleanShot X、Shottr 以自訂動作 / 整合替代。
-- **開源 / 免費** — Mark Shot 社群版為 MIT 開源、完全免費、無廣告、無帳號、無需連網；ShareX、Flameshot、ksnip、Spectacle、Greenshot（Windows）同為開源免費；Shottr、Windows 截圖工具免費；PixPin / Snipaste / PicPick / Xnip / iShot 為閉源免費 + 付費升級；Snagit / CleanShot X 為付費商業軟體。
+- **原生 Linux Wayland** — 太殷龍攝 原生支援 PipeWire portal、grim、layer-shell、KDE KWin ScreenShot2 與 GNOME 擴充套件；開源陣營僅 Spectacle（KDE）達到同等原生水準，Flameshot / ksnip 的 Wayland 為實驗性或依賴 portal。
+- **跨平台** — Snipaste、Flameshot、ksnip、Snagit 涵蓋 Windows + macOS + Linux 三大桌面 OS；太殷龍攝 涵蓋 Linux + Windows（macOS 在規劃中）；ShareX、PicPick、Windows 截圖工具、Spectacle、CleanShot X、Shottr、Xnip、iShot 為單平台工具。
+- **外掛 / 擴充機制** — 太殷龍攝 提供 Qt 外掛體系與 GitHub 外掛市集（OCR / 翻譯 / 掃碼 provider 可擴充）；ksnip、Greenshot 有外掛 API；ShareX、Spectacle、Snagit、CleanShot X、Shottr 以自訂動作 / 整合替代。
+- **開源 / 免費** — 太殷龍攝 社群版為 MIT 開源、完全免費、無廣告、無帳號、無需連網；ShareX、Flameshot、ksnip、Spectacle、Greenshot（Windows）同為開源免費；Shottr、Windows 截圖工具免費；PixPin / Snipaste / PicPick / Xnip / iShot 為閉源免費 + 付費升級；Snagit / CleanShot X 為付費商業軟體。
 
 > 說明：以上對比基於各產品官網與官方文件（2026-08）整理，功能口徑隨版本演進會變化，請以各產品最新文件為準。FastStone Capture、Nimbus、Lightshot、搜狗截圖、微信 / QQ 截圖等未列入總覽表（其中微信截圖 2026 年新增的「一鍵 AI 打碼」能力在同類中領先）。
 
@@ -317,7 +317,7 @@ xdg-desktop-portal、PipeWire、grim、KWin/GNOME 輔助、Windows Graphics Capt
 | `--default-tool <tool>` | 指定一般選區完成後的預設標註工具；未設定 `--fullscreen-default-tool` 時也作為全螢幕模式預設工具。 |
 | `--fullscreen-default-tool <tool>` | 指定全螢幕標註模式的預設工具。 |
 | `--default-color <color>` | 指定預設標註顏色。支援 `#RRGGBB` 與 `#RRGGBBAA`。 |
-| `--tray` | 將 Mark Shot 保持執行在系統匣中，並在平台支援時註冊全域截圖快捷鍵。 |
+| `--tray` | 將 太殷龍攝 保持執行在系統匣中，並在平台支援時註冊全域截圖快捷鍵。 |
 | `--capture` | 當設定中啟用系統匣自動啟動時，強制觸發單次截圖。 |
 | `--pin-image <path>` | 直接將本機圖片作為貼圖視窗開啟，跳過截圖與選區流程。 |
 | `--recording-status` | 透過執行中的實例輸出目前錄製狀態 JSON。 |
@@ -402,7 +402,7 @@ mark-shot --tray
 }
 ```
 
-`command` 在類 Unix 系統上透過 `$SHELL -c` 執行，在 Windows 上透過 `%COMSPEC% /C` 執行，因此支援 shell 運算式。使用 `{slurp}` 可把目前選區作為 `x,y widthxheight` 幾何字串傳入指令。使用 `{image}` 或 `{imagePath}` 可把目前已渲染選區作為臨時 PNG 路徑傳入指令，使用 `{imageUrl}` 可傳入 `file://` URL。這些佔位符會自動進行 shell 引用跳脫，設定中不要再額外加引號。若未使用圖片佔位符，可設定 `saveImage` 或 `needsImage` 為 `true`，程式會自動把臨時 PNG 路徑附加到指令結尾。`workingDirectory` 與 `cwd` 等價。`closeOnStart` 預設值為 `true`，指令啟動前會先隱藏並關閉 Mark Shot。
+`command` 在類 Unix 系統上透過 `$SHELL -c` 執行，在 Windows 上透過 `%COMSPEC% /C` 執行，因此支援 shell 運算式。使用 `{slurp}` 可把目前選區作為 `x,y widthxheight` 幾何字串傳入指令。使用 `{image}` 或 `{imagePath}` 可把目前已渲染選區作為臨時 PNG 路徑傳入指令，使用 `{imageUrl}` 可傳入 `file://` URL。這些佔位符會自動進行 shell 引用跳脫，設定中不要再額外加引號。若未使用圖片佔位符，可設定 `saveImage` 或 `needsImage` 為 `true`，程式會自動把臨時 PNG 路徑附加到指令結尾。`workingDirectory` 與 `cwd` 等價。`closeOnStart` 預設值為 `true`，指令啟動前會先隱藏並關閉 太殷龍攝。
 
 ### 應用程式設定檔
 
@@ -469,7 +469,7 @@ home.packages = with pkgs; [
   sudo dnf install ./mark-shot-<version>-1.x86_64.rpm
   ```
 
-> **Ubuntu 26.04 LTS**：Mark Shot 已在 Ubuntu 26.04 LTS（Resolute）上驗證並支援。
+> **Ubuntu 26.04 LTS**：太殷龍攝 已在 Ubuntu 26.04 LTS（Resolute）上驗證並支援。
 > 在 Ubuntu 26.04 上從原始碼建置可直接使用發行版自帶的 Qt 6.10 軟體套件
 > （無需 `aqtinstall` 步驟）：
 >
@@ -529,7 +529,7 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 
 #### OCR 後端（可選）
 
-Mark Shot 的文字辨識功能依賴內建的 `mark-shot-ocr` Python 腳本。該腳本支援 **RapidOCR**（首選，基於 PaddleOCR PP-OCR 模型）和 **Tesseract**（回退）。Linux 上會自動安裝該腳本；Windows 上需要手動設定。
+太殷龍攝 的文字辨識功能依賴內建的 `mark-shot-ocr` Python 腳本。該腳本支援 **RapidOCR**（首選，基於 PaddleOCR PP-OCR 模型）和 **Tesseract**（回退）。Linux 上會自動安裝該腳本；Windows 上需要手動設定。
 
 <details>
 <summary><b>Linux</b></summary>
@@ -564,7 +564,7 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. 複製 OCR 輔助腳本**
 
-將 [Mark Shot 儲存庫](https://github.com/tystudio-26020701/mark-shot-community) 中的 `../scripts/mark-shot-ocr` 複製到本機目錄，例如 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`。
+將 [太殷龍攝 儲存庫](https://github.com/tystudio-26020701/mark-shot-community) 中的 `../scripts/mark-shot-ocr` 複製到本機目錄，例如 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`。
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
@@ -596,7 +596,7 @@ python -m venv "$env:LOCALAPPDATA\mark-shot\ocr-venv"
 }
 ```
 
-將 `%LOCALAPPDATA%` 替換為實際展開後的路徑（如 `C:\Users\你的使用者名稱\AppData\Local`）。`{image}` 佔位符在執行階段會被替換為臨時截圖路徑；如果省略，Mark Shot 會自動附加。
+將 `%LOCALAPPDATA%` 替換為實際展開後的路徑（如 `C:\Users\你的使用者名稱\AppData\Local`）。`{image}` 佔位符在執行階段會被替換為臨時截圖路徑；如果省略，太殷龍攝 會自動附加。
 
 > **提示**：設定環境變數 `MARK_SHOT_OCR_NO_VENV=1` 可以跳過腳本內建的虛擬環境自動偵測，因為已經直接使用了虛擬環境中的 Python。
 
@@ -696,7 +696,7 @@ imgbb 透過 URL 查詢參數傳遞 API Key，無需設定 `API_KEY`。
 }
 ```
 
-litterbox 回應為純文字 URL（非 JSON），Mark Shot 會自動辨識 `http://`/`https://` 開頭的輸出作為上傳結果。
+litterbox 回應為純文字 URL（非 JSON），太殷龍攝 會自動辨識 `http://`/`https://` 開頭的輸出作為上傳結果。
 
 </details>
 
@@ -709,7 +709,7 @@ litterbox 回應為純文字 URL（非 JSON），Mark Shot 會自動辨識 `http
 2. **輸出格式**（二選一）：
    - **JSON**：`{"url":"https://...","deleteUrl":"https://...","errors":[]}`（`url` 必填，其他可選）
    - **純文字 URL**：stdout 第一行非空內容以 `http://` 或 `https://` 開頭
-3. **佔位符**：支援 `{image}`、`{imagePath}`、`{imageUrl}`；若指令中未包含佔位符，Mark Shot 會自動在指令結尾附加臨時圖片路徑
+3. **佔位符**：支援 `{image}`、`{imagePath}`、`{imageUrl}`；若指令中未包含佔位符，太殷龍攝 會自動在指令結尾附加臨時圖片路徑
 
 ```json
 "upload": {
@@ -769,7 +769,7 @@ cmake --install build --prefix "$HOME/.local"
 
 ### GNOME Wayland 捲動截圖擴充套件
 
-GNOME Wayland 的捲動截圖必須啟用 **Mark Shot Scroll Helper** 擴充套件。沒有該擴充套件時，Mark Shot 無法靜默連續截取選定區域，也無法繪製 GNOME 原生捲動預覽面板，因此會在 GNOME Wayland 上停用捲動截圖按鈕。
+GNOME Wayland 的捲動截圖必須啟用 **太殷龍攝 Scroll Helper** 擴充套件。沒有該擴充套件時，太殷龍攝 無法靜默連續截取選定區域，也無法繪製 GNOME 原生捲動預覽面板，因此會在 GNOME Wayland 上停用捲動截圖按鈕。
 
 擴充套件檔案位於專案儲存庫的 `../packaging/gnome-extension/mark-shot-scroll-helper@snemc.org` 路徑。
 
@@ -777,7 +777,7 @@ GNOME Wayland 的捲動截圖必須啟用 **Mark Shot Scroll Helper** 擴充套�
 <summary><b>展開/收合 GNOME Wayland 捲動截圖擴充套件安裝與啟用指南</b></summary>
 
 ##### 方式 A：透過發行版套件安裝
-如果您是透過發行版套件（如 `.deb` 或 `.rpm`）安裝的 Mark Shot，該擴充套件已隨系統預設安裝。可執行以下命令為目前使用者啟用該擴充套件：
+如果您是透過發行版套件（如 `.deb` 或 `.rpm`）安裝的 太殷龍攝，該擴充套件已隨系統預設安裝。可執行以下命令為目前使用者啟用該擴充套件：
 ```bash
 gnome-extensions enable mark-shot-scroll-helper@snemc.org
 ```
@@ -893,10 +893,10 @@ gdbus call --session \
 
 ## 致謝
 
-Mark Shot 站在開源社群眾人的肩膀上，我們在此致以誠摯的謝意：
+太殷龍攝 站在開源社群眾人的肩膀上，我們在此致以誠摯的謝意：
 
 - **原上游專案 [jswysnemc/mark-shot](https://github.com/jswysnemc/mark-shot) 及其作者與全部貢獻者。** 本社群版基於原上游專案開發，其卓越的設計與持續的貢獻是這一切的基礎，我們由衷感謝他們的出色工作。
 - **[serendipitywgy](https://github.com/serendipitywgy)**：感謝透過 `serendipitywgy/mark-shot` 貢獻跨桌面相容性改進、OCR 複製工具列動作和智慧矩形框預選功能。
-- **Mark Shot 所依賴的全部開源專案**，包括 Qt 6、PipeWire、xdg-desktop-portal、layer-shell-qt、wl-clipboard、xclip、grim、RapidOCR、onnxruntime、Tesseract、ZXing-C++ 等。
+- **太殷龍攝 所依賴的全部開源專案**，包括 Qt 6、PipeWire、xdg-desktop-portal、layer-shell-qt、wl-clipboard、xclip、grim、RapidOCR、onnxruntime、Tesseract、ZXing-C++ 等。
 
 本社群版由 [北京太殷造物科技有限公司](https://github.com/tystudio-26020701/mark-shot-community) 及貢獻者維護，基於 **MIT 授權許可** 開源。

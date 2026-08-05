@@ -2,7 +2,7 @@
 
 ## 应用配置文件
 
-Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置，在其他平台上使用 Qt 应用配置目录。贴图窗口同样使用该文件中的 OCR 与翻译配置。默认 OCR helper 会优先使用 `rapidocr`，也可以回退到 `tesseract`。翻译 helper 使用 OpenAI 兼容的 `/chat/completions` 接口。
+太殷龙摄 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置，在其他平台上使用 Qt 应用配置目录。贴图窗口同样使用该文件中的 OCR 与翻译配置。默认 OCR helper 会优先使用 `rapidocr`，也可以回退到 `tesseract`。翻译 helper 使用 OpenAI 兼容的 `/chat/completions` 接口。
 
 <details>
 <summary>应用配置 JSON 示例与配置项详细说明 (点击展开)</summary>
@@ -40,6 +40,7 @@ Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置�
   },
   "capture": {
     "hideOwnWindows": true,
+    "delaySeconds": 0,
     "wayland": {
       "kde": {
         "kwinScreenshot": {
@@ -139,7 +140,8 @@ Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置�
 | `ui.language` | 字符串 | `"system"` | 界面语言。支持 `system`（跟随系统语言）、`english`、`chinese`，也接受 `en`/`zh`/`zh_cn`/`cn` 等变体。取代旧版最外层 `language` 字段。可在设置通用页配置。 |
 | `ui.theme` | 字符串 | `"system"` | 界面主题。支持 `system`（跟随 Qt 或桌面色彩方案）、`dark` 和 `light`。可在设置通用页配置，设置窗口会立即应用该主题。取代旧版最外层 `theme` 字段。 |
 | `capture.freezeScope` | 字符串 | `"all-screens"` | 普通区域截图模式下的显示器冻结范围。当为多显示器环境且没有显式指定捕获全部输出时生效。支持的值包括：`all-screens`（冻结所有显示器）、`cursor-screen`（仅冻结鼠标指针当前所在的显示器）。别名：`freezeScope`、`freezeDisplayScope` 等。 |
-| `capture.hideOwnWindows` | 布尔值 | `true` | 控制截图后端是否从冻结画面中排除 Mark Shot 自身窗口。截图设置页的开关会在下一次截图时立即生效，不需要重启应用。别名：`screenshot.hideOwnWindowsDuringCapture`。 |
+| `capture.hideOwnWindows` | 布尔值 | `true` | 控制截图后端是否从冻结画面中排除 太殷龙摄 自身窗口。截图设置页的开关会在下一次截图时立即生效，不需要重启应用。别名：`screenshot.hideOwnWindowsDuringCapture`。 |
+| `capture.delaySeconds` | 整数 | `0` | 进入截图前的延时秒数。大于 0 时先显示全屏倒计时遮罩（按 Esc 取消），0 表示立即截图。别名：`capture.captureDelaySeconds`。 |
 | `capture.wayland.kde.kwinScreenshot.enabled` | 布尔值 | `true` | 是否在 KDE Wayland 环境下启用 KWin 的 `org.kde.KWin.ScreenShot2` 限制级别 DBus 接口截屏功能。如果关闭，将自动回退到常规 Portal 截屏。 |
 | `debug.enabled` | 布尔值 | `false` | 在 Linux 和 Windows 上启用调试日志。命令行参数 `--debug` / `--no-debug` 会覆盖此项；除非设置 `--no-debug`，否则 `DEBUG=1` 仍会启用日志。 |
 | `debug.logPath` | 字符串 | 系统临时目录 `mark-shot-scroll.log` | 调试日志输出路径。命令行参数 `--debug-log` 会覆盖此项；未设置配置或命令行路径时，`MARK_SHOT_DEBUG_LOG` 仍然有效。 |
@@ -156,9 +158,9 @@ Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置�
 | `windows.hotkeys.capture` | 字符串 | `"Ctrl+Alt+S"` | 托盘模式运行时触发区域截图的全局快捷键。Windows 使用 RegisterHotKey，支持的 Linux 桌面使用 desktop portal。别名包括 `hotkey`、`captureHotkey` 和 `screenshot` |
 | `windows.hotkeys.fullscreen` | 字符串 | `""` | 可选的全屏标注截图全局快捷键。别名：`fullscreenHotkey`。默认生成配置只写入区域截图快捷键。 |
 | `colorPicker.history` | 数组 | `[]` | 启动取色器最近拾取的颜色记录。以 `#RRGGBBAA` 字符串存储，最多保留 7 条。在颜色面板确认颜色时会自动更新。 |
-| `codeScan.command` | 字符串 | `""` | 自定义二维码/条形码扫码命令。支持 `{image}`、`{imagePath}` 和 `{imageUrl}` 占位符；如果没有占位符，Mark Shot 会把临时 PNG 路径追加到命令末尾。命令必须输出与 `mark-shot-code-scan` 相同结构的 JSON。别名：`codeScanner.command`、`barcodeScanner.command`、`barcode.command`。 |
+| `codeScan.command` | 字符串 | `""` | 自定义二维码/条形码扫码命令。支持 `{image}`、`{imagePath}` 和 `{imageUrl}` 占位符；如果没有占位符，太殷龙摄 会把临时 PNG 路径追加到命令末尾。命令必须输出与 `mark-shot-code-scan` 相同结构的 JSON。别名：`codeScanner.command`、`barcodeScanner.command`、`barcode.command`。 |
 | `codeScan.timeoutMs` | 数值 | `15000` | 扫码命令超时时间。环境变量 `MARK_SHOT_CODE_SCAN_TIMEOUT_MS` 可以覆盖该值。 |
-| `upload.command` | 字符串 | `""` | 自定义图床上传命令。支持 `{image}`、`{imagePath}` 和 `{imageUrl}` 占位符；如果没有占位符，Mark Shot 会把临时 PNG 路径追加到命令末尾。命令必须输出 JSON `{"url":"...","deleteUrl":"...","errors":[]}` 或纯文本 URL（以 `http://`/`https://` 开头）。留空时使用内置 `mark-shot-upload` 脚本，通过 `upload.env` 配置图床参数。别名：`imageUpload.command`、`uploader.command`、`imageHost.command`。 |
+| `upload.command` | 字符串 | `""` | 自定义图床上传命令。支持 `{image}`、`{imagePath}` 和 `{imageUrl}` 占位符；如果没有占位符，太殷龙摄 会把临时 PNG 路径追加到命令末尾。命令必须输出 JSON `{"url":"...","deleteUrl":"...","errors":[]}` 或纯文本 URL（以 `http://`/`https://` 开头）。留空时使用内置 `mark-shot-upload` 脚本，通过 `upload.env` 配置图床参数。别名：`imageUpload.command`、`uploader.command`、`imageHost.command`。 |
 | `upload.timeoutMs` | 数值 | `60000` | 上传命令超时时间。环境变量 `MARK_SHOT_UPLOAD_TIMEOUT_MS` 可以覆盖该值。 |
 | `upload.env` | 对象 | `{}` | 传递给上传命令的环境变量。会合并到系统环境变量之上。用于配置内置 `mark-shot-upload` 脚本的图床参数（端点、字段、API Key、认证方案、URL 提取路径等）。别名：`environment`、`envVars`、`variables`。 |
 | `pinnedWindow.autoOcr` | 布尔值 | `false` | 控制贴图窗口创建后是否立即在后台自动启动 OCR 文本识别。如果禁用，则仅在右键菜单中触发复制文字或翻译时按需识别。别名：`pinned`、`pin`。 |
@@ -199,7 +201,7 @@ Mark Shot 在 Linux 上从 `~/.config/mark-shot/config.json` 读取应用配置�
 
 ### 工具默认值持久化
 
-Mark Shot 会记住最近一次使用的标注工具默认值，并在下次启动时恢复，使得工具栏从首次绘制起就反映上次会话的样式。
+太殷龙摄 会记住最近一次使用的标注工具默认值，并在下次启动时恢复，使得工具栏从首次绘制起就反映上次会话的样式。
 
 状态文件独立保存在 `~/.config/mark-shot/annotation-state.json`（Linux 平台；其他平台使用 Qt 应用配置目录），与 `config.json` 完全分离。该文件只用于保存临时的工具默认值，可随时删除以重置编辑器到内置默认值。
 
@@ -216,9 +218,9 @@ Mark Shot 会记住最近一次使用的标注工具默认值，并在下次启�
 
 ### 截图前窗口检测与脚本贡献指南
 
-为了使 Mark Shot 在各种 Wayland 合成器中都能实现精准的窗口边界识别，项目采用了一种灵活的外部脚本调用机制：用户可通过 `windowDetection.command` 配置检测脚本，由脚本负责调用合成器的特定命令提取窗口位置，最终将数据转换为统一格式回传给 Mark Shot 消费。
+为了使 太殷龙摄 在各种 Wayland 合成器中都能实现精准的窗口边界识别，项目采用了一种灵活的外部脚本调用机制：用户可通过 `windowDetection.command` 配置检测脚本，由脚本负责调用合成器的特定命令提取窗口位置，最终将数据转换为统一格式回传给 太殷龙摄 消费。
 
-Mark Shot 还会在运行时探测当前桌面环境（`XDG_SESSION_TYPE`、`XDG_CURRENT_DESKTOP` 等），自动选择匹配的检测脚本。支持 GNOME、KDE Plasma、Hyprland、Niri；其他 Wayland 会话回退到 niri 脚本，X11 会话使用内置原生 X11 检测（空命令）。若已配置的 `windowDetection.command` 与当前环境不匹配，Mark Shot 会在内存中纠正而不修改 `config.json`，因此手动配置并非必需。
+太殷龙摄 还会在运行时探测当前桌面环境（`XDG_SESSION_TYPE`、`XDG_CURRENT_DESKTOP` 等），自动选择匹配的检测脚本。支持 GNOME、KDE Plasma、Hyprland、Niri；其他 Wayland 会话回退到 niri 脚本，X11 会话使用内置原生 X11 检测（空命令）。若已配置的 `windowDetection.command` 与当前环境不匹配，太殷龙摄 会在内存中纠正而不修改 `config.json`，因此手动配置并非必需。
 
 项目已内置了针对以下窗口管理器的边界检测脚本：
 - **Niri**：`mark-shot-window-detection-niri`
@@ -238,7 +240,7 @@ Mark Shot 还会在运行时探测当前桌面环境（`XDG_SESSION_TYPE`、`XDG
 - **KDE / KWin**：可以通过调用 KWin Script 获取窗口对象，或者查询相应的 D-Bus 接口获取。
 - **GNOME**：由于 GNOME Wayland 没有内置导出窗口位置的 CLI 命令，通常需借助 GNOME Shell 扩展读取窗口逻辑边界，再通过 D-Bus 对外暴露接口。
 
-若脚本执行失败或超时（默认为 `1000ms`），Mark Shot 将继续截图流程，并在 X11 模式下自动回退至内置的窗口检测器。
+若脚本执行失败或超时（默认为 `1000ms`），太殷龙摄 将继续截图流程，并在 X11 模式下自动回退至内置的窗口检测器。
 
 #### 如何使用与配置：
 1. 将项目仓库 `scripts/` 目录下的相应脚本复制到系统的 `$PATH` 路径目录下（例如 `~/.local/bin/` 或 `/usr/local/bin/`）。
@@ -269,7 +271,7 @@ Mark Shot 还会在运行时探测当前桌面环境（`XDG_SESSION_TYPE`、`XDG
 
 #### 1. 脚本执行时的输入（环境变量）
 
-脚本被调用时，Mark Shot 会传入以下环境变量以提供当前截图的上下文信息：
+脚本被调用时，太殷龙摄 会传入以下环境变量以提供当前截图的上下文信息：
 
 | 环境变量名称 | 数据类型 | 描述 |
 | :--- | :--- | :--- |
@@ -286,7 +288,7 @@ Mark Shot 还会在运行时探测当前桌面环境（`XDG_SESSION_TYPE`、`XDG
 
 #### 2. 约定的输出 JSON 数据格式
 
-脚本必须将检测到的窗口信息以 JSON 格式输出至标准输出（`stdout`）。Mark Shot 支持多种兼容的宽容解析格式：
+脚本必须将检测到的窗口信息以 JSON 格式输出至标准输出（`stdout`）。太殷龙摄 支持多种兼容的宽容解析格式：
 
 ##### 根节点格式
 根节点可以是一个包含 `windows` 或 `windowGeometries` 数组的对象，也可以直接是包含窗口几何信息的数组。例如：

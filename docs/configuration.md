@@ -2,7 +2,7 @@
 
 ## Application Config
 
-Mark Shot reads application settings from `~/.config/mark-shot/config.json` on Linux and the Qt application config directory on other platforms. If the file does not exist, Mark Shot creates a default `config.json` on first startup. Pinned windows use the OCR and translation settings in the same file. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`; the translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
+DracoPho reads application settings from `~/.config/mark-shot/config.json` on Linux and the Qt application config directory on other platforms. If the file does not exist, DracoPho creates a default `config.json` on first startup. Pinned windows use the OCR and translation settings in the same file. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`; the translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
 
 <details>
 <summary>Application Config JSON Example & Options Details (Click to expand)</summary>
@@ -40,6 +40,7 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
   },
   "capture": {
     "hideOwnWindows": true,
+    "delaySeconds": 0,
     "wayland": {
       "kde": {
         "kwinScreenshot": {
@@ -139,7 +140,8 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | `ui.language` | String | `"system"` | Interface language. Supported values: `system` (follow system locale), `english`, `chinese`. Also accepts `en`/`zh`/`zh_cn`/`cn` variants. Supersedes the legacy root-level `language` key. Configurable from the General settings page. |
 | `ui.theme` | String | `"system"` | Interface theme. Supported values: `system` (follow the Qt/desktop color scheme), `dark`, and `light`. The General settings page writes this value and the settings dialog applies it immediately. Supersedes the legacy root-level `theme` key. |
 | `capture.freezeScope` | String | `"all-screens"` | Scope of displays frozen during region screenshot session. Only effective in multi-monitor setups when not capturing all outputs explicitly. Supported values: `all-screens` (freeze all monitors) and `cursor-screen` (freeze only the monitor containing the mouse cursor). Aliases: `freezeScope`, `freezeDisplayScope`, etc. |
-| `capture.hideOwnWindows` | Boolean | `true` | Whether the screenshot backend should exclude Mark Shot windows from captured frames. The Capture settings switch applies to the next screenshot immediately without restarting the application. Alias: `screenshot.hideOwnWindowsDuringCapture`. |
+| `capture.hideOwnWindows` | Boolean | `true` | Whether the screenshot backend should exclude DracoPho windows from captured frames. The Capture settings switch applies to the next screenshot immediately without restarting the application. Alias: `screenshot.hideOwnWindowsDuringCapture`. |
+| `capture.delaySeconds` | Integer | `0` | Delay in seconds before entering capture. A fullscreen countdown overlay is shown (Esc to cancel); `0` captures immediately. Aliases: `capture.captureDelaySeconds`. |
 | `capture.wayland.kde.kwinScreenshot.enabled` | Boolean | `true` | Whether to enable KWin `org.kde.KWin.ScreenShot2` restricted D-Bus interface screenshot capture on KDE Wayland. If disabled, fallback to standard Portal capture. |
 | `debug.enabled` | Boolean | `false` | Enables debug logging on Linux and Windows. CLI `--debug` / `--no-debug` override this value; `DEBUG=1` still enables logging unless `--no-debug` is set. |
 | `debug.logPath` | String | system temp `mark-shot-scroll.log` | Debug log destination. CLI `--debug-log` overrides this value; `MARK_SHOT_DEBUG_LOG` remains supported when no config or CLI path is set. |
@@ -156,9 +158,9 @@ Mark Shot reads application settings from `~/.config/mark-shot/config.json` on L
 | `windows.hotkeys.capture` | String | `"Ctrl+Alt+S"` | Global hotkey for region capture while tray mode is running. Windows uses RegisterHotKey; supported Linux desktops use the desktop portal. Aliases include `hotkey`, `captureHotkey`, and `screenshot`. |
 | `windows.hotkeys.fullscreen` | String | `""` | Optional global hotkey for fullscreen annotation capture while tray mode is running. Alias: `fullscreenHotkey`. The generated default config only writes the region capture hotkey. |
 | `colorPicker.history` | Array | `[]` | Recent colors picked by the startup Color Picker tool. Stored as `#RRGGBBAA` strings, capped at 7 entries. Updated automatically whenever a color is confirmed in the color panel. |
-| `codeScan.command` | String | `""` | Custom QR/barcode scanner command. Supports `{image}`, `{imagePath}`, and `{imageUrl}` placeholders; if none is present, Mark Shot appends the temporary PNG path. The command must print the same JSON shape as `mark-shot-code-scan`. Aliases: `codeScanner.command`, `barcodeScanner.command`, `barcode.command`. |
+| `codeScan.command` | String | `""` | Custom QR/barcode scanner command. Supports `{image}`, `{imagePath}`, and `{imageUrl}` placeholders; if none is present, DracoPho appends the temporary PNG path. The command must print the same JSON shape as `mark-shot-code-scan`. Aliases: `codeScanner.command`, `barcodeScanner.command`, `barcode.command`. |
 | `codeScan.timeoutMs` | Number | `15000` | Timeout for the code scanner command. Environment variable `MARK_SHOT_CODE_SCAN_TIMEOUT_MS` can override it. |
-| `upload.command` | String | `""` | Custom image-host upload command. Supports `{image}`, `{imagePath}`, and `{imageUrl}` placeholders; if none is present, Mark Shot appends the temporary PNG path. The command must print a URL (JSON `{"url": "..."}` or plain text starting with `http`). Aliases: `imageUpload.command`, `uploader.command`, `imageHost.command`. Environment variable `MARK_SHOT_UPLOAD_COMMAND` can override it. |
+| `upload.command` | String | `""` | Custom image-host upload command. Supports `{image}`, `{imagePath}`, and `{imageUrl}` placeholders; if none is present, DracoPho appends the temporary PNG path. The command must print a URL (JSON `{"url": "..."}` or plain text starting with `http`). Aliases: `imageUpload.command`, `uploader.command`, `imageHost.command`. Environment variable `MARK_SHOT_UPLOAD_COMMAND` can override it. |
 | `upload.timeoutMs` | Number | `60000` | Timeout for the upload command. Environment variable `MARK_SHOT_UPLOAD_TIMEOUT_MS` can override it. |
 | `upload.env` | Object | `{}` | Environment variables passed to the upload helper (built-in `mark-shot-upload` or custom `command`). Merges over the system environment. Aliases: `environment`, `envVars`, `variables`. See below for supported keys. |
 | `pinnedWindow.autoOcr` | Boolean | `false` | Controls whether a pinned sticker window starts OCR text recognition in the background immediately on creation. If disabled, OCR runs on demand when Copy Image Text or Translate is chosen. Alias: `pinned`, `pin`. |
@@ -193,7 +195,7 @@ The `shortcuts` node supports the following sub-nodes:
 
 ### Persistent Tool Defaults
 
-Mark Shot remembers the most recently used annotation tool defaults and restores them on the next launch, so the toolbar reflects the saved styles from the very first paint.
+DracoPho remembers the most recently used annotation tool defaults and restores them on the next launch, so the toolbar reflects the saved styles from the very first paint.
 
 State is written to a dedicated file at `~/.config/mark-shot/annotation-state.json` (Linux) or the Qt application config directory on other platforms. The file is independent from `config.json`: it only stores transient tool defaults and can be deleted at any time to reset the editor to its built-in defaults.
 
@@ -210,7 +212,7 @@ Writes go through `QSaveFile` for atomic commits and are triggered immediately a
 
 ### Image Upload Configuration
 
-The `upload` section configures the sidebar upload action. When `upload.command` is empty, Mark Shot uses the bundled `mark-shot-upload` helper, which reads its behavior entirely from environment variables in `upload.env`. This keeps the config clean—no long shell commands needed.
+The `upload` section configures the sidebar upload action. When `upload.command` is empty, DracoPho uses the bundled `mark-shot-upload` helper, which reads its behavior entirely from environment variables in `upload.env`. This keeps the config clean—no long shell commands needed.
 
 <details>
 <summary><b>Supported <code>upload.env</code> keys</b> (consumed by the bundled helper):</summary>
@@ -299,7 +301,7 @@ ImgURL V3 uses `Authorization: Bearer <token>` authentication (`AUTH_SCHEME` def
 }
 ```
 
-litterbox returns a plain-text URL (not JSON); Mark Shot auto-detects any stdout line starting with `http://` or `https://` as the upload result.
+litterbox returns a plain-text URL (not JSON); DracoPho auto-detects any stdout line starting with `http://` or `https://` as the upload result.
 
 </details>
 
@@ -307,9 +309,9 @@ litterbox returns a plain-text URL (not JSON); Mark Shot auto-detects any stdout
 
 ### Pre-Capture Window Detection & Script Contribution Guide
 
-To ensure precise window boundary detection across different Wayland compositors, Mark Shot uses a flexible external script invocation mechanism. Users can configure a detection script via `windowDetection.command`. The script is responsible for querying window geometries from the compositor and outputting the data in a unified format for Mark Shot to consume.
+To ensure precise window boundary detection across different Wayland compositors, DracoPho uses a flexible external script invocation mechanism. Users can configure a detection script via `windowDetection.command`. The script is responsible for querying window geometries from the compositor and outputting the data in a unified format for DracoPho to consume.
 
-Mark Shot also auto-selects the matching detection script at runtime by probing the current desktop environment (`XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP`, etc.). Supported environments are GNOME, KDE Plasma, Hyprland, and Niri; other Wayland sessions fall back to the niri script, and X11 sessions use the built-in native X11 detector (empty command). If the configured `windowDetection.command` does not match the current environment, Mark Shot corrects it in memory without modifying your `config.json`, so manual configuration is optional.
+DracoPho also auto-selects the matching detection script at runtime by probing the current desktop environment (`XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP`, etc.). Supported environments are GNOME, KDE Plasma, Hyprland, and Niri; other Wayland sessions fall back to the niri script, and X11 sessions use the built-in native X11 detector (empty command). If the configured `windowDetection.command` does not match the current environment, DracoPho corrects it in memory without modifying your `config.json`, so manual configuration is optional.
 
 The project bundles default window detection scripts for the following window managers:
 - **Niri**: `mark-shot-window-detection-niri`
@@ -323,13 +325,13 @@ The project bundles default window detection scripts for the following window ma
 #### How to Contribute Adapters
 Currently, the repository ships adapter scripts for niri, Hyprland, GNOME Wayland, and KDE Plasma (KWin Wayland).
 
-We highly welcome and encourage community members to contribute adapter scripts for various desktop environments and Wayland compositors to expand compatibility. If you run Mark Shot on Hyprland, Sway, KDE (KWin Wayland), or GNOME (Mutter Wayland) and have configured a working script, please submit a Pull Request to share it with the community. Here are implementation guidelines for different environments:
+We highly welcome and encourage community members to contribute adapter scripts for various desktop environments and Wayland compositors to expand compatibility. If you run DracoPho on Hyprland, Sway, KDE (KWin Wayland), or GNOME (Mutter Wayland) and have configured a working script, please submit a Pull Request to share it with the community. Here are implementation guidelines for different environments:
 - **Hyprland**: Use `hyprctl clients -j` and parse the output JSON.
 - **Sway**: Use `swaymsg -t get_tree` to fetch the layout tree.
 - **KDE / KWin**: Implement a simple KWin Script, or query KWin's D-Bus interfaces.
 - **GNOME**: Use the bundled `mark-shot-window-detection-gnome` script together with the `mark-shot-scroll-helper@snemc.org` GNOME Shell extension, which exports Mutter window geometry over D-Bus.
 
-If the script fails to execute or times out (default: `1000ms`), Mark Shot will proceed with screenshot capture normally and fall back to its internal X11-based window detector where applicable.
+If the script fails to execute or times out (default: `1000ms`), DracoPho will proceed with screenshot capture normally and fall back to its internal X11-based window detector where applicable.
 
 #### How to Use & Configure:
 1. Copy the script corresponding to your compositor from the `scripts/` directory in the repository to a folder in your system `$PATH` (e.g. `~/.local/bin/` or `/usr/local/bin/`).
@@ -352,7 +354,7 @@ If the script fails to execute or times out (default: `1000ms`), Mark Shot will 
 
 #### 1. Input Provided to the Script (Environment Variables)
 
-When invoked, Mark Shot passes the following environment variables to provide context about the current screen capture session:
+When invoked, DracoPho passes the following environment variables to provide context about the current screen capture session:
 
 | Variable Name | Type | Description |
 | :--- | :--- | :--- |
