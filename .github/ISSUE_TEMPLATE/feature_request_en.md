@@ -1,6 +1,6 @@
 ---
 name: Feature Request (English)
-about: Propose a new feature or improvement for mark-shot.
+about: Propose a new feature or improvement for DracoPho.
 title: 'feat: [Feature Name]'
 labels: ['enhancement']
 assignees: []

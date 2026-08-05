@@ -1,6 +1,6 @@
 ---
 name: Feature Request (中文)
-about: 为 mark-shot 提出新功能或改进建议。
+about: 为太殷龙摄-DracoPho 提出新功能或改进建议。
 title: 'feat: [功能名称]'
 labels: ['enhancement']
 assignees: []

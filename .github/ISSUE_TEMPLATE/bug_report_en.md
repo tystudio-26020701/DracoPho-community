@@ -1,6 +1,6 @@
 ---
 name: Bug Report (English)
-about: Report software errors or unexpected behaviors in mark-shot.
+about: Report software errors or unexpected behaviors in DracoPho.
 title: 'bug: [Brief description of the issue]'
 labels: ['bug']
 assignees: []
