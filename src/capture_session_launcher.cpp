@@ -218,19 +218,16 @@ ShotWindow *showCaptureWindow(QScreen *screen,
                               windowCaptureMode);
 }
 
-/// @brief 判断普通区域截图是否应冻结全部显示器。
+/// @brief 判断截图会话是否应冻结全部显示器。
 /// @param allOutputs 是否显式捕获全部输出为一张图片。
-/// @param fullscreenAnnotation 是否直接进入全屏标注。
 /// @param freezeScope 配置的冻结范围。
 /// @param screenCount 当前显示器数量。
 /// @return 需要为每个显示器创建冻结窗口时返回 true。
 bool shouldFreezeAllScreens(bool allOutputs,
-                            bool fullscreenAnnotation,
                             markshot::CaptureFreezeScope freezeScope,
                             int screenCount)
 {
     return !allOutputs
-        && !fullscreenAnnotation
         && freezeScope == markshot::CaptureFreezeScope::AllScreens
         && screenCount > 1;
 }
@@ -551,6 +548,8 @@ QVector<CapturedScreenFrame> captureScreensIndividually(const QList<QScreen *> &
 /// @param hideOwnWindows 是否让截屏后端隐藏 mark-shot 自身窗口。
 /// @param useRegularWindow 是否使用普通窗口。
 /// @param fullscreenAnnotation 是否直接进入全屏标注。
+/// @param annotationScreen 全屏标注目标屏幕；仅在 fullscreenAnnotation 且与
+///        当前屏幕匹配时该窗口才进入全屏标注，其余窗口立即转为冻结背景。
 /// @param defaultTools 默认工具配置。
 /// @param error 输出错误信息。
 /// @param regionRecordingOptions 区域录制配置，为空时启动普通截图流程。
@@ -560,6 +559,7 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromIndividualFrames(const QList
                                                                      bool hideOwnWindows,
                                                                      bool useRegularWindow,
                                                                      bool fullscreenAnnotation,
+                                                                     QScreen *annotationScreen,
                                                                      const markshot::DefaultTools &defaultTools,
                                                                      QString *error,
                                                                      const std::optional<markshot::recording::RecordingOptions> &regionRecordingOptions,
@@ -571,11 +571,26 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromIndividualFrames(const QList
         return windows;
     }
 
+    if (fullscreenAnnotation) {
+        // 全屏标注只对聚焦显示器窗口生效：目标显示器不在冻结列表时回退到首屏。
+        bool foundAnnotationScreen = false;
+        for (const CapturedScreenFrame &frame : std::as_const(frames)) {
+            if (frame.screen.data() == annotationScreen) {
+                foundAnnotationScreen = true;
+                break;
+            }
+        }
+        if (!foundAnnotationScreen && !frames.isEmpty()) {
+            annotationScreen = frames.first().screen.data();
+        }
+    }
+
     for (CapturedScreenFrame &frame : frames) {
         if (!frame.screen) {
             continue;
         }
 
+        const bool annotationTarget = fullscreenAnnotation && frame.screen.data() == annotationScreen;
         // 2. 全部捕获完成后再显示窗口,保证冻结图不包含本应用覆盖层
         ShotWindow *window = showCapturedWindow(frame.screen.data(),
                                                 std::move(frame.image),
@@ -585,10 +600,15 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromIndividualFrames(const QList
                                                 frame.detectWindows,
                                                 false,
                                                 useRegularWindow,
-                                                fullscreenAnnotation,
+                                                annotationTarget,
                                                 defaultTools,
                                                 regionRecordingOptions,
                                                 windowCaptureMode);
+        if (window && fullscreenAnnotation && !annotationTarget) {
+            // 全屏标注会话中，非目标显示器的冻结窗口立即转为不可操作的背景，
+            // 而不是各自再进入一次全屏标注。
+            window->enterFrozenBackdrop();
+        }
         windows.append(window);
     }
 
@@ -601,6 +621,8 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromIndividualFrames(const QList
 /// @param hideOwnWindows 是否让截屏后端隐藏 mark-shot 自身窗口。
 /// @param useRegularWindow 是否使用普通窗口。
 /// @param fullscreenAnnotation 是否直接进入全屏标注。
+/// @param annotationScreen 全屏标注目标屏幕；仅在 fullscreenAnnotation 且与
+///        当前屏幕匹配时该窗口才进入全屏标注，其余窗口立即转为冻结背景。
 /// @param defaultTools 默认工具配置。
 /// @param error 输出错误信息。
 /// @param regionRecordingOptions 区域录制配置，为空时启动普通截图流程。
@@ -610,6 +632,7 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromSingleFrame(const QList<QScr
                                                                 bool hideOwnWindows,
                                                                 bool useRegularWindow,
                                                                 bool fullscreenAnnotation,
+                                                                QScreen *annotationScreen,
                                                                 const markshot::DefaultTools &defaultTools,
                                                                 QString *error,
                                                                 const std::optional<markshot::recording::RecordingOptions> &regionRecordingOptions,
@@ -651,6 +674,16 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromSingleFrame(const QList<QScr
                        static_cast<qreal>(capture.image.width()) / std::max(1, frameGeometry.width()),
                        static_cast<qreal>(capture.image.height()) / std::max(1, frameGeometry.height()));
     const bool detectWindows = markshot::windowDetectionEnabled();
+    bool foundAnnotationScreen = false;
+    for (QScreen *screen : screens) {
+        if (screen && screen == annotationScreen) {
+            foundAnnotationScreen = true;
+            break;
+        }
+    }
+    if (fullscreenAnnotation && !foundAnnotationScreen) {
+        annotationScreen = screens.isEmpty() ? nullptr : screens.first();
+    }
     for (QScreen *screen : screens) {
         if (!screen || screen->geometry().isEmpty()) {
             continue;
@@ -685,6 +718,7 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromSingleFrame(const QList<QScr
         const QVector<markshot::WindowInfo> windowInfos = detectWindows
             ? markshot::collectConfiguredWindowInfos(screenGeometry, screen->name(), false)
             : QVector<markshot::WindowInfo>();
+        const bool annotationTarget = fullscreenAnnotation && screen == annotationScreen;
         ShotWindow *window = showCapturedWindow(screen,
                                                 std::move(screenImage),
                                                 screen->name(),
@@ -693,10 +727,14 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromSingleFrame(const QList<QScr
                                                 detectWindows,
                                                 false,
                                                 useRegularWindow,
-                                                fullscreenAnnotation,
+                                                annotationTarget,
                                                 defaultTools,
                                                 regionRecordingOptions,
                                                 windowCaptureMode);
+        if (window && fullscreenAnnotation && !annotationTarget) {
+            // 全屏标注会话中，非目标显示器的冻结窗口立即转为不可操作的背景。
+            window->enterFrozenBackdrop();
+        }
         windows.append(window);
     }
     return windows;
@@ -747,7 +785,6 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
     QScreen *screen = markshot::focusedScreen();
     const QList<QScreen *> screens = QGuiApplication::screens();
     const bool freezeAllScreens = shouldFreezeAllScreens(allOutputs,
-                                                         fullscreenAnnotation,
                                                          freezeScope,
                                                          screens.size());
     const bool waylandPlatform = markshot::capture_session::isWaylandPlatform();
@@ -778,6 +815,7 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
                                                              hideOwnWindows,
                                                              useRegularWindow,
                                                              fullscreenAnnotation,
+                                                             screen,
                                                              defaultTools,
                                                              error,
                                                              regionRecordingOptions,
@@ -806,6 +844,7 @@ QVector<QPointer<ShotWindow>> showCaptureSession(QApplication *app,
                                                         hideOwnWindows,
                                                         useRegularWindow,
                                                         fullscreenAnnotation,
+                                                        screen,
                                                         defaultTools,
                                                         error,
                                                         regionRecordingOptions,
