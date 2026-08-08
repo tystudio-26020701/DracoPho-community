@@ -9,7 +9,6 @@
 #include "settings/settings_dialog.h"
 #include "ui/i18n.h"
 #include "ui/icons.h"
-#include "ui/theme.h"
 #include "windows_integration.h"
 
 #include <QAction>
@@ -22,7 +21,6 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QPainterPath>
 #include <QPropertyAnimation>
 #include <QRegion>
 #include <QScreen>
@@ -435,38 +433,25 @@ void FloatingBall::paintEvent(QPaintEvent *event)
     // 部分被天然裁剪，实现"一半隐入屏幕外"。不依赖 move()，Wayland 有效。
     painter.translate(m_contentOffset);
 
+    // logo 占据整个球体区域：宽度/高度 = 原外侧球直径（kBallSize）。
+    // 不再绘制渐变球体，直接以完整尺寸呈现 DracoPho SVG logo，更简洁美观。
     const QRectF ballRect(kShadowRadius, kShadowRadius, kBallSize, kBallSize);
-    const QColor accent = theme::kAccent;
+    constexpr qreal kLogoCornerRadius = 9.0;
 
-    // 外阴影。
-    QPainterPath shadowPath;
-    shadowPath.addEllipse(ballRect);
+    // 外阴影：圆角矩形贴合 logo 圆角轮廓，保留悬浮立体感。
     painter.setPen(Qt::NoPen);
     for (int i = kShadowRadius; i > 0; --i) {
         const qreal alpha = 0.10 * (1.0 - static_cast<qreal>(i - 1) / kShadowRadius);
         painter.setBrush(QColor(0, 0, 0, static_cast<int>(255 * alpha)));
-        painter.drawEllipse(ballRect.adjusted(-i, -i, i, i));
+        painter.drawRoundedRect(ballRect.adjusted(-i, -i, i, i),
+                                kLogoCornerRadius + i,
+                                kLogoCornerRadius + i);
     }
 
-    // 球体渐变。
-    const QRectF body = ballRect.adjusted(1.5, 1.5, -1.5, -1.5);
-    QLinearGradient gradient(body.topLeft(), body.bottomRight());
-    gradient.setColorAt(0.0, accent.lighter(125));
-    gradient.setColorAt(0.55, accent);
-    gradient.setColorAt(1.0, accent.darker(120));
-    painter.setBrush(gradient);
-    painter.setPen(QPen(QColor(255, 255, 255, 120), 1.5));
-    painter.drawEllipse(body);
-
-    // 中心图标。
-    const QPixmap iconPixmap = markshot::ui::applicationIcon().pixmap(26, 26);
-    if (!iconPixmap.isNull()) {
-        const QPointF iconCenter = body.center();
-        const QRectF iconRect(iconCenter.x() - iconPixmap.width() / 2.0,
-                              iconCenter.y() - iconPixmap.height() / 2.0,
-                              iconPixmap.width(),
-                              iconPixmap.height());
-        painter.drawPixmap(iconRect.toRect(), iconPixmap);
+    // SVG logo 全尺寸绘制（宽度/高度 = 球体直径）。
+    const QPixmap logoPixmap = markshot::ui::applicationIcon().pixmap(kBallSize, kBallSize);
+    if (!logoPixmap.isNull()) {
+        painter.drawPixmap(ballRect.toRect(), logoPixmap);
     }
 }
 
