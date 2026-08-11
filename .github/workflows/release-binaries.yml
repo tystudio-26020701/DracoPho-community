@@ -383,8 +383,9 @@ jobs:
           $product = $env:product
           $exeName = $env:exe_name
           if ([string]::IsNullOrWhiteSpace($product)) { throw "product env is empty" }
-          choco install innosetup -y --no-progress | Out-Null
-          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup*\ISCC.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+          # windows-latest runner 预装 Inno Setup；无需 choco。
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup*\ISCC.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
           if (-not $iscc) { throw "Inno Setup ISCC.exe was not found" }
           # 历史 tag 只有 mark-shot.ico，当前有 DracoPho-logo.ico。
           $icon = "data\icons\DracoPho-logo.ico"
@@ -396,7 +397,10 @@ jobs:
             /DMyProductName="$product" `
             /DMySourceDir="$env:GITHUB_WORKSPACE\app" `
             /DMyIconFile="$env:GITHUB_WORKSPACE\$icon"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "ISCC failed with exit code $LASTEXITCODE"
+            exit $LASTEXITCODE
+          }
           $setup = Get-ChildItem "." -Filter "$product-$env:APP_TAG-windows-x86_64-setup.exe" | Select-Object -First 1
           if (-not $setup) { throw "Inno Setup did not produce $product-$env:APP_TAG-windows-x86_64-setup.exe" }
           Get-FileHash $setup.FullName -Algorithm SHA256 | ForEach-Object {
