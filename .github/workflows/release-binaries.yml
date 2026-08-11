@@ -404,10 +404,17 @@ jobs:
             Write-Host "ISCC failed with exit code $LASTEXITCODE"
             exit $LASTEXITCODE
           }
-          $setup = Get-ChildItem "." -Filter "$product-$env:APP_TAG-windows-x86_64-setup.exe" | Select-Object -First 1
+          # ISCC OutputDir=. 相对于 .iss 文件所在目录（packaging/windows/）。
+          $setup = Get-ChildItem "packaging\windows" -Filter "$product-$env:APP_TAG-windows-x86_64-setup.exe" | Select-Object -First 1
+          if (-not $setup) {
+            $setup = Get-ChildItem "." -Filter "$product-$env:APP_TAG-windows-x86_64-setup.exe" | Select-Object -First 1
+          }
           if (-not $setup) { throw "Inno Setup did not produce $product-$env:APP_TAG-windows-x86_64-setup.exe" }
-          Get-FileHash $setup.FullName -Algorithm SHA256 | ForEach-Object {
-            "$($_.Hash.ToLower())  $($setup.Name)" | Set-Content "$($setup.Name).sha256"
+          # 移动到工作区根，便于上传步骤统一引用。
+          $target = Join-Path $env:GITHUB_WORKSPACE $setup.Name
+          if ($setup.FullName -ne $target) { Move-Item $setup.FullName $target }
+          Get-FileHash $target -Algorithm SHA256 | ForEach-Object {
+            "$($_.Hash.ToLower())  $($setup.Name)" | Set-Content "$target.sha256"
           }
           echo "setup_name=$($setup.Name)" | Out-File -Append $env:GITHUB_ENV -Encoding utf8
 
