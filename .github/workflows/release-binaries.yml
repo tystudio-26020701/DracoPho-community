@@ -337,7 +337,7 @@ jobs:
 
       - name: Deploy runtime libraries
         run: |
-          bash scripts/windows-deploy-runtime.sh "$PWD/app/bin" "$PWD/app/bin/$EXE_NAME"
+          bash scripts/windows-deploy-runtime.sh "$PWD/app/bin" "$PWD/app/bin/$exe_name"
 
       - name: Sign Windows binaries
         shell: pwsh
@@ -350,7 +350,7 @@ jobs:
 
       - name: Package zip
         run: |
-          ASSET="$PRODUCT-${{ steps.version.outputs.tag }}-windows-x86_64.zip"
+          ASSET="$product-${{ steps.version.outputs.tag }}-windows-x86_64.zip"
           (cd app && zip -r "../$ASSET" .)
           sha256sum "$ASSET" > "$ASSET.sha256"
 
@@ -360,16 +360,16 @@ jobs:
           plugins=()
           while IFS= read -r -d '' plugin; do
             plugins+=("$plugin")
-          done < <(find app -type f -path "*/$PRODUCT/plugins/*" -name '*.dll' -print0)
+          done < <(find app -type f -path "*/$product/plugins/*" -name '*.dll' -print0)
           if [ "${#plugins[@]}" -eq 0 ]; then
             echo "No provider plugin dynamic libraries were installed" >&2
             exit 1
           fi
           for plugin in "${plugins[@]}"; do
             base="$(basename "$plugin")"
-            provider="${base#$PRODUCT-}"
+            provider="${base#$product-}"
             provider="${provider%.dll}"
-            asset="$PRODUCT-plugin-${provider}-${{ steps.version.outputs.tag }}-windows-x86_64.dll"
+            asset="$product-plugin-${provider}-${{ steps.version.outputs.tag }}-windows-x86_64.dll"
             cp "$plugin" "plugin-assets/$asset"
             (cd plugin-assets && sha256sum "$asset" > "$asset.sha256")
           done
