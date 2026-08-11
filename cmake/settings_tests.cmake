@@ -1,51 +1,51 @@
-qt_add_executable(mark-shot-provider-preference-config-test
+qt_add_executable(dracoPho-provider-preference-config-test
     tests/provider_preference_config_test.cpp
     src/settings/provider_preference_config.cpp
     src/settings/provider_preference_config.h
     src/config_value.cpp
     src/config_value.h
 )
-target_include_directories(mark-shot-provider-preference-config-test PRIVATE src)
-target_link_libraries(mark-shot-provider-preference-config-test
+target_include_directories(dracoPho-provider-preference-config-test PRIVATE src)
+target_link_libraries(dracoPho-provider-preference-config-test
     PRIVATE
         Qt6::Core
         Qt6::Gui
         Qt6::Test
 )
-add_test(NAME provider-preference-config COMMAND mark-shot-provider-preference-config-test)
+add_test(NAME provider-preference-config COMMAND dracoPho-provider-preference-config-test)
 
-qt_add_executable(mark-shot-settings-wheel-guard-test
+qt_add_executable(dracoPho-settings-wheel-guard-test
     tests/settings_wheel_guard_test.cpp
     src/settings/settings_wheel_guard.cpp
     src/settings/settings_wheel_guard.h
 )
-target_include_directories(mark-shot-settings-wheel-guard-test PRIVATE src)
-target_link_libraries(mark-shot-settings-wheel-guard-test
+target_include_directories(dracoPho-settings-wheel-guard-test PRIVATE src)
+target_link_libraries(dracoPho-settings-wheel-guard-test
     PRIVATE
         Qt6::Core
         Qt6::Gui
         Qt6::Test
         Qt6::Widgets
 )
-add_test(NAME settings-wheel-guard COMMAND mark-shot-settings-wheel-guard-test)
+add_test(NAME settings-wheel-guard COMMAND dracoPho-settings-wheel-guard-test)
 
-qt_add_executable(mark-shot-headless-capture-config-test
+qt_add_executable(dracoPho-headless-capture-config-test
     tests/headless_capture_config_test.cpp
     src/headless_capture_config.cpp
     src/headless_capture_config.h
     src/config_value.cpp
     src/config_value.h
 )
-target_include_directories(mark-shot-headless-capture-config-test PRIVATE src)
-target_link_libraries(mark-shot-headless-capture-config-test
+target_include_directories(dracoPho-headless-capture-config-test PRIVATE src)
+target_link_libraries(dracoPho-headless-capture-config-test
     PRIVATE
         Qt6::Core
         Qt6::Gui
         Qt6::Test
 )
-add_test(NAME headless-capture-config COMMAND mark-shot-headless-capture-config-test)
+add_test(NAME headless-capture-config COMMAND dracoPho-headless-capture-config-test)
 
-qt_add_executable(mark-shot-i18n-tables-test
+qt_add_executable(dracoPho-i18n-tables-test
     tests/i18n_tables_test.cpp
     src/ui/i18n_tables.h
     src/ui/i18n_zh_cn.cpp
@@ -60,14 +60,14 @@ qt_add_executable(mark-shot-i18n-tables-test
     src/ui/i18n_es.cpp
     src/ui/i18n_pt.cpp
 )
-target_include_directories(mark-shot-i18n-tables-test PRIVATE src)
-target_link_libraries(mark-shot-i18n-tables-test
+target_include_directories(dracoPho-i18n-tables-test PRIVATE src)
+target_link_libraries(dracoPho-i18n-tables-test
     PRIVATE
         Qt6::Core
         Qt6::Gui
         Qt6::Test
 )
-add_test(NAME i18n-tables COMMAND mark-shot-i18n-tables-test)
+add_test(NAME i18n-tables COMMAND dracoPho-i18n-tables-test)
 
 # 与主目标保持一致：为复用主目标对象库的测试目标补齐平台库、可选功能库与
 # 编译宏。主目标平台/可选依赖变化时只需在此处修改一处，测试目标全部生效。
@@ -130,32 +130,32 @@ function(markshot_link_core_test_libraries target)
     endif()
 endfunction()
 
-qt_add_executable(mark-shot-settings-dialog-smoke-test
+qt_add_executable(dracoPho-settings-dialog-smoke-test
     tests/settings_dialog_smoke_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-settings-dialog-smoke-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-settings-dialog-smoke-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-settings-dialog-smoke-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-settings-dialog-smoke-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-settings-dialog-smoke-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-settings-dialog-smoke-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-settings-dialog-smoke-test)
-add_test(NAME settings-dialog-smoke COMMAND mark-shot-settings-dialog-smoke-test)
+markshot_link_core_test_libraries(dracoPho-settings-dialog-smoke-test)
+add_test(NAME settings-dialog-smoke COMMAND dracoPho-settings-dialog-smoke-test)
 
-qt_add_executable(mark-shot-settings-shortcuts-test
+qt_add_executable(dracoPho-settings-shortcuts-test
     tests/settings_shortcuts_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-settings-shortcuts-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-settings-shortcuts-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-settings-shortcuts-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-settings-shortcuts-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-settings-shortcuts-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-settings-shortcuts-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-settings-shortcuts-test)
-add_test(NAME settings-shortcuts COMMAND mark-shot-settings-shortcuts-test)
+markshot_link_core_test_libraries(dracoPho-settings-shortcuts-test)
+add_test(NAME settings-shortcuts COMMAND dracoPho-settings-shortcuts-test)
 
 
-qt_add_executable(mark-shot-settings-source-wheel-test
+qt_add_executable(dracoPho-settings-source-wheel-test
     tests/settings_source_wheel_test.cpp
     src/settings/settings_ui_helpers.cpp
     src/settings/settings_ui_helpers.h
@@ -194,127 +194,127 @@ qt_add_executable(mark-shot-settings-source-wheel-test
     src/debug_log.cpp
     src/debug_log.h
 )
-target_include_directories(mark-shot-settings-source-wheel-test PRIVATE src plugin-sdk)
-target_link_libraries(mark-shot-settings-source-wheel-test
+target_include_directories(dracoPho-settings-source-wheel-test PRIVATE src plugin-sdk)
+target_link_libraries(dracoPho-settings-source-wheel-test
     PRIVATE
         Qt6::Core
         Qt6::Gui
         Qt6::Test
         Qt6::Widgets
 )
-add_test(NAME settings-source-wheel COMMAND mark-shot-settings-source-wheel-test)
+add_test(NAME settings-source-wheel COMMAND dracoPho-settings-source-wheel-test)
 
-qt_add_executable(mark-shot-capture-overlay-flags-test
+qt_add_executable(dracoPho-capture-overlay-flags-test
     tests/capture_overlay_flags_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-capture-overlay-flags-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-capture-overlay-flags-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-capture-overlay-flags-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-capture-overlay-flags-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-capture-overlay-flags-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-capture-overlay-flags-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-capture-overlay-flags-test)
-add_test(NAME capture-overlay-flags COMMAND mark-shot-capture-overlay-flags-test)
+markshot_link_core_test_libraries(dracoPho-capture-overlay-flags-test)
+add_test(NAME capture-overlay-flags COMMAND dracoPho-capture-overlay-flags-test)
 
-qt_add_executable(mark-shot-shot-window-backdrop-test
+qt_add_executable(dracoPho-shot-window-backdrop-test
     tests/shot_window_frozen_backdrop_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-shot-window-backdrop-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-shot-window-backdrop-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-shot-window-backdrop-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-shot-window-backdrop-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-shot-window-backdrop-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-shot-window-backdrop-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-shot-window-backdrop-test)
-add_test(NAME shot-window-backdrop COMMAND mark-shot-shot-window-backdrop-test)
+markshot_link_core_test_libraries(dracoPho-shot-window-backdrop-test)
+add_test(NAME shot-window-backdrop COMMAND dracoPho-shot-window-backdrop-test)
 
 
-qt_add_executable(mark-shot-shot-window-editor-test
+qt_add_executable(dracoPho-shot-window-editor-test
     tests/shot_window_editor_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-shot-window-editor-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-shot-window-editor-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-shot-window-editor-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-shot-window-editor-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-shot-window-editor-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-shot-window-editor-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-shot-window-editor-test)
-add_test(NAME shot-window-editor COMMAND mark-shot-shot-window-editor-test)
+markshot_link_core_test_libraries(dracoPho-shot-window-editor-test)
+add_test(NAME shot-window-editor COMMAND dracoPho-shot-window-editor-test)
 
-qt_add_executable(mark-shot-shot-window-window-capture-test
+qt_add_executable(dracoPho-shot-window-window-capture-test
     tests/shot_window_window_capture_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-shot-window-window-capture-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-shot-window-window-capture-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-shot-window-window-capture-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-shot-window-window-capture-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-shot-window-window-capture-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-shot-window-window-capture-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-shot-window-window-capture-test)
-add_test(NAME shot-window-window-capture COMMAND mark-shot-shot-window-window-capture-test)
+markshot_link_core_test_libraries(dracoPho-shot-window-window-capture-test)
+add_test(NAME shot-window-window-capture COMMAND dracoPho-shot-window-window-capture-test)
 
-qt_add_executable(mark-shot-capture-history-test
+qt_add_executable(dracoPho-capture-history-test
     tests/capture_history_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-capture-history-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-capture-history-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-capture-history-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-capture-history-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-capture-history-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-capture-history-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-capture-history-test)
-add_test(NAME capture-history COMMAND mark-shot-capture-history-test)
+markshot_link_core_test_libraries(dracoPho-capture-history-test)
+add_test(NAME capture-history COMMAND dracoPho-capture-history-test)
 
-qt_add_executable(mark-shot-capture-history-dialog-test
+qt_add_executable(dracoPho-capture-history-dialog-test
     tests/capture_history_dialog_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-capture-history-dialog-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-capture-history-dialog-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-capture-history-dialog-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-capture-history-dialog-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-capture-history-dialog-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-capture-history-dialog-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-capture-history-dialog-test)
-add_test(NAME capture-history-dialog COMMAND mark-shot-capture-history-dialog-test)
+markshot_link_core_test_libraries(dracoPho-capture-history-dialog-test)
+add_test(NAME capture-history-dialog COMMAND dracoPho-capture-history-dialog-test)
 
 
-qt_add_executable(mark-shot-settings-dirty-roundtrip-test
+qt_add_executable(dracoPho-settings-dirty-roundtrip-test
     tests/settings_dirty_roundtrip_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-settings-dirty-roundtrip-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-settings-dirty-roundtrip-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-settings-dirty-roundtrip-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-settings-dirty-roundtrip-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-settings-dirty-roundtrip-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-settings-dirty-roundtrip-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-settings-dirty-roundtrip-test)
-add_test(NAME settings-dirty-roundtrip COMMAND mark-shot-settings-dirty-roundtrip-test)
+markshot_link_core_test_libraries(dracoPho-settings-dirty-roundtrip-test)
+add_test(NAME settings-dirty-roundtrip COMMAND dracoPho-settings-dirty-roundtrip-test)
 
-qt_add_executable(mark-shot-floating-ball-test
+qt_add_executable(dracoPho-floating-ball-test
     tests/floating_ball_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-floating-ball-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-floating-ball-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-floating-ball-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-floating-ball-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-floating-ball-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-floating-ball-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-floating-ball-test)
-add_test(NAME floating-ball COMMAND mark-shot-floating-ball-test)
+markshot_link_core_test_libraries(dracoPho-floating-ball-test)
+add_test(NAME floating-ball COMMAND dracoPho-floating-ball-test)
 
-qt_add_executable(mark-shot-capture-delay-config-test
+qt_add_executable(dracoPho-capture-delay-config-test
     tests/capture_delay_config_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-capture-delay-config-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-capture-delay-config-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-capture-delay-config-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-capture-delay-config-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-capture-delay-config-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-capture-delay-config-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-capture-delay-config-test)
-add_test(NAME capture-delay-config COMMAND mark-shot-capture-delay-config-test)
+markshot_link_core_test_libraries(dracoPho-capture-delay-config-test)
+add_test(NAME capture-delay-config COMMAND dracoPho-capture-delay-config-test)
 
-qt_add_executable(mark-shot-startup-behavior-config-test
+qt_add_executable(dracoPho-startup-behavior-config-test
     tests/startup_behavior_config_test.cpp
     src/startup_behavior_config.cpp
     src/startup_behavior_config.h
@@ -331,27 +331,27 @@ qt_add_executable(mark-shot-startup-behavior-config-test
     src/debug_log.cpp
     src/debug_log.h
 )
-target_include_directories(mark-shot-startup-behavior-config-test PRIVATE src)
-target_compile_definitions(mark-shot-startup-behavior-config-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-startup-behavior-config-test PRIVATE src)
+target_compile_definitions(dracoPho-startup-behavior-config-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-startup-behavior-config-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-startup-behavior-config-test PRIVATE /utf-8)
 endif()
-target_link_libraries(mark-shot-startup-behavior-config-test
+target_link_libraries(dracoPho-startup-behavior-config-test
     PRIVATE
         Qt6::Core
         Qt6::Gui
         Qt6::Test
 )
-add_test(NAME startup-behavior-config COMMAND mark-shot-startup-behavior-config-test)
+add_test(NAME startup-behavior-config COMMAND dracoPho-startup-behavior-config-test)
 
-qt_add_executable(mark-shot-settings-startup-behavior-test
+qt_add_executable(dracoPho-settings-startup-behavior-test
     tests/settings_startup_behavior_test.cpp
-    $<FILTER:$<FILTER:$<TARGET_OBJECTS:mark-shot>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
+    $<FILTER:$<FILTER:$<TARGET_OBJECTS:dracoPho>,EXCLUDE,main\.cpp\.o$>,EXCLUDE,main\.cpp\.obj$>
 )
-target_include_directories(mark-shot-settings-startup-behavior-test PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot-settings-startup-behavior-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho-settings-startup-behavior-test PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho-settings-startup-behavior-test PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
-    target_compile_options(mark-shot-settings-startup-behavior-test PRIVATE /utf-8)
+    target_compile_options(dracoPho-settings-startup-behavior-test PRIVATE /utf-8)
 endif()
-markshot_link_core_test_libraries(mark-shot-settings-startup-behavior-test)
-add_test(NAME settings-startup-behavior COMMAND mark-shot-settings-startup-behavior-test)
+markshot_link_core_test_libraries(dracoPho-settings-startup-behavior-test)
+add_test(NAME settings-startup-behavior COMMAND dracoPho-settings-startup-behavior-test)

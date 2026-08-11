@@ -111,7 +111,7 @@ QString resolvedCodeScanProviderName(const CodeScanTaskRequest &request)
     QString pluginId;
     const QString kind = normalizedProviderKind(request.provider, &pluginId);
     if (kind == QStringLiteral("helper")) {
-        return QStringLiteral("helper (mark-shot-code-scan)");
+        return QStringLiteral("helper (dracoPho-code-scan)");
     }
     if (kind == QStringLiteral("builtin")) {
         return QStringLiteral("builtin (zxing-cpp)");
@@ -129,7 +129,7 @@ QString resolvedCodeScanProviderName(const CodeScanTaskRequest &request)
     if (CodeScanZxingTask::available()) {
         return QStringLiteral("builtin (zxing-cpp)");
     }
-    return QStringLiteral("helper (mark-shot-code-scan)");
+    return QStringLiteral("helper (dracoPho-code-scan)");
 }
 
 }  // namespace markshot::providers

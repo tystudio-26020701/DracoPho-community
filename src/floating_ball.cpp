@@ -369,6 +369,11 @@ void FloatingBall::savePosition()
 
 void FloatingBall::placeOnScreen()
 {
+    // 这是应用显式重定位（启动、托盘切换、屏幕变化回退）：本次显示不应再被
+    // showEvent 的"隐藏期位置漂移纠正"覆盖（否则托盘切换会把球拉回上一次
+    // 隐藏前的陈旧位置，覆盖刚按配置放置的结果）。
+    m_havePositionBeforeHide = false;
+
     const QPoint stored = storedBallPosition();
     QScreen *screen = QGuiApplication::screenAt(stored);
     if (stored.isNull() || !screen) {
@@ -634,6 +639,25 @@ void FloatingBall::showEvent(QShowEvent *event)
             applyDockVisuals();
         }
     }
+    // 纠正隐藏期间的位置漂移：截图/录制会话隐藏窗口后，部分 WM/合成器重新
+    // 映射时会把自由漂浮的球挪到别处。延迟到事件循环返回后再比较（X11 上
+    // WM 的重新配置异步到达），若当前位置已偏离隐藏前位置且隐藏前位置仍在
+    // 屏幕内，则移回原位。停靠态由上面的恢复逻辑接管，不在这里干预。
+    if (positioningEnabled() && m_havePositionBeforeHide
+        && m_dockState == DockState::Floating) {
+        QTimer::singleShot(0, this, [this] {
+            if (!isVisible() || m_dockState != DockState::Floating) {
+                return;
+            }
+            const QPoint current = frameGeometry().topLeft();
+            if (current != m_positionBeforeHide && positionWithinScreenBounds(m_positionBeforeHide)) {
+                markshot::debugLog("floating", "restore position after show %d,%d -> %d,%d",
+                                   current.x(), current.y(),
+                                   m_positionBeforeHide.x(), m_positionBeforeHide.y());
+                move(m_positionBeforeHide);
+            }
+        });
+    }
     markshot::debugLog("floating", "ball shown platform=%s",
                        QGuiApplication::platformName().toUtf8().constData());
 }
@@ -645,6 +669,23 @@ void FloatingBall::hideEvent(QHideEvent *event)
     }
     if (m_autoHideTimer) {
         m_autoHideTimer->stop();
+    }
+    // 隐藏即拖动终结：截图/录制会话在鼠标仍按住或拖动悬浮球时被触发（全局
+    // 热键、托盘、延时倒计时结束）会把球连同进行中的拖动一起隐藏。若遗留
+    // m_dragging，重新显示后常驻 tick 的"拖动卡死自愈"会把这起中断误当成
+    // 一次真实拖动结束去执行 finishDrag——把球停靠到屏幕边缘（默认右下角
+    // 位置就在吸附阈值内）或重定位，表现为"截图后悬浮球自己移动"。隐藏期间
+    // 用户不可能继续拖动，直接复位拖动状态。
+    m_dragging = false;
+    m_moved = false;
+    m_systemMoveStarted = false;
+    m_lastDragActivityMs = -1;
+    // 记录隐藏前的窗口位置：截图/录制会话结束重新显示时，若 WM/合成器把窗口
+    // 挪到了别处（部分 X11 WM 与 Windows 在重新映射/显隐时行为不一），据此
+    // 把球移回原位，避免"截图后悬浮球自己移动"。
+    if (positioningEnabled()) {
+        m_positionBeforeHide = frameGeometry().topLeft();
+        m_havePositionBeforeHide = true;
     }
     QWidget::hideEvent(event);
 }

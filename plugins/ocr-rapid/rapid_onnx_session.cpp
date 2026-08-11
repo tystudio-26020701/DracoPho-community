@@ -11,7 +11,7 @@ namespace markshot::ocr_rapid {
 
 class RapidOnnxSession::Impl {
 public:
-    Ort::Env env{ORT_LOGGING_LEVEL_ERROR, "mark-shot-ocr-rapid"};
+    Ort::Env env{ORT_LOGGING_LEVEL_ERROR, "dracoPho-ocr-rapid"};
     std::unique_ptr<Ort::Session> session;
     std::string inputName;
     std::string outputName;

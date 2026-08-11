@@ -2,15 +2,61 @@
 #include "ui/i18n.h"
 
 #include <QApplication>
+#include <QDir>
+#include <QFile>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QScreen>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
+
+namespace {
+
+/// @brief 在独立临时目录下隔离配置路径，避免测试拖动画悬浮球时把位置写进
+/// 真实用户配置（Linux/macOS 走 XDG_CONFIG_HOME，Windows 覆盖 APPDATA）。
+class IsolatedConfigScope {
+public:
+    bool init()
+    {
+        if (!m_dir.isValid()) {
+            return false;
+        }
+        const QString configDir = m_dir.path() + QStringLiteral("/dracoPho");
+        if (!QDir().mkpath(configDir)) {
+            return false;
+        }
+        QFile file(configDir + QStringLiteral("/config.json"));
+        if (!file.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        file.write("{}");
+        file.close();
+#if defined(Q_OS_WIN)
+        qputenv("LOCALAPPDATA", m_dir.path().toUtf8());
+        qputenv("APPDATA", m_dir.path().toUtf8());
+        return qputenv("USERPROFILE", m_dir.path().toUtf8());
+#else
+        return qputenv("XDG_CONFIG_HOME", m_dir.path().toUtf8());
+#endif
+    }
+
+private:
+    QTemporaryDir m_dir;
+};
+
+}  // namespace
 
 class FloatingBallTest : public QObject {
     Q_OBJECT
 
 private slots:
+    void initTestCase()
+    {
+        // 全部用例共用一份隔离配置：拖动/停靠用例会写悬浮球位置，必须落在
+        // 临时目录而不是真实用户配置，否则测试会覆盖用户保存的球位置。
+        QVERIFY(m_configScope.init());
+    }
+
     void retranslatesMenuOnLanguageChange()
     {
         // 构造在中文环境下的悬浮球，随后切回英文，验证菜单文案跟随。
@@ -386,6 +432,135 @@ private slots:
         ball.show();
         QVERIFY(ball.isVisible());
     }
+
+    void hideShowRestoresPositionAfterDrift()
+    {
+        // 回归测试：截图会话隐藏窗口后，部分 WM/合成器重新映射时会把自由
+        // 漂浮的球挪到别处。重新显示时必须把球移回隐藏前的位置，而不是让
+        // 它停在漂移后的新位置（即"截图后悬浮球自己移动"）。
+        markshot::FloatingBall ball;
+        ball.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&ball));
+        QScreen *screen = ball.screen() ? ball.screen() : QGuiApplication::primaryScreen();
+        QVERIFY(screen);
+        const QRect available = screen->availableGeometry();
+
+        const QPoint original(available.left() + 120, available.top() + 120);
+        ball.move(original);
+        QVERIFY(ball.pos() == original);
+
+        // 截图会话：隐藏悬浮球。
+        ball.hide();
+
+        // 模拟 WM/合成器在隐藏期间把窗口挪到别处。
+        ball.move(available.left() + 300, available.top() + 300);
+        QVERIFY(ball.pos() != original);
+
+        // 会话结束：恢复显示，事件循环返回后的延迟纠正应把球移回原位。
+        ball.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&ball));
+        QTest::qWait(100);
+        QVERIFY2(ball.pos() == original,
+                 qPrintable(QStringLiteral("ball must return to pre-hide position: expected=%1,%2 now=%3,%4")
+                                .arg(original.x()).arg(original.y())
+                                .arg(ball.pos().x()).arg(ball.pos().y())));
+    }
+
+    void captureInterruptedDragMustNotMoveOrDockBall()
+    {
+        // 回归测试：截图/录制会话在鼠标仍按住或拖动悬浮球时被触发（热键、
+        // 托盘、延时倒计时结束），窗口隐藏时拖动状态被遗留。重新显示后若
+        // "拖动卡死自愈"把它当成一次真实拖动结束执行 finishDrag，会把球停靠
+        // 到屏幕边缘（默认右下角位置就在吸附阈值内）或重定位——即"截图后
+        // 悬浮球自己移动到其他地方"。隐藏即拖动终结，恢复显示后球必须留在
+        // 原地、不得停靠。
+        markshot::FloatingBall ball;
+        ball.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&ball));
+        QScreen *screen = ball.screen() ? ball.screen() : QGuiApplication::primaryScreen();
+        QVERIFY(screen);
+        const QRect available = screen->availableGeometry();
+        const int w = ball.width();
+        const int h = ball.height();
+
+        // 球放到右下角附近（吸附阈值 24px 内，自由漂浮、未停靠）。
+        const QPoint freeTopLeft(available.right() - w - 8, available.bottom() - h - 8);
+        ball.move(freeTopLeft);
+
+        // 模拟"按住球拖动时截图被触发"：press + move 进入拖动，但不发 release。
+        const QPoint start = ball.mapToGlobal(ball.rect().center());
+        QMouseEvent press(QEvent::MouseButtonPress, ball.rect().center(), start,
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(&ball, &press);
+        QMouseEvent moveEvent(QEvent::MouseMove,
+                              ball.mapFromGlobal(start + QPoint(20, 20)),
+                              start + QPoint(20, 20),
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(&ball, &moveEvent);
+        // 截图触发时刻球的位置：拖动已生效，球正停在这里等待 release。
+        const QPoint before = ball.pos();
+
+        // 截图会话：隐藏悬浮球（不释放鼠标）。
+        ball.hide();
+        QVERIFY(!ball.isVisible());
+
+        // 会话结束：恢复显示。
+        ball.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&ball));
+
+        // 等待"拖动卡死自愈"窗口期（>2s），确认自愈不会把球停靠或移动。
+        QTest::qWait(2500);
+        QVERIFY2(ball.mask().isEmpty(),
+                 "capture-interrupted drag must not dock the ball after re-show");
+        QVERIFY2(ball.pos() == before,
+                 qPrintable(QStringLiteral("capture must not move the ball: before=%1,%2 now=%3,%4")
+                                .arg(before.x()).arg(before.y())
+                                .arg(ball.pos().x()).arg(ball.pos().y())));
+    }
+
+    void userToggleMustNotResurrectStalePreHidePosition()
+    {
+        // 回归测试：会话隐藏期间记录的"隐藏前位置"只用于会话结束时的漂移纠正，
+        // 不得在用户后续主动切换（托盘 toggleByUser → placeOnScreen）时把球拉回
+        // 该陈旧位置，覆盖刚按配置/默认放置的结果。
+        markshot::FloatingBall ball;
+        ball.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&ball));
+        QScreen *screen = ball.screen() ? ball.screen() : QGuiApplication::primaryScreen();
+        QVERIFY(screen);
+        const QRect available = screen->availableGeometry();
+
+        // 模拟一次"拖动中截图"：把球放到屏幕中部，press + move 进入拖动后隐藏，
+        // 隐藏前位置被记录为拖动中的中间点 M。
+        const QPoint midDrag(available.left() + 200, available.top() + 200);
+        ball.move(midDrag);
+        const QPoint start = ball.mapToGlobal(ball.rect().center());
+        QMouseEvent press(QEvent::MouseButtonPress, ball.rect().center(), start,
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(&ball, &press);
+        QMouseEvent moveEvent(QEvent::MouseMove,
+                              ball.mapFromGlobal(start + QPoint(30, 30)),
+                              start + QPoint(30, 30),
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(&ball, &moveEvent);
+        ball.hide();
+
+        // 用户经托盘重新打开悬浮球：toggleByUser → placeOnScreen 应把球放到
+        // 配置/默认位置，而不是被拉回拖动中的中间点 M。
+        ball.toggleByUser();
+        QVERIFY(QTest::qWaitForWindowExposed(&ball));
+        QTest::qWait(100);  // 让 showEvent 的延迟纠正有机会执行（若未按会话限定）
+        const QPoint now = ball.pos();
+        const QPoint staleMidDrag = midDrag + QPoint(30, 30);
+        QVERIFY2(now != staleMidDrag,
+                 qPrintable(QStringLiteral("user toggle must not restore stale mid-drag position %1,%2")
+                                .arg(now.x()).arg(now.y())));
+        QVERIFY(ball.mask().isEmpty());
+        QVERIFY(ball.isVisible());
+    }
+
+private:
+    IsolatedConfigScope m_configScope;
 };
 
 QTEST_MAIN(FloatingBallTest)

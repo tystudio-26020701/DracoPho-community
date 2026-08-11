@@ -5,15 +5,15 @@ This template builds a minimal DracoPho QR code and barcode scan provider plugin
 ## Build
 
 ```bash
-cmake -S . -B build -DMARK_SHOT_PLUGIN_SDK_DIR=/path/to/mark-shot/plugin-sdk
+cmake -S . -B build -DMARK_SHOT_PLUGIN_SDK_DIR=/path/to/dracoPho/plugin-sdk
 cmake --build build --parallel
 ```
 
 ## Install For Local Testing
 
 ```bash
-mkdir -p ~/.local/share/mark-shot/plugins
-cp build/libmark-shot-sample-code-scan.so ~/.local/share/mark-shot/plugins/
+mkdir -p ~/.local/share/dracoPho/plugins
+cp build/libmark-shot-sample-code-scan.so ~/.local/share/dracoPho/plugins/
 ```
 
 Set `codeScan.provider` to `plugin:sample-code-scan` in DracoPho settings, or choose it from the Plugins settings page.

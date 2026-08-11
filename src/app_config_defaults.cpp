@@ -31,7 +31,7 @@ QJsonObject defaultAppConfigRoot(const QString &windowDetectionCommand)
     root.insert(QStringLiteral("toolbar"), toolbar);
 
     QJsonObject save;
-    save.insert(QStringLiteral("pathTemplate"), QStringLiteral("{pictures}/mark-shot/mark-shot-{datetime}.png"));
+    save.insert(QStringLiteral("pathTemplate"), QStringLiteral("{pictures}/dracoPho/dracoPho-{datetime}.png"));
     root.insert(QStringLiteral("save"), save);
 
     QJsonObject imageFrame;

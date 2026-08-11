@@ -29,7 +29,7 @@ QString writableStandardDir(QStandardPaths::StandardLocation location)
  */
 QString defaultSaveDirectory()
 {
-    return QDir(writableStandardDir(QStandardPaths::PicturesLocation)).filePath(QStringLiteral("mark-shot"));
+    return QDir(writableStandardDir(QStandardPaths::PicturesLocation)).filePath(QStringLiteral("dracoPho"));
 }
 
 /**
@@ -45,9 +45,9 @@ QString appConfigDirectory()
 
     const QString genericConfig = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
     if (!genericConfig.isEmpty()) {
-        return QDir(genericConfig).filePath(QStringLiteral("mark-shot"));
+        return QDir(genericConfig).filePath(QStringLiteral("dracoPho"));
     }
-    return QDir::home().filePath(QStringLiteral(".config/mark-shot"));
+    return QDir::home().filePath(QStringLiteral(".config/dracoPho"));
 }
 
 /**
@@ -63,9 +63,9 @@ QString appDataDirectory()
 
     const QString genericData = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
     if (!genericData.isEmpty()) {
-        return QDir(genericData).filePath(QStringLiteral("mark-shot"));
+        return QDir(genericData).filePath(QStringLiteral("dracoPho"));
     }
-    return QDir::home().filePath(QStringLiteral(".local/share/mark-shot"));
+    return QDir::home().filePath(QStringLiteral(".local/share/dracoPho"));
 }
 
 /**
@@ -262,7 +262,7 @@ QString withDefaultFileTemplate(QString directoryTemplate)
     if (directoryTemplate.trimmed().isEmpty()) {
         return {};
     }
-    return QDir(directoryTemplate).filePath(QStringLiteral("mark-shot-{datetime}.png"));
+    return QDir(directoryTemplate).filePath(QStringLiteral("dracoPho-{datetime}.png"));
 }
 
 /**
@@ -313,7 +313,7 @@ QString finalizedPngPath(QString path, const markshot::SavePathContext &context)
 
     if (path.endsWith(QLatin1Char('/')) || path.endsWith(QLatin1Char('\\'))) {
         const QDateTime timestamp = context.timestamp.isValid() ? context.timestamp : QDateTime::currentDateTime();
-        path = QDir(path).filePath(QStringLiteral("mark-shot-%1.png")
+        path = QDir(path).filePath(QStringLiteral("dracoPho-%1.png")
                                        .arg(timestamp.toString(QStringLiteral("yyyyMMdd-HHmmss"))));
     }
 
@@ -334,7 +334,7 @@ namespace markshot {
 
 QString defaultSavePathTemplate()
 {
-    return QStringLiteral("{pictures}/mark-shot/mark-shot-{datetime}.png");
+    return QStringLiteral("{pictures}/dracoPho/dracoPho-{datetime}.png");
 }
 
 QString defaultSavePath(const SavePathContext &context)
@@ -345,7 +345,7 @@ QString defaultSavePath(const SavePathContext &context)
     }
 
     const QDateTime timestamp = context.timestamp.isValid() ? context.timestamp : QDateTime::currentDateTime();
-    const QString filename = QStringLiteral("mark-shot-%1.png")
+    const QString filename = QStringLiteral("dracoPho-%1.png")
                                  .arg(timestamp.toString(QStringLiteral("yyyyMMdd-HHmmss")));
     return QDir(defaultSaveDirectory()).filePath(filename);
 }

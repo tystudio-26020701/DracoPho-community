@@ -82,9 +82,9 @@ QString resolveOutputPath(const QString &captureTo, const QString &outputName, Q
         QDir().mkpath(info.absoluteFilePath());
         const QString stamp =
             QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss-zzz"));
-        QString fileName = QStringLiteral("mark-shot-%1.png").arg(stamp);
+        QString fileName = QStringLiteral("dracoPho-%1.png").arg(stamp);
         if (!outputName.isEmpty()) {
-            fileName = QStringLiteral("mark-shot-%1-%2.png").arg(outputName, stamp);
+            fileName = QStringLiteral("dracoPho-%1-%2.png").arg(outputName, stamp);
         }
         return QDir(info.absoluteFilePath()).filePath(fileName);
     }

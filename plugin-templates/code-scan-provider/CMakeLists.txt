@@ -32,5 +32,5 @@ target_link_libraries(mark-shot-sample-code-scan
 )
 
 install(TARGETS mark-shot-sample-code-scan
-        LIBRARY DESTINATION lib/mark-shot/plugins
-        RUNTIME DESTINATION lib/mark-shot/plugins)
+        LIBRARY DESTINATION lib/dracoPho/plugins
+        RUNTIME DESTINATION lib/dracoPho/plugins)

@@ -17,11 +17,11 @@ namespace {
 QString pluginFileName()
 {
 #if defined(Q_OS_WIN)
-    return QStringLiteral("mark-shot-layer-shell.dll");
+    return QStringLiteral("dracoPho-layer-shell.dll");
 #elif defined(Q_OS_DARWIN)
-    return QStringLiteral("libmark-shot-layer-shell.dylib");
+    return QStringLiteral("libdracoPho-layer-shell.dylib");
 #else
-    return QStringLiteral("libmark-shot-layer-shell.so");
+    return QStringLiteral("libdracoPho-layer-shell.so");
 #endif
 }
 
@@ -48,18 +48,18 @@ QStringList pluginSearchDirs()
     const QString appDir = QCoreApplication::applicationDirPath();
     addSearchDir(&dirs, appDir);
     addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("plugins")));
-    addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("../lib/mark-shot")));
-    addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("../lib64/mark-shot")));
+    addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("../lib/dracoPho")));
+    addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("../lib64/dracoPho")));
 
     const QStringList libraryPaths = QCoreApplication::libraryPaths();
     for (const QString &path : libraryPaths) {
         addSearchDir(&dirs, path);
-        addSearchDir(&dirs, QDir(path).filePath(QStringLiteral("mark-shot")));
+        addSearchDir(&dirs, QDir(path).filePath(QStringLiteral("dracoPho")));
     }
     return dirs;
 }
 
-/// @brief Dynamically loads the mark-shot layer shell plugin if not already loaded.
+/// @brief Dynamically loads the dracoPho layer shell plugin if not already loaded.
 /// @return Pointer to the loaded PluginInterface, or nullptr on failure.
 PluginInterface *loadPlugin()
 {

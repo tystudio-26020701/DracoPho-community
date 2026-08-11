@@ -5,7 +5,7 @@
 #include <QString>
 #include <QVector>
 
-// Design tokens and stylesheet generators for the mark-shot overlay UI.
+// Design tokens and stylesheet generators for the dracoPho overlay UI.
 // All panels share a dark glass aesthetic with a teal accent. Tokens are
 // kept here so palette adjustments do not require trawling through panel
 // construction code.

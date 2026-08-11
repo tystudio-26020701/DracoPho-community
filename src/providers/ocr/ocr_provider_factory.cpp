@@ -83,7 +83,7 @@ bool legacyOcrHelperConfigured()
     const QString base = dataHome.isEmpty()
         ? QDir::home().filePath(QStringLiteral(".local/share"))
         : dataHome;
-    return QFileInfo::exists(QDir(base).filePath(QStringLiteral("mark-shot/ocr-venv/bin/python")));
+    return QFileInfo::exists(QDir(base).filePath(QStringLiteral("dracoPho/ocr-venv/bin/python")));
 }
 
 ProviderTask *createOcrTask(const OcrTaskRequest &request, QObject *parent)
@@ -134,7 +134,7 @@ QString resolvedOcrProviderName(const OcrTaskRequest &request)
     QString pluginId;
     const QString kind = normalizedProviderKind(request.provider, &pluginId);
     if (kind == QStringLiteral("helper")) {
-        return QStringLiteral("helper (mark-shot-ocr)");
+        return QStringLiteral("helper (dracoPho-ocr)");
     }
     if (kind == QStringLiteral("builtin")) {
         return QStringLiteral("builtin (tesseract)");
@@ -155,7 +155,7 @@ QString resolvedOcrProviderName(const OcrTaskRequest &request)
     if (OcrTesseractTask::available()) {
         return QStringLiteral("builtin (tesseract)");
     }
-    return QStringLiteral("helper (mark-shot-ocr)");
+    return QStringLiteral("helper (dracoPho-ocr)");
 }
 
 }  // namespace markshot::providers

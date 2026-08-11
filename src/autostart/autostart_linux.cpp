@@ -21,11 +21,11 @@ QString autostartDirPath()
 }
 
 /// @brief 返回 DracoPho 桌面自启动文件路径。
-/// @return mark-shot.desktop 完整路径。
+/// @return dracoPho.desktop 完整路径。
 QString autostartDesktopPath()
 {
     const QString dirPath = autostartDirPath();
-    return dirPath.isEmpty() ? QString() : QDir(dirPath).filePath(QStringLiteral("mark-shot.desktop"));
+    return dirPath.isEmpty() ? QString() : QDir(dirPath).filePath(QStringLiteral("dracoPho.desktop"));
 }
 
 /// @brief 转义 desktop Exec 字段中的路径。

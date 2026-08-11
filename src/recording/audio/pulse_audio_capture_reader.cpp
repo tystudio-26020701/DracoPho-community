@@ -65,10 +65,10 @@ bool PulseAudioCaptureReader::init(int frameBytes,
 
     int pulseError = 0;
     m_connection = pa_simple_new(nullptr,
-                                 "mark-shot",
+                                 "dracoPho",
                                  PA_STREAM_RECORD,
                                  nullptr,
-                                 "mark-shot recording",
+                                 "dracoPho recording",
                                  &sampleSpec,
                                  &channelMap,
                                  &attr,

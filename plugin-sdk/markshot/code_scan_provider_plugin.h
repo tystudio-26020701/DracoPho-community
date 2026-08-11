@@ -54,6 +54,6 @@ public:
 
 }  // namespace markshot::plugin
 
-#define MARK_SHOT_CODE_SCAN_PROVIDER_PLUGIN_IID "dev.mark-shot.CodeScanProviderPlugin/1.0"
+#define MARK_SHOT_CODE_SCAN_PROVIDER_PLUGIN_IID "dev.dracoPho.CodeScanProviderPlugin/1.0"
 
 Q_DECLARE_INTERFACE(markshot::plugin::CodeScanProviderPlugin, MARK_SHOT_CODE_SCAN_PROVIDER_PLUGIN_IID)

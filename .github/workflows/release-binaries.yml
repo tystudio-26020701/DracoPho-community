@@ -80,11 +80,11 @@ jobs:
         shell: bash
         run: |
           cmake --install build --prefix "$PWD/app"
-          install -Dm644 LICENSE app/share/licenses/mark-shot/LICENSE
-          install -Dm644 README.md app/share/doc/mark-shot/README.md
-          install -Dm644 README.zh-CN.md app/share/doc/mark-shot/README.zh-CN.md
+          install -Dm644 LICENSE app/share/licenses/dracoPho/LICENSE
+          install -Dm644 README.md app/share/doc/dracoPho/README.md
+          install -Dm644 README.zh-CN.md app/share/doc/dracoPho/README.zh-CN.md
 
-          ASSET="mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz"
+          ASSET="dracoPho-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz"
           tar -C app -czf "$ASSET" .
           sha256sum "$ASSET" > "$ASSET.sha256"
 
@@ -95,16 +95,16 @@ jobs:
           plugins=()
           while IFS= read -r -d '' plugin; do
             plugins+=("$plugin")
-          done < <(find app -type f -path '*/mark-shot/plugins/*' -name '*.so' -print0)
+          done < <(find app -type f -path '*/dracoPho/plugins/*' -name '*.so' -print0)
           if [ "${#plugins[@]}" -eq 0 ]; then
             echo "No provider plugin dynamic libraries were installed" >&2
             exit 1
           fi
           for plugin in "${plugins[@]}"; do
             base="$(basename "$plugin")"
-            provider="${base#libmark-shot-}"
+            provider="${base#libdracoPho-}"
             provider="${provider%.so}"
-            asset="mark-shot-plugin-${provider}-${{ steps.version.outputs.tag }}-linux-x86_64.so"
+            asset="dracoPho-plugin-${provider}-${{ steps.version.outputs.tag }}-linux-x86_64.so"
             cp "$plugin" "plugin-assets/$asset"
             (cd plugin-assets && sha256sum "$asset" > "$asset.sha256")
           done
@@ -115,18 +115,18 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: |
-            mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz
-            mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz.sha256
+            dracoPho-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz
+            dracoPho-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz.sha256
             plugin-assets/*
 
       - name: Upload binaries artifact
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: mark-shot-linux-x86_64-${{ steps.version.outputs.tag }}
+          name: dracoPho-linux-x86_64-${{ steps.version.outputs.tag }}
           path: |
-            mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz
-            mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz.sha256
+            dracoPho-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz
+            dracoPho-${{ steps.version.outputs.tag }}-linux-x86_64.tar.gz.sha256
             plugin-assets/*
           if-no-files-found: error
 
@@ -184,11 +184,11 @@ jobs:
         shell: bash
         run: |
           cmake --install build --prefix "$PWD/app"
-          install -Dm644 LICENSE app/share/licenses/mark-shot/LICENSE
-          install -Dm644 README.md app/share/doc/mark-shot/README.md
-          install -Dm644 README.zh-CN.md app/share/doc/mark-shot/README.zh-CN.md
+          install -Dm644 LICENSE app/share/licenses/dracoPho/LICENSE
+          install -Dm644 README.md app/share/doc/dracoPho/README.md
+          install -Dm644 README.zh-CN.md app/share/doc/dracoPho/README.zh-CN.md
 
-          ASSET="mark-shot-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz"
+          ASSET="dracoPho-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz"
           tar -C app -czf "$ASSET" .
           sha256sum "$ASSET" > "$ASSET.sha256"
 
@@ -199,16 +199,16 @@ jobs:
           plugins=()
           while IFS= read -r -d '' plugin; do
             plugins+=("$plugin")
-          done < <(find app -type f -path '*/mark-shot/plugins/*' -name '*.so' -print0)
+          done < <(find app -type f -path '*/dracoPho/plugins/*' -name '*.so' -print0)
           if [ "${#plugins[@]}" -eq 0 ]; then
             echo "No provider plugin dynamic libraries were installed" >&2
             exit 1
           fi
           for plugin in "${plugins[@]}"; do
             base="$(basename "$plugin")"
-            provider="${base#libmark-shot-}"
+            provider="${base#libdracoPho-}"
             provider="${provider%.so}"
-            asset="mark-shot-plugin-${provider}-${{ steps.version.outputs.tag }}-linux-arm64.so"
+            asset="dracoPho-plugin-${provider}-${{ steps.version.outputs.tag }}-linux-arm64.so"
             cp "$plugin" "plugin-assets/$asset"
             (cd plugin-assets && sha256sum "$asset" > "$asset.sha256")
           done
@@ -219,18 +219,18 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: |
-            mark-shot-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz
-            mark-shot-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz.sha256
+            dracoPho-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz
+            dracoPho-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz.sha256
             plugin-assets/*
 
       - name: Upload binaries artifact
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: mark-shot-linux-arm64-${{ steps.version.outputs.tag }}
+          name: dracoPho-linux-arm64-${{ steps.version.outputs.tag }}
           path: |
-            mark-shot-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz
-            mark-shot-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz.sha256
+            dracoPho-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz
+            dracoPho-${{ steps.version.outputs.tag }}-linux-arm64.tar.gz.sha256
             plugin-assets/*
           if-no-files-found: error
 
@@ -299,18 +299,18 @@ jobs:
         run: |
           cmake --install build --prefix "$PWD/app"
           for plugin in ocr-rapid translate-openai code-scan-zxing; do
-            test -f "$PWD/app/lib/mark-shot/plugins/mark-shot-${plugin}.dll" || {
+            test -f "$PWD/app/lib/dracoPho/plugins/dracoPho-${plugin}.dll" || {
               echo "Expected provider plugin was not installed: ${plugin}" >&2
               exit 1
             }
           done
-          install -Dm644 LICENSE app/share/licenses/mark-shot/LICENSE
-          install -Dm644 README.md app/share/doc/mark-shot/README.md
-          install -Dm644 README.zh-CN.md app/share/doc/mark-shot/README.zh-CN.md
+          install -Dm644 LICENSE app/share/licenses/dracoPho/LICENSE
+          install -Dm644 README.md app/share/doc/dracoPho/README.md
+          install -Dm644 README.zh-CN.md app/share/doc/dracoPho/README.zh-CN.md
 
       - name: Deploy runtime libraries
         run: |
-          bash scripts/windows-deploy-runtime.sh "$PWD/app/bin" "$PWD/app/bin/mark-shot.exe"
+          bash scripts/windows-deploy-runtime.sh "$PWD/app/bin" "$PWD/app/bin/dracoPho.exe"
 
       - name: Sign Windows binaries
         shell: pwsh
@@ -323,7 +323,7 @@ jobs:
 
       - name: Package zip
         run: |
-          ASSET="mark-shot-${{ steps.version.outputs.tag }}-windows-x86_64.zip"
+          ASSET="dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip"
           (cd app && zip -r "../$ASSET" .)
           sha256sum "$ASSET" > "$ASSET.sha256"
 
@@ -333,16 +333,16 @@ jobs:
           plugins=()
           while IFS= read -r -d '' plugin; do
             plugins+=("$plugin")
-          done < <(find app -type f -path '*/mark-shot/plugins/*' -name '*.dll' -print0)
+          done < <(find app -type f -path '*/dracoPho/plugins/*' -name '*.dll' -print0)
           if [ "${#plugins[@]}" -eq 0 ]; then
             echo "No provider plugin dynamic libraries were installed" >&2
             exit 1
           fi
           for plugin in "${plugins[@]}"; do
             base="$(basename "$plugin")"
-            provider="${base#mark-shot-}"
+            provider="${base#dracoPho-}"
             provider="${provider%.dll}"
-            asset="mark-shot-plugin-${provider}-${{ steps.version.outputs.tag }}-windows-x86_64.dll"
+            asset="dracoPho-plugin-${provider}-${{ steps.version.outputs.tag }}-windows-x86_64.dll"
             cp "$plugin" "plugin-assets/$asset"
             (cd plugin-assets && sha256sum "$asset" > "$asset.sha256")
           done
@@ -353,17 +353,17 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: |
-            mark-shot-${{ steps.version.outputs.tag }}-windows-x86_64.zip
-            mark-shot-${{ steps.version.outputs.tag }}-windows-x86_64.zip.sha256
+            dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip
+            dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip.sha256
             plugin-assets/*
 
       - name: Upload binaries artifact
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: mark-shot-windows-x86_64-${{ steps.version.outputs.tag }}
+          name: dracoPho-windows-x86_64-${{ steps.version.outputs.tag }}
           path: |
-            mark-shot-${{ steps.version.outputs.tag }}-windows-x86_64.zip
-            mark-shot-${{ steps.version.outputs.tag }}-windows-x86_64.zip.sha256
+            dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip
+            dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip.sha256
             plugin-assets/*
           if-no-files-found: error

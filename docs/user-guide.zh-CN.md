@@ -16,7 +16,7 @@ headless 截图与配置。
 开始一次区域截图会话：
 
 ```bash
-mark-shot --capture
+dracoPho --capture
 ```
 
 或按配置的启动行为启动（见 § 1.3）。按下桌面快捷键（见 § 8）或在终端运行。
@@ -34,7 +34,7 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 ```
 
 启动脚本会把其 `bin/` 目录加入 `PATH`，这是窗口检测脚本
-（`mark-shot-window-detection-*`）以及 OCR / 上传辅助脚本能够被找到的必要条件。
+（`dracoPho-window-detection-*`）以及 OCR / 上传辅助脚本能够被找到的必要条件。
 
 ### 1.3 启动行为（悬浮球 / 托盘 / 设置窗口 / 直接截图）
 
@@ -101,7 +101,7 @@ GNOME 检测脚本会报错退出，悬停框选保持关闭（普通拖拽框�
 
 ### 2.2 使用方法
 
-1. 触发截图（`mark-shot` 或桌面快捷键）。
+1. 触发截图（`dracoPho` 或桌面快捷键）。
 2. 不按任何鼠标键，把光标移到某个窗口上，出现青色边框标示将被选中的窗口。
 3. **单击一次**（按下并松开、位移不超过几像素）即可选中该窗口。窗口重叠时，
    优先选中光标下最顶层的窗口（按 z 序）。
@@ -120,13 +120,13 @@ GNOME 检测脚本会报错退出，悬停框选保持关闭（普通拖拽框�
 ### 2.4 启用 / 禁用
 
 该功能默认开启（`windowDetection.enabled = true`）。可在
-**设置 → 高级 → 窗口检测已启用** 中切换，或编辑 `~/.config/mark-shot/config.json`：
+**设置 → 高级 → 窗口检测已启用** 中切换，或编辑 `~/.config/dracoPho/config.json`：
 
 ```json
 {
   "windowDetection": {
     "enabled": true,
-    "command": "mark-shot-window-detection-gnome",
+    "command": "dracoPho-window-detection-gnome",
     "timeoutMs": 1000,
     "env": {}
   }
@@ -134,7 +134,7 @@ GNOME 检测脚本会报错退出，悬停框选保持关闭（普通拖拽框�
 ```
 
 - `command`：检测脚本。GNOME / KDE / Hyprland / niri Wayland 下会自动选择与
-  当前会话匹配的内置 `mark-shot-window-detection-*` 脚本；X11 与 Windows 在
+  当前会话匹配的内置 `dracoPho-window-detection-*` 脚本；X11 与 Windows 在
   进程内枚举平台，`command` 可留空。**用户自定义命令（例如绝对路径）始终会被
   尊重，不会被覆盖。**
 - `timeoutMs`：等待脚本的最长时间（100–30000 ms，默认 1000）。
@@ -148,7 +148,7 @@ GNOME 检测脚本会报错退出，悬停框选保持关闭（普通拖拽框�
 | X11 / Windows 下没有青色框 | 平台枚举是内置的，无需操作；确认没有启用取色器 / 标尺启动工具 |
 | 悬停框选到了错误的（下层）窗口 | 自定义检测脚本缺少 z 序数据；没有 `zOrder` 的窗口按最底层处理 |
 | 截图启动变慢 | 检测脚本在覆盖层之前运行；只有桌面响应慢才需要调大 `timeoutMs`，或设 `enabled:false` 跳过 |
-| 查看诊断 | 运行 `mark-shot --debug --debug-log /tmp/mark-shot.log`，查找 `window-detection` 日志行 |
+| 查看诊断 | 运行 `dracoPho --debug --debug-log /tmp/dracoPho.log`，查找 `window-detection` 日志行 |
 
 ---
 
@@ -266,28 +266,28 @@ GNOME 检测脚本会报错退出，悬停框选保持关闭（普通拖拽框�
 
 ```bash
 # 主屏
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # 目录（自动生成时间戳文件名）
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # 区域
-mark-shot --capture-to /tmp/r.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/r.png --region 0,0,1280,720
 
 # 指定显示器，包含鼠标
-mark-shot --capture-to /tmp/w.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/w.png --display DP-1 --include-cursor
 
 # 一次捕获多个显示器（每个一张 PNG）
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 列出输出
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 所有 headless 选项与位置参数（图片文件）互斥。完整参数表见 README。
 
 无人值守录制：无需打开录制对话框，即可通过正在运行的实例开始录制。
-`mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+`dracoPho --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
 --record-duration 30 --record-wait-json` 会录制该区域 30 秒并输出最终的 JSON
 状态。使用 `--record-display <id>` 录制整个显示器，`--record-format webp`
 生成动画 WebP（支持 GIF/MP4/WebP），`--record-audio` 收录系统音频，
@@ -303,7 +303,7 @@ mark-shot --list-displays
 先列出窗口看看有哪些可选：
 
 ```bash
-mark-shot --list-windows
+dracoPho --list-windows
 ```
 
 示例输出（GNOME Wayland）：
@@ -348,7 +348,7 @@ mark-shot --list-windows
 
 ```bash
 # 窗口 0 的顶部 100px 条带
-mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
+dracoPho --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
 ```
 
 #### 7.1.2 选择图片去向
@@ -360,23 +360,23 @@ mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp
 | :--- | :--- |
 | `inline`（默认） | 在 JSON 输出中直接内嵌 Base64 PNG。**不写任何文件，也绝不触碰剪贴板。** 只想拿到像素的智能体最安全的选择。 |
 | `file` | 把 PNG 写入 `--capture-to <目录>`；需要提供该参数。 |
-| `stage` | 把 PNG 写入临时暂存目录（`$TMPDIR/mark-shot-staging`），适合"先存着稍后取用"。 |
+| `stage` | 把 PNG 写入临时暂存目录（`$TMPDIR/dracoPho-staging`），适合"先存着稍后取用"。 |
 | `clipboard` | 图片进入系统剪贴板；多张图片时**最后一张生效**。内容在 CLI 退出后依然可用（会拉起持久的 `wl-copy` / `xclip` 所有者进程）。 |
 
 示例：
 
 ```bash
 # 多个窗口，保存到目录（每个窗口一张 PNG）
-mark-shot --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
+dracoPho --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
 
 # 一个窗口 + 另一个窗口的组件，暂存待用
-mark-shot --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
+dracoPho --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
 
 # 多选，直接以 base64 返回，不写文件、不动剪贴板
-mark-shot --window 0 --window "Terminal" --capture-destination inline
+dracoPho --window 0 --window "Terminal" --capture-destination inline
 
 # 把窗口复制到剪贴板
-mark-shot --window 0 --capture-destination clipboard
+dracoPho --window 0 --capture-destination clipboard
 ```
 
 **剪贴板策略。** 交互式编辑器刻意把选区放入系统剪贴板（`Copy` 动作 /
@@ -427,19 +427,19 @@ Agent 发起的截图不会覆盖用户正在别处使用的文本或图片。�
 托盘模式（默认开启，见 § 1.3）默认注册 `Ctrl+Alt+S` 区域截图，并提供捕获 /
 录制 / 设置 / 退出菜单。托盘图标平时不打扰，需要时随时可用。桌面快捷键配置：
 
-- **GNOME**：设置 → 键盘 → 快捷键 → 自定义快捷键，绑定到 `mark-shot`。
-- **KDE**：自定义快捷键绑定 `mark-shot`（精确 KDE 捕获还需 KWin ScreenShot2
+- **GNOME**：设置 → 键盘 → 快捷键 → 自定义快捷键，绑定到 `dracoPho`。
+- **KDE**：自定义快捷键绑定 `dracoPho`（精确 KDE 捕获还需 KWin ScreenShot2
   权限，见 README）。
-- **Hyprland**：`bind = SUPER SHIFT, S, exec, mark-shot` 与
-  `bind = , Print, exec, mark-shot`。
-- **niri**：`binds { Mod+Shift+S { spawn "mark-shot"; } }`。
-- **Sway / i3**：`bindsym Mod4+Shift+S exec mark-shot`。
+- **Hyprland**：`bind = SUPER SHIFT, S, exec, dracoPho` 与
+  `bind = , Print, exec, dracoPho`。
+- **niri**：`binds { Mod+Shift+S { spawn "dracoPho"; } }`。
+- **Sway / i3**：`bindsym Mod4+Shift+S exec dracoPho`。
 
 ---
 
 ## 9. 配置与后端
 
-- 配置文件：`~/.config/mark-shot/config.json`（Linux），首次运行自动创建。
+- 配置文件：`~/.config/dracoPho/config.json`（Linux），首次运行自动创建。
 - 完整参考：[配置文档](configuration.zh-CN.md)。
 - 后端：Wayland（PipeWire portal / grim / wlroots screencopy）、X11
   （`QScreen::grabWindow`）、Windows（原生 WGC）。录制优先使用 PipeWire
@@ -453,12 +453,12 @@ Agent 发起的截图不会覆盖用户正在别处使用的文本或图片。�
 
 ```bash
 # OCR（RapidOCR / Tesseract）
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 
 # 二维码扫描（zxing-cpp）
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 ---
@@ -467,7 +467,7 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 
 按以下步骤端到端验证一个构建：
 
-1. **启动** — `mark-shot` 按配置的启动行为启动（默认托盘 + 悬浮球），不会自动弹出截图覆盖层。
+1. **启动** — `dracoPho` 按配置的启动行为启动（默认托盘 + 悬浮球），不会自动弹出截图覆盖层。
 2. **启动行为** — 设置 → 通用 → 启动行为：勾选"直接截图"后重新启动：立即打开冻结覆盖层；取消勾选后重新启动：不再弹出覆盖层。
 3. **悬浮球** — 单击弹出快捷菜单（截图 / 全屏截图 / 开始录制 / 设置 / 隐藏 / 退出）；双击直接截图；拖动移动位置且位置跨启动保留；截图进行中自动隐藏、结束后恢复显示。
 4. **窗口悬停** — 鼠标移到窗口上：青色框跟随；单击选中窗口；重叠窗口选中
@@ -483,7 +483,7 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
    多个窗口；逐一验证 `--capture-destination` 的四种模式（inline / file /
    stage / clipboard）；测试组件选择器（`--window "0@0,0,400,300"`）；确认
    捕获前后窗口列表不变（无干扰）。
-9. **托盘与快捷键** — `mark-shot --tray`，按 `Ctrl+Alt+S`。
+9. **托盘与快捷键** — `dracoPho --tray`，按 `Ctrl+Alt+S`。
 10. **便携版细节** — 包内自带 Qt 库 / 插件 / 脚本可被找到。
 
 ---
@@ -491,5 +491,5 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 ## 11. 反馈
 
 使用内置的[问题提交指南](../.doc/submit-issue-via-gh.md)，通过 `gh issue
-create` 提交问题，并附上 `mark-shot --debug --debug-log /tmp/mark-shot.log`
+create` 提交问题，并附上 `dracoPho --debug --debug-log /tmp/dracoPho.log`
 抓取的调试日志。

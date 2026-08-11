@@ -38,7 +38,7 @@ mark-shot-plugin-sample-ocr/
 6. 应用把动态库安装到用户级插件目录。
 7. 重启 DracoPho 后，Provider 插件注册器扫描目录并加载插件。
 
-用户级插件目录以设置页 `Plugins` 显示为准。Windows 通常位于 `%LOCALAPPDATA%` 下，Linux 默认位于 `~/.local/share/mark-shot/plugins`。
+用户级插件目录以设置页 `Plugins` 显示为准。Windows 通常位于 `%LOCALAPPDATA%` 下，Linux 默认位于 `~/.local/share/dracoPho/plugins`。
 
 ## 资产格式
 

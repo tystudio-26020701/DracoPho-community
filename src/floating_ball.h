@@ -231,6 +231,10 @@ private:
     QPoint m_dragOffset;
     QPoint m_pressGlobalPos;
     QPoint m_pressFrameTopLeft;
+    /// @brief 最近一次隐藏前的窗口位置（供重新显示时纠正 WM/合成器漂移）。
+    QPoint m_positionBeforeHide;
+    /// @brief m_positionBeforeHide 是否有效。
+    bool m_havePositionBeforeHide = false;
     qreal m_fadeAlpha = 1.0;
     qint64 m_lastInteractionMs = -1; ///< 最近一次交互的单调时钟毫秒（-1=从未交互）
     qint64 m_lastDragActivityMs = -1; ///< 最近一次拖动活动的单调时钟毫秒（系统移动超时自愈用）

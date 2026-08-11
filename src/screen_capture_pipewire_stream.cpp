@@ -139,7 +139,7 @@ bool PortalPipeWireScreencast::startPipeWire(int fd, QString *error)
 {
     pw_init(nullptr, nullptr);
 
-    m_loop = pw_thread_loop_new("mark-shot-screencast", nullptr);
+    m_loop = pw_thread_loop_new("dracoPho-screencast", nullptr);
     if (!m_loop) {
         ::close(fd);
         if (error) {
@@ -186,7 +186,7 @@ bool PortalPipeWireScreencast::startPipeWire(int fd, QString *error)
         pw_properties_set(properties, PW_KEY_TARGET_OBJECT, m_targetObject.toUtf8().constData());
     }
 
-    m_stream = pw_stream_new(m_core, "mark-shot-screencast", properties);
+    m_stream = pw_stream_new(m_core, "dracoPho-screencast", properties);
     if (!m_stream) {
         pw_thread_loop_unlock(m_loop);
         if (error) {

@@ -160,7 +160,7 @@ QByteArray encodeResponse(const SingleInstanceResponse &response)
 
 QString singleInstanceServerName()
 {
-    return QStringLiteral("mark-shot-single-instance");
+    return QStringLiteral("dracoPho-single-instance");
 }
 
 bool sendSingleInstanceCommand(const SingleInstanceCommand &command,

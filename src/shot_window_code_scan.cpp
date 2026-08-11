@@ -29,7 +29,7 @@ void ShotWindow::scanCodeSelection()
     request.imagePath = tempPath;
     request.provider = config.provider;
     if (config.command.isEmpty()) {
-        request.helperProgram = helperProgramPath(QStringLiteral("mark-shot-code-scan"));
+        request.helperProgram = helperProgramPath(QStringLiteral("dracoPho-code-scan"));
     } else {
         QString commandLine = config.command;
         const bool replaced = replaceExtensionImagePlaceholders(&commandLine, tempPath);

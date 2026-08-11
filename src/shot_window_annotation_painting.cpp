@@ -748,7 +748,7 @@ QString ShotWindow::saveSelectionToTempFile(bool applyExportEffect) const
     const QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation).isEmpty()
         ? QDir::tempPath()
         : QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-    const QString filename = QStringLiteral("mark-shot-open-%1.png")
+    const QString filename = QStringLiteral("dracoPho-open-%1.png")
                                  .arg(QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-hhmmss-zzz")));
     const QString path = QDir(tempDir).filePath(filename);
     return output.save(path, "PNG") ? path : QString();

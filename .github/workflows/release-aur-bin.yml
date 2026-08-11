@@ -146,9 +146,9 @@ jobs:
           STAGE="$PWD/stage"
           rm -rf "$STAGE"
           cmake --install build --prefix "$STAGE/usr"
-          install -Dm644 LICENSE "$STAGE/usr/share/licenses/mark-shot/LICENSE"
-          install -Dm644 README.md "$STAGE/usr/share/doc/mark-shot/README.md"
-          install -Dm644 README.zh-CN.md "$STAGE/usr/share/doc/mark-shot/README.zh-CN.md"
+          install -Dm644 LICENSE "$STAGE/usr/share/licenses/dracoPho/LICENSE"
+          install -Dm644 README.md "$STAGE/usr/share/doc/dracoPho/README.md"
+          install -Dm644 README.zh-CN.md "$STAGE/usr/share/doc/dracoPho/README.zh-CN.md"
 
       - name: Build pacman package
         id: package
@@ -160,7 +160,7 @@ jobs:
           ARCH="${{ matrix.arch }}"
           PLATFORM="${{ matrix.platform }}"
           PKGREL=1
-          ASSET="mark-shot-bin-${VERSION}-${PKGREL}-${ARCH}.pkg.tar.zst"
+          ASSET="dracoPho-bin-${VERSION}-${PKGREL}-${ARCH}.pkg.tar.zst"
           STAGE="$PWD/stage"
 
           # 计算安装树总大小（字节），写入 .PKGINFO
@@ -178,7 +178,7 @@ jobs:
           fi
 
           cat > "$STAGE/.PKGINFO" <<EOF
-          pkgname = mark-shot-bin
+          pkgname = dracoPho-bin
           pkgver = ${VERSION}-${PKGREL}
           pkgdesc = Qt 6 Wayland screenshot selection and annotation tool (prebuilt binary)
           url = https://github.com/tystudio-26020701/DracoPho-community
@@ -200,8 +200,8 @@ jobs:
           optdepend = xclip: X11 clipboard backend
           optdepend = tesseract: fallback OCR backend
           optdepend = tesseract-data-chi_sim: simplified Chinese OCR data for tesseract
-          provides = mark-shot
-          conflicts = mark-shot
+          provides = dracoPho
+          conflicts = dracoPho
           EOF
 
           # 打包为 .pkg.tar.zst：.PKGINFO 必须在包根目录，随后是文件树
@@ -217,7 +217,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: mark-shot-pkg-${{ steps.version.outputs.version }}-${{ matrix.arch }}
+          name: dracoPho-pkg-${{ steps.version.outputs.version }}-${{ matrix.arch }}
           path: |
             ${{ steps.package.outputs.asset }}
             ${{ steps.package.outputs.checksum }}
@@ -233,7 +233,7 @@ jobs:
             ${{ steps.package.outputs.checksum }}
 
   aur:
-    name: Push mark-shot-bin to AUR
+    name: Push dracoPho-bin to AUR
     runs-on: ubuntu-latest
     needs: pkg
     if: github.event_name == 'push' || github.event_name == 'release'
@@ -267,7 +267,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           mkdir -p assets
           for arch in x86_64 aarch64; do
-            ASSET="mark-shot-bin-${VERSION}-1-${arch}.pkg.tar.zst"
+            ASSET="dracoPho-bin-${VERSION}-1-${arch}.pkg.tar.zst"
             gh release download "$TAG" --repo "${{ github.repository }}" --pattern "$ASSET" --dir assets || {
               echo "Asset $ASSET not found in release $TAG" >&2
               exit 1
@@ -283,8 +283,8 @@ jobs:
           sed -i "s/^pkgver=.*/pkgver=${VERSION}/" aur-bin-work/PKGBUILD
 
           # 回填 sha256 校验值，替换 PKGBUILD 中的 SKIP 占位符
-          SHA_X86_64=$(sha256sum "assets/mark-shot-bin-${VERSION}-1-x86_64.pkg.tar.zst" | awk '{print $1}')
-          SHA_AARCH64=$(sha256sum "assets/mark-shot-bin-${VERSION}-1-aarch64.pkg.tar.zst" | awk '{print $1}')
+          SHA_X86_64=$(sha256sum "assets/dracoPho-bin-${VERSION}-1-x86_64.pkg.tar.zst" | awk '{print $1}')
+          SHA_AARCH64=$(sha256sum "assets/dracoPho-bin-${VERSION}-1-aarch64.pkg.tar.zst" | awk '{print $1}')
           sed -i "s/^sha256sums_x86_64=('SKIP')/sha256sums_x86_64=('${SHA_X86_64}')/" aur-bin-work/PKGBUILD
           sed -i "s/^sha256sums_aarch64=('SKIP')/sha256sums_aarch64=('${SHA_AARCH64}')/" aur-bin-work/PKGBUILD
 
@@ -320,7 +320,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           for attempt in 1 2 3; do
-            if git clone ssh://aur@aur.archlinux.org/mark-shot-bin.git aur-bin-repo; then
+            if git clone ssh://aur@aur.archlinux.org/dracoPho-bin.git aur-bin-repo; then
               break
             fi
             echo "AUR clone failed on attempt ${attempt}" >&2
@@ -328,7 +328,7 @@ jobs:
             sleep $((attempt * 10))
           done
           if [ ! -d aur-bin-repo/.git ]; then
-            echo "Failed to clone AUR repository mark-shot-bin" >&2
+            echo "Failed to clone AUR repository dracoPho-bin" >&2
             exit 1
           fi
 
@@ -337,7 +337,7 @@ jobs:
           git -C aur-bin-repo add PKGBUILD .SRCINFO
 
           if git -C aur-bin-repo diff --cached --quiet; then
-            echo "AUR package mark-shot-bin is already up to date"
+            echo "AUR package dracoPho-bin is already up to date"
             exit 0
           fi
 
@@ -351,5 +351,5 @@ jobs:
             git -C aur-bin-repo rebase origin/master
             sleep $((attempt * 10))
           done
-          echo "Failed to push AUR package mark-shot-bin" >&2
+          echo "Failed to push AUR package dracoPho-bin" >&2
           exit 1

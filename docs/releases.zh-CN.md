@@ -11,7 +11,7 @@
 
 **独立图片编辑器**
 - `--editor` 以空画布打开图片编辑器；"打开图片"（按钮 / `Ctrl+O` / 拖放）
-  导入图片后进入完整标注编辑。`mark-shot-edit.desktop` 桌面入口在不带文件
+  导入图片后进入完整标注编辑。`dracoPho-edit.desktop` 桌面入口在不带文件
   启动时直接打开该编辑器。
 
 **交互式窗口截图**
@@ -254,7 +254,7 @@
 - `--capture-to <path>`：不打开标注界面直接截图并写入 PNG，同时向 stdout 输出紧凑 JSON 摘要；复用全部交互截图后端（QScreen、xdg-desktop-portal、PipeWire、grim、KWin/GNOME 助手、Windows Graphics Capture），画质与交互截图一致。
 - `--region x,y,w,h` 截取逻辑屏幕区域；`--display <name>` 按显示器名选择并支持重复以一次截取多个显示器；`--include-cursor` 将鼠标指针绘入画面；`--output-name` 指定生成文件名；`--list-displays` 以 JSON 列出可用输出。
 - `--list-windows` 列出可见窗口（index/id/title/class/instance/geometry，可选 zOrder），支持 Wayland（GNOME/KDE/Hyprland/niri）与 X11；`--window <selector>`（可重复，支持 `auto/id/title/class/index` 匹配，`<selector>@x,y,w,h` 截取窗口内组件子区域）截取任意窗口。
-- `--capture-destination inline|file|stage|clipboard`：inline 直接返回 base64 不写文件不碰剪贴板；file 写入 `--capture-to`；stage 写入 `$TMPDIR/mark-shot-staging`；clipboard 仅在显式指定时写入系统剪贴板。默认去向与剪贴板权限可在 设置 → 存储 中配置（口令二次确认，默认关闭）。
+- `--capture-destination inline|file|stage|clipboard`：inline 直接返回 base64 不写文件不碰剪贴板；file 写入 `--capture-to`；stage 写入 `$TMPDIR/dracoPho-staging`；clipboard 仅在显式指定时写入系统剪贴板。默认去向与剪贴板权限可在 设置 → 存储 中配置（口令二次确认，默认关闭）。
 - 无头模式不建窗口、不弹交互 portal 对话框、即取即退，捕获前后窗口列表保持一致。
 
 **文字标注控制**
@@ -381,7 +381,7 @@
 - **界面语言设置**：新增可配置的 `ui.language` 选项（`system` / `english` / `chinese`），可在设置通用页选择；取代旧版最外层 `language` 字段。
 - **按桌面环境自动选择窗口检测**：太殷龙摄 运行时会自动探测当前桌面环境（GNOME、KDE Plasma、Hyprland、Niri）并选择匹配的检测脚本，其他 Wayland 会话回退到 niri 脚本，X11 会话使用原生 X11 检测。配置命令与环境不匹配时仅在内存中纠正，不修改 `config.json`。
 - **GNOME 遮挡窗口过滤**：GNOME Shell 滚动助手扩展现会从检测结果中过滤完全被遮挡的窗口。
-- **预编译 AUR 包**：新增 `mark-shot-bin` AUR 包，从 GitHub Releases 下载预编译 pacman 包安装，与源码版 `mark-shot` 并存。
+- **预编译 AUR 包**：新增 `dracoPho-bin` AUR 包，从 GitHub Releases 下载预编译 pacman 包安装，与源码版 `dracoPho` 并存。
 - **GNOME Adwaita 配色修复**：在 `qApp` 层覆盖应用调色板，使深色配色在 GNOME Adwaita 下彻底替换 libqtk3 基础调色板。
 - **AUR 可选依赖**：新增 `python-rapidocr`、`python-pillow`、`python-zxing-cpp` 作为 OCR/扫码首选可选依赖。
 

@@ -101,10 +101,10 @@ jobs:
           RPM_ARCH="${{ matrix.rpm_arch }}"
           HOST_ARCH="$(uname -m)"
           RPM_TOP="$PWD/rpmbuild"
-          SOURCE_ROOT="mark-shot-$VERSION"
+          SOURCE_ROOT="dracoPho-$VERSION"
           SOURCE_ARCHIVE="$RPM_TOP/SOURCES/$SOURCE_ROOT.tar.gz"
-          SPEC_FILE="$RPM_TOP/SPECS/mark-shot.spec"
-          ASSET="mark-shot_${VERSION}_fedora_${RPM_ARCH}.rpm"
+          SPEC_FILE="$RPM_TOP/SPECS/dracoPho.spec"
+          ASSET="dracoPho_${VERSION}_fedora_${RPM_ARCH}.rpm"
 
           if [ "$HOST_ARCH" != "$RPM_ARCH" ]; then
             echo "Runner architecture $HOST_ARCH does not match package architecture $RPM_ARCH" >&2
@@ -118,14 +118,14 @@ jobs:
             --exclude='./rpmbuild' \
             --transform "s|^\.$|$SOURCE_ROOT|;s|^\./|$SOURCE_ROOT/|" \
             -czf "$SOURCE_ARCHIVE" .
-          cp packaging/rpm/mark-shot.spec "$SPEC_FILE"
+          cp packaging/rpm/dracoPho.spec "$SPEC_FILE"
           sed -i -E "s/^Version:.*/Version:        $VERSION/" "$SPEC_FILE"
 
           rpmbuild -ba \
             --define "_topdir $RPM_TOP" \
             "$SPEC_FILE"
 
-          mapfile -t rpms < <(find "$RPM_TOP/RPMS" -type f -name "mark-shot-${VERSION}-*.${RPM_ARCH}.rpm" -print | sort)
+          mapfile -t rpms < <(find "$RPM_TOP/RPMS" -type f -name "dracoPho-${VERSION}-*.${RPM_ARCH}.rpm" -print | sort)
           if [ "${#rpms[@]}" -ne 1 ]; then
             printf 'Expected one rpm package, found %s\n' "${#rpms[@]}" >&2
             printf '%s\n' "${rpms[@]}" >&2
@@ -144,7 +144,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: mark-shot-rpm-${{ steps.version.outputs.version }}-${{ matrix.rpm_arch }}
+          name: dracoPho-rpm-${{ steps.version.outputs.version }}-${{ matrix.rpm_arch }}
           path: |
             ${{ steps.package.outputs.asset }}
             ${{ steps.package.outputs.checksum }}

@@ -119,7 +119,7 @@ QString scrollSavePath()
         pictures = QDir::homePath();
     }
     const QString filename =
-        QStringLiteral("mark-shot-scroll-%1.png")
+        QStringLiteral("dracoPho-scroll-%1.png")
             .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-hhmmss")));
     return QDir(pictures).filePath(filename);
 }

@@ -78,7 +78,7 @@ Cattura istantaneamente lo schermo e apre una sovrapposizione di annotazione a s
   - **Clic per cambiare asse**: prima di avviare la cattura, un clic sulla maniglia fluttuante cambia direttamente la direzione di scorrimento (verticale/orizzontale).
 - **Note di compatibilità**: su KDE, GNOME, X11 e in altri ambienti non basati su `niri`, la cattura a scorrimento è ancora una funzione sperimentale e imperfetta. Questi stack desktop differiscono per le politiche dei backend portal, il comportamento di shell e window manager, il feedback sulla geometria delle finestre, la temporizzazione dei fotogrammi e la gestione degli eventi di scorrimento.
 - Se la cattura a scorrimento non è utilizzabile, usa il normale flusso di cattura oppure collega uno strumento esterno per catture lunghe tramite i comandi estesi di DracoPho.
-- Per segnalare un problema con la cattura a scorrimento, esegui prima `mark-shot --debug --debug-log /path/to/mark-shot.log`, riproduci il problema e allega il log alla issue su GitHub. Puoi anche attivarla tramite `debug.enabled` e `debug.logPath` in `config.json`; `DEBUG=1` e `MARK_SHOT_DEBUG_LOG=/path/to/log` restano comunque disponibili.
+- Per segnalare un problema con la cattura a scorrimento, esegui prima `dracoPho --debug --debug-log /path/to/dracoPho.log`, riproduci il problema e allega il log alla issue su GitHub. Puoi anche attivarla tramite `debug.enabled` e `debug.logPath` in `config.json`; `DEBUG=1` e `MARK_SHOT_DEBUG_LOG=/path/to/log` restano comunque disponibili.
 
 ### Supporto multi display server
 - **Wayland**: usa PipeWire portal screencast per la registrazione e la cattura a scorrimento sperimentale, gestendo sia i fotogrammi in memoria condivisa sia quelli DMA-BUF; usa `grim` per la cattura su wlroots, `layer-shell-qt` per creare sovrapposizioni native e `wl-copy` per mantenere persistenti gli appunti.
@@ -92,8 +92,8 @@ Cattura istantaneamente lo schermo e apre una sovrapposizione di annotazione a s
 - **Pallina fluttuante**: un piccolo widget circolare sempre in primo piano (in basso a destra per impostazione predefinita) per un accesso rapido a cattura, cattura a schermo intero, registrazione e impostazioni. Un clic apre il menu, il doppio clic cattura, il trascinamento la sposta (la posizione viene ricordata) e si nasconde automaticamente durante una cattura.
   Trascinandola vicino al bordo dello schermo si aggancia e **si nasconde per metà oltre il bordo** (il passaggio del mouse la fa riemergere, allontanandolo si nasconde di nuovo; funziona su tutte le piattaforme) e, dopo alcuni secondi di inattività, sfuma fino a diventare semitrasparente, tornando completamente opaca al passaggio del mouse.
 - **Scorciatoie desktop**:
-  - `mark-shot.desktop`: configurato come strumento di cattura globale di sistema, invocabile direttamente con le scorciatoie di sistema.
-  - `mark-shot-edit.desktop`: registrato come editor di immagini indipendente, integrabile nel menu "Apri con" dei file manager (ad es. Dolphin, Nautilus).
+  - `dracoPho.desktop`: configurato come strumento di cattura globale di sistema, invocabile direttamente con le scorciatoie di sistema.
+  - `dracoPho-edit.desktop`: registrato come editor di immagini indipendente, integrabile nel menu "Apri con" dei file manager (ad es. Dolphin, Nautilus).
 - Include le icone vettoriali di sistema ad alta risoluzione `dracoPho.svg` e `mark-shot-edit.svg`.
 
 ### Autorizzazione KDE KWin ScreenShot2
@@ -108,27 +108,27 @@ Dichiarazione del campo di autorizzazione:
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
-I pacchetti delle distribuzioni e `cmake --install` installano automaticamente i file desktop necessari. Se esegui direttamente i file di build locali senza installare il progetto, crea o aggiorna `~/.local/share/applications/mark-shot.desktop`:
+I pacchetti delle distribuzioni e `cmake --install` installano automaticamente i file desktop necessari. Se esegui direttamente i file di build locali senza installare il progetto, crea o aggiorna `~/.local/share/applications/dracoPho.desktop`:
 
 ```ini
 [Desktop Entry]
 Type=Application
 Name=DracoPho
 Comment=Wayland screenshot selection and annotation tool
-Exec=/absolute/path/to/mark-shot
+Exec=/absolute/path/to/dracoPho
 Icon=dracoPho
 Terminal=false
 Categories=Graphics;Utility;
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
-Se hai associato DracoPho tramite il servizio di scorciatoie dei comandi di KDE, crea anche `~/.local/share/applications/net.local.mark-shot.desktop`:
+Se hai associato DracoPho tramite il servizio di scorciatoie dei comandi di KDE, crea anche `~/.local/share/applications/net.local.dracoPho.desktop`:
 
 ```ini
 [Desktop Entry]
 Type=Application
 Name=DracoPho Shortcut Service
-Exec=/absolute/path/to/mark-shot
+Exec=/absolute/path/to/dracoPho
 Icon=dracoPho
 Terminal=false
 NoDisplay=true
@@ -237,50 +237,50 @@ DracoPho Community Edition è uno strumento all-in-one per **cattura, annotazion
 
 ```bash
 # 捕获屏幕并进入区域裁剪与标注模式
-mark-shot
+dracoPho
 
 # 在多显示器环境下捕获所有输出屏幕
-mark-shot --all-outputs
+dracoPho --all-outputs
 
 # 跳过选区步骤，直接对捕获的完整屏幕截图进行标注
-mark-shot --fullscreen
+dracoPho --fullscreen
 
 # 选区完成后默认使用移动工具，全屏标注默认使用激光笔，并设置红色默认颜色
-mark-shot --default-tool move --fullscreen-default-tool laser --default-color '#FF4D4D'
+dracoPho --default-tool move --fullscreen-default-tool laser --default-color '#FF4D4D'
 
 # 打开一个已有的本地图片文件并直接进入标注模式
-mark-shot path/to/image.png
+dracoPho path/to/image.png
 
 # 直接将本地图片作为贴图窗口打开
-mark-shot --pin-image path/to/image.png
+dracoPho --pin-image path/to/image.png
 
 # 强制使用标准的 XDG 全屏普通窗口运行（而非 Wayland layer-shell）
-mark-shot --xdg-window
+dracoPho --xdg-window
 ```
 
 #### Cattura senza interfaccia (non interattiva)
 
-Gli script, le automazioni CI o altri programmi possono invocare `mark-shot` per catturare lo schermo senza aprire l'interfaccia di annotazione.
+Gli script, le automazioni CI o altri programmi possono invocare `dracoPho` per catturare lo schermo senza aprire l'interfaccia di annotazione.
 Il fotogramma catturato viene scritto come PNG e sullo standard output viene stampato un riepilogo JSON compatto:
 
 ```bash
 # 捕获主屏并写入 PNG
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # 写入目录（自动生成带时间戳的文件名）
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # 捕获逻辑屏幕区域（x,y,宽度,高度）
-mark-shot --capture-to /tmp/region.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/region.png --region 0,0,1280,720
 
 # 按显示器名称捕获指定屏幕，并包含鼠标指针
-mark-shot --capture-to /tmp/window.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/window.png --display DP-1 --include-cursor
 
 # 同时捕获多个显示器（可重复 --display，每个显示器一张 PNG）
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 Esempio di output JSON di `--capture-to` con un singolo display:
@@ -292,8 +292,8 @@ Esempio di output JSON di `--capture-to` con un singolo display:
 Quando si specificano più `--display`, l'output diventa un array con una cattura per schermo:
 
 ```json
-{"captures":[{"path":"/tmp/shots/mark-shot-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
-             {"path":"/tmp/shots/mark-shot-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
+{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+             {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 Ogni display selezionato viene catturato usando la propria geometria sorgente, quindi i backend basati su portal restituiscono con precisione
@@ -341,36 +341,36 @@ quindi qualità dell'immagine e comportamento di ritaglio delle aree sono identi
 
 ### Associazioni di scorciatoie
 
-Per associare `mark-shot` come scorciatoia di sistema per la cattura dello schermo:
+Per associare `dracoPho` come scorciatoia di sistema per la cattura dello schermo:
 
 **niri** (modifica `~/.config/niri/config.kdl`):
 ```kdl
 binds {
-    Mod+Shift+S { spawn "mark-shot"; }
+    Mod+Shift+S { spawn "dracoPho"; }
 }
 ```
 
 **Hyprland** (modifica `~/.config/hypr/hyprland.conf`):
 ```ini
-# 绑定 Super+Shift+S 启动 mark-shot 选区截图
-bind = SUPER SHIFT, S, exec, mark-shot
-# 绑定 Print 按键启动 mark-shot 选区截图
-bind = , Print, exec, mark-shot
+# 绑定 Super+Shift+S 启动 dracoPho 选区截图
+bind = SUPER SHIFT, S, exec, dracoPho
+# 绑定 Print 按键启动 dracoPho 选区截图
+bind = , Print, exec, dracoPho
 ```
 
 **Sway / i3** (modifica `~/.config/sway/config` o `~/.config/i3/config`):
 ```ini
-# 绑定 Super+Shift+S 启动 mark-shot 选区截图
-bindsym Mod4+Shift+S exec mark-shot
-# 绑定 Print 按键启动 mark-shot 选区截图
-bindsym Print exec mark-shot
+# 绑定 Super+Shift+S 启动 dracoPho 选区截图
+bindsym Mod4+Shift+S exec dracoPho
+# 绑定 Print 按键启动 dracoPho 选区截图
+bindsym Print exec dracoPho
 ```
 
 **GNOME**: aggiungi in Impostazioni di sistema → Tastiera → Scorciatoie da tastiera → Scorciatoie personalizzate.
 
 **Modalità barra di sistema**:
 ```powershell
-mark-shot --tray
+dracoPho --tray
 ```
 
 La modalità barra di sistema registra di default le seguenti scorciatoie globali:
@@ -381,7 +381,7 @@ Il menu della barra di sistema offre anche cattura, cattura a schermo intero, av
 
 ### Comandi estesi
 
-La barra degli strumenti delle azioni a destra offre il pulsante **Extensions**; il programma legge i comandi personalizzati dell'utente da `~/.config/mark-shot/extensions.json`. Il file di configurazione può essere un array JSON oppure un oggetto JSON contenente un array `commands`.
+La barra degli strumenti delle azioni a destra offre il pulsante **Extensions**; il programma legge i comandi personalizzati dell'utente da `~/.config/dracoPho/extensions.json`. Il file di configurazione può essere un array JSON oppure un oggetto JSON contenente un array `commands`.
 
 ```json
 {
@@ -429,23 +429,23 @@ Altre lingue:
 Gli utenti Arch Linux possono installare direttamente tramite un helper AUR:
 ```bash
 # 从源码编译安装
-paru -S mark-shot
+paru -S dracoPho
 # 或
-yay -S mark-shot
+yay -S dracoPho
 
 # 安装预编译二进制包
-paru -S mark-shot-bin
+paru -S dracoPho-bin
 # 或
-yay -S mark-shot-bin
+yay -S dracoPho-bin
 ```
 
-`mark-shot` viene compilato dai sorgenti; `mark-shot-bin` scarica da GitHub Releases il pacchetto pacman precompilato e lo installa.
+`dracoPho` viene compilato dai sorgenti; `dracoPho-bin` scarica da GitHub Releases il pacchetto pacman precompilato e lo installa.
 
 ##### NixOS
 Gli utenti NixOS possono installare aggiungendo un Flake input
 ```nix
 # flake.nix
-mark-shot = {
+dracoPho = {
   url = "github:tystudio-26020701/DracoPho-community";
   inputs.nixpkgs.follows = "nixpkgs";
 };
@@ -453,7 +453,7 @@ mark-shot = {
 # home-manager
 home.packages = with pkgs; [
   # 其他用户应用
-  inputs.mark-shot.packages.${pkgs.stdenv.hostPlatform.system}.default
+  inputs.dracoPho.packages.${pkgs.stdenv.hostPlatform.system}.default
 ]
 ```
 
@@ -461,11 +461,11 @@ home.packages = with pkgs; [
 Per le altre distribuzioni (ad es. Ubuntu, Debian, Fedora), scarica il pacchetto compilato dalla pagina Releases ed esegui i comandi seguenti per installarlo:
 - **Debian / Ubuntu**:
   ```bash
-  sudo apt install ./mark-shot_<version>_amd64.deb
+  sudo apt install ./dracoPho_<version>_amd64.deb
   ```
 - **Fedora**:
   ```bash
-  sudo dnf install ./mark-shot-<version>-1.x86_64.rpm
+  sudo dnf install ./dracoPho-<version>-1.x86_64.rpm
   ```
 
 > **Ubuntu 26.04 LTS**: DracoPho è stato verificato e supportato su Ubuntu 26.04 LTS (Resolute).
@@ -528,17 +528,17 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 
 #### Backend OCR (opzionale)
 
-La funzione di riconoscimento del testo di DracoPho dipende dallo script Python integrato `mark-shot-ocr`. Lo script supporta **RapidOCR** (preferito, basato sui modelli PaddleOCR PP-OCR) e **Tesseract** (di riserva). Su Linux lo script viene installato automaticamente; su Windows va configurato manualmente.
+La funzione di riconoscimento del testo di DracoPho dipende dallo script Python integrato `dracoPho-ocr`. Lo script supporta **RapidOCR** (preferito, basato sui modelli PaddleOCR PP-OCR) e **Tesseract** (di riserva). Su Linux lo script viene installato automaticamente; su Windows va configurato manualmente.
 
 <details>
 <summary><b>Linux</b></summary>
 
 ```bash
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
 
-Al termine dell'installazione `mark-shot-ocr` viene rilevato automaticamente, senza bisogno di altra configurazione.
+Al termine dell'installazione `dracoPho-ocr` viene rilevato automaticamente, senza bisogno di altra configurazione.
 
 **Variabili d'ambiente** (opzionali):
 
@@ -546,9 +546,9 @@ Al termine dell'installazione `mark-shot-ocr` viene rilevato automaticamente, se
 |------|------|--------|
 | `MARK_SHOT_OCR_VERSION` | Versione PaddleOCR (`PP-OCRv5`, `PP-OCRv4`, ecc.) | `PP-OCRv5` |
 | `MARK_SHOT_OCR_MODEL_TYPE` | Dimensione del modello: `mobile` o `server` | `mobile` |
-| `MARK_SHOT_OCR_MODEL_DIR` | Directory personalizzata per l'archiviazione dei modelli | `~/.local/share/mark-shot/models` |
+| `MARK_SHOT_OCR_MODEL_DIR` | Directory personalizzata per l'archiviazione dei modelli | `~/.local/share/dracoPho/models` |
 | `MARK_SHOT_OCR_NO_VENV` | Impostala a `1` per disabilitare il passaggio automatico all'ambiente virtuale | — |
-| `MARK_SHOT_OCR_PYTHON` | Percorso dell'interprete Python usato per il re-exec | `~/.local/share/mark-shot/ocr-venv/bin/python` |
+| `MARK_SHOT_OCR_PYTHON` | Percorso dell'interprete Python usato per il re-exec | `~/.local/share/dracoPho/ocr-venv/bin/python` |
 
 </details>
 
@@ -563,33 +563,33 @@ Scarica e installa Python 3.10 o versioni successive da [python.org](https://www
 
 **2. Copia lo script OCR di supporto**
 
-Copia `scripts/mark-shot-ocr` dal [repository di DracoPho](https://github.com/tystudio-26020701/DracoPho-community) in una directory locale, ad esempio `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`.
+Copia `scripts/dracoPho-ocr` dal [repository di DracoPho](https://github.com/tystudio-26020701/DracoPho-community) in una directory locale, ad esempio `%LOCALAPPDATA%\dracoPho\dracoPho-ocr.py`.
 
 ```powershell
-New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/mark-shot-ocr" `
-  -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\dracoPho"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/dracoPho-ocr" `
+  -OutFile "$env:LOCALAPPDATA\dracoPho\dracoPho-ocr.py"
 ```
 
 **3. Crea l'ambiente virtuale e installa le dipendenze**
 
 ```powershell
-python -m venv "$env:LOCALAPPDATA\mark-shot\ocr-venv"
-& "$env:LOCALAPPDATA\mark-shot\ocr-venv\Scripts\pip.exe" install -U pip rapidocr onnxruntime
+python -m venv "$env:LOCALAPPDATA\dracoPho\ocr-venv"
+& "$env:LOCALAPPDATA\dracoPho\ocr-venv\Scripts\pip.exe" install -U pip rapidocr onnxruntime
 ```
 
 > `onnxruntime` fornisce l'inferenza su CPU. Se hai una GPU compatibile, puoi installare `onnxruntime-directml` o `onnxruntime-gpu` per accelerare il riconoscimento.
 
 **4. Configura `ocr.command` in `config.json`**
 
-Apri `%LOCALAPPDATA%\mark-shot\config.json` (crealo se non esiste) e imposta `ocr.command`:
+Apri `%LOCALAPPDATA%\dracoPho\config.json` (crealo se non esiste) e imposta `ocr.command`:
 
 ```json
 {
   "ocr": {
     "enabled": true,
     "backend": "rapidocr",
-    "command": "\"%LOCALAPPDATA%\\mark-shot\\ocr-venv\\Scripts\\python.exe\" \"%LOCALAPPDATA%\\mark-shot\\mark-shot-ocr.py\" --format json --backend rapidocr {image}",
+    "command": "\"%LOCALAPPDATA%\\dracoPho\\ocr-venv\\Scripts\\python.exe\" \"%LOCALAPPDATA%\\dracoPho\\dracoPho-ocr.py\" --format json --backend rapidocr {image}",
     "timeoutMs": 30000
   }
 }
@@ -604,15 +604,15 @@ Sostituisci `%LOCALAPPDATA%` con il percorso effettivamente espanso (ad es. `C:\
 #### Backend per la scansione dei codici (opzionale)
 
 ```bash
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 L'helper per la scansione dei codici usa preferibilmente `zxing-cpp` e supporta formati comuni come QR Code, Data Matrix, Aztec, PDF417, EAN, UPC, Code 39, Code 93 e Code 128. Se `pyzbar` o OpenCV sono installati, vengono usati anche come backend di riserva.
 
 #### Backend per il caricamento su hosting di immagini (opzionale)
 
-Il caricamento su hosting di immagini usa di default lo script Python integrato `mark-shot-upload`, senza dipendenze aggiuntive (usa solo la libreria standard di Python 3). Lo script configura i parametri dell'hosting tramite variabili d'ambiente e supporta qualsiasi servizio compatibile con il protocollo di caricamento multipart/form-data.
+Il caricamento su hosting di immagini usa di default lo script Python integrato `dracoPho-upload`, senza dipendenze aggiuntive (usa solo la libreria standard di Python 3). Lo script configura i parametri dell'hosting tramite variabili d'ambiente e supporta qualsiasi servizio compatibile con il protocollo di caricamento multipart/form-data.
 
 <details>
 <summary>Variabili d'ambiente supportate dall'helper integrato</summary>
@@ -734,7 +734,7 @@ cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
 cmake --build build-windows
 ```
 
-La copertura attuale su Windows riguarda la cattura normale e l'annotazione delle immagini. La cattura a scorrimento, il rilevamento delle finestre specifico del compositor e le scorciatoie desktop di Linux non sono disponibili su Windows. Gli script Python integrati (`mark-shot-ocr`, `mark-shot-code-scan`, `mark-shot-translate`) non vengono installati automaticamente: consulta la sezione [Backend OCR](#ocr-后端可选), [Backend per la scansione dei codici](#扫码后端可选) e quella sulla traduzione qui sopra per la configurazione manuale.
+La copertura attuale su Windows riguarda la cattura normale e l'annotazione delle immagini. La cattura a scorrimento, il rilevamento delle finestre specifico del compositor e le scorciatoie desktop di Linux non sono disponibili su Windows. Gli script Python integrati (`dracoPho-ocr`, `dracoPho-code-scan`, `dracoPho-translate`) non vengono installati automaticamente: consulta la sezione [Backend OCR](#ocr-后端可选), [Backend per la scansione dei codici](#扫码后端可选) e quella sulla traduzione qui sopra per la configurazione manuale.
 
 ### Build e compilazione
 
@@ -764,7 +764,7 @@ LayerShellQt viene rilevato automaticamente. Se presente, viene abilitato il pie
 cmake --install build --prefix "$HOME/.local"
 ```
 
-Questo comando installa l'eseguibile, gli script di supporto (`mark-shot-ocr`, `mark-shot-code-scan`, `mark-shot-translate`, `mark-shot-upload`), le scorciatoie desktop e le icone.
+Questo comando installa l'eseguibile, gli script di supporto (`dracoPho-ocr`, `dracoPho-code-scan`, `dracoPho-translate`, `dracoPho-upload`), le scorciatoie desktop e le icone.
 
 ### Estensione per la cattura a scorrimento su GNOME Wayland
 
@@ -807,7 +807,7 @@ gdbus call --session \
   --method org.gnome.Shell.Extensions.MarkShotScrollHelper.Version
 ```
 
-Il risultato atteso è `('4.2',)`. Dopo aver abilitato l'estensione, riavvia `mark-shot`.
+Il risultato atteso è `('4.2',)`. Dopo aver abilitato l'estensione, riavvia `dracoPho`.
 
 </details>
 

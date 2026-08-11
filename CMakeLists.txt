@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(mark-shot VERSION 26.8.5.0 LANGUAGES C CXX)
+project(dracoPho VERSION 26.8.5.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -87,7 +87,7 @@ include(cmake/recording_sources.cmake)
 include(cmake/settings_sources.cmake)
 include(cmake/shot_window_sources.cmake)
 
-qt_add_executable(mark-shot
+qt_add_executable(dracoPho
     resources.qrc
     ${MARK_SHOT_IPC_SOURCES}
     ${MARK_SHOT_CLI_SOURCES}
@@ -264,23 +264,23 @@ qt_add_executable(mark-shot
 
 include(cmake/capture_session_sources.cmake)
 
-target_include_directories(mark-shot PRIVATE src plugin-sdk)
-target_compile_definitions(mark-shot PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
+target_include_directories(dracoPho PRIVATE src plugin-sdk)
+target_compile_definitions(dracoPho PRIVATE MARK_SHOT_VERSION="${PROJECT_VERSION}")
 if(MSVC)
     # i18n 翻译表源文件均为无 BOM 的 UTF-8，MSVC 默认按系统代码页解析，
     # 需显式指定 UTF-8 源字符集，避免中文/日文/俄文等字面量乱码或编译失败。
-    target_compile_options(mark-shot PRIVATE /utf-8)
+    target_compile_options(dracoPho PRIVATE /utf-8)
 endif()
 if(WIN32)
-    set_property(TARGET mark-shot PROPERTY CXX_STANDARD 20)
+    set_property(TARGET dracoPho PROPERTY CXX_STANDARD 20)
     set(MARK_SHOT_WINDOWS_ICON "${CMAKE_CURRENT_SOURCE_DIR}/data/icons/DracoPho-logo.ico")
-    configure_file(packaging/windows/mark-shot.rc.in "${CMAKE_CURRENT_BINARY_DIR}/mark-shot.rc" @ONLY)
-    target_sources(mark-shot PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/mark-shot.rc")
-    set_target_properties(mark-shot PROPERTIES WIN32_EXECUTABLE TRUE)
-    target_link_libraries(mark-shot PRIVATE d3d11 dwmapi dxgi ksuser ole32 user32 uuid windowsapp)
+    configure_file(packaging/windows/dracoPho.rc.in "${CMAKE_CURRENT_BINARY_DIR}/dracoPho.rc" @ONLY)
+    target_sources(dracoPho PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/dracoPho.rc")
+    set_target_properties(dracoPho PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_link_libraries(dracoPho PRIVATE d3d11 dwmapi dxgi ksuser ole32 user32 uuid windowsapp)
 endif()
 
-target_link_libraries(mark-shot
+target_link_libraries(dracoPho
     PRIVATE
         Qt6::Core
         Qt6::Concurrent
@@ -290,78 +290,78 @@ target_link_libraries(mark-shot
 )
 
 if(ZXing_FOUND)
-    target_link_libraries(mark-shot PRIVATE ZXing::ZXing)
-    target_compile_definitions(mark-shot PRIVATE HAVE_ZXING_CPP)
-    message(STATUS "mark-shot: builtin zxing-cpp code scanner enabled (CMake package)")
+    target_link_libraries(dracoPho PRIVATE ZXing::ZXing)
+    target_compile_definitions(dracoPho PRIVATE HAVE_ZXING_CPP)
+    message(STATUS "dracoPho: builtin zxing-cpp code scanner enabled (CMake package)")
 elseif(ZXingCpp_FOUND)
-    target_link_libraries(mark-shot PRIVATE PkgConfig::ZXingCpp)
-    target_compile_definitions(mark-shot PRIVATE HAVE_ZXING_CPP)
-    message(STATUS "mark-shot: builtin zxing-cpp code scanner enabled (pkg-config)")
+    target_link_libraries(dracoPho PRIVATE PkgConfig::ZXingCpp)
+    target_compile_definitions(dracoPho PRIVATE HAVE_ZXING_CPP)
+    message(STATUS "dracoPho: builtin zxing-cpp code scanner enabled (pkg-config)")
 else()
-    message(STATUS "mark-shot: builtin zxing-cpp code scanner disabled")
+    message(STATUS "dracoPho: builtin zxing-cpp code scanner disabled")
 endif()
 
 if(MARK_SHOT_LINUX)
-    target_sources(mark-shot
+    target_sources(dracoPho
         PRIVATE
             src/global_shortcut_portal.cpp
             src/global_shortcut_portal.h
     )
-    target_link_libraries(mark-shot PRIVATE Qt6::DBus)
-    target_compile_definitions(mark-shot PRIVATE MARK_SHOT_WITH_DBUS)
+    target_link_libraries(dracoPho PRIVATE Qt6::DBus)
+    target_compile_definitions(dracoPho PRIVATE MARK_SHOT_WITH_DBUS)
 endif()
 
 if(MARK_SHOT_LINUX AND X11_xcb_FOUND)
-    target_link_libraries(mark-shot PRIVATE X11::xcb X11::X11)
-    target_compile_definitions(mark-shot PRIVATE HAVE_XCB)
+    target_link_libraries(dracoPho PRIVATE X11::xcb X11::X11)
+    target_compile_definitions(dracoPho PRIVATE HAVE_XCB)
     if(X11_Xcomposite_FOUND)
-        target_link_libraries(mark-shot PRIVATE X11::Xcomposite)
-        target_compile_definitions(mark-shot PRIVATE HAVE_XCOMPOSITE)
+        target_link_libraries(dracoPho PRIVATE X11::Xcomposite)
+        target_compile_definitions(dracoPho PRIVATE HAVE_XCOMPOSITE)
     endif()
 endif()
 
 if(FFmpegLibav_FOUND)
-    target_link_libraries(mark-shot PRIVATE MarkShot::FFmpegLibav)
-    target_compile_definitions(mark-shot PRIVATE HAVE_LIBAV_RECORDING)
-    message(STATUS "mark-shot: FFmpeg libav recording writer enabled")
+    target_link_libraries(dracoPho PRIVATE MarkShot::FFmpegLibav)
+    target_compile_definitions(dracoPho PRIVATE HAVE_LIBAV_RECORDING)
+    message(STATUS "dracoPho: FFmpeg libav recording writer enabled")
 else()
-    message(STATUS "mark-shot: FFmpeg libav recording writer disabled")
+    message(STATUS "dracoPho: FFmpeg libav recording writer disabled")
 endif()
 if(PulseAudioRecording_FOUND)
-    target_link_libraries(mark-shot PRIVATE PkgConfig::PulseAudioRecording)
-    target_compile_definitions(mark-shot PRIVATE HAVE_PULSE_RECORDING)
-    message(STATUS "mark-shot: PulseAudio lib recording capture enabled")
+    target_link_libraries(dracoPho PRIVATE PkgConfig::PulseAudioRecording)
+    target_compile_definitions(dracoPho PRIVATE HAVE_PULSE_RECORDING)
+    message(STATUS "dracoPho: PulseAudio lib recording capture enabled")
 else()
-    message(STATUS "mark-shot: PulseAudio lib recording capture disabled")
+    message(STATUS "dracoPho: PulseAudio lib recording capture disabled")
 endif()
 
 if(MARK_SHOT_WITH_LAYER_SHELL AND MARK_SHOT_LINUX AND LayerShellQt_FOUND)
-    qt_add_plugin(mark-shot-layer-shell MODULE)
-    target_sources(mark-shot-layer-shell
+    qt_add_plugin(dracoPho-layer-shell MODULE)
+    target_sources(dracoPho-layer-shell
         PRIVATE
         src/debug_log.cpp
         src/debug_log.h
         src/layer_shell_plugin.cpp
         src/layer_shell_plugin_interface.h
     )
-    target_include_directories(mark-shot-layer-shell PRIVATE src)
-    target_link_libraries(mark-shot-layer-shell
+    target_include_directories(dracoPho-layer-shell PRIVATE src)
+    target_link_libraries(dracoPho-layer-shell
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Widgets
             LayerShellQt::Interface
     )
-    set_target_properties(mark-shot-layer-shell PROPERTIES
+    set_target_properties(dracoPho-layer-shell PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
     )
-    message(STATUS "mark-shot: LayerShellQt found, optional layer-shell plugin enabled")
+    message(STATUS "dracoPho: LayerShellQt found, optional layer-shell plugin enabled")
 elseif(MARK_SHOT_WITH_LAYER_SHELL AND MARK_SHOT_LINUX)
-    message(STATUS "mark-shot: LayerShellQt not found, building without optional layer-shell plugin")
+    message(STATUS "dracoPho: LayerShellQt not found, building without optional layer-shell plugin")
 elseif(MARK_SHOT_WITH_LAYER_SHELL)
-    message(STATUS "mark-shot: LayerShellQt is Linux-only, building without optional layer-shell plugin")
+    message(STATUS "dracoPho: LayerShellQt is Linux-only, building without optional layer-shell plugin")
 else()
-    message(STATUS "mark-shot: optional layer-shell plugin disabled")
+    message(STATUS "dracoPho: optional layer-shell plugin disabled")
 endif()
 
 if(MARK_SHOT_LINUX AND WaylandClient_FOUND AND WAYLAND_SCANNER_EXECUTABLE)
@@ -385,13 +385,13 @@ if(MARK_SHOT_LINUX AND WaylandClient_FOUND AND WAYLAND_SCANNER_EXECUTABLE)
         DEPENDS "${MARK_SHOT_WLR_SCREENCOPY_XML}"
         VERBATIM
     )
-    target_sources(mark-shot PRIVATE "${MARK_SHOT_WLR_SCREENCOPY_CODE}")
-    target_include_directories(mark-shot PRIVATE "${MARK_SHOT_WAYLAND_GENERATED_DIR}")
-    target_link_libraries(mark-shot PRIVATE PkgConfig::WaylandClient)
-    target_compile_definitions(mark-shot PRIVATE HAVE_WLROOTS_SCREENCOPY)
-    message(STATUS "mark-shot: wlroots screencopy recording backend enabled")
+    target_sources(dracoPho PRIVATE "${MARK_SHOT_WLR_SCREENCOPY_CODE}")
+    target_include_directories(dracoPho PRIVATE "${MARK_SHOT_WAYLAND_GENERATED_DIR}")
+    target_link_libraries(dracoPho PRIVATE PkgConfig::WaylandClient)
+    target_compile_definitions(dracoPho PRIVATE HAVE_WLROOTS_SCREENCOPY)
+    message(STATUS "dracoPho: wlroots screencopy recording backend enabled")
 elseif(MARK_SHOT_LINUX)
-    message(STATUS "mark-shot: wlroots screencopy recording backend disabled")
+    message(STATUS "dracoPho: wlroots screencopy recording backend disabled")
 endif()
 
 include(cmake/pipewire_capture_target.cmake)
@@ -405,83 +405,83 @@ include(CTest)
 if(BUILD_TESTING)
     find_package(Qt6 REQUIRED COMPONENTS Test)
 
-    qt_add_executable(mark-shot-capture-geometry-test
+    qt_add_executable(dracoPho-capture-geometry-test
         tests/capture_geometry_test.cpp
         src/capture_geometry.cpp
         src/capture_geometry.h
     )
-    target_include_directories(mark-shot-capture-geometry-test PRIVATE src)
-    target_link_libraries(mark-shot-capture-geometry-test
+    target_include_directories(dracoPho-capture-geometry-test PRIVATE src)
+    target_link_libraries(dracoPho-capture-geometry-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME capture-geometry COMMAND mark-shot-capture-geometry-test)
+    add_test(NAME capture-geometry COMMAND dracoPho-capture-geometry-test)
 
-    qt_add_executable(mark-shot-line-skeleton-path-test
+    qt_add_executable(dracoPho-line-skeleton-path-test
         tests/line_skeleton_path_test.cpp
         src/line_skeleton_path.cpp
         src/line_skeleton_path.h
     )
-    target_include_directories(mark-shot-line-skeleton-path-test PRIVATE src)
-    target_link_libraries(mark-shot-line-skeleton-path-test
+    target_include_directories(dracoPho-line-skeleton-path-test PRIVATE src)
+    target_link_libraries(dracoPho-line-skeleton-path-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME line-skeleton-path COMMAND mark-shot-line-skeleton-path-test)
+    add_test(NAME line-skeleton-path COMMAND dracoPho-line-skeleton-path-test)
 
-    qt_add_executable(mark-shot-config-value-test
+    qt_add_executable(dracoPho-config-value-test
         tests/config_value_test.cpp
         src/config_value.cpp
         src/config_value.h
     )
-    target_include_directories(mark-shot-config-value-test PRIVATE src)
-    target_link_libraries(mark-shot-config-value-test
+    target_include_directories(dracoPho-config-value-test PRIVATE src)
+    target_link_libraries(dracoPho-config-value-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME config-value COMMAND mark-shot-config-value-test)
+    add_test(NAME config-value COMMAND dracoPho-config-value-test)
 
     include(cmake/recording_tests.cmake)
     include(cmake/provider_tests.cmake)
     include(cmake/marketplace_tests.cmake)
     include(cmake/settings_tests.cmake)
 
-    qt_add_executable(mark-shot-startup-default-color-test
+    qt_add_executable(dracoPho-startup-default-color-test
         tests/startup_default_color_test.cpp
     )
-    target_include_directories(mark-shot-startup-default-color-test PRIVATE src)
-    target_link_libraries(mark-shot-startup-default-color-test
+    target_include_directories(dracoPho-startup-default-color-test PRIVATE src)
+    target_link_libraries(dracoPho-startup-default-color-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Widgets
             Qt6::Test
     )
-    add_test(NAME startup-default-color COMMAND mark-shot-startup-default-color-test)
+    add_test(NAME startup-default-color COMMAND dracoPho-startup-default-color-test)
 
-    qt_add_executable(mark-shot-toolbar-appearance-config-test
+    qt_add_executable(dracoPho-toolbar-appearance-config-test
         tests/toolbar_appearance_config_test.cpp
         src/toolbar_appearance_config.cpp
         src/toolbar_appearance_config.h
         src/config_value.cpp
         src/config_value.h
     )
-    target_include_directories(mark-shot-toolbar-appearance-config-test PRIVATE src)
-    target_link_libraries(mark-shot-toolbar-appearance-config-test
+    target_include_directories(dracoPho-toolbar-appearance-config-test PRIVATE src)
+    target_link_libraries(dracoPho-toolbar-appearance-config-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME toolbar-appearance-config COMMAND mark-shot-toolbar-appearance-config-test)
+    add_test(NAME toolbar-appearance-config COMMAND dracoPho-toolbar-appearance-config-test)
 
-    qt_add_executable(mark-shot-clipboard-image-config-test
+    qt_add_executable(dracoPho-clipboard-image-config-test
         tests/clipboard_image_config_test.cpp
         src/clipboard_image_config.cpp
         src/clipboard_image_config.h
@@ -500,95 +500,95 @@ if(BUILD_TESTING)
         src/window_detection.cpp
         src/window_detection.h
     )
-    target_include_directories(mark-shot-clipboard-image-config-test PRIVATE src)
-    target_link_libraries(mark-shot-clipboard-image-config-test
+    target_include_directories(dracoPho-clipboard-image-config-test PRIVATE src)
+    target_link_libraries(dracoPho-clipboard-image-config-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME clipboard-image-config COMMAND mark-shot-clipboard-image-config-test)
+    add_test(NAME clipboard-image-config COMMAND dracoPho-clipboard-image-config-test)
 
-    qt_add_executable(mark-shot-export-image-effect-test
+    qt_add_executable(dracoPho-export-image-effect-test
         tests/export_image_effect_test.cpp
         src/export_image_effect.cpp
         src/export_image_effect.h
         src/config_value.cpp
         src/config_value.h
     )
-    target_include_directories(mark-shot-export-image-effect-test PRIVATE src)
-    target_link_libraries(mark-shot-export-image-effect-test
+    target_include_directories(dracoPho-export-image-effect-test PRIVATE src)
+    target_link_libraries(dracoPho-export-image-effect-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Widgets
             Qt6::Test
     )
-    add_test(NAME export-image-effect COMMAND mark-shot-export-image-effect-test)
+    add_test(NAME export-image-effect COMMAND dracoPho-export-image-effect-test)
 
-    qt_add_executable(mark-shot-line-constraint-test
+    qt_add_executable(dracoPho-line-constraint-test
         tests/shot_window_line_constraint_test.cpp
         src/shot_window_line_constraint.cpp
         src/shot_window_line_constraint.h
     )
-    target_include_directories(mark-shot-line-constraint-test PRIVATE src)
-    target_link_libraries(mark-shot-line-constraint-test
+    target_include_directories(dracoPho-line-constraint-test PRIVATE src)
+    target_link_libraries(dracoPho-line-constraint-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME line-constraint COMMAND mark-shot-line-constraint-test)
+    add_test(NAME line-constraint COMMAND dracoPho-line-constraint-test)
 
-    qt_add_executable(mark-shot-capture-freeze-scope-test
+    qt_add_executable(dracoPho-capture-freeze-scope-test
         tests/capture_freeze_scope_test.cpp
         src/capture_freeze_scope.cpp
         src/capture_freeze_scope.h
         src/config_value.cpp
         src/config_value.h
     )
-    target_include_directories(mark-shot-capture-freeze-scope-test PRIVATE src)
-    target_link_libraries(mark-shot-capture-freeze-scope-test
+    target_include_directories(dracoPho-capture-freeze-scope-test PRIVATE src)
+    target_link_libraries(dracoPho-capture-freeze-scope-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME capture-freeze-scope COMMAND mark-shot-capture-freeze-scope-test)
+    add_test(NAME capture-freeze-scope COMMAND dracoPho-capture-freeze-scope-test)
 
-    qt_add_executable(mark-shot-capture-cursor-policy-test
+    qt_add_executable(dracoPho-capture-cursor-policy-test
         tests/capture_cursor_policy_test.cpp
         src/capture_cursor_policy.cpp
         src/capture_cursor_policy.h
         src/config_value.cpp
         src/config_value.h
     )
-    target_include_directories(mark-shot-capture-cursor-policy-test PRIVATE src)
-    target_link_libraries(mark-shot-capture-cursor-policy-test
+    target_include_directories(dracoPho-capture-cursor-policy-test PRIVATE src)
+    target_link_libraries(dracoPho-capture-cursor-policy-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME capture-cursor-policy COMMAND mark-shot-capture-cursor-policy-test)
+    add_test(NAME capture-cursor-policy COMMAND dracoPho-capture-cursor-policy-test)
 
-    qt_add_executable(mark-shot-capture-own-windows-policy-test
+    qt_add_executable(dracoPho-capture-own-windows-policy-test
         tests/capture_own_windows_policy_test.cpp
         src/capture_own_windows_policy.cpp
         src/capture_own_windows_policy.h
         src/config_value.cpp
         src/config_value.h
     )
-    target_include_directories(mark-shot-capture-own-windows-policy-test PRIVATE src)
-    target_link_libraries(mark-shot-capture-own-windows-policy-test
+    target_include_directories(dracoPho-capture-own-windows-policy-test PRIVATE src)
+    target_link_libraries(dracoPho-capture-own-windows-policy-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME capture-own-windows-policy COMMAND mark-shot-capture-own-windows-policy-test)
+    add_test(NAME capture-own-windows-policy COMMAND dracoPho-capture-own-windows-policy-test)
 
-    qt_add_executable(mark-shot-kde-capture-config-test
+    qt_add_executable(dracoPho-kde-capture-config-test
         tests/kde_capture_config_test.cpp
         src/kde_capture_config.cpp
         src/kde_capture_config.h
@@ -607,101 +607,101 @@ if(BUILD_TESTING)
         src/window_detection.cpp
         src/window_detection.h
     )
-    target_include_directories(mark-shot-kde-capture-config-test PRIVATE src)
-    target_link_libraries(mark-shot-kde-capture-config-test
+    target_include_directories(dracoPho-kde-capture-config-test PRIVATE src)
+    target_link_libraries(dracoPho-kde-capture-config-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME kde-capture-config COMMAND mark-shot-kde-capture-config-test)
+    add_test(NAME kde-capture-config COMMAND dracoPho-kde-capture-config-test)
 
-    qt_add_executable(mark-shot-save-path-config-test
+    qt_add_executable(dracoPho-save-path-config-test
         tests/save_path_config_test.cpp
         src/save_path_config.cpp
         src/save_path_config.h
         src/config_value.cpp
         src/config_value.h
     )
-    target_include_directories(mark-shot-save-path-config-test PRIVATE src)
-    target_link_libraries(mark-shot-save-path-config-test
+    target_include_directories(dracoPho-save-path-config-test PRIVATE src)
+    target_link_libraries(dracoPho-save-path-config-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME save-path-config COMMAND mark-shot-save-path-config-test)
+    add_test(NAME save-path-config COMMAND dracoPho-save-path-config-test)
 
-    qt_add_executable(mark-shot-screen-capture-cursor-test
+    qt_add_executable(dracoPho-screen-capture-cursor-test
         tests/screen_capture_cursor_test.cpp
         src/screen_capture_cursor.cpp
         src/screen_capture_cursor.h
         src/screen_capture.h
     )
-    target_include_directories(mark-shot-screen-capture-cursor-test PRIVATE src)
-    target_link_libraries(mark-shot-screen-capture-cursor-test
+    target_include_directories(dracoPho-screen-capture-cursor-test PRIVATE src)
+    target_link_libraries(dracoPho-screen-capture-cursor-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME screen-capture-cursor COMMAND mark-shot-screen-capture-cursor-test)
+    add_test(NAME screen-capture-cursor COMMAND dracoPho-screen-capture-cursor-test)
 
-    qt_add_executable(mark-shot-ocr-result-test
+    qt_add_executable(dracoPho-ocr-result-test
         tests/ocr_result_test.cpp
         src/ocr_result.cpp
         src/ocr_result.h
     )
-    target_include_directories(mark-shot-ocr-result-test PRIVATE src)
-    target_link_libraries(mark-shot-ocr-result-test
+    target_include_directories(dracoPho-ocr-result-test PRIVATE src)
+    target_link_libraries(dracoPho-ocr-result-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME ocr-result COMMAND mark-shot-ocr-result-test)
+    add_test(NAME ocr-result COMMAND dracoPho-ocr-result-test)
 
-    qt_add_executable(mark-shot-code-scan-result-test
+    qt_add_executable(dracoPho-code-scan-result-test
         tests/code_scan_result_test.cpp
         src/code_scan_result.cpp
         src/code_scan_result.h
     )
-    target_include_directories(mark-shot-code-scan-result-test PRIVATE src)
-    target_link_libraries(mark-shot-code-scan-result-test
+    target_include_directories(dracoPho-code-scan-result-test PRIVATE src)
+    target_link_libraries(dracoPho-code-scan-result-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Test
     )
-    add_test(NAME code-scan-result COMMAND mark-shot-code-scan-result-test)
+    add_test(NAME code-scan-result COMMAND dracoPho-code-scan-result-test)
 
-    qt_add_executable(mark-shot-ui-language-config-test
+    qt_add_executable(dracoPho-ui-language-config-test
         tests/ui_language_config_test.cpp
         src/ui/interface_language_config.cpp
         src/ui/interface_language_config.h
     )
-    target_include_directories(mark-shot-ui-language-config-test PRIVATE src)
-    target_link_libraries(mark-shot-ui-language-config-test
+    target_include_directories(dracoPho-ui-language-config-test PRIVATE src)
+    target_link_libraries(dracoPho-ui-language-config-test
         PRIVATE
             Qt6::Core
             Qt6::Test
     )
-    add_test(NAME ui-language-config COMMAND mark-shot-ui-language-config-test)
+    add_test(NAME ui-language-config COMMAND dracoPho-ui-language-config-test)
 
-    qt_add_executable(mark-shot-ui-theme-config-test
+    qt_add_executable(dracoPho-ui-theme-config-test
         tests/ui_theme_config_test.cpp
         src/ui/interface_theme_config.cpp
         src/ui/interface_theme_config.h
     )
-    target_include_directories(mark-shot-ui-theme-config-test PRIVATE src)
-    target_link_libraries(mark-shot-ui-theme-config-test
+    target_include_directories(dracoPho-ui-theme-config-test PRIVATE src)
+    target_link_libraries(dracoPho-ui-theme-config-test
         PRIVATE
             Qt6::Core
             Qt6::Gui
             Qt6::Widgets
             Qt6::Test
     )
-    add_test(NAME ui-theme-config COMMAND mark-shot-ui-theme-config-test)
+    add_test(NAME ui-theme-config COMMAND dracoPho-ui-theme-config-test)
 
     include(cmake/tests.cmake)
 endif()

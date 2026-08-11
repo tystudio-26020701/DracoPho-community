@@ -47,7 +47,7 @@ QString defaultLogPath()
     if (override && override[0] != '\0') {
         return QString::fromLocal8Bit(override);
     }
-    return QDir::temp().filePath(QStringLiteral("mark-shot-scroll.log"));
+    return QDir::temp().filePath(QStringLiteral("dracoPho-scroll.log"));
 }
 
 void ensureLogDir(const QString &path)
@@ -108,7 +108,7 @@ void debugLogV(const char *category, const char *format, va_list args)
         std::fprintf(file, "%s [%s] %s\n", stamp.constData(), tag, message);
         std::fclose(file);
     }
-    std::fprintf(stderr, "[mark-shot][%s] %s\n", tag, message);
+    std::fprintf(stderr, "[dracoPho][%s] %s\n", tag, message);
     std::fflush(stderr);
 }
 

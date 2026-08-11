@@ -563,7 +563,7 @@ QString markShotPicturesDir()
         pictures = QDir::homePath();
     }
 
-    const QString markShotDir = QDir(pictures).filePath(QStringLiteral("mark-shot"));
+    const QString markShotDir = QDir(pictures).filePath(QStringLiteral("dracoPho"));
     QDir dir(markShotDir);
     if (dir.exists() || dir.mkpath(QStringLiteral("."))) {
         return markShotDir;
@@ -595,9 +595,9 @@ QString markShotDataDir()
 
     const QString genericDataDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
     if (!genericDataDir.isEmpty()) {
-        return QDir(genericDataDir).filePath(QStringLiteral("mark-shot"));
+        return QDir(genericDataDir).filePath(QStringLiteral("dracoPho"));
     }
-    return QDir::home().filePath(QStringLiteral(".local/share/mark-shot"));
+    return QDir::home().filePath(QStringLiteral(".local/share/dracoPho"));
 }
 
 QString slurpGeometry(QRect geometry)
@@ -776,8 +776,8 @@ QString helperProgramPath(const QString &programName)
     const QStringList candidates = {
         QDir(appDir).filePath(programName),
         QDir(appDir).filePath(QStringLiteral("../scripts/%1").arg(programName)),
-        QDir(appDir).filePath(QStringLiteral("../libexec/mark-shot/%1").arg(programName)),
-        QDir(appDir).filePath(QStringLiteral("../lib/mark-shot/%1").arg(programName)),
+        QDir(appDir).filePath(QStringLiteral("../libexec/dracoPho/%1").arg(programName)),
+        QDir(appDir).filePath(QStringLiteral("../lib/dracoPho/%1").arg(programName)),
         QDir::current().filePath(QStringLiteral("scripts/%1").arg(programName)),
         QDir(configDir).filePath(programName),
         QDir(configDir).filePath(QStringLiteral("scripts/%1").arg(programName)),

@@ -9,7 +9,7 @@ import sys
 def default_venv_python():
     xdg_data_home = os.environ.get("XDG_DATA_HOME", "").strip()
     base = xdg_data_home if xdg_data_home else os.path.expanduser("~/.local/share")
-    return os.path.join(base, "mark-shot", "code-scan-venv", "bin", "python")
+    return os.path.join(base, "dracoPho", "code-scan-venv", "bin", "python")
 
 
 def module_available(name):

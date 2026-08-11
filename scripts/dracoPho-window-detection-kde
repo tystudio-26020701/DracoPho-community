@@ -338,7 +338,7 @@ def write_script_file(token):
     with tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
-        prefix="mark-shot-window-detection-kde-",
+        prefix="dracoPho-window-detection-kde-",
         suffix=".js",
         delete=False,
     ) as file:
@@ -511,7 +511,7 @@ def collect_kde_windows():
     """
     qdbus = qdbus_command()
     token = uuid.uuid4().hex
-    plugin_name = "mark-shot-window-detection-kde-" + token
+    plugin_name = "dracoPho-window-detection-kde-" + token
     since_epoch = max(0, int(time.time()) - 2)
     script_path = write_script_file(token)
     try:

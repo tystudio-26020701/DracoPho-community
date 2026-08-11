@@ -90,9 +90,9 @@ QStringList rapidModelSearchDirs()
         addDir(&dirs, envDir);
     }
     // 2. 用户数据模型目录
-    addDir(&dirs, QDir(dataHomeDir()).filePath(QStringLiteral("mark-shot/models")));
+    addDir(&dirs, QDir(dataHomeDir()).filePath(QStringLiteral("dracoPho/models")));
     // 3. 复用旧 rapidocr venv 已下载的模型，老用户免重复下载
-    const QDir venvLib(QDir(dataHomeDir()).filePath(QStringLiteral("mark-shot/ocr-venv/lib")));
+    const QDir venvLib(QDir(dataHomeDir()).filePath(QStringLiteral("dracoPho/ocr-venv/lib")));
     const QStringList pythonDirs =
         venvLib.entryList({QStringLiteral("python*")}, QDir::Dirs, QDir::Name);
     for (const QString &pythonDir : pythonDirs) {

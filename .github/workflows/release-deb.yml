@@ -119,7 +119,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           DEB_ARCH="${{ matrix.deb_arch }}"
           HOST_ARCH="$(dpkg --print-architecture)"
-          ASSET="mark-shot_${VERSION}_${DEB_ARCH}.deb"
+          ASSET="dracoPho_${VERSION}_${DEB_ARCH}.deb"
 
           if [ "$HOST_ARCH" != "$DEB_ARCH" ]; then
             echo "Runner architecture $HOST_ARCH does not match package architecture $DEB_ARCH" >&2
@@ -128,28 +128,28 @@ jobs:
 
           rm -rf "$PACKAGE_DIR"
           cmake --install build --prefix "$INSTALL_DIR"
-          install -Dm644 LICENSE "$PACKAGE_DIR/usr/share/doc/mark-shot/copyright"
-          install -Dm644 README.md "$PACKAGE_DIR/usr/share/doc/mark-shot/README.md"
-          install -Dm644 README.zh-CN.md "$PACKAGE_DIR/usr/share/doc/mark-shot/README.zh-CN.md"
+          install -Dm644 LICENSE "$PACKAGE_DIR/usr/share/doc/dracoPho/copyright"
+          install -Dm644 README.md "$PACKAGE_DIR/usr/share/doc/dracoPho/README.md"
+          install -Dm644 README.zh-CN.md "$PACKAGE_DIR/usr/share/doc/dracoPho/README.zh-CN.md"
           install -d "$CONTROL_DIR"
 
           mkdir -p debian
           cat > debian/control <<EOF
-          Source: mark-shot
+          Source: dracoPho
           Section: graphics
           Priority: optional
           Maintainer: jswysnemc <snemc@qq.com>
           Rules-Requires-Root: no
           Standards-Version: 4.7.0
 
-          Package: mark-shot
+          Package: dracoPho
           Architecture: any
           Depends: \${shlibs:Depends}
           Description: Qt 6 screenshot selection and annotation tool
            DracoPho captures screenshots and annotates image regions.
           EOF
 
-          SHLIB_DEPS="$(dpkg-shlibdeps -O -e"$PACKAGE_DIR/usr/bin/mark-shot" | sed 's/^shlibs:Depends=//')"
+          SHLIB_DEPS="$(dpkg-shlibdeps -O -e"$PACKAGE_DIR/usr/bin/dracoPho" | sed 's/^shlibs:Depends=//')"
           MANUAL_DEPS="python3"
           RECOMMENDS="python3-venv, xdg-desktop-portal, pipewire, qt6-wayland, grim, wl-clipboard, xclip"
           SUGGESTS="gnome-shell, tesseract-ocr, tesseract-ocr-chi-sim"
@@ -166,7 +166,7 @@ jobs:
           fi
 
           cat > "$CONTROL_DIR/control" <<EOF
-          Package: mark-shot
+          Package: dracoPho
           Version: $VERSION
           Section: graphics
           Priority: optional
@@ -193,7 +193,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: mark-shot-deb-${{ steps.version.outputs.version }}-${{ matrix.deb_arch }}
+          name: dracoPho-deb-${{ steps.version.outputs.version }}-${{ matrix.deb_arch }}
           path: |
             ${{ steps.package.outputs.asset }}
             ${{ steps.package.outputs.checksum }}

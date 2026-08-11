@@ -53,7 +53,7 @@ public:
 
 } // namespace markshot::layershell
 
-#define MARK_SHOT_LAYER_SHELL_PLUGIN_IID "dev.mark-shot.LayerShellPlugin/1.2"
+#define MARK_SHOT_LAYER_SHELL_PLUGIN_IID "dev.dracoPho.LayerShellPlugin/1.2"
 
 /// @brief Declares the interface for the layer shell plugin.
 Q_DECLARE_INTERFACE(markshot::layershell::PluginInterface, MARK_SHOT_LAYER_SHELL_PLUGIN_IID)

@@ -26,7 +26,7 @@ bool sendDesktopNotification(const QString &summary, const QString &body, int ti
     }
 
     QDBusMessage reply = notifications.call(QStringLiteral("Notify"),
-                                            QStringLiteral("mark-shot"),
+                                            QStringLiteral("dracoPho"),
                                             static_cast<uint>(0),
                                             QString(),
                                             summary,

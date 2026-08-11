@@ -70,6 +70,16 @@ const DBUS_XML = `
       <arg type="b" name="above" direction="in"/>
       <arg type="i" name="changed" direction="out"/>
     </method>
+    <method name="CaptureWindow">
+      <arg type="i" name="pid" direction="in"/>
+      <arg type="i" name="x" direction="in"/>
+      <arg type="i" name="y" direction="in"/>
+      <arg type="i" name="width" direction="in"/>
+      <arg type="i" name="height" direction="in"/>
+      <arg type="s" name="filename" direction="in"/>
+      <arg type="b" name="success" direction="out"/>
+      <arg type="s" name="filename_used" direction="out"/>
+    </method>
     <signal name="PreviewAction">
       <arg type="s" name="session_id"/>
       <arg type="s" name="action"/>
@@ -175,26 +185,13 @@ function windowTitleMatches(metaWindow, title) {
     return metaWindow?.get_title?.() === title;
 }
 
-function textMatchesMarkShot(text) {
-    if (typeof text !== 'string') {
-        return false;
-    }
-    const normalized = text.trim().toLowerCase();
-    return normalized === 'mark-shot'
-        || normalized === 'mark shot'
-        || normalized === 'markshot'
-        || normalized.includes('mark shot')
-        || normalized.includes('mark-shot');
-}
-
+// 置顶匹配只允许精确标题：调用方（悬浮球 "DracoPho" / 贴纸 "Pinned DracoPho"）
+// 传各自的完整标题，绝不做子串/模糊匹配——子串匹配会把标题/类名/实例名恰好
+// 包含 "mark-shot" 的第三方窗口（如工作区目录名含 mark-shot 的编辑器）误置顶，
+// 干扰用户的其他工作。更名后本产品窗口标题不再含 mark-shot，子串匹配已无
+// 任何本产品匹配目标，纯粹是误伤源。
 function windowMatchesPinnedRequest(metaWindow, title) {
-    if (windowTitleMatches(metaWindow, title)) {
-        return true;
-    }
-
-    return textMatchesMarkShot(metaWindow?.get_title?.())
-        || textMatchesMarkShot(metaWindow?.get_wm_class?.())
-        || textMatchesMarkShot(metaWindow?.get_wm_class_instance?.());
+    return windowTitleMatches(metaWindow, title);
 }
 
 function setWindowAbove(metaWindow, above) {
@@ -317,6 +314,11 @@ export default class MarkShotScrollHelper extends Extension {
                 return;
             }
 
+            if (methodName === 'CaptureWindow') {
+                this._handleCaptureWindow(parameters, invocation);
+                return;
+            }
+
             invocation.return_dbus_error(`${IFACE}.Error`, `Unknown method: ${methodName}`);
         } catch (e) {
             invocation.return_dbus_error(`${IFACE}.Error`, e.message);
@@ -390,7 +392,7 @@ export default class MarkShotScrollHelper extends Extension {
                 item.instance = wmClassInstance;
             }
             const pid = metaWindow.get_pid?.();
-            if (Number.isInteger(pid) && pid > 0) {
+            if (typeof pid === 'number' && pid > 0) {
                 item.pid = pid;
             }
             if (Number.isInteger(monitor)) {
@@ -440,6 +442,134 @@ export default class MarkShotScrollHelper extends Extension {
         }
 
         return changed;
+    }
+
+    // 按 pid 定位窗口 actor（多窗口进程按检测脚本上报的矩形精确匹配，
+    // 匹配不到则回退到该 pid 的第一个普通窗口）。
+    _findWindowActorByPidAndRect(pid, x, y, width, height) {
+        if (!Number.isInteger(pid) || pid <= 0) {
+            return null;
+        }
+        const actors = global.get_window_actors?.() ?? [];
+        let fallback = null;
+        for (const actor of actors) {
+            const metaWindow = actor?.meta_window;
+            if (!metaWindow || metaWindow.get_pid?.() !== pid || !allowedWindowType(metaWindow)) {
+                continue;
+            }
+            const rect = windowRect(metaWindow);
+            if (!rect) {
+                continue;
+            }
+            if (rect.x === x && rect.y === y && rect.width === width && rect.height === height) {
+                return { actor, metaWindow, rect };
+            }
+            if (!fallback) {
+                fallback = { actor, metaWindow, rect };
+            }
+        }
+        return fallback;
+    }
+
+    // 隐藏目标窗口之外的所有普通窗口 actor（合成器可见性，不改变窗口的
+    // 状态/层叠/焦点），使后续区域截图得到目标窗口的无遮挡画面。
+    _hideOtherWindowActors(targetActor) {
+        const hidden = [];
+        const actors = global.get_window_actors?.() ?? [];
+        for (const actor of actors) {
+            if (actor === targetActor || !actor?.meta_window || !allowedWindowType(actor.meta_window)) {
+                continue;
+            }
+            if (actor.visible) {
+                actor.visible = false;
+                hidden.push(actor);
+            }
+        }
+        return hidden;
+    }
+
+    _restoreWindowActors(actors) {
+        for (const actor of actors) {
+            if (actor) {
+                actor.visible = true;
+            }
+        }
+    }
+
+    _handleCaptureWindow(parameters, invocation) {
+        const [pid, x, y, width, height, filename] = parameters.deepUnpack();
+        const target = this._findWindowActorByPidAndRect(pid, x, y, width, height);
+        if (!target) {
+            invocation.return_value(new GLib.Variant('(bs)', [false, '']));
+            return;
+        }
+        // 目标窗口当前不可见（最小化/不在当前工作区）：GNOME 无窗口缓冲接口，
+        // 隐藏其他窗口后该区域也拿不到目标内容，诚实失败而非返回背景/遮挡画面。
+        if (!target.actor.visible) {
+            invocation.return_value(new GLib.Variant('(bs)', [false, '']));
+            return;
+        }
+
+        const screenshot = global.screenshot ?? this._screenshot;
+        if (!screenshot?.screenshot_area) {
+            invocation.return_value(new GLib.Variant('(bs)', [false, '']));
+            return;
+        }
+
+        const hidden = this._hideOtherWindowActors(target.actor);
+        const rect = target.rect;
+        let stream = null;
+        try {
+            const file = Gio.File.new_for_path(filename);
+            stream = file.replace(null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        } catch (e) {
+            this._restoreWindowActors(hidden);
+            invocation.return_dbus_error(`${IFACE}.Error`, e.message);
+            return;
+        }
+
+        // 等待隐藏生效（compositor 完成重绘）后再区域截图，保证目标窗口无遮挡。
+        Meta.later_add(Meta.LaterType.AFTER_REDRAW, () => {
+            try {
+                screenshot.screenshot_area(
+                    rect.x, rect.y, rect.width, rect.height,
+                    stream,
+                    (source, result) => {
+                        try {
+                            const finishResult = screenshot.screenshot_area_finish(result);
+                            const success = Array.isArray(finishResult) ? finishResult[0] : Boolean(finishResult);
+                            const returnedPath = Array.isArray(finishResult) && typeof finishResult[1] === 'string'
+                                ? finishResult[1]
+                                : '';
+                            const realPath = stream ? filename : (returnedPath || filename);
+                            invocation.return_value(new GLib.Variant('(bs)', [success, realPath]));
+                        } catch (e) {
+                            invocation.return_dbus_error(`${IFACE}.Error`, e.message);
+                        } finally {
+                            if (stream) {
+                                try {
+                                    stream.close(null);
+                                } catch (e) {
+                                    console.log(`[MarkShotScrollHelper] Failed to close capture stream: ${e.message}`);
+                                }
+                            }
+                            this._restoreWindowActors(hidden);
+                        }
+                    }
+                );
+            } catch (e) {
+                if (stream) {
+                    try {
+                        stream.close(null);
+                    } catch (e2) {
+                        console.log(`[MarkShotScrollHelper] Failed to close capture stream: ${e2.message}`);
+                    }
+                }
+                this._restoreWindowActors(hidden);
+                invocation.return_dbus_error(`${IFACE}.Error`, e.message);
+            }
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _handleShowScrollPreview(parameters) {

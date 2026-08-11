@@ -18,7 +18,7 @@
 ابدأ جلسة التقاط منطقة:
 
 ```bash
-mark-shot --capture
+dracoPho --capture
 ```
 
 اضغط على اختصار سطح مكتب (انظر § 8) أو شغّله من الطرفية. تفتح طبقة تغطية
@@ -36,7 +36,7 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 ```
 
 تضيف أداة الإطلاق دليل `bin/` الخاص بها إلى مقدمة `PATH`، وهو أمر مطلوب
-للبرامج النصية المساعدة لاكتشاف النوافذ (`mark-shot-window-detection-*`)
+للبرامج النصية المساعدة لاكتشاف النوافذ (`dracoPho-window-detection-*`)
 والمساعدات الخاصة بـ OCR / الرفع.
 
 ### 1.3 سلوك بدء التشغيل (الكرة العائمة / شريط النظام / نافذة الإعدادات / الالتقاط المباشر)
@@ -106,7 +106,7 @@ X11) وحاول مجددًا. بدون الامتداد، يخرج البرنا�
 
 ### 2.2 كيفية استخدامها
 
-1. شغّل التقاطًا (`mark-shot` أو اختصار سطح المكتب).
+1. شغّل التقاطًا (`dracoPho` أو اختصار سطح المكتب).
 2. دون الضغط على أي زر في الماوس، مرّر المؤشر فوق نافذة. سيظهر إطار أخضر
    مزرق حول النافذة التي سيتم تحديدها.
 3. **انقر مرة واحدة** (اضغط وأفلت دون تحريك أكثر من بضعة بكسلات) لتحديد تلك
@@ -130,13 +130,13 @@ X11) وحاول مجددًا. بدون الامتداد، يخرج البرنا�
 
 الميزة مفعّلة افتراضيًا (`windowDetection.enabled = true`). بدّل حالتها من
 **Settings → Advanced → Window Detection Enabled**، أو عدّل
-`~/.config/mark-shot/config.json`:
+`~/.config/dracoPho/config.json`:
 
 ```json
 {
   "windowDetection": {
     "enabled": true,
-    "command": "mark-shot-window-detection-gnome",
+    "command": "dracoPho-window-detection-gnome",
     "timeoutMs": 1000,
     "env": {}
   }
@@ -144,7 +144,7 @@ X11) وحاول مجددًا. بدون الامتداد، يخرج البرنا�
 ```
 
 - `command`: برنامج الاكتشاف النصي. على GNOME / KDE / Hyprland / niri لـ
-  Wayland يُختار البرنامج النصي المرفق `mark-shot-window-detection-*`
+  Wayland يُختار البرنامج النصي المرفق `dracoPho-window-detection-*`
   المطابق لجلسة عملك تلقائيًا؛ على X11 و Windows يُعدَّد النظام داخل العملية
   ويمكن ترك `command` فارغًا. **أمر مخصص يوفّره المستخدم (مثلًا مسار مطلق)
   يُحترم دائمًا.**
@@ -160,7 +160,7 @@ X11) وحاول مجددًا. بدون الامتداد، يخرج البرنا�
 | لا إطار أخضر مزرق على X11 / Windows | لا شيء — تعداد المنصة مدمج؛ تأكد من أن جلسة الالتقاط لا تستخدم أداة مؤشر عند بدء التشغيل |
 | إطار المرور يلتقط نافذة خاطئة (الأسفل منها) | بيانات ترتيب z مفقودة من برنامج اكتشاف مخصص؛ النوافذ التي لا تحتوي `zOrder` تُرتَّب كطبقة سفلية |
 | بدء الالتقاط بطيء | يعمل برنامج الاكتشاف قبل طبقة التغطية؛ ارفع `timeoutMs` فقط إذا كان سطح المكتب بطيئًا، أو اضبط `enabled:false` لتخطيه |
-| راجع التشخيصات | شغّل `mark-shot --debug --debug-log /tmp/mark-shot.log`؛ وابحث عن سطور `window-detection` |
+| راجع التشخيصات | شغّل `dracoPho --debug --debug-log /tmp/dracoPho.log`؛ وابحث عن سطور `window-detection` |
 
 ---
 
@@ -285,29 +285,29 @@ X11) وحاول مجددًا. بدون الامتداد، يخرج البرنا�
 
 ```bash
 # primary screen
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # directory (timestamped file name)
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # region
-mark-shot --capture-to /tmp/r.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/r.png --region 0,0,1280,720
 
 # a specific display, with cursor
-mark-shot --capture-to /tmp/w.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/w.png --display DP-1 --include-cursor
 
 # several displays at once (one PNG each)
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # list outputs
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 جميع خيارات الالتقاط بدون واجهة متنافية مع ملف صورة موضعي.
 راجع README لجدول الوسائط الكامل.
 
 التسجيل دون مراقبة: يمكنك بدء تسجيل عبر المثيل قيد التشغيل دون فتح مربع حوار
-التسجيل. `mark-shot --record-region 0,0,640,480 --record-output
+التسجيل. `dracoPho --record-region 0,0,640,480 --record-output
 ~/Videos/clip.mp4 --record-duration 30 --record-wait-json` يسجّل تلك المنطقة
 لمدة 30 ثانية ويطبع حالة JSON النهائية. استخدم `--record-display <id>` لتسجيل
 شاشة كاملة، و`--record-format webp` لصيغة WebP المتحركة (GIF/MP4/WebP
@@ -325,7 +325,7 @@ mark-shot --list-displays
 أولًا اسرد النوافذ لمعرفة المتاح:
 
 ```bash
-mark-shot --list-windows
+dracoPho --list-windows
 ```
 
 مثال على المخرجات (GNOME Wayland):
@@ -362,7 +362,7 @@ mark-shot --list-windows
 
 ```bash
 # the top 100px strip of window 0
-mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
+dracoPho --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
 ```
 
 #### 7.1.2 اختيار وجهة الصور
@@ -374,23 +374,23 @@ mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp
 | :--- | :--- |
 | `inline` (الافتراضية) | صور PNG بصيغة Base64 مضمّنة في مخرجات JSON. **لا تُكتب أي ملفات ولا تُلمَس الحافظة أبدًا.** الخيار الأكثر أمانًا للوكلاء الذين يريدون البكسلات فقط. |
 | `file` | تُكتب ملفات PNG إلى `--capture-to <directory>`؛ يتطلب هذا الخيار. |
-| `stage` | تُكتب ملفات PNG إلى دليل مراحل مؤقت (`$TMPDIR/mark-shot-staging`). مناسبة لسير عمل "احتفظ به لاحقًا". |
+| `stage` | تُكتب ملفات PNG إلى دليل مراحل مؤقت (`$TMPDIR/dracoPho-staging`). مناسبة لسير عمل "احتفظ به لاحقًا". |
 | `clipboard` | تُنسخ الصور إلى حافظة النظام؛ مع عدة صور **تفوز الأخيرة**. يبقى المحتوى بعد خروج CLI (يُطلق مالك دائم `wl-copy` / `xclip`). |
 
 أمثلة:
 
 ```bash
 # several windows, saved to a directory (one PNG per window)
-mark-shot --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
+dracoPho --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
 
 # a window plus a component of another window, staged for later
-mark-shot --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
+dracoPho --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
 
 # multi-select, returned as base64 without touching files or clipboard
-mark-shot --window 0 --window "Terminal" --capture-destination inline
+dracoPho --window 0 --window "Terminal" --capture-destination inline
 
 # copy a window to the clipboard
-mark-shot --window 0 --capture-destination clipboard
+dracoPho --window 0 --capture-destination clipboard
 ```
 
 **سياسة الحافظة.** يضع المحرر التفاعلي تحديدك عمدًا على حافظة النظام (إجراء
@@ -441,22 +441,22 @@ mark-shot --window 0 --capture-destination clipboard
 
 ## 8. اختصارات سطح المكتب والعلبة
 
-يسجّل وضع العلبة (`mark-shot --tray`) اختصار `Ctrl+Alt+S` لالتقاط منطقة
+يسجّل وضع العلبة (`dracoPho --tray`) اختصار `Ctrl+Alt+S` لالتقاط منطقة
 ويوفّر عناصر قائمة للالتقاط / التسجيل / الإعدادات / الخروج. اختصارات سطح
 المكتب:
 
-- **GNOME**: Settings → Keyboard → Shortcuts → Custom Shortcuts → اربطه بـ `mark-shot`.
-- **KDE**: اختصار مخصص مربوط بـ `mark-shot` (إضافة إلى إذن KWin ScreenShot2
+- **GNOME**: Settings → Keyboard → Shortcuts → Custom Shortcuts → اربطه بـ `dracoPho`.
+- **KDE**: اختصار مخصص مربوط بـ `dracoPho` (إضافة إلى إذن KWin ScreenShot2
   للالتقاط الدقيق على KDE، انظر README).
-- **Hyprland**: `bind = SUPER SHIFT, S, exec, mark-shot` و `bind = , Print, exec, mark-shot`.
-- **niri**: `binds { Mod+Shift+S { spawn "mark-shot"; } }`.
-- **Sway / i3**: `bindsym Mod4+Shift+S exec mark-shot`.
+- **Hyprland**: `bind = SUPER SHIFT, S, exec, dracoPho` و `bind = , Print, exec, dracoPho`.
+- **niri**: `binds { Mod+Shift+S { spawn "dracoPho"; } }`.
+- **Sway / i3**: `bindsym Mod4+Shift+S exec dracoPho`.
 
 ---
 
 ## 9. الإعدادات والأنظمة الخلفية
 
-- ملف الإعدادات: `~/.config/mark-shot/config.json` (لينكس)، يُنشأ عند أول تشغيل.
+- ملف الإعدادات: `~/.config/dracoPho/config.json` (لينكس)، يُنشأ عند أول تشغيل.
 - المرجع الكامل: [Configuration](configuration.md).
 - الأنظمة الخلفية: Wayland (بوابة PipeWire / grim / wlroots screencopy)، X11
   (`QScreen::grabWindow`)، Windows (WGC الأصلي). يفضّل التسجيل بوابة
@@ -471,12 +471,12 @@ mark-shot --window 0 --capture-destination clipboard
 
 ```bash
 # OCR (RapidOCR / Tesseract)
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 
 # Code scan (zxing-cpp)
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 ---
@@ -501,7 +501,7 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
    الأوضاع الأربعة (inline, file, stage, clipboard)؛ تحقق من مُحدِّد مكوّن
    (`--window "0@0,0,400,300"`)؛ أكّد أن قائمة النوافذ قبل وبعد لم تتغير
    (عدم التداخل مع النوافذ).
-9. **Tray + hotkey** — `mark-shot --tray`، اضغط `Ctrl+Alt+S`.
+9. **Tray + hotkey** — `dracoPho --tray`، اضغط `Ctrl+Alt+S`.
 10. **Portable specifics** — تجد الحزمة مكتبات Qt/مكوناتها الإضافية/برامجها النصية الخاصة.
 
 ---
@@ -510,4 +510,4 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 
 أبلغ عن المشكلات عبر `gh issue create` مستخدمًا
 [دليل إرسال المشكلات](../.doc/submit-issue-via-gh.md) المرفق. أرفق سجل
-تصحيح مأخوذًا عبر `mark-shot --debug --debug-log /tmp/mark-shot.log`.
+تصحيح مأخوذًا عبر `dracoPho --debug --debug-log /tmp/dracoPho.log`.

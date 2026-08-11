@@ -83,7 +83,7 @@
   - **点击切换轴向**：在未开始捕获前，点击悬浮手柄可直接切换滚动方向（垂直/水平）。
 - **兼容性说明**：KDE、GNOME、X11 以及其他非 `niri` 环境中的滚动截图仍是测试特性，尚不完善。这些桌面栈的 portal 后端策略、Shell 或窗口管理器行为、窗口几何反馈、帧时序和滚动事件处理存在差异。
 - 如果滚动截图无法使用，请使用普通截图流程，或者通过 太殷龙摄 拓展命令接入外部长截图工具。
-- 如果需要提交滚动截图问题，请先运行 `mark-shot --debug --debug-log /path/to/mark-shot.log` 并复现问题，然后把日志附到 GitHub issue 中。也可以在 `config.json` 中通过 `debug.enabled` 和 `debug.logPath` 开启；`DEBUG=1` 与 `MARK_SHOT_DEBUG_LOG=/path/to/log` 仍然可用。
+- 如果需要提交滚动截图问题，请先运行 `dracoPho --debug --debug-log /path/to/dracoPho.log` 并复现问题，然后把日志附到 GitHub issue 中。也可以在 `config.json` 中通过 `debug.enabled` 和 `debug.logPath` 开启；`DEBUG=1` 与 `MARK_SHOT_DEBUG_LOG=/path/to/log` 仍然可用。
 
 ### 跨显示服务器支持
 - **Wayland**：使用 PipeWire portal screencast 支持录制和实验性滚动截图，并处理共享内存与 DMA-BUF 两类帧路径；使用 `grim` 支持 wlroots 截屏，使用 `layer-shell-qt` 创建原生覆盖层，使用 `wl-copy` 持久化剪贴板。
@@ -106,8 +106,8 @@
   MarkShotScrollHelper Shell 扩展保持置顶。闲置数秒后自动淡出为半透明，
   悬停立即恢复，避免遮挡内容。
  - **桌面快捷方式**：
-   - `mark-shot.desktop`：配置为系统全局截图工具，支持系统快捷键直接调用。
-   - `mark-shot-edit.desktop`：注册为独立的图像编辑器，可集成到文件管理器（如 Dolphin、Nautilus）的右键"打开方式"菜单中；直接启动该入口（不带文件）会以空画布打开图片编辑器（打开 / Ctrl+O / 拖放导入）。
+   - `dracoPho.desktop`：配置为系统全局截图工具，支持系统快捷键直接调用。
+   - `dracoPho-edit.desktop`：注册为独立的图像编辑器，可集成到文件管理器（如 Dolphin、Nautilus）的右键"打开方式"菜单中；直接启动该入口（不带文件）会以空画布打开图片编辑器（打开 / Ctrl+O / 拖放导入）。
 - 附带高分辨率的 `dracoPho.svg` 以及上游 `mark-shot.svg` 与 `mark-shot-edit.svg` 系统矢量图标。
 
 ### KDE KWin ScreenShot2 授权
@@ -122,27 +122,27 @@
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
-发行版安装包和 `cmake --install` 会自动安装所需桌面文件。如果直接运行本地构建产物而没有安装项目，请创建或更新 `~/.local/share/applications/mark-shot.desktop`：
+发行版安装包和 `cmake --install` 会自动安装所需桌面文件。如果直接运行本地构建产物而没有安装项目，请创建或更新 `~/.local/share/applications/dracoPho.desktop`：
 
 ```ini
 [Desktop Entry]
 Type=Application
 Name=太殷龙摄
 Comment=Wayland screenshot selection and annotation tool
-Exec=/absolute/path/to/mark-shot
+Exec=/absolute/path/to/dracoPho
 Icon=dracoPho
 Terminal=false
 Categories=Graphics;Utility;
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
-如果通过 KDE 的命令快捷键服务绑定 太殷龙摄，还需要创建 `~/.local/share/applications/net.local.mark-shot.desktop`：
+如果通过 KDE 的命令快捷键服务绑定 太殷龙摄，还需要创建 `~/.local/share/applications/net.local.dracoPho.desktop`：
 
 ```ini
 [Desktop Entry]
 Type=Application
 Name=太殷龙摄 Shortcut Service
-Exec=/absolute/path/to/mark-shot
+Exec=/absolute/path/to/dracoPho
 Icon=dracoPho
 Terminal=false
 NoDisplay=true
@@ -251,57 +251,57 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 
 ```bash
 # 捕获屏幕并进入区域裁剪与标注模式
-mark-shot
+dracoPho
 
 # 在多显示器环境下捕获所有输出屏幕
-mark-shot --all-outputs
+dracoPho --all-outputs
 
 # 跳过选区步骤，直接对捕获的完整屏幕截图进行标注
-mark-shot --fullscreen
+dracoPho --fullscreen
 
 # 选区完成后默认使用移动工具，全屏标注默认使用激光笔，并设置红色默认颜色
-mark-shot --default-tool move --fullscreen-default-tool laser --default-color '#FF4D4D'
+dracoPho --default-tool move --fullscreen-default-tool laser --default-color '#FF4D4D'
 
 # 打开一个已有的本地图片文件并直接进入标注模式
-mark-shot path/to/image.png
+dracoPho path/to/image.png
 
 # 以空画布打开 太殷龙摄 图片编辑器（打开 / Ctrl+O / 拖放图片开始编辑）
-mark-shot --editor
+dracoPho --editor
 
 # 交互式窗口捕获：悬停高亮窗口、点击捕获
 #（X11 读取被遮挡/最小化窗口的真实内容，其余平台截取窗口所在屏幕区域）
-mark-shot --capture-window
+dracoPho --capture-window
 
 # 直接将本地图片作为贴图窗口打开
-mark-shot --pin-image path/to/image.png
+dracoPho --pin-image path/to/image.png
 
 # 强制使用标准的 XDG 全屏普通窗口运行（而非 Wayland layer-shell）
-mark-shot --xdg-window
+dracoPho --xdg-window
 ```
 
 #### 无界面（非交互）截图
 
-脚本、CI 自动化或其它程序可调用 `mark-shot` 完成截图而无需打开标注界面。
+脚本、CI 自动化或其它程序可调用 `dracoPho` 完成截图而无需打开标注界面。
 捕获的帧会写入 PNG，并向标准输出打印一行紧凑的 JSON 摘要：
 
 ```bash
 # 捕获主屏并写入 PNG
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # 写入目录（自动生成带时间戳的文件名）
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # 捕获逻辑屏幕区域（x,y,宽度,高度）
-mark-shot --capture-to /tmp/region.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/region.png --region 0,0,1280,720
 
 # 按显示器名称捕获指定屏幕，并包含鼠标指针
-mark-shot --capture-to /tmp/window.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/window.png --display DP-1 --include-cursor
 
 # 同时捕获多个显示器（可重复 --display，每个显示器一张 PNG）
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 单显示器 `--capture-to` 的 JSON 输出示例：
@@ -313,8 +313,8 @@ mark-shot --list-displays
 当指定多个 `--display` 时，输出变为每屏一个捕获的数组：
 
 ```json
-{"captures":[{"path":"/tmp/shots/mark-shot-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
-             {"path":"/tmp/shots/mark-shot-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
+{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+             {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 每个选中的显示器使用各自的源几何进行捕获，因此 portal 类后端会精确返回
@@ -327,17 +327,17 @@ xdg-desktop-portal、PipeWire、grim、KWin/GNOME 辅助、Windows Graphics Capt
 无界面模式也能**按窗口或组件**截图（全程无窗口、无弹窗、无焦点抢占）：
 ```bash
 # 列出窗口（含 pid/process，便于按进程定位）
-mark-shot --list-windows
+dracoPho --list-windows
 
 # 按窗口标题 / 进程名 / 进程 id 捕获
-mark-shot --window "VSCodium" --capture-destination file --capture-to /tmp/shots/
-mark-shot --window-by process --window vscode --capture-destination inline
+dracoPho --window "VSCodium" --capture-destination file --capture-to /tmp/shots/
+dracoPho --window-by process --window vscode --capture-destination inline
 
 # 按 PID 捕获，即使窗口被遮挡或已最小化（X11 从合成缓冲直接读取窗口内容）
-mark-shot --window-by pid --window 12345 --capture-destination file --capture-to /tmp/shots/
+dracoPho --window-by pid --window 12345 --capture-destination file --capture-to /tmp/shots/
 
 # 截取窗口顶部 100px 的组件条带
-mark-shot --window "0@0,0,1680,100" --capture-destination stage
+dracoPho --window "0@0,0,1680,100" --capture-destination stage
 ```
 
 无人值守录制（`--record-*`）同样静默执行：不弹桌面通知、不发起交互式 portal
@@ -389,36 +389,36 @@ mark-shot --window "0@0,0,1680,100" --capture-destination stage
 
 ### 快捷键绑定
 
-将 `mark-shot` 绑定为系统截图快捷键：
+将 `dracoPho` 绑定为系统截图快捷键：
 
 **niri**（修改 `~/.config/niri/config.kdl`）：
 ```kdl
 binds {
-    Mod+Shift+S { spawn "mark-shot"; }
+    Mod+Shift+S { spawn "dracoPho"; }
 }
 ```
 
 **Hyprland**（修改 `~/.config/hypr/hyprland.conf`）：
 ```ini
-# 绑定 Super+Shift+S 启动 mark-shot 选区截图
-bind = SUPER SHIFT, S, exec, mark-shot
-# 绑定 Print 按键启动 mark-shot 选区截图
-bind = , Print, exec, mark-shot
+# 绑定 Super+Shift+S 启动 dracoPho 选区截图
+bind = SUPER SHIFT, S, exec, dracoPho
+# 绑定 Print 按键启动 dracoPho 选区截图
+bind = , Print, exec, dracoPho
 ```
 
 **Sway / i3**（修改 `~/.config/sway/config` 或 `~/.config/i3/config`）：
 ```ini
-# 绑定 Super+Shift+S 启动 mark-shot 选区截图
-bindsym Mod4+Shift+S exec mark-shot
-# 绑定 Print 按键启动 mark-shot 选区截图
-bindsym Print exec mark-shot
+# 绑定 Super+Shift+S 启动 dracoPho 选区截图
+bindsym Mod4+Shift+S exec dracoPho
+# 绑定 Print 按键启动 dracoPho 选区截图
+bindsym Print exec dracoPho
 ```
 
 **GNOME**：在系统设置 → 键盘 → 键盘快捷键 → 自定义快捷键中添加。
 
 **托盘模式**：
 ```powershell
-mark-shot --tray
+dracoPho --tray
 ```
 
 托盘模式默认注册以下全局快捷键：
@@ -429,7 +429,7 @@ mark-shot --tray
 
 ### 拓展命令
 
-右侧动作工具栏提供 **Extensions** 按钮，程序会从 `~/.config/mark-shot/extensions.json` 读取用户自定义命令。配置文件可以是 JSON 数组，也可以是包含 `commands` 数组的 JSON 对象。
+右侧动作工具栏提供 **Extensions** 按钮，程序会从 `~/.config/dracoPho/extensions.json` 读取用户自定义命令。配置文件可以是 JSON 数组，也可以是包含 `commands` 数组的 JSON 对象。
 
 ```json
 {
@@ -477,23 +477,23 @@ mark-shot --tray
 Arch Linux 用户可以直接通过 AUR 助手进行安装：
 ```bash
 # 从源码编译安装
-paru -S mark-shot
+paru -S dracoPho
 # 或
-yay -S mark-shot
+yay -S dracoPho
 
 # 安装预编译二进制包
-paru -S mark-shot-bin
+paru -S dracoPho-bin
 # 或
-yay -S mark-shot-bin
+yay -S dracoPho-bin
 ```
 
-`mark-shot` 从源码编译；`mark-shot-bin` 从 GitHub Releases 下载预编译 pacman 包安装。
+`dracoPho` 从源码编译；`dracoPho-bin` 从 GitHub Releases 下载预编译 pacman 包安装。
 
 ##### NixOS
 NixOS 用户可以通过添加 Flake input 来进行安装
 ```nix
 # flake.nix
-mark-shot = {
+dracoPho = {
   url = "github:tystudio-26020701/DracoPho-community";
   inputs.nixpkgs.follows = "nixpkgs";
 };
@@ -501,7 +501,7 @@ mark-shot = {
 # home-manager
 home.packages = with pkgs; [
   # 其他用户应用
-  inputs.mark-shot.packages.${pkgs.stdenv.hostPlatform.system}.default
+  inputs.dracoPho.packages.${pkgs.stdenv.hostPlatform.system}.default
 ]
 ```
 
@@ -509,11 +509,11 @@ home.packages = with pkgs; [
 对于其他发行版（如 Ubuntu, Debian, Fedora），请在 Releases 页面下载编译好的安装包并运行以下命令安装：
 - **Debian / Ubuntu**:
   ```bash
-  sudo apt install ./mark-shot_<version>_amd64.deb
+  sudo apt install ./dracoPho_<version>_amd64.deb
   ```
 - **Fedora**:
   ```bash
-  sudo dnf install ./mark-shot-<version>-1.x86_64.rpm
+  sudo dnf install ./dracoPho-<version>-1.x86_64.rpm
   ```
 
 > **Ubuntu 26.04 LTS**：太殷龙摄 已在 Ubuntu 26.04 LTS（Resolute）上验证并支持。
@@ -576,17 +576,17 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 
 #### OCR 后端（可选）
 
-太殷龙摄 的文字识别功能依赖内置的 `mark-shot-ocr` Python 脚本。该脚本支持 **RapidOCR**（首选，基于 PaddleOCR PP-OCR 模型）和 **Tesseract**（回退）。Linux 上会自动安装该脚本；Windows 上需要手动配置。
+太殷龙摄 的文字识别功能依赖内置的 `dracoPho-ocr` Python 脚本。该脚本支持 **RapidOCR**（首选，基于 PaddleOCR PP-OCR 模型）和 **Tesseract**（回退）。Linux 上会自动安装该脚本；Windows 上需要手动配置。
 
 <details>
 <summary><b>Linux</b></summary>
 
 ```bash
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
 
-安装完成后 `mark-shot-ocr` 会被自动发现，无需额外配置。
+安装完成后 `dracoPho-ocr` 会被自动发现，无需额外配置。
 
 **环境变量**（可选）：
 
@@ -594,9 +594,9 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 |------|------|--------|
 | `MARK_SHOT_OCR_VERSION` | PaddleOCR 版本（`PP-OCRv5`、`PP-OCRv4` 等） | `PP-OCRv5` |
 | `MARK_SHOT_OCR_MODEL_TYPE` | 模型大小：`mobile` 或 `server` | `mobile` |
-| `MARK_SHOT_OCR_MODEL_DIR` | 自定义模型存储目录 | `~/.local/share/mark-shot/models` |
+| `MARK_SHOT_OCR_MODEL_DIR` | 自定义模型存储目录 | `~/.local/share/dracoPho/models` |
 | `MARK_SHOT_OCR_NO_VENV` | 设为 `1` 禁用自动切换虚拟环境 | — |
-| `MARK_SHOT_OCR_PYTHON` | 指定用于 re-exec 的 Python 解释器路径 | `~/.local/share/mark-shot/ocr-venv/bin/python` |
+| `MARK_SHOT_OCR_PYTHON` | 指定用于 re-exec 的 Python 解释器路径 | `~/.local/share/dracoPho/ocr-venv/bin/python` |
 
 </details>
 
@@ -611,33 +611,33 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. 复制 OCR 辅助脚本**
 
-将 [太殷龙摄 仓库](https://github.com/tystudio-26020701/DracoPho-community) 中的 `scripts/mark-shot-ocr` 复制到本地目录，例如 `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`。
+将 [太殷龙摄 仓库](https://github.com/tystudio-26020701/DracoPho-community) 中的 `scripts/dracoPho-ocr` 复制到本地目录，例如 `%LOCALAPPDATA%\dracoPho\dracoPho-ocr.py`。
 
 ```powershell
-New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/mark-shot-ocr" `
-  -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\dracoPho"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/dracoPho-ocr" `
+  -OutFile "$env:LOCALAPPDATA\dracoPho\dracoPho-ocr.py"
 ```
 
 **3. 创建虚拟环境并安装依赖**
 
 ```powershell
-python -m venv "$env:LOCALAPPDATA\mark-shot\ocr-venv"
-& "$env:LOCALAPPDATA\mark-shot\ocr-venv\Scripts\pip.exe" install -U pip rapidocr onnxruntime
+python -m venv "$env:LOCALAPPDATA\dracoPho\ocr-venv"
+& "$env:LOCALAPPDATA\dracoPho\ocr-venv\Scripts\pip.exe" install -U pip rapidocr onnxruntime
 ```
 
 > `onnxruntime` 提供 CPU 推理。如果有兼容的 GPU，可以安装 `onnxruntime-directml` 或 `onnxruntime-gpu` 以加速识别。
 
 **4. 在 `config.json` 中配置 `ocr.command`**
 
-打开 `%LOCALAPPDATA%\mark-shot\config.json`（不存在则新建），设置 `ocr.command`：
+打开 `%LOCALAPPDATA%\dracoPho\config.json`（不存在则新建），设置 `ocr.command`：
 
 ```json
 {
   "ocr": {
     "enabled": true,
     "backend": "rapidocr",
-    "command": "\"%LOCALAPPDATA%\\mark-shot\\ocr-venv\\Scripts\\python.exe\" \"%LOCALAPPDATA%\\mark-shot\\mark-shot-ocr.py\" --format json --backend rapidocr {image}",
+    "command": "\"%LOCALAPPDATA%\\dracoPho\\ocr-venv\\Scripts\\python.exe\" \"%LOCALAPPDATA%\\dracoPho\\dracoPho-ocr.py\" --format json --backend rapidocr {image}",
     "timeoutMs": 30000
   }
 }
@@ -652,15 +652,15 @@ python -m venv "$env:LOCALAPPDATA\mark-shot\ocr-venv"
 #### 扫码后端（可选）
 
 ```bash
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 扫码 helper 优先使用 `zxing-cpp`，支持 QR Code、Data Matrix、Aztec、PDF417、EAN、UPC、Code 39、Code 93、Code 128 等常见格式。如果安装了 `pyzbar` 或 OpenCV，也会作为回退后端使用。
 
 #### 图床上传后端（可选）
 
-图床上传功能默认使用内置的 `mark-shot-upload` Python 脚本，无需额外安装依赖（仅使用 Python 3 标准库）。该脚本通过环境变量配置图床参数，支持任意兼容 multipart/form-data 上传协议的图床服务。
+图床上传功能默认使用内置的 `dracoPho-upload` Python 脚本，无需额外安装依赖（仅使用 Python 3 标准库）。该脚本通过环境变量配置图床参数，支持任意兼容 multipart/form-data 上传协议的图床服务。
 
 <details>
 <summary>内置 helper 支持的环境变量</summary>
@@ -782,7 +782,7 @@ cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
 cmake --build build-windows
 ```
 
-当前 Windows 支持范围是普通截图与图片标注。滚动截图、合成器专用窗口检测和 Linux 桌面快捷方式在 Windows 上不可用。内置的 Python 辅助脚本（`mark-shot-ocr`、`mark-shot-code-scan`、`mark-shot-translate`）不会自动安装，请参考上方的 [OCR 后端](#ocr-后端可选)、[扫码后端](#扫码后端可选)和翻译章节进行手动配置。
+当前 Windows 支持范围是普通截图与图片标注。滚动截图、合成器专用窗口检测和 Linux 桌面快捷方式在 Windows 上不可用。内置的 Python 辅助脚本（`dracoPho-ocr`、`dracoPho-code-scan`、`dracoPho-translate`）不会自动安装，请参考上方的 [OCR 后端](#ocr-后端可选)、[扫码后端](#扫码后端可选)和翻译章节进行手动配置。
 
 ### 构建与编译
 
@@ -812,7 +812,7 @@ LayerShellQt 会被自动检测。找到时启用完整 Wayland layer-shell 支�
 cmake --install build --prefix "$HOME/.local"
 ```
 
-此命令会安装可执行文件、辅助脚本（`mark-shot-ocr`、`mark-shot-code-scan`、`mark-shot-translate`、`mark-shot-upload`）、桌面快捷方式和图标。
+此命令会安装可执行文件、辅助脚本（`dracoPho-ocr`、`dracoPho-code-scan`、`dracoPho-translate`、`dracoPho-upload`）、桌面快捷方式和图标。
 
 ### GNOME Wayland 滚动截图扩展
 
@@ -855,7 +855,7 @@ gdbus call --session \
   --method org.gnome.Shell.Extensions.MarkShotScrollHelper.Version
 ```
 
-预期结果为 `('4.2',)`。启用扩展后，请重新启动 `mark-shot`。
+预期结果为 `('4.2',)`。启用扩展后，请重新启动 `dracoPho`。
 
 </details>
 

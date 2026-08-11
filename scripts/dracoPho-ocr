@@ -12,7 +12,7 @@ import sys
 def default_model_dir():
     xdg_data_home = os.environ.get("XDG_DATA_HOME", "").strip()
     base = xdg_data_home if xdg_data_home else os.path.expanduser("~/.local/share")
-    return os.path.join(base, "mark-shot", "models")
+    return os.path.join(base, "dracoPho", "models")
 
 
 def configured_model_dir():
@@ -27,7 +27,7 @@ def maybe_reexec_venv():
 
     preferred_python = os.environ.get("MARK_SHOT_OCR_PYTHON")
     if not preferred_python:
-        preferred_python = os.path.expanduser("~/.local/share/mark-shot/ocr-venv/bin/python")
+        preferred_python = os.path.expanduser("~/.local/share/dracoPho/ocr-venv/bin/python")
 
     if not os.path.exists(preferred_python):
         return

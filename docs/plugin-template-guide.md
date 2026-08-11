@@ -38,8 +38,8 @@ cmake --build build --parallel
 Linux 用户级插件目录：
 
 ```bash
-mkdir -p ~/.local/share/mark-shot/plugins
-cp build/libmark-shot-sample-ocr.so ~/.local/share/mark-shot/plugins/
+mkdir -p ~/.local/share/dracoPho/plugins
+cp build/libmark-shot-sample-ocr.so ~/.local/share/dracoPho/plugins/
 ```
 
 替换上面的库名为你的实际插件库名。重启 DracoPho 后，插件会出现在设置页的 `Plugins` 页面中。

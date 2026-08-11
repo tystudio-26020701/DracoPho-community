@@ -138,11 +138,11 @@ QString clipboardCacheDir()
     if (baseDir.isEmpty()) {
         const QString genericCacheDir = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation);
         if (!genericCacheDir.isEmpty()) {
-            baseDir = QDir(genericCacheDir).filePath(QStringLiteral("mark-shot"));
+            baseDir = QDir(genericCacheDir).filePath(QStringLiteral("dracoPho"));
         }
     }
     if (baseDir.isEmpty()) {
-        baseDir = QDir(QDir::tempPath()).filePath(QStringLiteral("mark-shot"));
+        baseDir = QDir(QDir::tempPath()).filePath(QStringLiteral("dracoPho"));
     }
 
     const QString cacheDir = QDir(baseDir).filePath(QStringLiteral("clipboard"));
@@ -163,7 +163,7 @@ std::optional<QUrl> savePngToClipboardCache(const QByteArray &png)
         return std::nullopt;
     }
 
-    QTemporaryFile cacheFile(QDir(cacheDir).filePath(QStringLiteral("mark-shot-clipboard-XXXXXX.png")));
+    QTemporaryFile cacheFile(QDir(cacheDir).filePath(QStringLiteral("dracoPho-clipboard-XXXXXX.png")));
     cacheFile.setAutoRemove(false);
     if (!cacheFile.open()) {
         return std::nullopt;
@@ -198,7 +198,7 @@ bool copyToPersistentClipboardOwner(const QByteArray &payload, const QString &su
         return false;
     }
 
-    QTemporaryFile tempFile(QDir(QDir::tempPath()).filePath(QStringLiteral("mark-shot-clipboard-XXXXXX%1").arg(suffix)));
+    QTemporaryFile tempFile(QDir(QDir::tempPath()).filePath(QStringLiteral("dracoPho-clipboard-XXXXXX%1").arg(suffix)));
     tempFile.setAutoRemove(false);
     if (!tempFile.open()) {
         return false;
@@ -222,7 +222,7 @@ bool copyToPersistentClipboardOwner(const QByteArray &payload, const QString &su
     ownerProcess.setProgram(QStringLiteral("sh"));
     ownerProcess.setArguments({QStringLiteral("-c"),
                                owner.shellCommand,
-                               QStringLiteral("mark-shot-clipboard"),
+                               QStringLiteral("dracoPho-clipboard"),
                                tempPath,
                                owner.executable});
     ownerProcess.setStandardOutputFile(QProcess::nullDevice());

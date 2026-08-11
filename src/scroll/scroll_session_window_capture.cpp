@@ -180,7 +180,7 @@ void ScrollSessionWindow::dumpDebugFrame(const QImage &frame, const char *tag)
 
     const QString safeTag = QString::fromLatin1(tag ? tag : "frame").remove(QLatin1Char('/'));
     const QString path = QDir::temp().filePath(
-        QStringLiteral("mark-shot-scroll-%1-%2-%3.png")
+        QStringLiteral("dracoPho-scroll-%1-%2-%3.png")
             .arg(m_sessionId)
             .arg(m_debugFrameDumpCount, 2, 10, QLatin1Char('0'))
             .arg(safeTag));

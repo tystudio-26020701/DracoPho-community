@@ -34,7 +34,7 @@ namespace markshot::cli {
 namespace {
 
 // Sub-directory used for the "stage" capture destination.
-constexpr const char *kStageDirectoryName = "mark-shot-staging";
+constexpr const char *kStageDirectoryName = "dracoPho-staging";
 
 enum class CaptureDestination {
     Inline,   // embed base64 PNG in the JSON output, no files, no clipboard
@@ -345,7 +345,7 @@ QString stagingDirectory()
     const QFileInfo info(primary);
     if (!info.isDir() || info.ownerId() != static_cast<uint>(::getuid())) {
         const QString privateDirectory = QDir(tempRoot).filePath(
-            QStringLiteral("mark-shot-staging-%1").arg(static_cast<qulonglong>(::getuid())));
+            QStringLiteral("dracoPho-staging-%1").arg(static_cast<qulonglong>(::getuid())));
         QDir().mkpath(privateDirectory);
         return privateDirectory;
     }
@@ -715,7 +715,7 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
     const QVector<WindowInfo> windows = collectWindowInfos(&source);
     if (windows.isEmpty()) {
         err << "no windows detected (platform=" << platformName()
-            << "). Check the window detection configuration in ~/.config/mark-shot/config.json "
+            << "). Check the window detection configuration in ~/.config/dracoPho/config.json "
                "and make sure the desktop session supports window enumeration.\n";
         return 1;
     }

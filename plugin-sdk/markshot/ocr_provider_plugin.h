@@ -19,7 +19,7 @@ struct OcrToken {
 /**
  * OCR 识别 provider 插件接口。
  *
- * 实现方以 Qt 插件形式编译为动态库，放入 mark-shot 插件搜索目录即可被发现。
+ * 实现方以 Qt 插件形式编译为动态库，放入 dracoPho 插件搜索目录即可被发现。
  * recognize 在工作线程调用，实现必须线程安全且不得访问 GUI。
  */
 class OcrProviderPlugin {
@@ -57,6 +57,6 @@ public:
 
 }  // namespace markshot::plugin
 
-#define MARK_SHOT_OCR_PROVIDER_PLUGIN_IID "dev.mark-shot.OcrProviderPlugin/1.0"
+#define MARK_SHOT_OCR_PROVIDER_PLUGIN_IID "dev.dracoPho.OcrProviderPlugin/1.0"
 
 Q_DECLARE_INTERFACE(markshot::plugin::OcrProviderPlugin, MARK_SHOT_OCR_PROVIDER_PLUGIN_IID)

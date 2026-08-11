@@ -21,7 +21,7 @@ public:
         if (!m_dir.isValid()) {
             return false;
         }
-        const QString configDir = m_dir.path() + QStringLiteral("/mark-shot");
+        const QString configDir = m_dir.path() + QStringLiteral("/dracoPho");
         if (!QDir().mkpath(configDir)) {
             return false;
         }

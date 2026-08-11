@@ -438,7 +438,7 @@ void PinnedImageWindow::rotateImage(qreal degrees)
 
 void PinnedImageWindow::saveImageAs()
 {
-    const QString filename = QStringLiteral("mark-shot-pin-%1.png")
+    const QString filename = QStringLiteral("dracoPho-pin-%1.png")
                                  .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-hhmmss")));
     const QString path = QFileDialog::getSaveFileName(this,
                                                       MS_TR("Save Pinned Image"),

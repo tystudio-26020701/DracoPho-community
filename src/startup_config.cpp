@@ -30,28 +30,28 @@ QStringList preApplicationConfigPathCandidates()
     const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     const QString localAppData = env.value(QStringLiteral("LOCALAPPDATA"));
     if (!localAppData.isEmpty()) {
-        candidates.append(QDir(localAppData).filePath(QStringLiteral("mark-shot/config.json")));
+        candidates.append(QDir(localAppData).filePath(QStringLiteral("dracoPho/config.json")));
     }
 
     const QString appData = env.value(QStringLiteral("APPDATA"));
     if (!appData.isEmpty()) {
-        candidates.append(QDir(appData).filePath(QStringLiteral("mark-shot/config.json")));
+        candidates.append(QDir(appData).filePath(QStringLiteral("dracoPho/config.json")));
     }
 
     const QString userProfile = env.value(QStringLiteral("USERPROFILE"));
     if (!userProfile.isEmpty()) {
-        candidates.append(QDir(userProfile).filePath(QStringLiteral("AppData/Local/mark-shot/config.json")));
+        candidates.append(QDir(userProfile).filePath(QStringLiteral("AppData/Local/dracoPho/config.json")));
     }
 #else
     const QByteArray xdgConfigHome = qgetenv("XDG_CONFIG_HOME");
     if (!xdgConfigHome.isEmpty()) {
         candidates.append(QDir(QString::fromLocal8Bit(xdgConfigHome))
-                              .filePath(QStringLiteral("mark-shot/config.json")));
+                              .filePath(QStringLiteral("dracoPho/config.json")));
     }
 
     const QByteArray home = qgetenv("HOME");
     if (!home.isEmpty()) {
-        candidates.append(QDir(QString::fromLocal8Bit(home)).filePath(QStringLiteral(".config/mark-shot/config.json")));
+        candidates.append(QDir(QString::fromLocal8Bit(home)).filePath(QStringLiteral(".config/dracoPho/config.json")));
     }
 #endif
     candidates.removeAll(QString());

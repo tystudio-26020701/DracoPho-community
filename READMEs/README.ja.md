@@ -83,7 +83,7 @@ DracoPho は Qt 6 ベースで開発された高性能スクリーンショッ�
   - **クリックで軸を切り替え**: キャプチャを開始する前に、フローティングハンドルをクリックするとスクロール方向（垂直/水平）を直接切り替えられます。
 - **互換性の注意**: KDE、GNOME、X11、その他の `niri` 以外の環境でのスクロールスクリーンショットはまだ試験的な機能であり、未完成です。これらのデスクトップスタックでは、portal バックエンドのポリシー、Shell やウィンドウマネージャの動作、ウィンドウジオメトリのフィードバック、フレームのタイミング、スクロールイベントの処理に違いがあります。
 - スクロールスクリーンショットが使えない場合は、通常のスクリーンショットの流れを使用するか、DracoPho の拡張コマンドで外部の長尺スクリーンショットツールを利用してください。
-- スクロールスクリーンショットの問題を報告する場合は、まず `mark-shot --debug --debug-log /path/to/mark-shot.log` を実行して問題を再現し、ログを GitHub issue に添付してください。`config.json` の `debug.enabled` と `debug.logPath` でも有効にできます。`DEBUG=1` と `MARK_SHOT_DEBUG_LOG=/path/to/log` も引き続き利用できます。
+- スクロールスクリーンショットの問題を報告する場合は、まず `dracoPho --debug --debug-log /path/to/dracoPho.log` を実行して問題を再現し、ログを GitHub issue に添付してください。`config.json` の `debug.enabled` と `debug.logPath` でも有効にできます。`DEBUG=1` と `MARK_SHOT_DEBUG_LOG=/path/to/log` も引き続き利用できます。
 
 ### ディスプレイサーバー横断対応
 - **Wayland**: PipeWire portal screencast による録画と実験的なスクロールスクリーンショットをサポートし、共有メモリと DMA-BUF の 2 種類のフレームパスを処理します。`grim` で wlroots のスクリーンショット、`layer-shell-qt` でネイティブオーバーレイの作成、`wl-copy` でクリップボードの保持を行います。
@@ -97,8 +97,8 @@ DracoPho は Qt 6 ベースで開発された高性能スクリーンショッ�
 - **フローティングボール**: 小さな常時最前面の丸いボール（既定は画面右下）で、スクリーンショット・全画面スクリーンショット・録画・設定へのクイックアクセスを提供します。シングルクリックでメニュー、ダブルクリックで直接スクリーンショット、ドラッグで移動（位置は記憶されます）。スクリーンショット中は自動的に非表示になります。
   画面端の近くにドラッグすると自動的に吸着し、**端側の半分が画面外に隠れます**（ホバーすると表示され、離すと再び非表示になります。X11/Windows/macOS で有効。ネイティブ Wayland では位置をコンポジタが管理するため、プロトコル上の制約によりボールは自由浮遊のまま）。数秒間アイドル状態が続くと半透明にフェードアウトし、ホバーするとすぐに不透明度が戻ります。
 - **デスクトップショートカット**:
-  - `mark-shot.desktop`: システム全体のスクリーンショットツールとして設定され、システムショートカットから直接呼び出せます。
-  - `mark-shot-edit.desktop`: 独立した画像エディタとして登録され、ファイルマネージャ（Dolphin、Nautilus など）の右クリックメニューの「アプリで開く」に統合できます。
+  - `dracoPho.desktop`: システム全体のスクリーンショットツールとして設定され、システムショートカットから直接呼び出せます。
+  - `dracoPho-edit.desktop`: 独立した画像エディタとして登録され、ファイルマネージャ（Dolphin、Nautilus など）の右クリックメニューの「アプリで開く」に統合できます。
 - 高解像度のシステムベクターアイコン `dracoPho.svg` と `mark-shot-edit.svg` が同梱されています。
 
 ### KDE KWin ScreenShot2 の認可
@@ -113,27 +113,27 @@ KDE Wayland では、DracoPho は KWin の `org.kde.KWin.ScreenShot2` インタ�
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
-ディストリビューションのパッケージと `cmake --install` は必要なデスクトップファイルを自動的にインストールします。プロジェクトをインストールせずにローカルのビルド成果物を直接実行する場合は、`~/.local/share/applications/mark-shot.desktop` を作成または更新してください:
+ディストリビューションのパッケージと `cmake --install` は必要なデスクトップファイルを自動的にインストールします。プロジェクトをインストールせずにローカルのビルド成果物を直接実行する場合は、`~/.local/share/applications/dracoPho.desktop` を作成または更新してください:
 
 ```ini
 [Desktop Entry]
 Type=Application
 Name=DracoPho
 Comment=Wayland screenshot selection and annotation tool
-Exec=/absolute/path/to/mark-shot
+Exec=/absolute/path/to/dracoPho
 Icon=dracoPho
 Terminal=false
 Categories=Graphics;Utility;
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 ```
 
-KDE のコマンドショートカットサービスで DracoPho をバインドする場合は、`~/.local/share/applications/net.local.mark-shot.desktop` も作成する必要があります:
+KDE のコマンドショートカットサービスで DracoPho をバインドする場合は、`~/.local/share/applications/net.local.dracoPho.desktop` も作成する必要があります:
 
 ```ini
 [Desktop Entry]
 Type=Application
 Name=DracoPho Shortcut Service
-Exec=/absolute/path/to/mark-shot
+Exec=/absolute/path/to/dracoPho
 Icon=dracoPho
 Terminal=false
 NoDisplay=true
@@ -243,49 +243,49 @@ DracoPho コミュニティ版は、**オープンソース（MIT）、クロス
 
 ```bash
 # 捕获屏幕并进入区域裁剪与标注模式
-mark-shot
+dracoPho
 
 # 在多显示器环境下捕获所有输出屏幕
-mark-shot --all-outputs
+dracoPho --all-outputs
 
 # 跳过选区步骤，直接对捕获的完整屏幕截图进行标注
-mark-shot --fullscreen
+dracoPho --fullscreen
 
 # 选区完成后默认使用移动工具，全屏标注默认使用激光笔，并设置红色默认颜色
-mark-shot --default-tool move --fullscreen-default-tool laser --default-color '#FF4D4D'
+dracoPho --default-tool move --fullscreen-default-tool laser --default-color '#FF4D4D'
 
 # 打开一个已有的本地图片文件并直接进入标注模式
-mark-shot path/to/image.png
+dracoPho path/to/image.png
 
 # 直接将本地图片作为贴图窗口打开
-mark-shot --pin-image path/to/image.png
+dracoPho --pin-image path/to/image.png
 
 # 强制使用标准的 XDG 全屏普通窗口运行（而非 Wayland layer-shell）
-mark-shot --xdg-window
+dracoPho --xdg-window
 ```
 
 #### ヘッドレス（非対話）スクリーンショット
 
-スクリプト、CI 自動化、その他のプログラムは、注釈 UI を開かずに `mark-shot` を呼び出してスクリーンショットを取得できます。キャプチャされたフレームは PNG として書き出され、1 行のコンパクトな JSON サマリーが標準出力に出力されます:
+スクリプト、CI 自動化、その他のプログラムは、注釈 UI を開かずに `dracoPho` を呼び出してスクリーンショットを取得できます。キャプチャされたフレームは PNG として書き出され、1 行のコンパクトな JSON サマリーが標準出力に出力されます:
 
 ```bash
 # 捕获主屏并写入 PNG
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # 写入目录（自动生成带时间戳的文件名）
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # 捕获逻辑屏幕区域（x,y,宽度,高度）
-mark-shot --capture-to /tmp/region.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/region.png --region 0,0,1280,720
 
 # 按显示器名称捕获指定屏幕，并包含鼠标指针
-mark-shot --capture-to /tmp/window.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/window.png --display DP-1 --include-cursor
 
 # 同时捕获多个显示器（可重复 --display，每个显示器一张 PNG）
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 単一ディスプレイの `--capture-to` における JSON 出力例:
@@ -297,8 +297,8 @@ mark-shot --list-displays
 複数の `--display` を指定した場合、出力は各ディスプレイのキャプチャを含む配列になります:
 
 ```json
-{"captures":[{"path":"/tmp/shots/mark-shot-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
-             {"path":"/tmp/shots/mark-shot-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
+{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+             {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 選択した各ディスプレイはそれぞれのソースジオメトリでキャプチャされるため、portal 系バックエンドは仮想デスクトップ全体ではなく、そのディスプレイを正確に返します。
@@ -343,36 +343,36 @@ mark-shot --list-displays
 
 ### ショートカットキーのバインド
 
-`mark-shot` をシステムのスクリーンショットショートカットとしてバインドするには:
+`dracoPho` をシステムのスクリーンショットショートカットとしてバインドするには:
 
 **niri**（`~/.config/niri/config.kdl` を編集）:
 ```kdl
 binds {
-    Mod+Shift+S { spawn "mark-shot"; }
+    Mod+Shift+S { spawn "dracoPho"; }
 }
 ```
 
 **Hyprland**（`~/.config/hypr/hyprland.conf` を編集）:
 ```ini
-# 绑定 Super+Shift+S 启动 mark-shot 选区截图
-bind = SUPER SHIFT, S, exec, mark-shot
-# 绑定 Print 按键启动 mark-shot 选区截图
-bind = , Print, exec, mark-shot
+# 绑定 Super+Shift+S 启动 dracoPho 选区截图
+bind = SUPER SHIFT, S, exec, dracoPho
+# 绑定 Print 按键启动 dracoPho 选区截图
+bind = , Print, exec, dracoPho
 ```
 
 **Sway / i3**（`~/.config/sway/config` または `~/.config/i3/config` を編集）:
 ```ini
-# 绑定 Super+Shift+S 启动 mark-shot 选区截图
-bindsym Mod4+Shift+S exec mark-shot
-# 绑定 Print 按键启动 mark-shot 选区截图
-bindsym Print exec mark-shot
+# 绑定 Super+Shift+S 启动 dracoPho 选区截图
+bindsym Mod4+Shift+S exec dracoPho
+# 绑定 Print 按键启动 dracoPho 选区截图
+bindsym Print exec dracoPho
 ```
 
 **GNOME**: システム設定 → キーボード → キーボードショートカット → カスタムショートカットで追加します。
 
 **トレイモード**:
 ```powershell
-mark-shot --tray
+dracoPho --tray
 ```
 
 トレイモードでは、デフォルトで以下のグローバルショートカットが登録されます:
@@ -383,7 +383,7 @@ mark-shot --tray
 
 ### 拡張コマンド
 
-右側のアクションツールバーには **Extensions** ボタンがあり、プログラムは `~/.config/mark-shot/extensions.json` からユーザー定義のコマンドを読み込みます。設定ファイルは JSON 配列でも、`commands` 配列を含む JSON オブジェクトでも構いません。
+右側のアクションツールバーには **Extensions** ボタンがあり、プログラムは `~/.config/dracoPho/extensions.json` からユーザー定義のコマンドを読み込みます。設定ファイルは JSON 配列でも、`commands` 配列を含む JSON オブジェクトでも構いません。
 
 ```json
 {
@@ -429,23 +429,23 @@ mark-shot --tray
 Arch Linux ユーザーは AUR ヘルパーを使って直接インストールできます:
 ```bash
 # 从源码编译安装
-paru -S mark-shot
+paru -S dracoPho
 # 或
-yay -S mark-shot
+yay -S dracoPho
 
 # 安装预编译二进制包
-paru -S mark-shot-bin
+paru -S dracoPho-bin
 # 或
-yay -S mark-shot-bin
+yay -S dracoPho-bin
 ```
 
-`mark-shot` はソースからコンパイルされ、`mark-shot-bin` は GitHub Releases からプリコンパイルされた pacman パッケージをダウンロードしてインストールします。
+`dracoPho` はソースからコンパイルされ、`dracoPho-bin` は GitHub Releases からプリコンパイルされた pacman パッケージをダウンロードしてインストールします。
 
 ##### NixOS
 NixOS ユーザーは Flake input を追加してインストールできます
 ```nix
 # flake.nix
-mark-shot = {
+dracoPho = {
   url = "github:tystudio-26020701/DracoPho-community";
   inputs.nixpkgs.follows = "nixpkgs";
 };
@@ -453,7 +453,7 @@ mark-shot = {
 # home-manager
 home.packages = with pkgs; [
   # 其他用户应用
-  inputs.mark-shot.packages.${pkgs.stdenv.hostPlatform.system}.default
+  inputs.dracoPho.packages.${pkgs.stdenv.hostPlatform.system}.default
 ]
 ```
 
@@ -461,11 +461,11 @@ home.packages = with pkgs; [
 その他のディストリビューション（Ubuntu、Debian、Fedora など）では、Releases ページからビルド済みのインストーラをダウンロードし、以下のコマンドでインストールします:
 - **Debian / Ubuntu**:
   ```bash
-  sudo apt install ./mark-shot_<version>_amd64.deb
+  sudo apt install ./dracoPho_<version>_amd64.deb
   ```
 - **Fedora**:
   ```bash
-  sudo dnf install ./mark-shot-<version>-1.x86_64.rpm
+  sudo dnf install ./dracoPho-<version>-1.x86_64.rpm
   ```
 
 > **Ubuntu 26.04 LTS**: DracoPho は Ubuntu 26.04 LTS（Resolute）で検証済み・サポート対象です。
@@ -528,17 +528,17 @@ cp /tmp/fcitx5-qt/build/qt6/dbusaddons/libFcitx5Qt6DBusAddons.so* \
 
 #### OCR バックエンド（オプション）
 
-DracoPho の文字認識機能は、内蔵の `mark-shot-ocr` Python スクリプトに依存しています。このスクリプトは **RapidOCR**（推奨、PaddleOCR PP-OCR モデルベース）と **Tesseract**（フォールバック）をサポートしています。Linux ではこのスクリプトが自動的にインストールされますが、Windows では手動での設定が必要です。
+DracoPho の文字認識機能は、内蔵の `dracoPho-ocr` Python スクリプトに依存しています。このスクリプトは **RapidOCR**（推奨、PaddleOCR PP-OCR モデルベース）と **Tesseract**（フォールバック）をサポートしています。Linux ではこのスクリプトが自動的にインストールされますが、Windows では手動での設定が必要です。
 
 <details>
 <summary><b>Linux</b></summary>
 
 ```bash
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 ```
 
-インストール後、`mark-shot-ocr` は自動的に検出されるため、追加の設定は不要です。
+インストール後、`dracoPho-ocr` は自動的に検出されるため、追加の設定は不要です。
 
 **環境変数**（オプション）:
 
@@ -546,9 +546,9 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 |------|------|--------|
 | `MARK_SHOT_OCR_VERSION` | PaddleOCR のバージョン（`PP-OCRv5`、`PP-OCRv4` など） | `PP-OCRv5` |
 | `MARK_SHOT_OCR_MODEL_TYPE` | モデルサイズ: `mobile` または `server` | `mobile` |
-| `MARK_SHOT_OCR_MODEL_DIR` | カスタムモデルの保存ディレクトリ | `~/.local/share/mark-shot/models` |
+| `MARK_SHOT_OCR_MODEL_DIR` | カスタムモデルの保存ディレクトリ | `~/.local/share/dracoPho/models` |
 | `MARK_SHOT_OCR_NO_VENV` | `1` に設定すると仮想環境の自動切り替えを無効化 | — |
-| `MARK_SHOT_OCR_PYTHON` | re-exec に使用する Python インタープリターのパスを指定 | `~/.local/share/mark-shot/ocr-venv/bin/python` |
+| `MARK_SHOT_OCR_PYTHON` | re-exec に使用する Python インタープリターのパスを指定 | `~/.local/share/dracoPho/ocr-venv/bin/python` |
 
 </details>
 
@@ -563,33 +563,33 @@ python3 -m venv ~/.local/share/mark-shot/ocr-venv
 
 **2. OCR ヘルパースクリプトのコピー**
 
-[DracoPho リポジトリ](https://github.com/tystudio-26020701/DracoPho-community) 内の `scripts/mark-shot-ocr` を、ローカルディレクトリ（例: `%LOCALAPPDATA%\mark-shot\mark-shot-ocr.py`）にコピーします。
+[DracoPho リポジトリ](https://github.com/tystudio-26020701/DracoPho-community) 内の `scripts/dracoPho-ocr` を、ローカルディレクトリ（例: `%LOCALAPPDATA%\dracoPho\dracoPho-ocr.py`）にコピーします。
 
 ```powershell
-New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\mark-shot"
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/mark-shot-ocr" `
-  -OutFile "$env:LOCALAPPDATA\mark-shot\mark-shot-ocr.py"
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\dracoPho"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tystudio-26020701/DracoPho-community/main/scripts/dracoPho-ocr" `
+  -OutFile "$env:LOCALAPPDATA\dracoPho\dracoPho-ocr.py"
 ```
 
 **3. 仮想環境の作成と依存パッケージのインストール**
 
 ```powershell
-python -m venv "$env:LOCALAPPDATA\mark-shot\ocr-venv"
-& "$env:LOCALAPPDATA\mark-shot\ocr-venv\Scripts\pip.exe" install -U pip rapidocr onnxruntime
+python -m venv "$env:LOCALAPPDATA\dracoPho\ocr-venv"
+& "$env:LOCALAPPDATA\dracoPho\ocr-venv\Scripts\pip.exe" install -U pip rapidocr onnxruntime
 ```
 
 > `onnxruntime` は CPU 推論を提供します。互換性のある GPU がある場合は、`onnxruntime-directml` または `onnxruntime-gpu` をインストールすると認識を高速化できます。
 
 **4. `config.json` で `ocr.command` を設定**
 
-`%LOCALAPPDATA%\mark-shot\config.json` を開き（存在しない場合は新規作成）、`ocr.command` を設定します:
+`%LOCALAPPDATA%\dracoPho\config.json` を開き（存在しない場合は新規作成）、`ocr.command` を設定します:
 
 ```json
 {
   "ocr": {
     "enabled": true,
     "backend": "rapidocr",
-    "command": "\"%LOCALAPPDATA%\\mark-shot\\ocr-venv\\Scripts\\python.exe\" \"%LOCALAPPDATA%\\mark-shot\\mark-shot-ocr.py\" --format json --backend rapidocr {image}",
+    "command": "\"%LOCALAPPDATA%\\dracoPho\\ocr-venv\\Scripts\\python.exe\" \"%LOCALAPPDATA%\\dracoPho\\dracoPho-ocr.py\" --format json --backend rapidocr {image}",
     "timeoutMs": 30000
   }
 }
@@ -604,15 +604,15 @@ python -m venv "$env:LOCALAPPDATA\mark-shot\ocr-venv"
 #### コードスキャンバックエンド（オプション）
 
 ```bash
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 コードスキャンヘルパーは `zxing-cpp` を優先して使用し、QR Code、Data Matrix、Aztec、PDF417、EAN、UPC、Code 39、Code 93、Code 128 などの一般的な形式をサポートしています。`pyzbar` や OpenCV がインストールされている場合は、フォールバックバックエンドとしても使用されます。
 
 #### 画像ホストアップロードバックエンド（オプション）
 
-画像ホストへのアップロード機能は、デフォルトで内蔵の `mark-shot-upload` Python スクリプトを使用し、追加の依存パッケージは不要です（Python 3 の標準ライブラリのみを使用）。このスクリプトは環境変数で画像ホストのパラメータを設定し、multipart/form-data アップロードプロトコルに対応する任意の画像ホストサービスをサポートします。
+画像ホストへのアップロード機能は、デフォルトで内蔵の `dracoPho-upload` Python スクリプトを使用し、追加の依存パッケージは不要です（Python 3 の標準ライブラリのみを使用）。このスクリプトは環境変数で画像ホストのパラメータを設定し、multipart/form-data アップロードプロトコルに対応する任意の画像ホストサービスをサポートします。
 
 <details>
 <summary>内蔵ヘルパーがサポートする環境変数</summary>
@@ -734,7 +734,7 @@ cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
 cmake --build build-windows
 ```
 
-現在の Windows での対応範囲は、通常のスクリーンショットと画像注釈です。スクロールスクリーンショット、コンポジタ専用のウィンドウ検出、Linux デスクトップショートカットは Windows では利用できません。内蔵の Python ヘルパースクリプト（`mark-shot-ocr`、`mark-shot-code-scan`、`mark-shot-translate`）は自動インストールされないため、上記の [OCR バックエンド](#ocr-后端可选)、[コードスキャンバックエンド](#扫码后端可选)、および翻訳の章を参照して手動で設定してください。
+現在の Windows での対応範囲は、通常のスクリーンショットと画像注釈です。スクロールスクリーンショット、コンポジタ専用のウィンドウ検出、Linux デスクトップショートカットは Windows では利用できません。内蔵の Python ヘルパースクリプト（`dracoPho-ocr`、`dracoPho-code-scan`、`dracoPho-translate`）は自動インストールされないため、上記の [OCR バックエンド](#ocr-后端可选)、[コードスキャンバックエンド](#扫码后端可选)、および翻訳の章を参照して手動で設定してください。
 
 ### ビルドとコンパイル
 
@@ -764,7 +764,7 @@ LayerShellQt は自動検出されます。見つかった場合は完全な Way
 cmake --install build --prefix "$HOME/.local"
 ```
 
-このコマンドは、実行ファイル、ヘルパースクリプト（`mark-shot-ocr`、`mark-shot-code-scan`、`mark-shot-translate`、`mark-shot-upload`）、デスクトップショートカット、アイコンをインストールします。
+このコマンドは、実行ファイル、ヘルパースクリプト（`dracoPho-ocr`、`dracoPho-code-scan`、`dracoPho-translate`、`dracoPho-upload`）、デスクトップショートカット、アイコンをインストールします。
 
 ### GNOME Wayland スクロールスクリーンショット拡張機能
 
@@ -807,7 +807,7 @@ gdbus call --session \
   --method org.gnome.Shell.Extensions.MarkShotScrollHelper.Version
 ```
 
-期待される結果は `('4.2',)` です。拡張機能を有効にした後、`mark-shot` を再起動してください。
+期待される結果は `('4.2',)` です。拡張機能を有効にした後、`dracoPho` を再起動してください。
 
 </details>
 

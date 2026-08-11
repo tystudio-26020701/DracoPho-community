@@ -24,7 +24,7 @@ void ShotWindow::uploadSelection()
     QProcess process;
     process.setProcessEnvironment(config.env);
     if (config.command.isEmpty()) {
-        process.setProgram(helperProgramPath(QStringLiteral("mark-shot-upload")));
+        process.setProgram(helperProgramPath(QStringLiteral("dracoPho-upload")));
         process.setArguments({QStringLiteral("--format"), QStringLiteral("json"), tempPath});
     } else {
         QString commandLine = config.command;

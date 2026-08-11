@@ -48,10 +48,10 @@ if [ "$lang_choice" = "1" ]; then
         DISPLAY_TYPE="${XDG_SESSION_TYPE:-未知}"
         
         MS_VERSION="未知 (未编译或未安装)"
-        if command -v mark-shot &> /dev/null; then
-            MS_VERSION=$(mark-shot --version 2>&1)
-        elif [ -f "$REPO_DIR/build/mark-shot" ]; then
-            MS_VERSION=$("$REPO_DIR/build/mark-shot" --version 2>&1)
+        if command -v dracoPho &> /dev/null; then
+            MS_VERSION=$(dracoPho --version 2>&1)
+        elif [ -f "$REPO_DIR/build/dracoPho" ]; then
+            MS_VERSION=$("$REPO_DIR/build/dracoPho" --version 2>&1)
         fi
 
         QT_VERSION="未知"
@@ -113,10 +113,10 @@ elif [ "$lang_choice" = "2" ]; then
         DISPLAY_TYPE="${XDG_SESSION_TYPE:-Unknown}"
         
         MS_VERSION="Unknown (Not compiled or installed)"
-        if command -v mark-shot &> /dev/null; then
-            MS_VERSION=$(mark-shot --version 2>&1)
-        elif [ -f "$REPO_DIR/build/mark-shot" ]; then
-            MS_VERSION=$("$REPO_DIR/build/mark-shot" --version 2>&1)
+        if command -v dracoPho &> /dev/null; then
+            MS_VERSION=$(dracoPho --version 2>&1)
+        elif [ -f "$REPO_DIR/build/dracoPho" ]; then
+            MS_VERSION=$("$REPO_DIR/build/dracoPho" --version 2>&1)
         fi
 
         QT_VERSION="Unknown"

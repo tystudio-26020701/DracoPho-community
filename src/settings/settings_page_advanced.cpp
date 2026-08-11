@@ -26,7 +26,7 @@ SettingsPageAdvanced::SettingsPageAdvanced(QWidget *parent)
                                            this);
     QFormLayout *debugForm = settingsCardForm(debugCard);
     m_debugEnabled = addSwitchRow(debugForm, MS_TR("Debug Logging"), MS_TR("Enable debug log output."));
-    m_debugLogPath = addTextRow(debugForm, MS_TR("Debug Log Path"), QStringLiteral("~/mark-shot-debug.log"));
+    m_debugLogPath = addTextRow(debugForm, MS_TR("Debug Log Path"), QStringLiteral("~/dracoPho-debug.log"));
     addCardRestoreButton(debugCard, [this] {
         m_debugEnabled->setChecked(m_saved.advanced.debugEnabled);
         m_debugLogPath->setText(m_saved.advanced.debugLogPath);
@@ -42,7 +42,7 @@ SettingsPageAdvanced::SettingsPageAdvanced(QWidget *parent)
                                             MS_TR("Run the configured helper before region selection."));
     m_windowDetectionCommand = addTextRow(windowForm,
                                           MS_TR("Window Detection Command"),
-                                          QStringLiteral("mark-shot-window-detection-niri"));
+                                          QStringLiteral("dracoPho-window-detection-niri"));
     m_windowDetectionWorkingDirectory = addTextRow(windowForm, MS_TR("Working Directory"), QStringLiteral("~/"));
     m_windowDetectionTimeoutMs = addSpinRow(windowForm, MS_TR("Window Detection Timeout"), 100, 30000, QStringLiteral(" ms"));
     m_windowDetectionEnv = addPlainTextRow(windowForm,
