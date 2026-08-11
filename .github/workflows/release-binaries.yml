@@ -487,7 +487,7 @@ jobs:
         # 主镜像 mirror.msys2.org 未同步 mingw-w64-qt6-static；清华镜像完整。
         # 元包为完整静态 Qt6（lib/include/cmake 俱全，仅依赖 vulkan-loader），
         # 手动下载并用 pacman -U 安装，绕开主镜像缺失。
-        shell: bash
+        # 注意：pacman 是 MSYS2 命令，必须用 msys2 shell（Set up MSYS2 之后）。
         run: |
           QT6_STATIC_VER="6.11.1-1"
           PKG="mingw-w64-ucrt-x86_64-qt6-static-${QT6_STATIC_VER}-any"
