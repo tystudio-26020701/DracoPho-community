@@ -390,13 +390,16 @@ jobs:
           # 历史 tag 只有 mark-shot.ico，当前有 DracoPho-logo.ico。
           $icon = "data\icons\DracoPho-logo.ico"
           if (-not (Test-Path $icon)) { $icon = "packaging\windows\mark-shot.ico" }
-          & $iscc.Source "packaging\windows\dracoPho-setup.iss" `
-            /DMyAppVersion="$env:APP_VERSION" `
-            /DMyAppTag="$env:APP_TAG" `
-            /DMyExeName="$exeName" `
-            /DMyProductName="$product" `
-            /DMySourceDir="$env:GITHUB_WORKSPACE\app" `
-            /DMyIconFile="$env:GITHUB_WORKSPACE\$icon"
+          # ISCC 语法：/D 定义参数必须放在 scriptname.iss 之前。
+          # 参数值用单引号包裹，避免 PowerShell 解析反斜杠/特殊字符。
+          & $iscc.Source `
+            "/DMyAppVersion=$env:APP_VERSION" `
+            "/DMyAppTag=$env:APP_TAG" `
+            "/DMyExeName=$exeName" `
+            "/DMyProductName=$product" `
+            "/DMySourceDir=$env:GITHUB_WORKSPACE\app" `
+            "/DMyIconFile=$env:GITHUB_WORKSPACE\$icon" `
+            "packaging\windows\dracoPho-setup.iss"
           if ($LASTEXITCODE -ne 0) {
             Write-Host "ISCC failed with exit code $LASTEXITCODE"
             exit $LASTEXITCODE
