@@ -392,7 +392,7 @@ jobs:
           if (-not (Test-Path $icon)) { $icon = "packaging\windows\mark-shot.ico" }
           # ISCC 语法：/D 定义参数必须放在 scriptname.iss 之前。
           # 参数值用单引号包裹，避免 PowerShell 解析反斜杠/特殊字符。
-          & $iscc.Source `
+          & $iscc.FullName `
             "/DMyAppVersion=$env:APP_VERSION" `
             "/DMyAppTag=$env:APP_TAG" `
             "/DMyExeName=$exeName" `
