@@ -266,6 +266,9 @@ jobs:
       - name: Fetch release-tooling files from default branch
         # 历史 tag 源码不含本轮新增的辅助文件（.iss 模板 / 静态 FFmpeg 脚本），
         # 从默认分支（main）拉取，保证回填历史发布版时工具链可用。
+        # 注意：在 Set up MSYS2 之前执行，必须显式用 bash（Git Bash），
+        # 不能用 job 默认的 msys2 shell（此时 MSYS2 尚未安装）。
+        shell: bash
         run: |
           git fetch origin "${GITHUB_REF_NAME:-main}" --depth=1 || true
           git fetch origin main --depth=1 || true
@@ -456,6 +459,8 @@ jobs:
           ref: ${{ steps.version.outputs.tag }}
 
       - name: Fetch static-build script from default branch
+        # 在 Set up MSYS2 之前执行，必须显式用 bash（Git Bash）。
+        shell: bash
         run: |
           git fetch origin main --depth=1 || true
           git checkout origin/main -- scripts/build-static-ffmpeg.sh 2>/dev/null || true
