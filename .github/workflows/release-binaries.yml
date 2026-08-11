@@ -263,6 +263,18 @@ jobs:
         with:
           ref: ${{ steps.version.outputs.tag }}
 
+      - name: Fetch release-tooling files from default branch
+        # 历史 tag 源码不含本轮新增的辅助文件（.iss 模板 / 静态 FFmpeg 脚本），
+        # 从默认分支（main）拉取，保证回填历史发布版时工具链可用。
+        run: |
+          git fetch origin "${GITHUB_REF_NAME:-main}" --depth=1 || true
+          git fetch origin main --depth=1 || true
+          for f in packaging/windows/dracoPho-setup.iss scripts/build-static-ffmpeg.sh; do
+            git checkout origin/main -- "$f" 2>/dev/null || git checkout "${GITHUB_REF_NAME:-main}" -- "$f" 2>/dev/null || true
+          done
+          test -f packaging/windows/dracoPho-setup.iss && echo "iss OK" || echo "iss MISSING"
+          test -f scripts/build-static-ffmpeg.sh && echo "ffmpeg-script OK" || echo "ffmpeg-script MISSING"
+
       - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
         with:
@@ -296,21 +308,33 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
       - name: Package install tree
+        id: package
         run: |
           cmake --install build --prefix "$PWD/app"
+          # 产物名随 tag 源码而定：历史 tag 为 mark-shot，当前为 dracoPho。
+          EXE_NAME="$(basename "$(find app/bin -maxdepth 1 -name '*.exe' | head -1)")"
+          PRODUCT="${EXE_NAME%.exe}"
+          echo "product=$PRODUCT" >> "$GITHUB_OUTPUT"
+          echo "exe_name=$EXE_NAME" >> "$GITHUB_OUTPUT"
+          # 同时写入 GITHUB_ENV 供后续 shell 步骤使用。
+          {
+            echo "exe_name=$EXE_NAME"
+            echo "product=$PRODUCT"
+          } >> "$GITHUB_ENV"
+          echo "Detected product: $PRODUCT / exe: $EXE_NAME"
           for plugin in ocr-rapid translate-openai code-scan-zxing; do
-            test -f "$PWD/app/lib/dracoPho/plugins/dracoPho-${plugin}.dll" || {
+            test -f "$PWD/app/lib/$PRODUCT/plugins/$PRODUCT-${plugin}.dll" || {
               echo "Expected provider plugin was not installed: ${plugin}" >&2
               exit 1
             }
           done
-          install -Dm644 LICENSE app/share/licenses/dracoPho/LICENSE
-          install -Dm644 README.md app/share/doc/dracoPho/README.md
-          install -Dm644 README.zh-CN.md app/share/doc/dracoPho/README.zh-CN.md
+          install -Dm644 LICENSE "app/share/licenses/$PRODUCT/LICENSE"
+          install -Dm644 README.md "app/share/doc/$PRODUCT/README.md"
+          install -Dm644 README.zh-CN.md "app/share/doc/$PRODUCT/README.zh-CN.md"
 
       - name: Deploy runtime libraries
         run: |
-          bash scripts/windows-deploy-runtime.sh "$PWD/app/bin" "$PWD/app/bin/dracoPho.exe"
+          bash scripts/windows-deploy-runtime.sh "$PWD/app/bin" "$PWD/app/bin/$EXE_NAME"
 
       - name: Sign Windows binaries
         shell: pwsh
@@ -323,7 +347,7 @@ jobs:
 
       - name: Package zip
         run: |
-          ASSET="dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip"
+          ASSET="$PRODUCT-${{ steps.version.outputs.tag }}-windows-x86_64.zip"
           (cd app && zip -r "../$ASSET" .)
           sha256sum "$ASSET" > "$ASSET.sha256"
 
@@ -333,19 +357,49 @@ jobs:
           plugins=()
           while IFS= read -r -d '' plugin; do
             plugins+=("$plugin")
-          done < <(find app -type f -path '*/dracoPho/plugins/*' -name '*.dll' -print0)
+          done < <(find app -type f -path "*/$PRODUCT/plugins/*" -name '*.dll' -print0)
           if [ "${#plugins[@]}" -eq 0 ]; then
             echo "No provider plugin dynamic libraries were installed" >&2
             exit 1
           fi
           for plugin in "${plugins[@]}"; do
             base="$(basename "$plugin")"
-            provider="${base#dracoPho-}"
+            provider="${base#$PRODUCT-}"
             provider="${provider%.dll}"
-            asset="dracoPho-plugin-${provider}-${{ steps.version.outputs.tag }}-windows-x86_64.dll"
+            asset="$PRODUCT-plugin-${provider}-${{ steps.version.outputs.tag }}-windows-x86_64.dll"
             cp "$plugin" "plugin-assets/$asset"
             (cd plugin-assets && sha256sum "$asset" > "$asset.sha256")
           done
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          $product = $env:product
+          $exeName = $env:exe_name
+          if ([string]::IsNullOrWhiteSpace($product)) { throw "product env is empty" }
+          choco install innosetup -y --no-progress | Out-Null
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup*\ISCC.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $iscc) { throw "Inno Setup ISCC.exe was not found" }
+          # 历史 tag 只有 mark-shot.ico，当前有 DracoPho-logo.ico。
+          $icon = "data\icons\DracoPho-logo.ico"
+          if (-not (Test-Path $icon)) { $icon = "packaging\windows\mark-shot.ico" }
+          & $iscc.Source "packaging\windows\dracoPho-setup.iss" `
+            /DMyAppVersion="$env:APP_VERSION" `
+            /DMyAppTag="$env:APP_TAG" `
+            /DMyExeName="$exeName" `
+            /DMyProductName="$product" `
+            /DMySourceDir="$env:GITHUB_WORKSPACE\app" `
+            /DMyIconFile="$env:GITHUB_WORKSPACE\$icon"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $setup = Get-ChildItem "." -Filter "$product-$env:APP_TAG-windows-x86_64-setup.exe" | Select-Object -First 1
+          if (-not $setup) { throw "Inno Setup did not produce $product-$env:APP_TAG-windows-x86_64-setup.exe" }
+          Get-FileHash $setup.FullName -Algorithm SHA256 | ForEach-Object {
+            "$($_.Hash.ToLower())  $($setup.Name)" | Set-Content "$($setup.Name).sha256"
+          }
+          echo "setup_name=$($setup.Name)" | Out-File -Append $env:GITHUB_ENV -Encoding utf8
 
       - name: Upload binaries to release
         if: github.event_name == 'release' || github.event_name == 'push' || inputs.upload_to_release
@@ -353,17 +407,134 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: |
-            dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip
-            dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip.sha256
+            ${{ steps.package.outputs.product }}-${{ steps.version.outputs.tag }}-windows-x86_64.zip
+            ${{ steps.package.outputs.product }}-${{ steps.version.outputs.tag }}-windows-x86_64.zip.sha256
+            ${{ steps.package.outputs.product }}-${{ steps.version.outputs.tag }}-windows-x86_64-setup.exe
+            ${{ steps.package.outputs.product }}-${{ steps.version.outputs.tag }}-windows-x86_64-setup.exe.sha256
             plugin-assets/*
 
       - name: Upload binaries artifact
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: dracoPho-windows-x86_64-${{ steps.version.outputs.tag }}
+          name: ${{ steps.package.outputs.product }}-windows-x86_64-${{ steps.version.outputs.tag }}
           path: |
-            dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip
-            dracoPho-${{ steps.version.outputs.tag }}-windows-x86_64.zip.sha256
+            ${{ steps.package.outputs.product }}-${{ steps.version.outputs.tag }}-windows-x86_64.zip
+            ${{ steps.package.outputs.product }}-${{ steps.version.outputs.tag }}-windows-x86_64.zip.sha256
+            ${{ steps.package.outputs.product }}-${{ steps.version.outputs.tag }}-windows-x86_64-setup.exe
+            ${{ steps.package.outputs.product }}-${{ steps.version.outputs.tag }}-windows-x86_64-setup.exe.sha256
             plugin-assets/*
+          if-no-files-found: error
+
+  windows-static:
+    name: Build Windows x86_64 static single-file exe
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Resolve tag
+        id: version
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag || github.ref_name }}"
+          if [ -z "$TAG" ]; then
+            echo "No release tag was provided" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          {
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.version.outputs.tag }}
+
+      - name: Fetch static-build script from default branch
+        run: |
+          git fetch origin main --depth=1 || true
+          git checkout origin/main -- scripts/build-static-ffmpeg.sh 2>/dev/null || true
+          test -f scripts/build-static-ffmpeg.sh && echo "ffmpeg-script OK" || echo "ffmpeg-script MISSING"
+
+      - name: Set up MSYS2 (static toolchain)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-cppwinrt
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-qt6-static
+
+      - name: Build static FFmpeg (MIT-compatible minimal LGPL)
+        run: |
+          bash scripts/build-static-ffmpeg.sh "$PWD/ffmpeg-src" "$PWD/ffmpeg-static"
+          echo "FFMPEG_STATIC=$PWD/ffmpeg-static" >> "$GITHUB_ENV"
+
+      - name: Detect product name
+        id: product
+        shell: bash
+        run: |
+          # 从源码工程名探测产物名（历史 tag = mark-shot，当前 = dracoPho）。
+          PROJECT_NAME="$(grep -oP 'project\(\K[^ )]+' CMakeLists.txt | head -1)"
+          echo "project=$PROJECT_NAME"
+          echo "project=$PROJECT_NAME" >> "$GITHUB_ENV"
+
+      - name: Configure (static)
+        run: |
+          # 静态 Qt6 安装到 /ucrt64/qt6-static；静态 FFmpeg 用 MINGW_PREFIX 查找。
+          # 静态 FFmpeg 库间互链 + 依赖系统库（ws2_32/bcrypt/secur32），
+          # 链接时补足；Qt 静态库链接也需要 ws2_32/bcrypt 等。
+          export MINGW_PREFIX="$FFMPEG_STATIC"
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="/ucrt64/qt6-static" \
+            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++ -lws2_32 -lbcrypt -lsecur32 -lcrypt32 -luser32 -lgdi32 -lshell32 -lole32 -ladvapi32" \
+            -DMARK_SHOT_REQUIRE_FFMPEG=ON \
+            -DMARK_SHOT_WITH_LAYER_SHELL=OFF \
+            -DMARK_SHOT_WITH_LIBPORTAL=OFF \
+            -DBUILD_TESTING=OFF
+
+      - name: Build (static)
+        run: |
+          cmake --build build --target "$PROJECT" --parallel
+
+      - name: Package static exe
+        id: static-package
+        run: |
+          ASSET="$PROJECT-${{ steps.version.outputs.tag }}-windows-x86_64-static.exe"
+          cp "build/$PROJECT.exe" "$ASSET"
+          echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+          # 校验无外部 DLL 依赖（仅系统 DLL 可保留）。
+          if command -v objdump >/dev/null 2>&1; then
+            echo "=== DLL imports (system-only expected) ==="
+            objdump -p "$ASSET" | awk '/DLL Name:/{print $3}'
+          fi
+          sha256sum "$ASSET" > "$ASSET.sha256"
+
+      - name: Upload static exe to release
+        if: github.event_name == 'release' || github.event_name == 'push' || inputs.upload_to_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            ${{ steps.static-package.outputs.asset }}
+            ${{ steps.static-package.outputs.asset }}.sha256
+
+      - name: Upload static exe artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.product.outputs.project }}-windows-x86_64-static-${{ steps.version.outputs.tag }}
+          path: |
+            ${{ steps.static-package.outputs.asset }}
+            ${{ steps.static-package.outputs.asset }}.sha256
           if-no-files-found: error
