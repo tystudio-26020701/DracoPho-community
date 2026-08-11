@@ -477,7 +477,21 @@ jobs:
             mingw-w64-ucrt-x86_64-cppwinrt
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-qt6-static
+            mingw-w64-ucrt-x86_64-vulkan-loader
+
+      - name: Install static Qt6 from Tsinghua mirror
+        # 主镜像 mirror.msys2.org 未同步 mingw-w64-qt6-static；清华镜像完整。
+        # 元包为完整静态 Qt6（lib/include/cmake 俱全，仅依赖 vulkan-loader），
+        # 手动下载并用 pacman -U 安装，绕开主镜像缺失。
+        shell: bash
+        run: |
+          QT6_STATIC_VER="6.11.1-1"
+          PKG="mingw-w64-ucrt-x86_64-qt6-static-${QT6_STATIC_VER}-any"
+          curl -fL --retry 5 --retry-delay 2 -o "$PKG.pkg.tar.zst" \
+            "https://mirrors.tuna.tsinghua.edu.cn/msys2/mingw/ucrt64/${PKG}.pkg.tar.zst"
+          pacman -U --noconfirm "./$PKG.pkg.tar.zst"
+          test -d /ucrt64/qt6-static/lib/cmake/Qt6 && echo "static Qt6 OK"
+          ls /ucrt64/qt6-static/bin/ | head -3
 
       - name: Build static FFmpeg (MIT-compatible minimal LGPL)
         run: |
@@ -496,13 +510,13 @@ jobs:
       - name: Configure (static)
         run: |
           # 静态 Qt6 安装到 /ucrt64/qt6-static；静态 FFmpeg 用 MINGW_PREFIX 查找。
-          # 静态 FFmpeg 库间互链 + 依赖系统库（ws2_32/bcrypt/secur32），
-          # 链接时补足；Qt 静态库链接也需要 ws2_32/bcrypt 等。
+          # 静态 FFmpeg/Qt 依赖系统库，用 --start-group 允许循环解析
+          # （系统库名可能在 FFmpeg 目标库之前）。
           export MINGW_PREFIX="$FFMPEG_STATIC"
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="/ucrt64/qt6-static" \
-            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++ -lws2_32 -lbcrypt -lsecur32 -lcrypt32 -luser32 -lgdi32 -lshell32 -lole32 -ladvapi32" \
+            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++ -Wl,--start-group -lws2_32 -lbcrypt -lsecur32 -lcrypt32 -luser32 -lgdi32 -lshell32 -lole32 -ladvapi32 -lwinmm -limm32 -loleaut32 -lversion -lshlwapi -Wl,--end-group" \
             -DMARK_SHOT_REQUIRE_FFMPEG=ON \
             -DMARK_SHOT_WITH_LAYER_SHELL=OFF \
             -DMARK_SHOT_WITH_LIBPORTAL=OFF \
