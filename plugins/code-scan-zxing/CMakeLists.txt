@@ -11,35 +11,35 @@ if(NOT TARGET ZXing::ZXing AND NOT TARGET PkgConfig::ZXingCpp)
 endif()
 
 if(NOT TARGET ZXing::ZXing AND NOT TARGET PkgConfig::ZXingCpp AND NOT TARGET PkgConfig::ZXingPlugin)
-    message(STATUS "mark-shot: code-scan-zxing plugin disabled (zxing-cpp not found)")
+    message(STATUS "dracoPho: code-scan-zxing plugin disabled (zxing-cpp not found)")
     return()
 endif()
 
-qt_add_plugin(mark-shot-code-scan-zxing
+qt_add_plugin(dracoPho-code-scan-zxing
     SHARED
     zxing_code_scan_plugin.cpp
     zxing_code_scan_plugin.h
 )
 
-target_include_directories(mark-shot-code-scan-zxing PRIVATE
+target_include_directories(dracoPho-code-scan-zxing PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/plugin-sdk
 )
-target_link_libraries(mark-shot-code-scan-zxing
+target_link_libraries(dracoPho-code-scan-zxing
     PRIVATE
         Qt6::Core
         Qt6::Gui
 )
 if(TARGET ZXing::ZXing)
-    target_link_libraries(mark-shot-code-scan-zxing PRIVATE ZXing::ZXing)
+    target_link_libraries(dracoPho-code-scan-zxing PRIVATE ZXing::ZXing)
 elseif(TARGET PkgConfig::ZXingCpp)
-    target_link_libraries(mark-shot-code-scan-zxing PRIVATE PkgConfig::ZXingCpp)
+    target_link_libraries(dracoPho-code-scan-zxing PRIVATE PkgConfig::ZXingCpp)
 else()
-    target_link_libraries(mark-shot-code-scan-zxing PRIVATE PkgConfig::ZXingPlugin)
+    target_link_libraries(dracoPho-code-scan-zxing PRIVATE PkgConfig::ZXingPlugin)
 endif()
 
-install(TARGETS mark-shot-code-scan-zxing
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/mark-shot/plugins
-        RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/mark-shot/plugins)
+install(TARGETS dracoPho-code-scan-zxing
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/dracoPho/plugins
+        RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/dracoPho/plugins)
 
-message(STATUS "mark-shot: code-scan-zxing plugin enabled")
+message(STATUS "dracoPho: code-scan-zxing plugin enabled")

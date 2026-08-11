@@ -17,6 +17,7 @@
 #include <QProcess>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QStringList>
 
@@ -27,7 +28,7 @@ namespace markshot {
 namespace {
 
 #if defined(Q_OS_WIN)
-QString envConfigDir(const QString &name, const QString &relativePath = QStringLiteral("mark-shot"))
+QString envConfigDir(const QString &name, const QString &relativePath = QStringLiteral("dracoPho"))
 {
     const QString root = QProcessEnvironment::systemEnvironment().value(name).trimmed();
     return root.isEmpty() ? QString() : QDir(root).filePath(relativePath);
@@ -51,7 +52,7 @@ QStringList appConfigDirCandidates()
     }
 
     const QString userProfile = envConfigDir(QStringLiteral("USERPROFILE"),
-                                             QStringLiteral("AppData/Local/mark-shot"));
+                                             QStringLiteral("AppData/Local/dracoPho"));
     if (!userProfile.isEmpty()) {
         candidates.append(userProfile);
     }
@@ -64,10 +65,10 @@ QStringList appConfigDirCandidates()
 
     const QString genericConfig = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
     if (!genericConfig.isEmpty()) {
-        candidates.append(QDir(genericConfig).filePath(QStringLiteral("mark-shot")));
+        candidates.append(QDir(genericConfig).filePath(QStringLiteral("dracoPho")));
     }
 
-    candidates.append(QDir::home().filePath(QStringLiteral(".config/mark-shot")));
+    candidates.append(QDir::home().filePath(QStringLiteral(".config/dracoPho")));
     candidates.removeAll(QString());
     candidates.removeDuplicates();
     return candidates;
@@ -79,7 +80,7 @@ QString defaultAppConfigDir()
 {
     const QStringList candidates = appConfigDirCandidates();
     return candidates.isEmpty()
-        ? QDir::home().filePath(QStringLiteral(".config/mark-shot"))
+        ? QDir::home().filePath(QStringLiteral(".config/dracoPho"))
         : candidates.first();
 }
 
@@ -95,6 +96,154 @@ QString existingAppConfigPath()
         }
     }
     return {};
+}
+
+/// @brief 旧版配置目录候选列表（产品更名 dracoPho 前的 mark-shot 目录）。
+/// 与新目录候选一一对应，保证各平台（XDG/APPDATA/AppConfigLocation）都能迁移。
+/// @return 旧配置目录列表（含 config.json 的目录才有效）。
+QStringList legacyConfigDirCandidates()
+{
+    QStringList candidates;
+#if defined(Q_OS_WIN)
+    const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    const QString localAppData = env.value(QStringLiteral("LOCALAPPDATA")).trimmed();
+    if (!localAppData.isEmpty()) {
+        candidates.append(QDir(localAppData).filePath(QStringLiteral("mark-shot")));
+    }
+    const QString appData = env.value(QStringLiteral("APPDATA")).trimmed();
+    if (!appData.isEmpty()) {
+        candidates.append(QDir(appData).filePath(QStringLiteral("mark-shot")));
+    }
+    const QString userProfile = env.value(QStringLiteral("USERPROFILE")).trimmed();
+    if (!userProfile.isEmpty()) {
+        candidates.append(QDir(userProfile).filePath(QStringLiteral("AppData/Local/mark-shot")));
+    }
+#endif
+    const QString appConfig = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    const QString genericConfig = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
+    if (!appConfig.isEmpty()) {
+        candidates.append(QDir(QFileInfo(appConfig).absolutePath()).filePath(QStringLiteral("mark-shot")));
+    }
+    if (!genericConfig.isEmpty()) {
+        candidates.append(QDir(genericConfig).filePath(QStringLiteral("mark-shot")));
+    }
+    candidates.append(QDir::home().filePath(QStringLiteral(".config/mark-shot")));
+    candidates.append(QDir::home().filePath(QStringLiteral(".local/share/mark-shot")));
+    candidates.removeAll(QString());
+    candidates.removeDuplicates();
+    return candidates;
+}
+
+/// @brief 递归复制目录内容（QDir::copy 的跨 Qt 版本行为不稳定，这里手写）。
+/// @param source 源目录。
+/// @param destination 目标目录。
+/// @return 成功时返回 true。
+bool copyDirectoryContents(const QString &source, const QString &destination)
+{
+    QDir sourceDir(source);
+    if (!sourceDir.exists() || !QDir().mkpath(destination)) {
+        return false;
+    }
+    bool ok = true;
+    const QFileInfoList entries =
+        sourceDir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QFileInfo &entry : entries) {
+        const QString target = QDir(destination).filePath(entry.fileName());
+        if (entry.isDir()) {
+            ok = copyDirectoryContents(entry.absoluteFilePath(), target) && ok;
+        } else if (!QFile::copy(entry.absoluteFilePath(), target)) {
+            ok = false;
+        }
+    }
+    return ok;
+}
+
+/// @brief 递归地把 JSON 值中所有 "mark-shot" 子串替换为 "dracoPho"。
+/// @param value 要处理的 JSON 值（原地改写对象/数组，字符串值改写）。
+void rewriteMarkShotIdentifiers(QJsonValue *value)
+{
+    if (!value) {
+        return;
+    }
+    if (value->isString()) {
+        QString text = value->toString();
+        if (text.contains(QStringLiteral("mark-shot"))) {
+            text.replace(QStringLiteral("mark-shot"), QStringLiteral("dracoPho"));
+            *value = text;
+        }
+        return;
+    }
+    if (value->isArray()) {
+        QJsonArray array = value->toArray();
+        for (int i = 0; i < array.size(); ++i) {
+            QJsonValue item = array.at(i);
+            rewriteMarkShotIdentifiers(&item);
+            array.replace(i, item);
+        }
+        *value = array;
+        return;
+    }
+    if (value->isObject()) {
+        QJsonObject object = value->toObject();
+        for (auto it = object.begin(); it != object.end(); ++it) {
+            QJsonValue item = it.value();
+            rewriteMarkShotIdentifiers(&item);
+            object.insert(it.key(), item);
+        }
+        *value = object;
+    }
+}
+
+/// @brief 产品更名后的一次性配置迁移：旧 mark-shot 目录存在、新目录不存在时，
+/// 复制旧目录全部内容（config.json / annotation-state.json / history 等）到新目录，
+/// 并把配置内仍指向旧技术标识的字符串（窗口检测脚本、OCR/翻译/扫码/上传助手、
+/// 保存路径模板、调试日志路径等）改写为 dracoPho。幂等：新目录已存在配置则跳过。
+void migrateLegacyConfigDirectory()
+{
+    const QString newPath = appConfigPath();
+    const QString newDir = QFileInfo(newPath).absolutePath();
+    if (QFileInfo::exists(QDir(newDir).filePath(QStringLiteral("config.json")))) {
+        return;
+    }
+
+    QString legacyDir;
+    for (const QString &candidate : legacyConfigDirCandidates()) {
+        if (QFileInfo::exists(QDir(candidate).filePath(QStringLiteral("config.json")))) {
+            legacyDir = candidate;
+            break;
+        }
+    }
+    if (legacyDir.isEmpty()) {
+        return;
+    }
+
+    markshot::debugLog("config", "migrating legacy config dir %s -> %s",
+                       legacyDir.toUtf8().constData(), newDir.toUtf8().constData());
+    if (!copyDirectoryContents(legacyDir, newDir)) {
+        markshot::debugLog("config", "legacy config migration copy failed");
+        return;
+    }
+
+    // 改写配置内的旧技术标识字符串。
+    QFile file(QDir(newDir).filePath(QStringLiteral("config.json")));
+    if (file.open(QIODevice::ReadWrite)) {
+        const QByteArray data = file.readAll();
+        file.close();
+        QJsonParseError parseError;
+        const QJsonDocument document = QJsonDocument::fromJson(data, &parseError);
+        if (parseError.error == QJsonParseError::NoError && document.isObject()) {
+            QJsonObject root = document.object();
+            QJsonValue value(root);
+            rewriteMarkShotIdentifiers(&value);
+            root = value.toObject();
+            QSaveFile save(QDir(newDir).filePath(QStringLiteral("config.json")));
+            if (save.open(QIODevice::WriteOnly)) {
+                save.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+                save.write("\n");
+                save.commit();
+            }
+        }
+    }
 }
 
 /// @brief Detects the Wayland session type based on environment variables.
@@ -140,7 +289,7 @@ QString defaultWindowDetectionCommand()
     if (sessionType.isEmpty()) {
         return QString();
     }
-    return QStringLiteral("mark-shot-window-detection-") + sessionType;
+    return QStringLiteral("dracoPho-window-detection-") + sessionType;
 #endif
 }
 
@@ -166,6 +315,10 @@ QString appConfigPath()
 
 bool ensureAppConfigFile()
 {
+    // 产品更名一次性迁移：新配置目录尚无 config.json 时，从旧 mark-shot 目录
+    // 搬入配置并改写旧技术标识，避免用户配置/截图历史丢失。
+    migrateLegacyConfigDirectory();
+
     const QString path = appConfigPath();
     if (QFileInfo::exists(path)) {
         return true;
@@ -559,7 +712,7 @@ std::optional<bool> configuredWindowDetectionEnabled(const QJsonObject &root)
 ///
 /// 行为约定:
 /// - 非 Wayland 会话(如 X11)与 Windows:尊重用户配置,空命令交由平台枚举回退。
-/// - Wayland 会话下内置默认脚本(mark-shot-window-detection-*)仅在面向其他
+/// - Wayland 会话下内置默认脚本(dracoPho-window-detection-*)仅在面向其他
 ///   合成器时自动纠正为当前会话对应的脚本;用户自定义命令(非内置脚本名,
 ///   例如带路径的脚本)一律保留,不再被静默覆盖。
 bool commandMatchesEnvironment(const QString &command)
@@ -574,7 +727,7 @@ bool commandMatchesEnvironment(const QString &command)
     if (command.isEmpty()) {
         return false;
     }
-    if (!command.startsWith(QStringLiteral("mark-shot-window-detection-"))) {
+    if (!command.startsWith(QStringLiteral("dracoPho-window-detection-"))) {
         return true;
     }
     return command.contains(sessionType);

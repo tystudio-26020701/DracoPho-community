@@ -159,7 +159,7 @@ ShotWindow *showCapturedWindow(QScreen *screen,
 /// @param screen 要捕获的显示器。
 /// @param allOutputs 是否捕获全部输出为一张图片。
 /// @param includeCursor 冻结图是否包含鼠标。
-/// @param hideOwnWindows 是否让截屏后端隐藏 mark-shot 自身窗口。
+/// @param hideOwnWindows 是否让截屏后端隐藏 dracoPho 自身窗口。
 /// @param useRegularWindow 是否使用普通窗口。
 /// @param fullscreenAnnotation 是否直接进入全屏标注。
 /// @param defaultTools 默认工具配置。
@@ -307,7 +307,7 @@ ShotWindow *showDisplayCaptureTarget(const markshot::display_capture::Target &ta
 /// @param app 应用对象。
 /// @param windows 冻结窗口列表。
 /// @param includeCursor 冻结图是否包含鼠标。
-/// @param hideOwnWindows 是否让截屏后端隐藏 mark-shot 自身窗口。
+/// @param hideOwnWindows 是否让截屏后端隐藏 dracoPho 自身窗口。
 /// @param useRegularWindow 是否使用普通窗口。
 /// @param defaultTools 默认工具配置。
 /// @param regionRecordingOptions 区域录制配置，为空时启动普通截图流程。
@@ -470,7 +470,7 @@ void connectCaptureWindowSession(QApplication *app,
 /// @brief 逐个显示器捕获冻结图,但暂不创建覆盖窗口。
 /// @param screens 当前屏幕列表。
 /// @param includeCursor 冻结图是否包含鼠标。
-/// @param hideOwnWindows 是否让截屏后端隐藏 mark-shot 自身窗口。
+/// @param hideOwnWindows 是否让截屏后端隐藏 dracoPho 自身窗口。
 /// @param error 输出错误信息。
 /// @return 捕获成功的逐屏冻结帧列表。
 QVector<CapturedScreenFrame> captureScreensIndividually(const QList<QScreen *> &screens,
@@ -545,7 +545,7 @@ QVector<CapturedScreenFrame> captureScreensIndividually(const QList<QScreen *> &
 /// @brief 通过逐屏捕获创建多显示器冻结窗口。
 /// @param screens 当前屏幕列表。
 /// @param includeCursor 冻结图是否包含鼠标。
-/// @param hideOwnWindows 是否让截屏后端隐藏 mark-shot 自身窗口。
+/// @param hideOwnWindows 是否让截屏后端隐藏 dracoPho 自身窗口。
 /// @param useRegularWindow 是否使用普通窗口。
 /// @param fullscreenAnnotation 是否直接进入全屏标注。
 /// @param annotationScreen 全屏标注目标屏幕；仅在 fullscreenAnnotation 且与
@@ -618,7 +618,7 @@ QVector<QPointer<ShotWindow>> showCaptureWindowsFromIndividualFrames(const QList
 /// @brief 使用一次全屏截图为每个屏幕创建冻结窗口。
 /// @param screens 当前屏幕列表。
 /// @param includeCursor 冻结图是否包含鼠标。
-/// @param hideOwnWindows 是否让截屏后端隐藏 mark-shot 自身窗口。
+/// @param hideOwnWindows 是否让截屏后端隐藏 dracoPho 自身窗口。
 /// @param useRegularWindow 是否使用普通窗口。
 /// @param fullscreenAnnotation 是否直接进入全屏标注。
 /// @param annotationScreen 全屏标注目标屏幕；仅在 fullscreenAnnotation 且与

@@ -72,11 +72,11 @@ int main(int argc, char *argv[])
 {
     markshot::applyConfiguredEnvironment();
 
-    QGuiApplication::setDesktopFileName(QStringLiteral("mark-shot"));
+    QGuiApplication::setDesktopFileName(QStringLiteral("dracoPho"));
     markshot::disableQtPortalServicesForHostApp();
 
     QApplication app(argc, argv);
-    QApplication::setApplicationName(QStringLiteral("mark-shot"));
+    QApplication::setApplicationName(QStringLiteral("dracoPho"));
     QApplication::setApplicationDisplayName(QStringLiteral("DracoPho"));
     QApplication::setApplicationVersion(QStringLiteral(MARK_SHOT_VERSION));
     QApplication::setWindowIcon(markshot::ui::applicationIcon());
@@ -216,12 +216,12 @@ int main(int argc, char *argv[])
 
         if (request.outputPath.isEmpty()) {
             QTextStream errorStream(stderr);
-            errorStream << "mark-shot: --record-output is required for recording\n";
+            errorStream << "dracoPho: --record-output is required for recording\n";
             return 1;
         }
         if (request.displayKey.isEmpty() && request.geometryText.isEmpty()) {
             QTextStream errorStream(stderr);
-            errorStream << "mark-shot: one of --record-display or --record-region is required for recording\n";
+            errorStream << "dracoPho: one of --record-display or --record-region is required for recording\n";
             return 1;
         }
         // 录制格式白名单校验：非法值立即报错，绝不静默降级为 mp4。
@@ -230,7 +230,7 @@ int main(int argc, char *argv[])
             && request.format != QLatin1String("gif")
             && request.format != QLatin1String("webp")) {
             QTextStream errorStream(stderr);
-            errorStream << "mark-shot: unsupported --record-format \"" << request.format
+            errorStream << "dracoPho: unsupported --record-format \"" << request.format
                         << "\" (expected mp4, gif or webp)\n";
             return 1;
         }
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
         // --stop-recording 结束，二者组合必然超时，直接拒绝并说明。
         if (request.waitForFinish && request.durationMs <= 0) {
             QTextStream errorStream(stderr);
-            errorStream << "mark-shot: --record-wait-json requires --record-duration > 0 "
+            errorStream << "dracoPho: --record-wait-json requires --record-duration > 0 "
                            "(infinite recording only ends via --stop-recording)\n";
             return 1;
         }
@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
             }
             if (!valid) {
                 QTextStream errorStream(stderr);
-                errorStream << "mark-shot: --record-region expects x,y,width,height integers\n";
+                errorStream << "dracoPho: --record-region expects x,y,width,height integers\n";
                 return 1;
             }
         }

@@ -26,7 +26,7 @@ namespace {
 /// @brief 开启无头模式剪贴板写权限前展示的固定口令。
 /// 防呆设计：用户必须逐字输入该口令并点击"确定"才能开启，避免脚本或
 /// 误触把剪贴板写权限悄悄打开。
-constexpr const char *kHeadlessClipboardPassphrase = "mark-shot-headless-clipboard";
+constexpr const char *kHeadlessClipboardPassphrase = "dracoPho-headless-clipboard";
 
 /**
  * 添加目录选择表单项。
@@ -134,7 +134,7 @@ SettingsPageStorage::SettingsPageStorage(QWidget *parent)
     QFormLayout *saveForm = settingsCardForm(saveCard);
     m_savePathTemplate = addTextRow(saveForm,
                                     MS_TR("Path Template"),
-                                    QStringLiteral("{pictures}/mark-shot/mark-shot-{datetime}.png"));
+                                    QStringLiteral("{pictures}/dracoPho/dracoPho-{datetime}.png"));
     addCardRestoreButton(saveCard, [this] {
         m_savePathTemplate->setText(m_saved.storage.savePathTemplate);
     });

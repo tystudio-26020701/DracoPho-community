@@ -18,7 +18,7 @@ seleziona), al flusso di annotazione, alla cattura headless e alla configurazion
 Avvia una sessione di cattura di una regione:
 
 ```bash
-mark-shot --capture
+dracoPho --capture
 ```
 
 Premi un tasto di scelta rapida del desktop (vedi § 8) oppure eseguilo da un
@@ -38,7 +38,7 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 
 Il launcher antepone la propria directory `bin/` a `PATH`, requisito per gli
 script di supporto per il rilevamento delle finestre
-(`mark-shot-window-detection-*`) e per gli helper OCR / upload.
+(`dracoPho-window-detection-*`) e per gli helper OCR / upload.
 
 ### 1.3 Comportamento all'avvio (pallina fluttuante / barra / finestra impostazioni / cattura diretta)
 
@@ -114,7 +114,7 @@ tramite trascinamento funziona comunque).
 
 ### 2.2 Come si usa
 
-1. Avvia una cattura (`mark-shot` o il tasto di scelta rapida del desktop).
+1. Avvia una cattura (`dracoPho` o il tasto di scelta rapida del desktop).
 2. Senza premere alcun pulsante del mouse, sposta il cursore su una finestra.
    Una cornice color verde acqua delinea la finestra che verrebbe selezionata.
 3. **Fai clic una volta** (premi e rilascia senza spostarti di più di qualche
@@ -141,13 +141,13 @@ corrisponde a ciò che vedi su quel display.
 
 La funzione è abilitata per impostazione predefinita (`windowDetection.enabled
 = true`). Puoi attivarla/disattivarla in **Impostazioni → Avanzate → Window
-Detection Enabled**, oppure modificare `~/.config/mark-shot/config.json`:
+Detection Enabled**, oppure modificare `~/.config/dracoPho/config.json`:
 
 ```json
 {
   "windowDetection": {
     "enabled": true,
-    "command": "mark-shot-window-detection-gnome",
+    "command": "dracoPho-window-detection-gnome",
     "timeoutMs": 1000,
     "env": {}
   }
@@ -155,7 +155,7 @@ Detection Enabled**, oppure modificare `~/.config/mark-shot/config.json`:
 ```
 
 - `command`: lo script di rilevamento. Su GNOME / KDE / Hyprland / niri Wayland
-  viene scelto automaticamente lo script `mark-shot-window-detection-*` incluso
+  viene scelto automaticamente lo script `dracoPho-window-detection-*` incluso
   nel bundle e corrispondente alla tua sessione; su X11 e Windows la piattaforma
   viene enumerata in-process e `command` può essere lasciato vuoto. **Un comando
   personalizzato fornito dall'utente (ad esempio un percorso assoluto) viene
@@ -173,7 +173,7 @@ Detection Enabled**, oppure modificare `~/.config/mark-shot/config.json`:
 | Nessuna cornice verde acqua su X11 / Windows | nessuno — l'enumerazione della piattaforma è integrata; assicurati che la sessione di cattura non usi uno strumento puntatore di avvio |
 | La cornice di hover seleziona la finestra sbagliata (sottostante) | dati dell'ordine z mancanti da uno script di rilevamento personalizzato; le finestre senza `zOrder` sono classificate come livello inferiore |
 | La cattura parte lentamente | lo script di rilevamento viene eseguito prima dell'overlay; alza `timeoutMs` solo se il desktop è lento, oppure imposta `enabled:false` per saltarlo |
-| Vedi la diagnostica | esegui `mark-shot --debug --debug-log /tmp/mark-shot.log`; cerca le righe `window-detection` |
+| Vedi la diagnostica | esegui `dracoPho --debug --debug-log /tmp/dracoPho.log`; cerca le righe `window-detection` |
 
 ---
 
@@ -309,22 +309,22 @@ La cattura non interattiva scrive un PNG e stampa un JSON:
 
 ```bash
 # schermo primario
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # directory (nome file con timestamp)
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # regione
-mark-shot --capture-to /tmp/r.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/r.png --region 0,0,1280,720
 
 # un display specifico, con cursore
-mark-shot --capture-to /tmp/w.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/w.png --display DP-1 --include-cursor
 
 # più display contemporaneamente (un PNG ciascuno)
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # elenca gli output
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 Tutte le opzioni headless si escludono a vicenda con un file immagine
@@ -332,7 +332,7 @@ posizionale. Vedi il README per la tabella completa degli argomenti.
 
 Registrazione senza supervisione: puoi avviare una registrazione tramite
 l'istanza in esecuzione senza aprire la finestra di dialogo di registrazione.
-`mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+`dracoPho --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
 --record-duration 30 --record-wait-json` registra quella regione per 30 secondi
 e stampa lo stato JSON finale. Usa `--record-display <id>` per un intero
 display, `--record-format webp` per WebP animato (sono supportati
@@ -351,7 +351,7 @@ a lavorare mentre uno strumento cattura il desktop.
 Per prima cosa elenca le finestre per vedere cosa è disponibile:
 
 ```bash
-mark-shot --list-windows
+dracoPho --list-windows
 ```
 
 Esempio di output (GNOME Wayland):
@@ -389,7 +389,7 @@ superiore sinistro della finestra e viene limitato ai bordi della finestra:
 
 ```bash
 # la striscia superiore di 100px della finestra 0
-mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
+dracoPho --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
 ```
 
 #### 7.1.2 Scelta della destinazione delle immagini
@@ -401,23 +401,23 @@ qualsiasi di selettori `--window` e con una sottoregione componente:
 | :--- | :--- |
 | `inline` (default) | PNG in Base64 incorporati nell'output JSON. **Non viene scritto alcun file e gli appunti non vengono mai toccati.** La scelta più sicura per gli agenti che vogliono solo i pixel. |
 | `file` | I file PNG vengono scritti in `--capture-to <directory>`; richiede tale opzione. |
-| `stage` | I file PNG vengono scritti in una directory di staging temporanea (`$TMPDIR/mark-shot-staging`). Adatto a un flusso di lavoro "tieni per dopo". |
+| `stage` | I file PNG vengono scritti in una directory di staging temporanea (`$TMPDIR/dracoPho-staging`). Adatto a un flusso di lavoro "tieni per dopo". |
 | `clipboard` | Le immagini vengono copiate negli appunti di sistema; con più immagini **vince l'ultima**. Il contenuto sopravvive alla chiusura del CLI (viene avviato un proprietario persistente `wl-copy` / `xclip`). |
 
 Esempi:
 
 ```bash
 # più finestre, salvate in una directory (un PNG per finestra)
-mark-shot --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
+dracoPho --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
 
 # una finestra più un componente di un'altra finestra, messe in staging per dopo
-mark-shot --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
+dracoPho --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
 
 # selezione multipla, restituita come base64 senza toccare file o appunti
-mark-shot --window 0 --window "Terminal" --capture-destination inline
+dracoPho --window 0 --window "Terminal" --capture-destination inline
 
 # copia una finestra negli appunti
-mark-shot --window 0 --capture-destination clipboard
+dracoPho --window 0 --capture-destination clipboard
 ```
 
 **Criteri per gli appunti.** L'editor interattivo mette deliberatamente la tua
@@ -480,22 +480,22 @@ catturare silenziosamente nulla.
 
 ## 8. Tasti di scelta rapida del desktop e tray
 
-La modalità tray (`mark-shot --tray`) registra `Ctrl+Alt+S` per la cattura
+La modalità tray (`dracoPho --tray`) registra `Ctrl+Alt+S` per la cattura
 della regione e fornisce le voci di menu cattura / registrazione / impostazioni
 / esci. Tasti di scelta rapida del desktop:
 
-- **GNOME**: Impostazioni → Tastiera → Scorciatoie → Scorciatoie personalizzate → collega a `mark-shot`.
-- **KDE**: scorciatoia personalizzata collegata a `mark-shot` (più il permesso
+- **GNOME**: Impostazioni → Tastiera → Scorciatoie → Scorciatoie personalizzate → collega a `dracoPho`.
+- **KDE**: scorciatoia personalizzata collegata a `dracoPho` (più il permesso
   KWin ScreenShot2 per una cattura KDE esatta, vedi README).
-- **Hyprland**: `bind = SUPER SHIFT, S, exec, mark-shot` e `bind = , Print, exec, mark-shot`.
-- **niri**: `binds { Mod+Shift+S { spawn "mark-shot"; } }`.
-- **Sway / i3**: `bindsym Mod4+Shift+S exec mark-shot`.
+- **Hyprland**: `bind = SUPER SHIFT, S, exec, dracoPho` e `bind = , Print, exec, dracoPho`.
+- **niri**: `binds { Mod+Shift+S { spawn "dracoPho"; } }`.
+- **Sway / i3**: `bindsym Mod4+Shift+S exec dracoPho`.
 
 ---
 
 ## 9. Configurazione e backend
 
-- File di configurazione: `~/.config/mark-shot/config.json` (Linux), creato al
+- File di configurazione: `~/.config/dracoPho/config.json` (Linux), creato al
   primo avvio.
 - Riferimento completo: [Configurazione](configuration.md).
 - Backend: Wayland (portale PipeWire / grim / screencopy wlroots), X11
@@ -513,12 +513,12 @@ Helper opzionali:
 
 ```bash
 # OCR (RapidOCR / Tesseract)
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 
 # Scansione codici (zxing-cpp)
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 ---
@@ -545,7 +545,7 @@ Usa questa checklist per verificare una build da cima a fondo:
    in tutte e quattro le modalità (inline, file, stage, clipboard); verifica un
    selettore di componente (`--window "0@0,0,400,300"`); conferma che l'elenco
    delle finestre prima e dopo sia invariato (non interferenza con le finestre).
-9. **Tray + tasto di scelta rapida** — `mark-shot --tray`, premi `Ctrl+Alt+S`.
+9. **Tray + tasto di scelta rapida** — `dracoPho --tray`, premi `Ctrl+Alt+S`.
 10. **Specifiche portabili** — il bundle trova le proprie lib/plugin/script Qt.
 
 ---
@@ -554,4 +554,4 @@ Usa questa checklist per verificare una build da cima a fondo:
 
 Segnala i problemi con `gh issue create` usando la [guida all'invio dei
 problemi](../.doc/submit-issue-via-gh.md) inclusa nel bundle. Allega un log
-di debug catturato con `mark-shot --debug --debug-log /tmp/mark-shot.log`.
+di debug catturato con `dracoPho --debug --debug-log /tmp/dracoPho.log`.

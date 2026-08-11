@@ -20,7 +20,7 @@ QString defaultRecordingRootDirectory()
     if (pictures.isEmpty()) {
         pictures = QDir::home().filePath(QStringLiteral("Pictures"));
     }
-    return QDir(pictures).filePath(QStringLiteral("mark-shot"));
+    return QDir(pictures).filePath(QStringLiteral("dracoPho"));
 }
 
 /**

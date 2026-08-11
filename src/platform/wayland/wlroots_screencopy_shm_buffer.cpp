@@ -28,7 +28,7 @@ namespace {
  */
 int createSharedMemoryFile(qsizetype size, QString *error)
 {
-    char name[] = "/tmp/mark-shot-wlroots-shm-XXXXXX";
+    char name[] = "/tmp/dracoPho-wlroots-shm-XXXXXX";
     const int fd = ::mkstemp(name);
     if (fd < 0) {
         if (error) {

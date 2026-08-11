@@ -5,15 +5,15 @@ This template builds a minimal DracoPho translation provider plugin. Replace the
 ## Build
 
 ```bash
-cmake -S . -B build -DMARK_SHOT_PLUGIN_SDK_DIR=/path/to/mark-shot/plugin-sdk
+cmake -S . -B build -DMARK_SHOT_PLUGIN_SDK_DIR=/path/to/dracoPho/plugin-sdk
 cmake --build build --parallel
 ```
 
 ## Install For Local Testing
 
 ```bash
-mkdir -p ~/.local/share/mark-shot/plugins
-cp build/libmark-shot-sample-translate.so ~/.local/share/mark-shot/plugins/
+mkdir -p ~/.local/share/dracoPho/plugins
+cp build/libmark-shot-sample-translate.so ~/.local/share/dracoPho/plugins/
 ```
 
 Set `translation.provider` to `plugin:sample-translate` in DracoPho settings, or choose it from the Plugins settings page.

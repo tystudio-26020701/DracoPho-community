@@ -13,7 +13,7 @@
 **Standalone image editor**
 - `--editor` opens the DracoPho image editor with an empty canvas; "Open
   Image" (button / `Ctrl+O` / drag & drop) imports an image for annotation
-  editing. The `mark-shot-edit.desktop` entry now launches this editor when
+  editing. The `dracoPho-edit.desktop` entry now launches this editor when
   opened without a file.
 
 **Interactive window capture**
@@ -280,7 +280,7 @@
 - `--capture-to <path>` captures the screen without opening the annotation UI and writes a PNG with a compact JSON summary. It reuses all interactive capture backends (QScreen, xdg-desktop-portal, PipeWire, grim, KWin/GNOME helpers, Windows Graphics Capture).
 - `--region x,y,w,h` captures a logical screen region; `--display <name>` selects a monitor and may be repeated to capture several monitors at once; `--include-cursor` draws the cursor; `--output-name` sets the generated file name; `--list-displays` prints outputs as JSON.
 - `--list-windows` enumerates visible windows (index/id/title/class/instance/geometry, optional z-order) on Wayland (GNOME/KDE/Hyprland/niri) and X11; `--window <selector>` (repeatable, `auto/id/title/class/index` matching, with `<selector>@x,y,w,h` for window-internal component sub-regions) captures windows.
-- `--capture-destination inline|file|stage|clipboard`: inline returns base64 without touching the filesystem or clipboard, file writes to `--capture-to`, stage writes to `$TMPDIR/mark-shot-staging`, clipboard enters the system clipboard only when explicitly requested. Defaults and the clipboard permission are configurable in Settings → Storage (passphrase-gated, off by default).
+- `--capture-destination inline|file|stage|clipboard`: inline returns base64 without touching the filesystem or clipboard, file writes to `--capture-to`, stage writes to `$TMPDIR/dracoPho-staging`, clipboard enters the system clipboard only when explicitly requested. Defaults and the clipboard permission are configurable in Settings → Storage (passphrase-gated, off by default).
 - Headless mode opens no window, shows no interactive portal dialog, and exits immediately; the window list is unchanged before and after capture.
 
 **Annotation Text Control**
@@ -407,7 +407,7 @@
 - **Interface Language Setting**: Added a configurable `ui.language` option (`system` / `english` / `chinese`) selectable from the General settings page; supersedes the legacy root-level `language` key.
 - **Desktop-Aware Window Detection**: DracoPho now auto-selects the matching window detection script at runtime (GNOME, KDE Plasma, Hyprland, Niri), falling back to the niri script on other Wayland sessions and native X11 detection on X11. Mismatched configured commands are corrected in memory without touching `config.json`.
 - **GNOME Occluded Window Filtering**: The GNOME Shell scroll helper extension now filters fully occluded windows from detection results.
-- **Prebuilt AUR Package**: Added a `mark-shot-bin` AUR package installing prebuilt pacman packages from GitHub Releases, alongside the source-based `mark-shot` package.
+- **Prebuilt AUR Package**: Added a `dracoPho-bin` AUR package installing prebuilt pacman packages from GitHub Releases, alongside the source-based `dracoPho` package.
 - **GNOME Adwaita Palette Fix**: Overrode the application palette at the `qApp` level so the dark palette fully replaces the libqtk3 base palette under GNOME Adwaita.
 - **AUR Optional Dependencies**: Added `python-rapidocr`, `python-pillow`, and `python-zxing-cpp` as preferred OCR/code-scan optdepends.
 

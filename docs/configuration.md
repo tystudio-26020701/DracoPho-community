@@ -2,7 +2,7 @@
 
 ## Application Config
 
-DracoPho reads application settings from `~/.config/mark-shot/config.json` on Linux and the Qt application config directory on other platforms. If the file does not exist, DracoPho creates a default `config.json` on first startup. Pinned windows use the OCR and translation settings in the same file. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`; the translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
+DracoPho reads application settings from `~/.config/dracoPho/config.json` on Linux and the Qt application config directory on other platforms. If the file does not exist, DracoPho creates a default `config.json` on first startup. Pinned windows use the OCR and translation settings in the same file. The default OCR helper prefers `rapidocr` and can fall back to `tesseract`; the translation helper calls an OpenAI-compatible `/chat/completions` endpoint.
 
 <details>
 <summary>Application Config JSON Example & Options Details (Click to expand)</summary>
@@ -26,7 +26,7 @@ DracoPho reads application settings from `~/.config/mark-shot/config.json` on Li
     "defaultColor": "#FF4D4D"
   },
   "save": {
-    "pathTemplate": "{pictures}/mark-shot/mark-shot-{datetime}.png"
+    "pathTemplate": "{pictures}/dracoPho/dracoPho-{datetime}.png"
   },
   "export": {
     "imageFrame": {
@@ -105,7 +105,7 @@ DracoPho reads application settings from `~/.config/mark-shot/config.json` on Li
   },
   "windowDetection": {
     "enabled": true,
-    "command": "mark-shot-window-detection-niri",
+    "command": "dracoPho-window-detection-niri",
     "env": {
       "MARK_SHOT_NIRI_PANEL_EDGE": "top",
       "MARK_SHOT_NIRI_OFFSET_Y": 0
@@ -144,25 +144,25 @@ DracoPho reads application settings from `~/.config/mark-shot/config.json` on Li
 | `capture.delaySeconds` | Integer | `0` | Delay in seconds before entering capture. A fullscreen countdown overlay is shown (Esc to cancel); `0` captures immediately. Aliases: `capture.captureDelaySeconds`. |
 | `capture.wayland.kde.kwinScreenshot.enabled` | Boolean | `true` | Whether to enable KWin `org.kde.KWin.ScreenShot2` restricted D-Bus interface screenshot capture on KDE Wayland. If disabled, fallback to standard Portal capture. |
 | `debug.enabled` | Boolean | `false` | Enables debug logging on Linux and Windows. CLI `--debug` / `--no-debug` override this value; `DEBUG=1` still enables logging unless `--no-debug` is set. |
-| `debug.logPath` | String | system temp `mark-shot-scroll.log` | Debug log destination. CLI `--debug-log` overrides this value; `MARK_SHOT_DEBUG_LOG` remains supported when no config or CLI path is set. |
+| `debug.logPath` | String | system temp `dracoPho-scroll.log` | Debug log destination. CLI `--debug-log` overrides this value; `MARK_SHOT_DEBUG_LOG` remains supported when no config or CLI path is set. |
 | `annotation.defaultTool` | String | `"move"` | The default annotation tool active after selecting a region. Supported values: `move`, `select`, `pen`, `line`, `highlighter`, `rectangle`, `ellipse`, `arrow`, `text`, `number`, `mosaic`, `magnifier`, `laser`. Overridden by CLI `--default-tool`. |
 | `annotation.fullscreenDefaultTool` | String | `"laser"` | The default tool active in fullscreen annotation mode. Overridden by CLI `--fullscreen-default-tool`. If configured as `move` in fullscreen, the program defaults to `select`. |
 | `annotation.defaultColor` | String | `"#FF4D4D"` | Initial annotation color. Supports `#RRGGBB` (opaque) or `#RRGGBBAA` (with alpha). Overridden by CLI `--default-color`. |
-| `save.pathTemplate` | String | `"{pictures}/mark-shot/mark-shot-{datetime}.png"` | Default PNG path used by Save and as the initial Save As filename. Parent directories are created before saving. Aliases include `save.path`, `save.location`, root `savePathTemplate`, and directory-only `save.directory`. |
-| `save.directoryTemplate` | String | `""` | Directory-only save template. If set, filename automatically uses `mark-shot-{datetime}.png`. Aliases: `save.directory`, `save.dir`, `save.folder`. |
-| `recording.storage.videoDirectory` | String | `"{pictures}/mark-shot/videos"` | Default output directory for MP4 recordings. Aliases include `recording.storage.videos`, `recording.storage.videoDir`, and `recording.output.videoDirectory`. |
-| `recording.storage.gifDirectory` | String | `"{pictures}/mark-shot/gifs"` | Default output directory for GIF and animated WebP recordings. Aliases include `recording.storage.gifs`, `recording.storage.gifDir`, and `recording.output.gifDirectory`. |
+| `save.pathTemplate` | String | `"{pictures}/dracoPho/dracoPho-{datetime}.png"` | Default PNG path used by Save and as the initial Save As filename. Parent directories are created before saving. Aliases include `save.path`, `save.location`, root `savePathTemplate`, and directory-only `save.directory`. |
+| `save.directoryTemplate` | String | `""` | Directory-only save template. If set, filename automatically uses `dracoPho-{datetime}.png`. Aliases: `save.directory`, `save.dir`, `save.folder`. |
+| `recording.storage.videoDirectory` | String | `"{pictures}/dracoPho/videos"` | Default output directory for MP4 recordings. Aliases include `recording.storage.videos`, `recording.storage.videoDir`, and `recording.output.videoDirectory`. |
+| `recording.storage.gifDirectory` | String | `"{pictures}/dracoPho/gifs"` | Default output directory for GIF and animated WebP recordings. Aliases include `recording.storage.gifs`, `recording.storage.gifDir`, and `recording.output.gifDirectory`. |
 | `export.imageFrame` | Boolean/Object | `false` | Optional Mac-style image frame for user-facing exports. Object form supports `enabled`, `padding` (`0`-`256`, default `112`), `cornerRadius` (`0`-`128`, default `18`), `shadowRadius` (`0`-`128`, default `72`), `shadowOffsetY` (`0`-`128`, default `28`), and `shadowOpacity` (`0.0`-`1.0`, default `0.32`). Applies to Save, Save As, Copy, Upload, Open With, and extension-command images; OCR, code scan, pinned windows, quick display capture, and scrolling capture keep the raw image. Set `enabled` to `true` to enable the framed export. |
 | `shortcuts` | Object | - | Customizable keyboard shortcuts. Alias: `hotkeys` (or under `annotation.shortcuts`/`annotation.hotkeys`). See details below. |
-| `windows.tray.enabled` | Boolean | `true` on Windows, `false` elsewhere | Starts tray mode automatically. The key name is kept for compatibility. Use `mark-shot --tray` to start tray mode without changing config, or `mark-shot --capture` to force one-shot capture when autostart is enabled. |
+| `windows.tray.enabled` | Boolean | `true` on Windows, `false` elsewhere | Starts tray mode automatically. The key name is kept for compatibility. Use `dracoPho --tray` to start tray mode without changing config, or `dracoPho --capture` to force one-shot capture when autostart is enabled. |
 | `windows.hotkeys.capture` | String | `"Ctrl+Alt+S"` | Global hotkey for region capture while tray mode is running. Windows uses RegisterHotKey; supported Linux desktops use the desktop portal. Aliases include `hotkey`, `captureHotkey`, and `screenshot`. |
 | `windows.hotkeys.fullscreen` | String | `""` | Optional global hotkey for fullscreen annotation capture while tray mode is running. Alias: `fullscreenHotkey`. The generated default config only writes the region capture hotkey. |
 | `colorPicker.history` | Array | `[]` | Recent colors picked by the startup Color Picker tool. Stored as `#RRGGBBAA` strings, capped at 7 entries. Updated automatically whenever a color is confirmed in the color panel. |
-| `codeScan.command` | String | `""` | Custom QR/barcode scanner command. Supports `{image}`, `{imagePath}`, and `{imageUrl}` placeholders; if none is present, DracoPho appends the temporary PNG path. The command must print the same JSON shape as `mark-shot-code-scan`. Aliases: `codeScanner.command`, `barcodeScanner.command`, `barcode.command`. |
+| `codeScan.command` | String | `""` | Custom QR/barcode scanner command. Supports `{image}`, `{imagePath}`, and `{imageUrl}` placeholders; if none is present, DracoPho appends the temporary PNG path. The command must print the same JSON shape as `dracoPho-code-scan`. Aliases: `codeScanner.command`, `barcodeScanner.command`, `barcode.command`. |
 | `codeScan.timeoutMs` | Number | `15000` | Timeout for the code scanner command. Environment variable `MARK_SHOT_CODE_SCAN_TIMEOUT_MS` can override it. |
 | `upload.command` | String | `""` | Custom image-host upload command. Supports `{image}`, `{imagePath}`, and `{imageUrl}` placeholders; if none is present, DracoPho appends the temporary PNG path. The command must print a URL (JSON `{"url": "..."}` or plain text starting with `http`). Aliases: `imageUpload.command`, `uploader.command`, `imageHost.command`. Environment variable `MARK_SHOT_UPLOAD_COMMAND` can override it. |
 | `upload.timeoutMs` | Number | `60000` | Timeout for the upload command. Environment variable `MARK_SHOT_UPLOAD_TIMEOUT_MS` can override it. |
-| `upload.env` | Object | `{}` | Environment variables passed to the upload helper (built-in `mark-shot-upload` or custom `command`). Merges over the system environment. Aliases: `environment`, `envVars`, `variables`. See below for supported keys. |
+| `upload.env` | Object | `{}` | Environment variables passed to the upload helper (built-in `dracoPho-upload` or custom `command`). Merges over the system environment. Aliases: `environment`, `envVars`, `variables`. See below for supported keys. |
 | `pinnedWindow.autoOcr` | Boolean | `false` | Controls whether a pinned sticker window starts OCR text recognition in the background immediately on creation. If disabled, OCR runs on demand when Copy Image Text or Translate is chosen. Alias: `pinned`, `pin`. |
 | `pinnedWindow.alwaysOnTop` | Boolean | `true` | Controls whether pinned sticker windows stay above normal windows. The pinned-window context menu can toggle this value and writes it back to `config.json`. Aliases: `stayOnTop`, `topmost`, `above`. On GNOME Wayland, the bundled helper extension is used when available. |
 | `pinnedWindow.border` | Boolean/Object | `true` | Outer border configuration for pinned sticker windows. Can be a boolean, or an object containing `enabled` (bool), `color` (name/hex/RGBA object), and `width` (float, `1.0` to `12.0`). Also flat configs like `borderEnabled`, `borderColor`, and `borderWidth` are supported. |
@@ -182,7 +182,7 @@ DracoPho reads application settings from `~/.config/mark-shot/config.json` on Li
 | `floatingBall.idleOpacity` | Number | `0.35` | Target opacity of the floating ball while idle (between `0` and `1`, clamped to a minimum of `0.05` so it stays clickable). The ball returns to full opacity on hover. |
 
 ##### Save Path Placeholders
-Path values: `{home}` (user home), `{pictures}` (pictures directory), `{desktop}` (desktop directory), `{downloads}` (downloads directory), `{config}` (config directory), `{data}` (data directory); time values `{timestamp}`, `{timestamp.ms}`, `{yyyy}`, `{yy}`, `{MM}`, `{M}`, `{dd}`, `{d}`, `{HH}`, `{hh}`, `{mm}`, `{ss}`, `{zzz}`, `{date}`, `{time}`, `{datetime}`, and `{datetime:FORMAT}` such as `{datetime:yyyy-MM-dd_HH-mm-ss-zzz}`; geometry values `{selection.x}`, `{selection.y}`, `{selection.width}`, `{selection.height}`, `{selection.right}`, `{selection.bottom}`, `{selection.geometry}`, and the same `{source.*}` fields for the capture source; image/output values `{image.width}`, `{image.height}`, `{name}`, and `{ext}`. Relative expanded paths are resolved below the default pictures `mark-shot` directory, missing `.png` suffixes are appended, and unknown placeholders make the template fall back to the default path.
+Path values: `{home}` (user home), `{pictures}` (pictures directory), `{desktop}` (desktop directory), `{downloads}` (downloads directory), `{config}` (config directory), `{data}` (data directory); time values `{timestamp}`, `{timestamp.ms}`, `{yyyy}`, `{yy}`, `{MM}`, `{M}`, `{dd}`, `{d}`, `{HH}`, `{hh}`, `{mm}`, `{ss}`, `{zzz}`, `{date}`, `{time}`, `{datetime}`, and `{datetime:FORMAT}` such as `{datetime:yyyy-MM-dd_HH-mm-ss-zzz}`; geometry values `{selection.x}`, `{selection.y}`, `{selection.width}`, `{selection.height}`, `{selection.right}`, `{selection.bottom}`, `{selection.geometry}`, and the same `{source.*}` fields for the capture source; image/output values `{image.width}`, `{image.height}`, `{name}`, and `{ext}`. Relative expanded paths are resolved below the default pictures `dracoPho` directory, missing `.png` suffixes are appended, and unknown placeholders make the template fall back to the default path.
 
 ##### Keyboard Shortcut Config Details
 
@@ -199,7 +199,7 @@ The `shortcuts` node supports the following sub-nodes:
 
 DracoPho remembers the most recently used annotation tool defaults and restores them on the next launch, so the toolbar reflects the saved styles from the very first paint.
 
-State is written to a dedicated file at `~/.config/mark-shot/annotation-state.json` (Linux) or the Qt application config directory on other platforms. The file is independent from `config.json`: it only stores transient tool defaults and can be deleted at any time to reset the editor to its built-in defaults.
+State is written to a dedicated file at `~/.config/dracoPho/annotation-state.json` (Linux) or the Qt application config directory on other platforms. The file is independent from `config.json`: it only stores transient tool defaults and can be deleted at any time to reset the editor to its built-in defaults.
 
 The persisted snapshot covers:
 
@@ -214,7 +214,7 @@ Writes go through `QSaveFile` for atomic commits and are triggered immediately a
 
 ### Image Upload Configuration
 
-The `upload` section configures the sidebar upload action. When `upload.command` is empty, DracoPho uses the bundled `mark-shot-upload` helper, which reads its behavior entirely from environment variables in `upload.env`. This keeps the config clean—no long shell commands needed.
+The `upload` section configures the sidebar upload action. When `upload.command` is empty, DracoPho uses the bundled `dracoPho-upload` helper, which reads its behavior entirely from environment variables in `upload.env`. This keeps the config clean—no long shell commands needed.
 
 <details>
 <summary><b>Supported <code>upload.env</code> keys</b> (consumed by the bundled helper):</summary>
@@ -316,10 +316,10 @@ To ensure precise window boundary detection across different Wayland compositors
 DracoPho also auto-selects the matching detection script at runtime by probing the current desktop environment (`XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP`, etc.). Supported environments are GNOME, KDE Plasma, Hyprland, and Niri; other Wayland sessions fall back to the niri script, and X11 sessions use the built-in native X11 detector (empty command). If the configured `windowDetection.command` does not match the current environment, DracoPho corrects it in memory without modifying your `config.json`, so manual configuration is optional.
 
 The project bundles default window detection scripts for the following window managers:
-- **Niri**: `mark-shot-window-detection-niri`
-- **Hyprland**: `mark-shot-window-detection-hyprland`
-- **GNOME Wayland**: `mark-shot-window-detection-gnome` (requires the bundled GNOME Shell helper extension)
-- **KDE Plasma / KWin**: `mark-shot-window-detection-kde`
+- **Niri**: `dracoPho-window-detection-niri`
+- **Hyprland**: `dracoPho-window-detection-hyprland`
+- **GNOME Wayland**: `dracoPho-window-detection-gnome` (requires the bundled GNOME Shell helper extension)
+- **KDE Plasma / KWin**: `dracoPho-window-detection-kde`
 
 <details>
 <summary><b>Expand/Collapse Window Detection Script Configuration & Contribution Guide</b></summary>
@@ -331,7 +331,7 @@ We highly welcome and encourage community members to contribute adapter scripts 
 - **Hyprland**: Use `hyprctl clients -j` and parse the output JSON.
 - **Sway**: Use `swaymsg -t get_tree` to fetch the layout tree.
 - **KDE / KWin**: Implement a simple KWin Script, or query KWin's D-Bus interfaces.
-- **GNOME**: Use the bundled `mark-shot-window-detection-gnome` script together with the `mark-shot-scroll-helper@snemc.org` GNOME Shell extension, which exports Mutter window geometry over D-Bus.
+- **GNOME**: Use the bundled `dracoPho-window-detection-gnome` script together with the `mark-shot-scroll-helper@snemc.org` GNOME Shell extension, which exports Mutter window geometry over D-Bus.
 
 If the script fails to execute or times out (default: `1000ms`), DracoPho will proceed with screenshot capture normally and fall back to its internal X11-based window detector where applicable.
 
@@ -339,18 +339,18 @@ If the script fails to execute or times out (default: `1000ms`), DracoPho will p
 1. Copy the script corresponding to your compositor from the `scripts/` directory in the repository to a folder in your system `$PATH` (e.g. `~/.local/bin/` or `/usr/local/bin/`).
 2. Make the script executable:
    ```bash
-   chmod +x ~/.local/bin/mark-shot-window-detection-niri
+   chmod +x ~/.local/bin/dracoPho-window-detection-niri
    # or
-   chmod +x ~/.local/bin/mark-shot-window-detection-hyprland
+   chmod +x ~/.local/bin/dracoPho-window-detection-hyprland
    # or
-   chmod +x ~/.local/bin/mark-shot-window-detection-gnome
+   chmod +x ~/.local/bin/dracoPho-window-detection-gnome
    # or
-   chmod +x ~/.local/bin/mark-shot-window-detection-kde
+   chmod +x ~/.local/bin/dracoPho-window-detection-kde
    ```
-3. Update your `~/.config/mark-shot/config.json` configuration file, specifying the script name or its absolute path in the `windowDetection.command` field:
+3. Update your `~/.config/dracoPho/config.json` configuration file, specifying the script name or its absolute path in the `windowDetection.command` field:
    ```json
    "windowDetection": {
-     "command": "mark-shot-window-detection-gnome"
+     "command": "dracoPho-window-detection-gnome"
    }
    ```
 
@@ -360,7 +360,7 @@ When invoked, DracoPho passes the following environment variables to provide con
 
 | Variable Name | Type | Description |
 | :--- | :--- | :--- |
-| `MARK_SHOT_CONFIG` | String | Path to the config file (typically `~/.config/mark-shot/config.json`) |
+| `MARK_SHOT_CONFIG` | String | Path to the config file (typically `~/.config/dracoPho/config.json`) |
 | `MARK_SHOT_CAPTURE_OUTPUT` | String | Name of the output display to capture (e.g., `eDP-1`, `DP-2`) |
 | `MARK_SHOT_CAPTURE_ALL_OUTPUTS` | Integer | `1` to capture all outputs; `0` to capture only the active screen |
 | `MARK_SHOT_CAPTURE_X` | Integer | The logical start X coordinate of the capture area in the compositor |
@@ -440,6 +440,6 @@ Each element in the array (or the root object itself) can take one of the follow
 
 </details>
 
-When installing manually, install `mark-shot`, `mark-shot-ocr`, `mark-shot-code-scan`, `mark-shot-translate`, and `mark-shot-upload` together. Otherwise OCR, code scanning, translation, or image upload cannot call the backend helpers.
+When installing manually, install `dracoPho`, `dracoPho-ocr`, `dracoPho-code-scan`, `dracoPho-translate`, and `dracoPho-upload` together. Otherwise OCR, code scanning, translation, or image upload cannot call the backend helpers.
 
 ---

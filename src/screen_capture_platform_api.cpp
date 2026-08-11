@@ -194,7 +194,7 @@ CaptureResult captureWithGnomeScrollHelper(const CaptureRequest &request)
     const QString tempDir = QFile::exists(QStringLiteral("/dev/shm"))
         ? QStringLiteral("/dev/shm")
         : QDir::tempPath();
-    const QString tempPath = QStringLiteral("%1/mark-shot-scroll-frame-%2.png")
+    const QString tempPath = QStringLiteral("%1/dracoPho-scroll-frame-%2.png")
         .arg(tempDir, QUuid::createUuid().toString(QUuid::Id128));
 
     QDBusMessage message = QDBusMessage::createMethodCall(

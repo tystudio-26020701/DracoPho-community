@@ -207,7 +207,7 @@ void OcrResultWindow::startTranslation()
         QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation).isEmpty()
                  ? QDir::tempPath()
                  : QStandardPaths::writableLocation(QStandardPaths::TempLocation))
-            .filePath(QStringLiteral("mark-shot-ocr-result-translate-XXXXXX.json")));
+            .filePath(QStringLiteral("dracoPho-ocr-result-translate-XXXXXX.json")));
     inputFile.setAutoRemove(false);
     if (!inputFile.open()) {
         showToast(MS_TR("Translation failed"));
@@ -239,7 +239,7 @@ void OcrResultWindow::startTranslation()
         }
         request.commandLine = commandLine;
     } else {
-        request.helperProgram = helperProgramPath(QStringLiteral("mark-shot-translate"));
+        request.helperProgram = helperProgramPath(QStringLiteral("dracoPho-translate"));
     }
 
     m_translateButton->setEnabled(false);

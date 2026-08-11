@@ -34,7 +34,7 @@ void PinnedImageWindow::startTranslation(bool activateWhenFinished, bool showBus
     QTemporaryFile inputFile(QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation).isEmpty()
                                  ? QDir::tempPath()
                                  : QStandardPaths::writableLocation(QStandardPaths::TempLocation))
-                                 .filePath(QStringLiteral("mark-shot-translate-XXXXXX.json")));
+                                 .filePath(QStringLiteral("dracoPho-translate-XXXXXX.json")));
     inputFile.setAutoRemove(false);
     if (!inputFile.open()) {
         m_activateTranslationWhenFinished = true;
@@ -109,7 +109,7 @@ QJsonArray PinnedImageWindow::rectToJson(QRectF rect) const
 
 QString PinnedImageWindow::defaultTranslationHelperProgram() const
 {
-    return helperProgramPath(QStringLiteral("mark-shot-translate"));
+    return helperProgramPath(QStringLiteral("dracoPho-translate"));
 }
 
 void PinnedImageWindow::cancelTranslation()

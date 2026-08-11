@@ -225,7 +225,7 @@ void ScrollSessionWindow::updateGnomeShellPreview(bool force)
             const QString tempDir = QFile::exists(QStringLiteral("/dev/shm"))
                 ? QStringLiteral("/dev/shm")
                 : QDir::tempPath();
-            previewPath = QStringLiteral("%1/mark-shot-gnome-preview-%2-%3.png")
+            previewPath = QStringLiteral("%1/dracoPho-gnome-preview-%2-%3.png")
                 .arg(tempDir, m_gnomePreviewSessionId)
                 .arg(++m_gnomePreviewSerial);
             if (preview.save(previewPath, "PNG")) {

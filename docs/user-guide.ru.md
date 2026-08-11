@@ -18,7 +18,7 @@
 Начните сеанс захвата области:
 
 ```bash
-mark-shot --capture
+dracoPho --capture
 ```
 
 Нажмите горячую клавишу рабочего стола (см. § 8) или запустите из терминала.
@@ -37,7 +37,7 @@ portable/mark-shot-community/bin/run-mark-shot.sh
 ```
 
 Лаунчер добавляет свой каталог `bin/` в `PATH` — это требуется для
-вспомогательных скриптов определения окон (`mark-shot-window-detection-*`) и
+вспомогательных скриптов определения окон (`dracoPho-window-detection-*`) и
 помощников OCR / загрузки.
 
 ### 1.3 Поведение при запуске (плавающий шар / трей / окно настроек / снимок экрана)
@@ -111,7 +111,7 @@ GNOME завершается с ошибкой, и выбор при навед�
 
 ### 2.2 Как это использовать
 
-1. Запустите захват (`mark-shot` или горячая клавиша рабочего стола).
+1. Запустите захват (`dracoPho` или горячая клавиша рабочего стола).
 2. Не нажимая кнопок мыши, наведите курсор на окно. Бирюзовая рамка
    обводит окно, которое будет выбрано.
 3. **Щёлкните один раз** (нажмите и отпустите, не сдвинувшись более чем на
@@ -137,13 +137,13 @@ GNOME завершается с ошибкой, и выбор при навед�
 
 Функция включена по умолчанию (`windowDetection.enabled = true`). Переключите её
 в **Настройки → Дополнительно → Window Detection Enabled**, или отредактируйте
-`~/.config/mark-shot/config.json`:
+`~/.config/dracoPho/config.json`:
 
 ```json
 {
   "windowDetection": {
     "enabled": true,
-    "command": "mark-shot-window-detection-gnome",
+    "command": "dracoPho-window-detection-gnome",
     "timeoutMs": 1000,
     "env": {}
   }
@@ -151,7 +151,7 @@ GNOME завершается с ошибкой, и выбор при навед�
 ```
 
 - `command`: скрипт определения. На GNOME / KDE / Hyprland / niri Wayland
-  соответствующий вашему сеансу встроенный скрипт `mark-shot-window-detection-*`
+  соответствующий вашему сеансу встроенный скрипт `dracoPho-window-detection-*`
   выбирается автоматически; на X11 и Windows платформа перечисляется
   внутрипроцессно, и `command` можно оставить пустым. **Пользовательская
   команда (например, абсолютный путь) всегда учитывается.**
@@ -167,7 +167,7 @@ GNOME завершается с ошибкой, и выбор при навед�
 | Нет бирюзовой рамки на X11 / Windows | ничего — перечисление платформы встроено; убедитесь, что сеанс захвата не использует стартовый инструмент указателя |
 | Рамка наведения выбирает не то (нижнее) окно | отсутствуют данные z-порядка в пользовательском скрипте определения; окна без `zOrder` ранжируются как нижний слой |
 | Захват запускается медленно | скрипт определения выполняется до оверлея; поднимайте `timeoutMs` только если рабочий стол медленный, или установите `enabled:false`, чтобы пропустить его |
-| Посмотреть диагностику | запустите `mark-shot --debug --debug-log /tmp/mark-shot.log`; ищите строки `window-detection` |
+| Посмотреть диагностику | запустите `dracoPho --debug --debug-log /tmp/dracoPho.log`; ищите строки `window-detection` |
 
 ---
 
@@ -299,22 +299,22 @@ wlroots/Wayland; на KDE, X11 и других стеках это тестов�
 
 ```bash
 # основной экран
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # каталог (имя файла с меткой времени)
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # область
-mark-shot --capture-to /tmp/r.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/r.png --region 0,0,1280,720
 
 # конкретный дисплей, с курсором
-mark-shot --capture-to /tmp/w.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/w.png --display DP-1 --include-cursor
 
 # несколько дисплеев сразу (по одному PNG на каждый)
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # список выходов
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 Все безоконные опции взаимоисключающие с позиционным файлом изображения.
@@ -322,7 +322,7 @@ mark-shot --list-displays
 
 Автоматическая запись без участия пользователя: вы можете запустить запись
 через уже работающий экземпляр, не открывая диалог записи.
-`mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+`dracoPho --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
 --record-duration 30 --record-wait-json` записывает эту область в течение
 30 секунд и выводит итоговый статус в JSON. Используйте
 `--record-display <id>` для записи всего дисплея, `--record-format webp` для
@@ -342,7 +342,7 @@ DracoPho может захватывать **конкретные окна — �
 Сначала выведите список окон, чтобы увидеть, что доступно:
 
 ```bash
-mark-shot --list-windows
+dracoPho --list-windows
 ```
 
 Пример вывода (GNOME Wayland):
@@ -380,7 +380,7 @@ mark-shot --list-windows
 
 ```bash
 # верхняя полоса высотой 100px окна 0
-mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
+dracoPho --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
 ```
 
 #### 7.1.2 Выбор места назначения изображений
@@ -392,23 +392,23 @@ mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp
 | :--- | :--- |
 | `inline` (по умолчанию) | PNG в Base64, встроенные в JSON-вывод. **Файлы не записываются, буфер обмена не затрагивается.** Самый безопасный выбор для агентов, которым нужны только пиксели. |
 | `file` | PNG-файлы записываются в `--capture-to <каталог>`; требует указания этой опции. |
-| `stage` | PNG-файлы записываются во временный каталог подготовки (`$TMPDIR/mark-shot-staging`). Подходит для рабочего процесса «оставить на потом». |
+| `stage` | PNG-файлы записываются во временный каталог подготовки (`$TMPDIR/dracoPho-staging`). Подходит для рабочего процесса «оставить на потом». |
 | `clipboard` | Изображения копируются в системный буфер обмена; при нескольких изображениях побеждает **последнее**. Содержимое переживает завершение CLI (запускается постоянный владелец `wl-copy` / `xclip`). |
 
 Примеры:
 
 ```bash
 # несколько окон, сохранённые в каталог (по одному PNG на окно)
-mark-shot --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
+dracoPho --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
 
 # окно плюс компонент другого окна, отложенные на потом
-mark-shot --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
+dracoPho --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
 
 # мультивыбор, возврат в base64 без обращения к файлам или буферу обмена
-mark-shot --window 0 --window "Terminal" --capture-destination inline
+dracoPho --window 0 --window "Terminal" --capture-destination inline
 
 # скопировать окно в буфер обмена
-mark-shot --window 0 --capture-destination clipboard
+dracoPho --window 0 --capture-destination clipboard
 ```
 
 **Политика буфера обмена.** Интерактивный редактор намеренно помещает ваш выбор
@@ -464,23 +464,23 @@ MCP-сервер) следуют противоположному правилу
 
 ## 8. Горячие клавиши рабочего стола и трей
 
-Режим трея (`mark-shot --tray`) регистрирует `Ctrl+Alt+S` для захвата области и
+Режим трея (`dracoPho --tray`) регистрирует `Ctrl+Alt+S` для захвата области и
 предоставляет пункты меню захвата / записи / настроек / выхода. Горячие клавиши
 рабочего стола:
 
 - **GNOME**: Настройки → Клавиатура → Сочетания клавиш → Пользовательские
-  сочетания → привязать к `mark-shot`.
-- **KDE**: пользовательское сочетание, привязанное к `mark-shot` (плюс
+  сочетания → привязать к `dracoPho`.
+- **KDE**: пользовательское сочетание, привязанное к `dracoPho` (плюс
   разрешение KWin ScreenShot2 для точного захвата в KDE, см. README).
-- **Hyprland**: `bind = SUPER SHIFT, S, exec, mark-shot` и `bind = , Print, exec, mark-shot`.
-- **niri**: `binds { Mod+Shift+S { spawn "mark-shot"; } }`.
-- **Sway / i3**: `bindsym Mod4+Shift+S exec mark-shot`.
+- **Hyprland**: `bind = SUPER SHIFT, S, exec, dracoPho` и `bind = , Print, exec, dracoPho`.
+- **niri**: `binds { Mod+Shift+S { spawn "dracoPho"; } }`.
+- **Sway / i3**: `bindsym Mod4+Shift+S exec dracoPho`.
 
 ---
 
 ## 9. Конфигурация и бэкенды
 
-- Файл конфигурации: `~/.config/mark-shot/config.json` (Linux), создаётся при
+- Файл конфигурации: `~/.config/dracoPho/config.json` (Linux), создаётся при
   первом запуске.
 - Полный справочник: [Конфигурация](configuration.md).
 - Бэкенды: Wayland (портал PipeWire / grim / screencopy wlroots), X11
@@ -497,12 +497,12 @@ MCP-сервер) следуют противоположному правилу
 
 ```bash
 # OCR (RapidOCR / Tesseract)
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 
 # Сканирование кода (zxing-cpp)
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 ---
@@ -533,7 +533,7 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
    clipboard); проверьте селектор компонента (`--window "0@0,0,400,300"`);
    убедитесь, что список окон до и после не изменился (отсутствие вмешательства
    в окна).
-9. **Трей + горячая клавиша** — `mark-shot --tray`, нажмите `Ctrl+Alt+S`.
+9. **Трей + горячая клавиша** — `dracoPho --tray`, нажмите `Ctrl+Alt+S`.
 10. **Особенности переносимого комплекта** — комплект находит собственные
     Qt-библиотеки / плагины / скрипты.
 
@@ -544,4 +544,4 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 Сообщайте об ошибках с помощью `gh issue create`, используя встроенное
 [руководство по отправке ошибок](../.doc/submit-issue-via-gh.md). Приложите
 журнал отладки, записанный с помощью
-`mark-shot --debug --debug-log /tmp/mark-shot.log`.
+`dracoPho --debug --debug-log /tmp/dracoPho.log`.

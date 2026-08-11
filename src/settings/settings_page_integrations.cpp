@@ -41,7 +41,7 @@ SettingsPageIntegrations::SettingsPageIntegrations(QWidget *parent)
                                           MS_TR("Configure the external helper used to recognize QR codes and barcodes."),
                                           this);
     QFormLayout *codeForm = settingsCardForm(codeCard);
-    m_codeScanCommand = addTextRow(codeForm, MS_TR("Scan Command"), QStringLiteral("mark-shot-code-scan {image}"));
+    m_codeScanCommand = addTextRow(codeForm, MS_TR("Scan Command"), QStringLiteral("dracoPho-code-scan {image}"));
     m_codeScanTimeoutMs = addSpinRow(codeForm, MS_TR("Scan Timeout"), 1000, 300000, QStringLiteral(" ms"));
     addCardRestoreButton(codeCard, [this] {
         m_codeScanCommand->setText(m_saved.integrations.codeScanCommand);
@@ -53,7 +53,7 @@ SettingsPageIntegrations::SettingsPageIntegrations(QWidget *parent)
                                             MS_TR("Configure the external helper used to upload screenshots."),
                                             this);
     QFormLayout *uploadForm = settingsCardForm(uploadCard);
-    m_uploadCommand = addTextRow(uploadForm, MS_TR("Upload Command"), QStringLiteral("mark-shot-upload {image}"));
+    m_uploadCommand = addTextRow(uploadForm, MS_TR("Upload Command"), QStringLiteral("dracoPho-upload {image}"));
     m_uploadTimeoutMs = addSpinRow(uploadForm, MS_TR("Upload Timeout"), 1000, 300000, QStringLiteral(" ms"));
     m_uploadEnv = addPlainTextRow(uploadForm,
                                   MS_TR("Upload Environment"),

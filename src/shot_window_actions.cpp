@@ -281,7 +281,7 @@ void ShotWindow::ocrCopySelection()
         }
         request.commandLine = commandLine;
     } else {
-        request.helperProgram = helperProgramPath(QStringLiteral("mark-shot-ocr"));
+        request.helperProgram = helperProgramPath(QStringLiteral("dracoPho-ocr"));
     }
 
     // 2. 同步等待任务结果，行为与旧版阻塞式调用一致

@@ -1,8 +1,8 @@
 {
-    "name": "mark-shot-ocr-rapid",
+    "name": "dracoPho-ocr-rapid",
     "version": "1.0.0",
     "description": "PP-OCR text recognition provider backed by ONNX Runtime",
-    "vendor": "mark-shot",
+    "vendor": "dracoPho",
     "markShotMinVersion": "0.1.38",
     "license": "MIT",
     "capabilities": [

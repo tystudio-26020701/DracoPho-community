@@ -13,7 +13,7 @@
 영역 캡처 세션 시작:
 
 ```bash
-mark-shot --capture
+dracoPho --capture
 ```
 
 데스크톱 단축키(§ 8 참조)를 누르거나 터미널에서 실행하세요. 활성화된 디스플레이에 정지된 전체 화면 오버레이가 열립니다. 마우스를 움직여 선택 사각형을 그리고, 놓으면 주석 편집기로 들어갑니다.
@@ -26,7 +26,7 @@ mark-shot --capture
 portable/mark-shot-community/bin/run-mark-shot.sh
 ```
 
-런처는 자신의 `bin/` 디렉터리를 `PATH` 앞에 추가합니다. 이는 창 감지 헬퍼 스크립트(`mark-shot-window-detection-*`)와 OCR / 업로드 헬퍼에 필요합니다.
+런처는 자신의 `bin/` 디렉터리를 `PATH` 앞에 추가합니다. 이는 창 감지 헬퍼 스크립트(`dracoPho-window-detection-*`)와 OCR / 업로드 헬퍼에 필요합니다.
 
 ### 1.3 시작 동작 (플로팅 볼 / 트레이 / 설정 창 / 직접 캡처)
 
@@ -87,7 +87,7 @@ gdbus call --session \
 
 ### 2.2 사용 방법
 
-1. 캡처를 트리거합니다(`mark-shot` 또는 데스크톱 단축키).
+1. 캡처를 트리거합니다(`dracoPho` 또는 데스크톱 단축키).
 2. 어떤 마우스 버튼도 누르지 않은 채 커서를 창 위로 움직입니다. 선택될 창이 청록색 테두리로 윤곽이 그려집니다.
 3. **한 번 클릭**(몇 픽셀 이상 움직이지 않고 누르고 놓기)하여 해당 창을 선택합니다. 창이 겹쳐 있으면 커서 위치에서 가장 위에 있는 창이 선택됩니다(z-order 인식).
 4. 놓으면 해당 창이 정확히 프레임된 주석 편집기로 들어갑니다.
@@ -101,20 +101,20 @@ gdbus call --session \
 
 ### 2.4 활성화 / 비활성화
 
-이 기능은 기본적으로 활성화되어 있습니다(`windowDetection.enabled = true`). **설정 → 고급 → 창 감지 활성화(Window Detection Enabled)** 에서 전환하거나 `~/.config/mark-shot/config.json`을 편집하세요:
+이 기능은 기본적으로 활성화되어 있습니다(`windowDetection.enabled = true`). **설정 → 고급 → 창 감지 활성화(Window Detection Enabled)** 에서 전환하거나 `~/.config/dracoPho/config.json`을 편집하세요:
 
 ```json
 {
   "windowDetection": {
     "enabled": true,
-    "command": "mark-shot-window-detection-gnome",
+    "command": "dracoPho-window-detection-gnome",
     "timeoutMs": 1000,
     "env": {}
   }
 }
 ```
 
-- `command`: 감지 스크립트. GNOME / KDE / Hyprland / niri Wayland에서는 세션과 일치하는 번들 `mark-shot-window-detection-*` 스크립트가 자동으로 선택됩니다. X11과 Windows에서는 플랫폼이 프로세스 내에서 열거되므로 `command`를 비워 두어도 됩니다. **사용자가 제공한 사용자 지정 명령(예: 절대 경로)은 항상 존중됩니다.**
+- `command`: 감지 스크립트. GNOME / KDE / Hyprland / niri Wayland에서는 세션과 일치하는 번들 `dracoPho-window-detection-*` 스크립트가 자동으로 선택됩니다. X11과 Windows에서는 플랫폼이 프로세스 내에서 열거되므로 `command`를 비워 두어도 됩니다. **사용자가 제공한 사용자 지정 명령(예: 절대 경로)은 항상 존중됩니다.**
 - `timeoutMs`: 스크립트에 대한 최대 대기 시간(100–30000ms, 기본값 1000).
 - `env`: 스크립트에 전달되는 추가 환경 변수. 컴포지터별 조정(오프셋)은 스크립트 헤더에 문서화되어 있습니다.
 
@@ -126,7 +126,7 @@ gdbus call --session \
 | X11 / Windows에서 청록색 프레임 없음 | 해당 없음 — 플랫폼 열거가 내장되어 있습니다. 캡처 세션이 시작 포인터 도구를 사용하지 않는지 확인하세요 |
 | 호버 프레임이 잘못된(아래쪽) 창을 선택함 | 사용자 지정 감지 스크립트에서 z-order 데이터가 누락됨. `zOrder`가 없는 창은 최하위 레이어로 처리됩니다 |
 | 캡처가 느리게 시작됨 | 감지 스크립트가 오버레이 전에 실행됩니다. 데스크톱이 느린 경우에만 `timeoutMs`를 올리거나, 건너뛰려면 `enabled:false`로 설정하세요 |
-| 진단 내용 확인 | `mark-shot --debug --debug-log /tmp/mark-shot.log` 실행 — `window-detection` 줄을 확인하세요 |
+| 진단 내용 확인 | `dracoPho --debug --debug-log /tmp/dracoPho.log` 실행 — `window-detection` 줄을 확인하세요 |
 
 ---
 
@@ -233,28 +233,28 @@ gdbus call --session \
 
 ```bash
 # primary screen
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # directory (timestamped file name)
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # region
-mark-shot --capture-to /tmp/r.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/r.png --region 0,0,1280,720
 
 # a specific display, with cursor
-mark-shot --capture-to /tmp/w.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/w.png --display DP-1 --include-cursor
 
 # several displays at once (one PNG each)
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # list outputs
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 모든 헤드리스 옵션은 위치 인수(포지셔널) 이미지 파일과 상호 배타적입니다. 전체 인수 표는 README를 참조하세요.
 
 무인 녹화: 녹화 대화 상자를 열지 않고 실행 중인 인스턴스를 통해 녹화를 시작할 수
-있습니다. `mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+있습니다. `dracoPho --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
 --record-duration 30 --record-wait-json` 명령은 해당 영역을 30초 동안 녹화하고
 최종 JSON 상태를 출력합니다. `--record-display <id>`로 전체 디스플레이를 녹화하고,
 `--record-format webp`로 애니메이션 WebP를 생성하며(GIF/MP4/WebP 지원),
@@ -268,7 +268,7 @@ DracoPho은 **특정 창 — 또는 창 내부의 구성 요소(하위 영역) �
 먼저 창 목록을 확인하여 무엇을 사용할 수 있는지 알아보세요:
 
 ```bash
-mark-shot --list-windows
+dracoPho --list-windows
 ```
 
 출력 예시(GNOME Wayland):
@@ -299,7 +299,7 @@ mark-shot --list-windows
 
 ```bash
 # the top 100px strip of window 0
-mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
+dracoPho --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
 ```
 
 #### 7.1.2 이미지 저장 위치 선택
@@ -310,23 +310,23 @@ mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp
 | :--- | :--- |
 | `inline`(기본값) | JSON 출력에 포함된 Base64 PNG. **파일이 기록되지 않고 클립보드도 건드리지 않습니다.** 픽셀만 필요한 에이전트에게 가장 안전한 선택입니다. |
 | `file` | `--capture-to <directory>`에 PNG 파일 기록. 해당 옵션이 필요합니다. |
-| `stage` | 임시 스테이징 디렉터리(`$TMPDIR/mark-shot-staging`)에 PNG 파일 기록. "나중에 보관" 워크플로에 좋습니다. |
+| `stage` | 임시 스테이징 디렉터리(`$TMPDIR/dracoPho-staging`)에 PNG 파일 기록. "나중에 보관" 워크플로에 좋습니다. |
 | `clipboard` | 이미지를 시스템 클립보드에 복사. 여러 이미지일 경우 **마지막 것이 승리**합니다. 콘텐츠는 CLI 종료 후에도 유지됩니다(지속형 `wl-copy` / `xclip` 소유자가 생성됨). |
 
 예시:
 
 ```bash
 # several windows, saved to a directory (one PNG per window)
-mark-shot --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
+dracoPho --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
 
 # a window plus a component of another window, staged for later
-mark-shot --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
+dracoPho --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
 
 # multi-select, returned as base64 without touching files or clipboard
-mark-shot --window 0 --window "Terminal" --capture-destination inline
+dracoPho --window 0 --window "Terminal" --capture-destination inline
 
 # copy a window to the clipboard
-mark-shot --window 0 --capture-destination clipboard
+dracoPho --window 0 --capture-destination clipboard
 ```
 
 **클립보드 정책.** 대화형 편집기는 의도적으로 선택 내용을 시스템 클립보드에 올립니다(`복사` 동작 / `Ctrl+C`). 이는 스크린샷 도구의 주요 워크플로이기 때문입니다. 헤드리스 모드(CLI 및 엔터프라이즈 MCP 서버)는 반대 규칙을 따릅니다: **`clipboard`가 대상으로 명시적으로 선택되고 클립보드 쓰기가 설정 > 저장소 > 헤드리스 모드(Headless Mode)에서 활성화된 경우가 아니면 클립보드는 절대 수정되지 않습니다.** `inline`(기본값)과 `stage`는 사용자의 현재 클립보드 내용을 그대로 두므로, 예약된 캡처나 에이전트 주도 캡처가 사용자가 다른 곳에서 작업 중인 텍스트나 이미지를 덮어쓸 수 없습니다. 헤드리스 클립보드 쓰기가 비활성화되어 `clipboard` 요청이 거부되면, 캡처는 설정된 헤드리스 기본 대상으로 폴백하고, JSON 출력(`"warning"`)과 stderr가 이를 알려주며, 프로세스는 자동화가 감지할 수 있도록 0이 아닌 코드로 종료됩니다. 설정에서 헤드리스 클립보드 쓰기를 활성화하려면 확인 암호 문구를 입력해야 합니다.
@@ -352,19 +352,19 @@ mark-shot --window 0 --capture-destination clipboard
 
 ## 8. 데스크톱 단축키 & 트레이
 
-트레이 모드(`mark-shot --tray`)는 영역 캡처용 `Ctrl+Alt+S`를 등록하고 캡처 / 녹화 / 설정 / 종료 메뉴 항목을 제공합니다. 데스크톱 단축키:
+트레이 모드(`dracoPho --tray`)는 영역 캡처용 `Ctrl+Alt+S`를 등록하고 캡처 / 녹화 / 설정 / 종료 메뉴 항목을 제공합니다. 데스크톱 단축키:
 
-- **GNOME**: 설정 → 키보드 → 단축키 → 사용자 지정 단축키 → `mark-shot`에 바인딩.
-- **KDE**: `mark-shot`에 바인딩된 사용자 지정 단축키(정확한 KDE 캡처를 위한 KWin ScreenShot2 권한 포함, README 참조).
-- **Hyprland**: `bind = SUPER SHIFT, S, exec, mark-shot` 및 `bind = , Print, exec, mark-shot`.
-- **niri**: `binds { Mod+Shift+S { spawn "mark-shot"; } }`.
-- **Sway / i3**: `bindsym Mod4+Shift+S exec mark-shot`.
+- **GNOME**: 설정 → 키보드 → 단축키 → 사용자 지정 단축키 → `dracoPho`에 바인딩.
+- **KDE**: `dracoPho`에 바인딩된 사용자 지정 단축키(정확한 KDE 캡처를 위한 KWin ScreenShot2 권한 포함, README 참조).
+- **Hyprland**: `bind = SUPER SHIFT, S, exec, dracoPho` 및 `bind = , Print, exec, dracoPho`.
+- **niri**: `binds { Mod+Shift+S { spawn "dracoPho"; } }`.
+- **Sway / i3**: `bindsym Mod4+Shift+S exec dracoPho`.
 
 ---
 
 ## 9. 설정 & 백엔드
 
-- 설정 파일: `~/.config/mark-shot/config.json`(Linux), 첫 실행 시 생성됩니다.
+- 설정 파일: `~/.config/dracoPho/config.json`(Linux), 첫 실행 시 생성됩니다.
 - 전체 참조: [설정](configuration.md).
 - 백엔드: Wayland(PipeWire 포털 / grim / wlroots screencopy), X11(`QScreen::grabWindow`), Windows(네이티브 WGC). 녹화는 PipeWire 포털을 선호하며 자동으로 폴백합니다.
 - 설정 창은 저장되지 않은 변경 사항을 결정적으로 추적합니다: 모든 컨트롤(드롭다운, 스위치, 스핀 상자, 텍스트 필드, 단축키 필드, 색상 피커)은 콤보 상자 팝업과 모달 색상 대화 상자에서 선택한 값도 포함하여 저장되지 않은 변경 표시기를 즉시 업데이트합니다. 변경을 되돌리면 표시기가 지워지므로 창은 닫을 때 실제로 보류 중인 편집이 있는 경우에만 확인을 요청합니다.
@@ -373,12 +373,12 @@ mark-shot --window 0 --capture-destination clipboard
 
 ```bash
 # OCR (RapidOCR / Tesseract)
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 
 # Code scan (zxing-cpp)
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 ---
@@ -395,11 +395,11 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 6. **시작 도구** — `C` 색상 피커, `R` 자, `Q` 코드 스캔, `D` 디스플레이 캡처.
 7. **헤드리스** — `--capture-to`, `--region`, `--display`, `--list-displays`.
 8. **헤드리스 창 캡처** — `--list-windows`가 데스크톱을 나열합니다; `--window`를 반복하여 여러 창 캡처; 4가지 모드(inline, file, stage, clipboard) 모두에서 `--capture-destination` 테스트; 구성 요소 선택기(`--window "0@0,0,400,300"`) 검증; 전후 창 목록이 동일한지 확인(창 간섭 없음).
-9. **트레이 + 단축키** — `mark-shot --tray`, `Ctrl+Alt+S` 누르기.
+9. **트레이 + 단축키** — `dracoPho --tray`, `Ctrl+Alt+S` 누르기.
 10. **휴대용 세부 사항** — 번들이 자체 Qt 라이브러리/플러그인/스크립트를 찾습니다.
 
 ---
 
 ## 11. 피드백
 
-번들에 포함된 [이슈 제출 가이드](../.doc/submit-issue-via-gh.md)를 사용하여 `gh issue create`로 문제를 보고하세요. `mark-shot --debug --debug-log /tmp/mark-shot.log`로 캡처한 디버그 로그를 첨부하세요.
+번들에 포함된 [이슈 제출 가이드](../.doc/submit-issue-via-gh.md)를 사용하여 `gh issue create`로 문제를 보고하세요. `dracoPho --debug --debug-log /tmp/dracoPho.log`로 캡처한 디버그 로그를 첨부하세요.

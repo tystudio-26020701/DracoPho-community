@@ -10,11 +10,11 @@ endif()
 find_package(protobuf CONFIG QUIET)
 
 if(NOT OnnxRuntime_FOUND AND NOT onnxruntime_FOUND)
-    message(STATUS "mark-shot: ocr-rapid plugin disabled (onnxruntime not found)")
+    message(STATUS "dracoPho: ocr-rapid plugin disabled (onnxruntime not found)")
     return()
 endif()
 
-qt_add_plugin(mark-shot-ocr-rapid
+qt_add_plugin(dracoPho-ocr-rapid
     SHARED
     rapid_det_model.cpp
     rapid_det_model.h
@@ -30,26 +30,26 @@ qt_add_plugin(mark-shot-ocr-rapid
     rapid_rec_model.h
 )
 
-target_include_directories(mark-shot-ocr-rapid PRIVATE
+target_include_directories(dracoPho-ocr-rapid PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/plugin-sdk
 )
-target_link_libraries(mark-shot-ocr-rapid
+target_link_libraries(dracoPho-ocr-rapid
     PRIVATE
         Qt6::Core
         Qt6::Gui
 )
 if(OnnxRuntime_FOUND)
-    target_link_libraries(mark-shot-ocr-rapid PRIVATE PkgConfig::OnnxRuntime)
+    target_link_libraries(dracoPho-ocr-rapid PRIVATE PkgConfig::OnnxRuntime)
 else()
-    target_link_libraries(mark-shot-ocr-rapid PRIVATE onnxruntime::onnxruntime)
+    target_link_libraries(dracoPho-ocr-rapid PRIVATE onnxruntime::onnxruntime)
 endif()
 if(TARGET protobuf::libprotobuf)
-    target_link_libraries(mark-shot-ocr-rapid PRIVATE protobuf::libprotobuf)
+    target_link_libraries(dracoPho-ocr-rapid PRIVATE protobuf::libprotobuf)
 endif()
 
-install(TARGETS mark-shot-ocr-rapid
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/mark-shot/plugins
-        RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/mark-shot/plugins)
+install(TARGETS dracoPho-ocr-rapid
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/dracoPho/plugins
+        RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/dracoPho/plugins)
 
-message(STATUS "mark-shot: ocr-rapid plugin enabled")
+message(STATUS "dracoPho: ocr-rapid plugin enabled")

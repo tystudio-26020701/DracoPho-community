@@ -13,7 +13,7 @@ namespace markshot::ocr_rapid {
  * PP-OCR ONNX 推理插件。
  *
  * 以外部库插件形态提供 rapidocr 等价的识别能力，模型文件复用
- * mark-shot 模型目录或旧 rapidocr venv 已下载的模型。
+ * dracoPho 模型目录或旧 rapidocr venv 已下载的模型。
  */
 class RapidOcrPlugin final : public QObject, public markshot::plugin::OcrProviderPlugin {
     Q_OBJECT

@@ -112,7 +112,7 @@ QString resolvedTranslateProviderName(const TranslateTaskRequest &request)
     QString pluginId;
     const QString kind = normalizedProviderKind(request.provider, &pluginId);
     if (kind == QStringLiteral("helper")) {
-        return QStringLiteral("helper (mark-shot-translate)");
+        return QStringLiteral("helper (dracoPho-translate)");
     }
     if (kind == QStringLiteral("builtin")) {
         return QStringLiteral("builtin (openai-compatible)");

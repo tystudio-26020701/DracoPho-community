@@ -28,5 +28,5 @@ target_include_directories(mark-shot-sample-translate PRIVATE "${MARK_SHOT_PLUGI
 target_link_libraries(mark-shot-sample-translate PRIVATE Qt6::Core)
 
 install(TARGETS mark-shot-sample-translate
-        LIBRARY DESTINATION lib/mark-shot/plugins
-        RUNTIME DESTINATION lib/mark-shot/plugins)
+        LIBRARY DESTINATION lib/dracoPho/plugins
+        RUNTIME DESTINATION lib/dracoPho/plugins)

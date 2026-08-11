@@ -21,7 +21,7 @@ A clear and concise description of what you expected to happen.
 A clear and concise description of what actually happened.
 
 ## Environment Information
-Please provide the following system environment details (run `mark-shot --version` to obtain some info):
+Please provide the following system environment details (run `dracoPho --version` to obtain some info):
 - DracoPho Version: 
 - Operating System (OS): 
 - Window Manager (e.g. niri, sway) / Desktop Environment (e.g. GNOME): 
@@ -30,7 +30,7 @@ Please provide the following system environment details (run `mark-shot --versio
 
 ### Scrolling Screenshot Related (If applicable)
 If the issue is related to scrolling capture, please attach the log file:
-- Default log path is `/tmp/mark-shot-scroll.log`
+- Default log path is `/tmp/dracoPho-scroll.log`
 - If you customized the path, please provide the corresponding log.
 
 ## Additional Context / Screenshots

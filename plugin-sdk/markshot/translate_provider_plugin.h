@@ -55,6 +55,6 @@ public:
 
 }  // namespace markshot::plugin
 
-#define MARK_SHOT_TRANSLATE_PROVIDER_PLUGIN_IID "dev.mark-shot.TranslateProviderPlugin/1.0"
+#define MARK_SHOT_TRANSLATE_PROVIDER_PLUGIN_IID "dev.dracoPho.TranslateProviderPlugin/1.0"
 
 Q_DECLARE_INTERFACE(markshot::plugin::TranslateProviderPlugin, MARK_SHOT_TRANSLATE_PROVIDER_PLUGIN_IID)

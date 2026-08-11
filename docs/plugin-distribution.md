@@ -27,7 +27,7 @@ mark-shot-plugin-example/
 └── libmark-shot-example.so
 ```
 
-Linux 安装目标目录为 `~/.local/share/mark-shot/plugins`。系统包可以安装到 `${libdir}/mark-shot/plugins`。
+Linux 安装目标目录为 `~/.local/share/dracoPho/plugins`。系统包可以安装到 `${libdir}/dracoPho/plugins`。
 
 ## metadata.json
 

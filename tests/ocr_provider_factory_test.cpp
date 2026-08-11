@@ -57,7 +57,7 @@ private slots:
 
         request.commandLine.clear();
         request.provider = QStringLiteral("helper");
-        QCOMPARE(resolvedOcrProviderName(request), QStringLiteral("helper (mark-shot-ocr)"));
+        QCOMPARE(resolvedOcrProviderName(request), QStringLiteral("helper (dracoPho-ocr)"));
 
         request.provider = QStringLiteral("builtin");
         QCOMPARE(resolvedOcrProviderName(request), QStringLiteral("builtin (tesseract)"));

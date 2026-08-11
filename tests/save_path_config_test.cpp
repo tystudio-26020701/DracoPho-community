@@ -67,7 +67,7 @@ private slots:
         root.insert(QStringLiteral("save"), save);
 
         QCOMPARE(markshot::savePathFromConfigRoot(root, testContext()),
-                 QDir::cleanPath(QDir::temp().filePath(QStringLiteral("2026/06/mark-shot-20260610-140506.png"))));
+                 QDir::cleanPath(QDir::temp().filePath(QStringLiteral("2026/06/dracoPho-20260610-140506.png"))));
     }
 
     void unknownPlaceholderFallsBackToDefault()

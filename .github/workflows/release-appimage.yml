@@ -102,18 +102,18 @@ jobs:
           APPDIR="$PWD/AppDir"
           rm -rf "$APPDIR"
           DESTDIR="$APPDIR" cmake --install build
-          install -Dm644 LICENSE "$APPDIR/usr/share/licenses/mark-shot/LICENSE"
-          install -Dm644 README.md "$APPDIR/usr/share/doc/mark-shot/README.md"
-          install -Dm644 README.zh-CN.md "$APPDIR/usr/share/doc/mark-shot/README.zh-CN.md"
-          sed -i -E 's#^Exec=[^ ]*/mark-shot( |$)#Exec=mark-shot\1#' \
+          install -Dm644 LICENSE "$APPDIR/usr/share/licenses/dracoPho/LICENSE"
+          install -Dm644 README.md "$APPDIR/usr/share/doc/dracoPho/README.md"
+          install -Dm644 README.zh-CN.md "$APPDIR/usr/share/doc/dracoPho/README.zh-CN.md"
+          sed -i -E 's#^Exec=[^ ]*/dracoPho( |$)#Exec=dracoPho\1#' \
             "$APPDIR"/usr/share/applications/*.desktop
 
       - name: Assert LayerShellQt packaging
         shell: bash
         run: |
           set -euo pipefail
-          BINARY="$PWD/AppDir/usr/bin/mark-shot"
-          PLUGIN="$(find "$PWD/AppDir/usr" -path '*/mark-shot/libmark-shot-layer-shell.so' -print -quit)"
+          BINARY="$PWD/AppDir/usr/bin/dracoPho"
+          PLUGIN="$(find "$PWD/AppDir/usr" -path '*/dracoPho/libdracoPho-layer-shell.so' -print -quit)"
           if ldd "$BINARY" | grep -Ei 'LayerShellQt|layershell'; then
             echo "main binary unexpectedly links LayerShellQt directly" >&2
             exit 1
@@ -133,8 +133,8 @@ jobs:
 
           ./linuxdeploy-x86_64.AppImage \
             --appdir "$APPDIR" \
-            --executable "$APPDIR/usr/bin/mark-shot" \
-            --desktop-file "$APPDIR/usr/share/applications/mark-shot.desktop" \
+            --executable "$APPDIR/usr/bin/dracoPho" \
+            --desktop-file "$APPDIR/usr/share/applications/dracoPho.desktop" \
             --icon-file data/icons/TY-DracoPho.svg \
             --plugin qt \
             --output appimage
@@ -149,7 +149,7 @@ jobs:
             exit 1
           fi
 
-          ASSET="mark-shot-${{ steps.version.outputs.tag }}-linux-x86_64.AppImage"
+          ASSET="dracoPho-${{ steps.version.outputs.tag }}-linux-x86_64.AppImage"
           mv "${appimages[0]}" "$ASSET"
           sha256sum "$ASSET" > "$ASSET.sha256"
           {
@@ -161,7 +161,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: mark-shot-appimage-${{ steps.version.outputs.tag }}
+          name: dracoPho-appimage-${{ steps.version.outputs.tag }}
           path: |
             ${{ steps.package.outputs.asset }}
             ${{ steps.package.outputs.checksum }}

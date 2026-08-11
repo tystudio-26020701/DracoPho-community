@@ -28,9 +28,9 @@ DracoPho 通过 Qt 插件机制扩展 OCR、翻译与扫码能力。插件是普
 按顺序扫描，全部目录的匹配插件都会加载：
 
 1. `<应用目录>/plugins`
-2. `<应用目录>/../lib/mark-shot/plugins`、`../lib64/mark-shot/plugins`
-3. Qt libraryPaths 下的 `mark-shot/plugins`
-4. 用户级插件目录（Linux 默认 `~/.local/share/mark-shot/plugins`；Windows 以设置页显示为准）
+2. `<应用目录>/../lib/dracoPho/plugins`、`../lib64/dracoPho/plugins`
+3. Qt libraryPaths 下的 `dracoPho/plugins`
+4. 用户级插件目录（Linux 默认 `~/.local/share/dracoPho/plugins`；Windows 以设置页显示为准）
 
 用户级目录（第 4 项）适合免打包试用插件。
 
@@ -100,7 +100,7 @@ target_link_libraries(my-ocr-plugin PRIVATE Qt6::Core Qt6::Gui)
 `plugins/ocr-rapid/` 是完整的 OCR 模型运行时插件，基于 ONNX Runtime 执行
 PP-OCR 检测与识别模型：
 
-- 模型发现：`MARK_SHOT_OCR_MODEL_DIR` → `~/.local/share/mark-shot/models` →
+- 模型发现：`MARK_SHOT_OCR_MODEL_DIR` → `~/.local/share/dracoPho/models` →
   旧 rapidocr venv 模型目录（老用户已下载的模型直接复用）
 - 环境变量可逐项覆盖：`MARK_SHOT_RAPID_DET_MODEL`、`MARK_SHOT_RAPID_REC_MODEL`、
   `MARK_SHOT_RAPID_REC_DICT`
@@ -124,7 +124,7 @@ PP-OCR 检测与识别模型：
 
 ## 兼容性承诺
 
-- 旧 Python helper（`mark-shot-ocr`/`mark-shot-translate`/`mark-shot-code-scan`）
+- 旧 Python helper（`dracoPho-ocr`/`dracoPho-translate`/`dracoPho-code-scan`）
   完整保留，永远作为兜底
 - 自定义命令优先级最高，升级不改变既有配置的行为
 - 已配置 rapidocr venv 的用户在 `auto` 模式下保持原有 helper 链路

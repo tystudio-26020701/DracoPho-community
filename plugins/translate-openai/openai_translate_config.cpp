@@ -86,7 +86,7 @@ void addConfigDir(QStringList *paths, const QString &dir)
  */
 QString windowsConfigDir(const QProcessEnvironment &env,
                          const QString &name,
-                         const QString &relativePath = QStringLiteral("mark-shot"))
+                         const QString &relativePath = QStringLiteral("dracoPho"))
 {
     const QString root = envValue(env, name);
     return root.isEmpty() ? QString() : QDir(root).filePath(relativePath);
@@ -107,15 +107,15 @@ QStringList configPathCandidates(const QProcessEnvironment &env)
     addConfigDir(&paths, windowsConfigDir(env, QStringLiteral("LOCALAPPDATA")));
     addConfigDir(&paths, windowsConfigDir(env, QStringLiteral("APPDATA")));
     addConfigDir(&paths,
-                 windowsConfigDir(env, QStringLiteral("USERPROFILE"), QStringLiteral("AppData/Local/mark-shot")));
+                 windowsConfigDir(env, QStringLiteral("USERPROFILE"), QStringLiteral("AppData/Local/dracoPho")));
 #endif
 
     const QString appConfig = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     addConfigDir(&paths, appConfig);
 
     const QString genericConfig = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
-    addConfigDir(&paths, QDir(genericConfig).filePath(QStringLiteral("mark-shot")));
-    addConfigDir(&paths, QDir::home().filePath(QStringLiteral(".config/mark-shot")));
+    addConfigDir(&paths, QDir(genericConfig).filePath(QStringLiteral("dracoPho")));
+    addConfigDir(&paths, QDir::home().filePath(QStringLiteral(".config/dracoPho")));
     return paths;
 }
 

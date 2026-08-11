@@ -1,4 +1,4 @@
-Name:           mark-shot
+Name:           dracoPho
 Version:        0.1.41
 Release:        1%{?dist}
 Summary:        Qt 6 screenshot selection and annotation tool
@@ -50,36 +50,36 @@ stickers, and provides OCR and translation helpers for pinned image text.
 %install
 %cmake_install
 sed -i '1s|^#!/usr/bin/env python3$|#!/usr/bin/python3|' \
-    %{buildroot}%{_bindir}/mark-shot-ocr \
-    %{buildroot}%{_bindir}/mark-shot-code-scan \
-    %{buildroot}%{_bindir}/mark-shot-translate \
-    %{buildroot}%{_bindir}/mark-shot-upload \
-    %{buildroot}%{_bindir}/mark-shot-window-detection-niri \
-    %{buildroot}%{_bindir}/mark-shot-window-detection-hyprland \
-    %{buildroot}%{_bindir}/mark-shot-window-detection-gnome \
-    %{buildroot}%{_bindir}/mark-shot-window-detection-kde
+    %{buildroot}%{_bindir}/dracoPho-ocr \
+    %{buildroot}%{_bindir}/dracoPho-code-scan \
+    %{buildroot}%{_bindir}/dracoPho-translate \
+    %{buildroot}%{_bindir}/dracoPho-upload \
+    %{buildroot}%{_bindir}/dracoPho-window-detection-niri \
+    %{buildroot}%{_bindir}/dracoPho-window-detection-hyprland \
+    %{buildroot}%{_bindir}/dracoPho-window-detection-gnome \
+    %{buildroot}%{_bindir}/dracoPho-window-detection-kde
 
 %files
 %license LICENSE
-%doc %{_docdir}/mark-shot/
-%{_bindir}/mark-shot
-%{_bindir}/mark-shot-ocr
-%{_bindir}/mark-shot-code-scan
-%{_bindir}/mark-shot-translate
-%{_bindir}/mark-shot-upload
-%{_bindir}/mark-shot-window-detection-niri
-%{_bindir}/mark-shot-window-detection-hyprland
-%{_bindir}/mark-shot-window-detection-gnome
-%{_bindir}/mark-shot-window-detection-kde
-%{_libdir}/mark-shot/
-%{_datadir}/mark-shot/python/
-%{_datadir}/applications/mark-shot.desktop
-%{_datadir}/applications/mark-shot-edit.desktop
-%{_datadir}/applications/net.local.mark-shot.desktop
+%doc %{_docdir}/dracoPho/
+%{_bindir}/dracoPho
+%{_bindir}/dracoPho-ocr
+%{_bindir}/dracoPho-code-scan
+%{_bindir}/dracoPho-translate
+%{_bindir}/dracoPho-upload
+%{_bindir}/dracoPho-window-detection-niri
+%{_bindir}/dracoPho-window-detection-hyprland
+%{_bindir}/dracoPho-window-detection-gnome
+%{_bindir}/dracoPho-window-detection-kde
+%{_libdir}/dracoPho/
+%{_datadir}/dracoPho/python/
+%{_datadir}/applications/dracoPho.desktop
+%{_datadir}/applications/dracoPho-edit.desktop
+%{_datadir}/applications/net.local.dracoPho.desktop
 %{_datadir}/icons/hicolor/scalable/apps/dracoPho.svg
-%{_datadir}/icons/hicolor/scalable/apps/mark-shot.svg
-%{_datadir}/icons/hicolor/scalable/apps/mark-shot-edit.svg
-%{_datadir}/gnome-shell/extensions/mark-shot-scroll-helper@snemc.org/
+%{_datadir}/icons/hicolor/scalable/apps/dracoPho.svg
+%{_datadir}/icons/hicolor/scalable/apps/dracoPho-edit.svg
+%{_datadir}/gnome-shell/extensions/dracoPho-scroll-helper@snemc.org/
 
 %changelog
 * Thu Jul 16 2026 jswysnemc <snemc@qq.com> - 0.1.41-1

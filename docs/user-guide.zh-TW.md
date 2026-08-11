@@ -13,7 +13,7 @@
 開始一次區域擷取工作階段：
 
 ```bash
-mark-shot --capture
+dracoPho --capture
 ```
 
 按下桌面快速鍵（見第 8 節）或從終端機執行。凍結的全螢幕疊加層會在聚焦的顯示器上開啟。移動滑鼠繪製選取矩形，然後放開按鍵進入註記編輯器。
@@ -26,7 +26,7 @@ mark-shot --capture
 portable/mark-shot-community/bin/run-mark-shot.sh
 ```
 
-啟動器會將其 `bin/` 目錄加入 `PATH` 前端，這是視窗偵測輔助腳本（`mark-shot-window-detection-*`）以及 OCR／上傳輔助程式所必需的。
+啟動器會將其 `bin/` 目錄加入 `PATH` 前端，這是視窗偵測輔助腳本（`dracoPho-window-detection-*`）以及 OCR／上傳輔助程式所必需的。
 
 ### 1.3 啟動行為（懸浮球 / 托盤 / 設定視窗 / 直接截圖）
 
@@ -86,7 +86,7 @@ gdbus call --session \
 
 ### 2.2 如何使用
 
-1. 觸發一次擷取（`mark-shot` 或桌面快速鍵）。
+1. 觸發一次擷取（`dracoPho` 或桌面快速鍵）。
 2. 在未按下任何滑鼠按鍵的狀態下，將游標移到某個視窗上。一個青色框會框出將被選取的視窗。
 3. **按一下**（按下並放開，且移動不超過幾像素）即可選取該視窗。如果視窗重疊，游標處最上方的視窗獲勝（考量 z 軸順序）。
 4. 放開後會進入註記編輯器，視窗正好被框住。
@@ -100,20 +100,20 @@ gdbus call --session \
 
 ### 2.4 啟用／停用
 
-此功能預設為啟用（`windowDetection.enabled = true`）。您可以在**設定 → 進階 → 啟用視窗偵測**中切換，或編輯 `~/.config/mark-shot/config.json`：
+此功能預設為啟用（`windowDetection.enabled = true`）。您可以在**設定 → 進階 → 啟用視窗偵測**中切換，或編輯 `~/.config/dracoPho/config.json`：
 
 ```json
 {
   "windowDetection": {
     "enabled": true,
-    "command": "mark-shot-window-detection-gnome",
+    "command": "dracoPho-window-detection-gnome",
     "timeoutMs": 1000,
     "env": {}
   }
 }
 ```
 
-- `command`：偵測腳本。在 GNOME／KDE／Hyprland／niri Wayland 上，會自動選擇符合您工作階段的隨附 `mark-shot-window-detection-*` 腳本；在 X11 與 Windows 上則是在程序內列舉平台，`command` 可以留空。**使用者提供的自訂命令（例如絕對路徑）一律會被採用。**
+- `command`：偵測腳本。在 GNOME／KDE／Hyprland／niri Wayland 上，會自動選擇符合您工作階段的隨附 `dracoPho-window-detection-*` 腳本；在 X11 與 Windows 上則是在程序內列舉平台，`command` 可以留空。**使用者提供的自訂命令（例如絕對路徑）一律會被採用。**
 - `timeoutMs`：等待腳本的最長時間（100–30000 毫秒，預設 1000）。
 - `env`：傳遞給腳本的額外環境變數。依合成器而定的調整（偏移量）記載於腳本標頭中。
 
@@ -125,7 +125,7 @@ gdbus call --session \
 | X11／Windows 上沒有青色框 | 不需要——平台列舉內建其中；請確認擷取工作階段未使用啟動指標工具 |
 | 懸停框選到錯誤的（下層）視窗 | 自訂偵測腳本缺少 z 軸順序資料；沒有 `zOrder` 的視窗會被排在底層 |
 | 擷取開始很慢 | 偵測腳本在疊加層之前執行；只有在桌面很慢時才調高 `timeoutMs`，或設定 `enabled:false` 加以略過 |
-| 查看診斷資訊 | 執行 `mark-shot --debug --debug-log /tmp/mark-shot.log`；尋找 `window-detection` 行 |
+| 查看診斷資訊 | 執行 `dracoPho --debug --debug-log /tmp/dracoPho.log`；尋找 `window-detection` 行 |
 
 ---
 
@@ -232,28 +232,28 @@ gdbus call --session \
 
 ```bash
 # primary screen
-mark-shot --capture-to /tmp/shot.png
+dracoPho --capture-to /tmp/shot.png
 
 # directory (timestamped file name)
-mark-shot --capture-to /tmp/shots/
+dracoPho --capture-to /tmp/shots/
 
 # region
-mark-shot --capture-to /tmp/r.png --region 0,0,1280,720
+dracoPho --capture-to /tmp/r.png --region 0,0,1280,720
 
 # a specific display, with cursor
-mark-shot --capture-to /tmp/w.png --display DP-1 --include-cursor
+dracoPho --capture-to /tmp/w.png --display DP-1 --include-cursor
 
 # several displays at once (one PNG each)
-mark-shot --capture-to /tmp/shots/ --display DP-1 --display DP-2
+dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # list outputs
-mark-shot --list-displays
+dracoPho --list-displays
 ```
 
 所有無頭選項都與位置參數的影像檔互斥。完整的參數表請參閱 README。
 
 無人值守錄製：無需開啟錄製對話方塊，即可透過正在執行的實例開始錄製。
-`mark-shot --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
+`dracoPho --record-region 0,0,640,480 --record-output ~/Videos/clip.mp4
 --record-duration 30 --record-wait-json` 會錄製該區域 30 秒並輸出最終的 JSON
 狀態。使用 `--record-display <id>` 錄製整個顯示器，`--record-format webp`
 產生動畫 WebP（支援 GIF/MP4/WebP），`--record-audio` 納入系統音訊，而
@@ -266,7 +266,7 @@ mark-shot --list-displays
 首先列出視窗以查看有哪些可用：
 
 ```bash
-mark-shot --list-windows
+dracoPho --list-windows
 ```
 
 範例輸出（GNOME Wayland）：
@@ -297,7 +297,7 @@ mark-shot --list-windows
 
 ```bash
 # the top 100px strip of window 0
-mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
+dracoPho --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp/shots/
 ```
 
 #### 7.1.2 選擇影像的去處
@@ -308,23 +308,23 @@ mark-shot --window "0@0,0,1680,100" --capture-destination file --capture-to /tmp
 | :--- | :--- |
 | `inline`（預設） | 以 JSON 輸出內嵌 Base64 PNG。**不會寫入任何檔案，也絕不碰觸剪貼簿。** 對於只需要像素的代理程式而言是最安全的選擇。 |
 | `file` | 將 PNG 檔案寫入 `--capture-to <directory>`；需要該選項。 |
-| `stage` | 將 PNG 檔案寫入暫存目錄（`$TMPDIR/mark-shot-staging`）。適合「先留著稍後使用」的工作流程。 |
+| `stage` | 將 PNG 檔案寫入暫存目錄（`$TMPDIR/dracoPho-staging`）。適合「先留著稍後使用」的工作流程。 |
 | `clipboard` | 將影像複製到系統剪貼簿；有多張影像時以**最後一張**為準。內容在 CLI 結束後仍然保留（會產生一個持續存在的 `wl-copy`／`xclip` 持有者）。 |
 
 範例：
 
 ```bash
 # several windows, saved to a directory (one PNG per window)
-mark-shot --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
+dracoPho --window VSCodium --window Terminal --capture-destination file --capture-to /tmp/shots/
 
 # a window plus a component of another window, staged for later
-mark-shot --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
+dracoPho --window "VSCodium@0,0,400,300" --window 1 --capture-destination stage
 
 # multi-select, returned as base64 without touching files or clipboard
-mark-shot --window 0 --window "Terminal" --capture-destination inline
+dracoPho --window 0 --window "Terminal" --capture-destination inline
 
 # copy a window to the clipboard
-mark-shot --window 0 --capture-destination clipboard
+dracoPho --window 0 --capture-destination clipboard
 ```
 
 **剪貼簿政策。** 互動式編輯器刻意將您的選取範圍放到系統剪貼簿上（「複製」動作／`Ctrl+C`），因為這是截圖工具的主要工作流程。無頭模式（CLI 與企業版 MCP 伺服器）則遵循相反的規則：**除非明確選擇 `clipboard` 作為目標，且在「設定 → 儲存 → 無頭模式」中啟用了剪貼簿寫入，否則絕不修改剪貼簿**——`inline`（預設）與 `stage` 會保留使用者目前的剪貼簿內容，因此排程或代理程式驅動的擷取不會覆寫使用者正在其他地方使用的文字或影像。當 `clipboard` 請求因無頭剪貼簿寫入被停用而被拒絕時，擷取會退回設定的無頭預設目標，JSON 輸出（`"warning"`）與 stderr 會告知您，程序並以非零代碼結束，好讓自動化可以偵測。在設定中啟用無頭剪貼簿寫入需要輸入確認通行片語。
@@ -350,19 +350,19 @@ mark-shot --window 0 --capture-destination clipboard
 
 ## 8. 桌面快速鍵與系統匣
 
-系統匣模式（`mark-shot --tray`）會註冊 `Ctrl+Alt+S` 用於區域擷取，並提供擷取／錄製／設定／結束的選單項目。桌面快速鍵：
+系統匣模式（`dracoPho --tray`）會註冊 `Ctrl+Alt+S` 用於區域擷取，並提供擷取／錄製／設定／結束的選單項目。桌面快速鍵：
 
-- **GNOME**：設定 → 鍵盤 → 快捷鍵 → 自訂快捷鍵 → 綁定到 `mark-shot`。
-- **KDE**：綁定到 `mark-shot` 的自訂快捷鍵（加上用於精確 KDE 擷取的 KWin ScreenShot2 權限，請參閱 README）。
-- **Hyprland**：`bind = SUPER SHIFT, S, exec, mark-shot` 與 `bind = , Print, exec, mark-shot`。
-- **niri**：`binds { Mod+Shift+S { spawn "mark-shot"; } }`。
-- **Sway / i3**：`bindsym Mod4+Shift+S exec mark-shot`。
+- **GNOME**：設定 → 鍵盤 → 快捷鍵 → 自訂快捷鍵 → 綁定到 `dracoPho`。
+- **KDE**：綁定到 `dracoPho` 的自訂快捷鍵（加上用於精確 KDE 擷取的 KWin ScreenShot2 權限，請參閱 README）。
+- **Hyprland**：`bind = SUPER SHIFT, S, exec, dracoPho` 與 `bind = , Print, exec, dracoPho`。
+- **niri**：`binds { Mod+Shift+S { spawn "dracoPho"; } }`。
+- **Sway / i3**：`bindsym Mod4+Shift+S exec dracoPho`。
 
 ---
 
 ## 9. 設定與後端
 
-- 設定檔：`~/.config/mark-shot/config.json`（Linux），於首次執行時建立。
+- 設定檔：`~/.config/dracoPho/config.json`（Linux），於首次執行時建立。
 - 完整參考：[Configuration](configuration.md)。
 - 後端：Wayland（PipeWire portal／grim／wlroots screencopy）、X11（`QScreen::grabWindow`）、Windows（原生 WGC）。錄製偏好 PipeWire portal，並會自動退回。
 - 設定視窗會以確定性的方式追蹤未儲存的變更：每個控制項（下拉式選單、開關、微調方塊、文字欄位、快速鍵欄位、色彩選擇器）都會立即更新未儲存變更指示器，包括從下拉式清單快顯與強制回應色彩對話方塊中選取的值。還原變更會清除指示器，因此視窗只會在關閉時詢問真正待處理的編輯。
@@ -371,12 +371,12 @@ mark-shot --window 0 --capture-destination clipboard
 
 ```bash
 # OCR (RapidOCR / Tesseract)
-python3 -m venv ~/.local/share/mark-shot/ocr-venv
-~/.local/share/mark-shot/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
+python3 -m venv ~/.local/share/dracoPho/ocr-venv
+~/.local/share/dracoPho/ocr-venv/bin/pip install -U pip rapidocr onnxruntime
 
 # Code scan (zxing-cpp)
-python3 -m venv ~/.local/share/mark-shot/code-scan-venv
-~/.local/share/mark-shot/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
+python3 -m venv ~/.local/share/dracoPho/code-scan-venv
+~/.local/share/dracoPho/code-scan-venv/bin/pip install -U pip zxing-cpp pillow
 ```
 
 ---
@@ -393,11 +393,11 @@ python3 -m venv ~/.local/share/mark-shot/code-scan-venv
 6. **啟動工具**——`C` 色彩選擇器、`R` 標尺、`Q` 條碼掃描、`D` 顯示器擷取。
 7. **無頭**——`--capture-to`、`--region`、`--display`、`--list-displays`。
 8. **無頭視窗擷取**——`--list-windows` 列出桌面；重複 `--window` 擷取多個視窗；在全部四種模式（inline、file、stage、clipboard）下測試 `--capture-destination`；驗證元件選擇器（`--window "0@0,0,400,300"`）；確認前後的視窗清單不變（無視窗干擾）。
-9. **系統匣＋快速鍵**——`mark-shot --tray`，按下 `Ctrl+Alt+S`。
+9. **系統匣＋快速鍵**——`dracoPho --tray`，按下 `Ctrl+Alt+S`。
 10. **可攜式細節**——套件能找到自己的 Qt 函式庫／外掛程式／腳本。
 
 ---
 
 ## 11. 意見回饋
 
-請使用隨附的 [issue submission guide](../.doc/submit-issue-via-gh.md)，以 `gh issue create` 回報問題。並附上用 `mark-shot --debug --debug-log /tmp/mark-shot.log` 擷取的偵錯日誌。
+請使用隨附的 [issue submission guide](../.doc/submit-issue-via-gh.md)，以 `gh issue create` 回報問題。並附上用 `dracoPho --debug --debug-log /tmp/dracoPho.log` 擷取的偵錯日誌。

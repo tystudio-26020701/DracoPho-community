@@ -32,5 +32,5 @@ target_link_libraries(mark-shot-sample-ocr
 )
 
 install(TARGETS mark-shot-sample-ocr
-        LIBRARY DESTINATION lib/mark-shot/plugins
-        RUNTIME DESTINATION lib/mark-shot/plugins)
+        LIBRARY DESTINATION lib/dracoPho/plugins
+        RUNTIME DESTINATION lib/dracoPho/plugins)

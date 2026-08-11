@@ -3,7 +3,7 @@
 
 The script reads its configuration from environment variables so it can be
 reused across providers (ImgURL, sm.ms, imgbb, custom endpoints, ...). It
-prints a JSON document on stdout that the mark-shot UI parses:
+prints a JSON document on stdout that the dracoPho UI parses:
 
     {"url": "https://...", "deleteUrl": "...", "errors": []}
 
@@ -34,7 +34,7 @@ def guess_mime_type(path):
 
 def build_multipart(fields, files):
     """Build a multipart/form-data body. Returns (body, boundary)."""
-    boundary = "----mark-shot-upload-boundary"
+    boundary = "----dracoPho-upload-boundary"
     body = bytearray()
     for name, value in fields.items():
         body.extend(f"--{boundary}\r\n".encode("utf-8"))

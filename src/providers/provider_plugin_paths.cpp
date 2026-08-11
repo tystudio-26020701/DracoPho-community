@@ -32,13 +32,13 @@ QString appDataDirectory()
     if (!appLocalData.isEmpty()) {
         return appLocalData;
     }
-    return QDir::home().filePath(QStringLiteral("AppData/Local/mark-shot"));
+    return QDir::home().filePath(QStringLiteral("AppData/Local/dracoPho"));
 #else
     const QString dataHome = qEnvironmentVariable("XDG_DATA_HOME").trimmed();
     const QString userBase = dataHome.isEmpty()
         ? QDir::home().filePath(QStringLiteral(".local/share"))
         : dataHome;
-    return QDir(userBase).filePath(QStringLiteral("mark-shot"));
+    return QDir(userBase).filePath(QStringLiteral("dracoPho"));
 #endif
 }
 
@@ -55,10 +55,10 @@ QStringList pluginSearchDirs()
     const QString appDir = QCoreApplication::applicationDirPath();
     // 1. 系统级与应用相邻目录，支持安装包和免安装目录。
     addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("plugins")));
-    addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("../lib/mark-shot/plugins")));
-    addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("../lib64/mark-shot/plugins")));
+    addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("../lib/dracoPho/plugins")));
+    addSearchDir(&dirs, QDir(appDir).filePath(QStringLiteral("../lib64/dracoPho/plugins")));
     for (const QString &path : QCoreApplication::libraryPaths()) {
-        addSearchDir(&dirs, QDir(path).filePath(QStringLiteral("mark-shot/plugins")));
+        addSearchDir(&dirs, QDir(path).filePath(QStringLiteral("dracoPho/plugins")));
     }
     // 2. 用户级插件目录，插件市场和手工安装都写入这里。
     addSearchDir(&dirs, userPluginDirectory());

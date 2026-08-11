@@ -2,7 +2,7 @@
 set -euo pipefail
 
 app_bin="${1:-$PWD/app/bin}"
-exe="${2:-$app_bin/mark-shot.exe}"
+exe="${2:-$app_bin/dracoPho.exe}"
 app_root="$(dirname "$app_bin")"
 
 if [ ! -x "$exe" ]; then

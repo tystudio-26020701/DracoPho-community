@@ -1,6 +1,6 @@
 # Maintainer: jswysnemc <snemc@qq.com>
 # 本地打包：在 packaging/local_aur 目录执行 ./make-local.sh 或先 make-local.sh --tar-only 再 makepkg -si
-pkgname=mark-shot
+pkgname=dracoPho
 pkgver=26.8.4.0
 pkgrel=1
 pkgdesc='Qt 6 Wayland screenshot selection and annotation tool'
@@ -18,7 +18,7 @@ optdepends=(
     'tesseract: fallback OCR backend'
     'libxcb: optional X11 integration when built with xcb'
 )
-source=("mark-shot-${pkgver}.tar.gz")
+source=("dracoPho-${pkgver}.tar.gz")
 sha256sums=('SKIP')
 
 build() {

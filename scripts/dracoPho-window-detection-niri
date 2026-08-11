@@ -14,7 +14,7 @@ def add_shared_module_path():
     prefix_dir = os.path.dirname(script_dir)
     candidates = (
         os.path.join(script_dir, "lib"),
-        os.path.join(prefix_dir, "share", "mark-shot", "python"),
+        os.path.join(prefix_dir, "share", "dracoPho", "python"),
     )
     for candidate in candidates:
         if os.path.isdir(candidate) and candidate not in sys.path:

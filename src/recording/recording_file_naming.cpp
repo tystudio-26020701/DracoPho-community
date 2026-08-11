@@ -57,7 +57,7 @@ QString defaultRecordingPathInDirectory(const QString &directory, RecordingMode 
         : directory.trimmed();
     QDir().mkpath(targetDirectory);
     return QDir(targetDirectory)
-        .filePath(QStringLiteral("mark-shot-recording-%1.%2").arg(timestamp, extensionForMode(mode)));
+        .filePath(QStringLiteral("dracoPho-recording-%1.%2").arg(timestamp, extensionForMode(mode)));
 }
 
 QString normalizedRecordingPath(QString path, RecordingMode mode)

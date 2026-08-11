@@ -21,7 +21,7 @@ assignees: []
 描述实际发生的情况。
 
 ## 运行环境
-请提供以下系统环境信息（可运行 `mark-shot --version` 获取部分信息）：
+请提供以下系统环境信息（可运行 `dracoPho --version` 获取部分信息）：
  - 太殷龙摄 版本: 
 - 操作系统 (OS): 
 - 窗口管理器 (Window Manager, 如 niri, sway) / 桌面环境 (Desktop, 如 GNOME): 
@@ -30,7 +30,7 @@ assignees: []
 
 ### 滚动截图相关
 若问题与滚动截图有关，请在此附上复现时的日志文件。
-- 日志文件路径默认为 `/tmp/mark-shot-scroll.log`
+- 日志文件路径默认为 `/tmp/dracoPho-scroll.log`
 - 若设置了自定义路径，请提供对应日志。
 
 ## 补充信息 / 截图

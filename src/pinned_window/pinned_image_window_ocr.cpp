@@ -27,7 +27,7 @@ void PinnedImageWindow::startOcr()
     QTemporaryFile tempFile(QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation).isEmpty()
                                 ? QDir::tempPath()
                                 : QStandardPaths::writableLocation(QStandardPaths::TempLocation))
-                                .filePath(QStringLiteral("mark-shot-pin-ocr-XXXXXX.png")));
+                                .filePath(QStringLiteral("dracoPho-pin-ocr-XXXXXX.png")));
     tempFile.setAutoRemove(false);
     if (!tempFile.open()) {
         m_translateAfterOcr = false;
@@ -76,7 +76,7 @@ void PinnedImageWindow::startOcr()
 
 QString PinnedImageWindow::defaultOcrHelperProgram() const
 {
-    return helperProgramPath(QStringLiteral("mark-shot-ocr"));
+    return helperProgramPath(QStringLiteral("dracoPho-ocr"));
 }
 
 void PinnedImageWindow::cancelOcr()

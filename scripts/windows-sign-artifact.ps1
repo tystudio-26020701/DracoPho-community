@@ -43,7 +43,7 @@ if (-not (Test-Path $Path)) {
 }
 
 $signTool = Get-SignToolPath
-$certificatePath = Join-Path ([System.IO.Path]::GetTempPath()) "mark-shot-codesign.pfx"
+$certificatePath = Join-Path ([System.IO.Path]::GetTempPath()) "dracoPho-codesign.pfx"
 
 try {
     [System.IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($CertificateBase64))
