@@ -235,46 +235,45 @@ bool copyToPersistentClipboardOwner(const QByteArray &payload, const QString &su
 #endif
 }
 
-/// @brief Copies an image and its PNG byte array representation to the system clipboard and persistent owner.
+/// @brief 把图片写入系统剪贴板（交互式路径）。
+///
+/// 交互式调用方（截图会话、贴图、编辑器等）运行在常驻主进程内，Qt 的
+/// data source 由主进程持续持有、退出前一直有效，因此这里只写 QClipboard，
+/// 绝不派生 wl-copy --foreground 常驻进程。常驻进程会与 Qt data source
+/// 形成双持有者竞争（表现为"点击某个图标后截图才真正复制进剪贴板"、任务栏
+/// 出现剪贴板相关图标），并且每次复制都遗留一个占用剪贴板的常驻进程，
+/// 干扰用户后续的剪贴板操作。短命进程（无头 CLI）需要常驻持有者时，走
+/// copyImageToClipboardHeadless 专用路径。
 /// @param image The QImage to be set on the system clipboard.
-/// @param png The encoded PNG byte data to be saved to the persistent clipboard owner.
+/// @param png 保留参数（旧签名兼容），不再使用。
 /// @return True if the image was successfully copied.
 bool copyImageDataToClipboard(const QImage &image, const QByteArray &png)
 {
-    bool copied = false;
+    Q_UNUSED(png);
     if (QClipboard *clipboard = QApplication::clipboard()) {
         clipboard->setImage(image);
-        copied = true;
+        return true;
     }
-
-    const std::optional<ClipboardOwnerCommand> owner = clipboardOwnerCommand(ClipboardPayload::ImagePng);
-    if (owner.has_value()) {
-        copied = copyToPersistentClipboardOwner(png, QStringLiteral(".png"), *owner) || copied;
-    }
-    return copied;
+    return false;
 }
 
-/// @brief Copies a URL to both the system clipboard and a persistent clipboard owner process.
+/// @brief 把 URL 写入系统剪贴板（交互式路径）。
+///
+/// 与 copyImageDataToClipboard 同理：只写 QClipboard，由常驻主进程持有，
+/// 不派生 wl-copy 常驻进程，避免双持有者竞争与常驻进程干扰用户。
 /// @param url The URL to be copied.
 /// @return True if the copy operation was successful.
 bool copyUrlToClipboard(const QUrl &url)
 {
     const QString urlText = url.toString(QUrl::FullyEncoded);
-    bool copied = false;
-
     if (QClipboard *clipboard = QApplication::clipboard()) {
         auto *mimeData = new QMimeData;
         mimeData->setText(urlText);
         mimeData->setUrls({url});
         clipboard->setMimeData(mimeData);
-        copied = true;
+        return true;
     }
-
-    const std::optional<ClipboardOwnerCommand> owner = clipboardOwnerCommand(ClipboardPayload::Text);
-    if (owner.has_value()) {
-        copied = copyToPersistentClipboardOwner(urlText.toUtf8(), QStringLiteral(".txt"), *owner) || copied;
-    }
-    return copied;
+    return false;
 }
 
 /**
@@ -296,17 +295,13 @@ bool copyTextToClipboard(const QString &text)
         return false;
     }
 
-    bool copied = false;
+    // 交互式路径：只写 QClipboard，由常驻主进程持有 data source，不派生
+    // wl-copy 常驻进程（理由见 copyImageDataToClipboard 注释）。
     if (QClipboard *clipboard = QApplication::clipboard()) {
         clipboard->setText(text);
-        copied = true;
+        return true;
     }
-
-    const std::optional<ClipboardOwnerCommand> owner = clipboardOwnerCommand(ClipboardPayload::Text);
-    if (owner.has_value()) {
-        copied = copyToPersistentClipboardOwner(text.toUtf8(), QStringLiteral(".txt"), *owner) || copied;
-    }
-    return copied;
+    return false;
 }
 
 bool copyImageToClipboard(const QImage &image)
