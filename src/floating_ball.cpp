@@ -111,7 +111,14 @@ QPoint defaultBallPosition()
 FloatingBall::FloatingBall(QWidget *parent)
     : QWidget(parent)
 {
-    setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    // 置顶按用户配置决定（floatingBall.alwaysOnTop，默认开启）。Qt 标志在构造时
+    // 一次性定下，运行中不改标志（避免重建原生窗口丢位置）；每次 showEvent 再按
+    // 配置做原生兜底（Windows HWND_TOPMOST / GNOME 扩展 SetWindowsAbove）。
+    Qt::WindowFlags flags = Qt::Window | Qt::FramelessWindowHint;
+    if (alwaysOnTopEnabled()) {
+        flags |= Qt::WindowStaysOnTopHint;
+    }
+    setWindowFlags(flags);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
     setFixedSize(kBallSize + kShadowRadius * 2, kBallSize + kShadowRadius * 2);
@@ -612,12 +619,11 @@ void FloatingBall::leaveEvent(QEvent *event)
 void FloatingBall::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    // 置顶兜底：窗口标志已含 Qt::WindowStaysOnTopHint，但每次显示时仍显式
-    // 强化——Windows 用原生 HWND_TOPMOST 层级（不依赖 Qt 内部映射），GNOME
-    // Wayland 走 MarkShotScrollHelper 扩展 SetWindowsAbove（合成器不遵守
+    // 置顶兜底：窗口标志已按配置设定，但每次显示时仍显式按当前配置强化——
+    // Windows 用原生 HWND_TOPMOST 层级（不依赖 Qt 内部映射），GNOME Wayland
+    // 走 MarkShotScrollHelper 扩展 SetWindowsAbove（合成器不遵守
     // WindowStaysOnTopHint）。其余平台无操作。
-    markshot::windows::setWindowTopMost(this, true);
-    markshot::windows::setGnomeWindowAbove(windowTitle(), true);
+    applyAlwaysOnTopState(alwaysOnTopEnabled());
     setBallOpacity(1.0);
     // 显示即视为一次交互：鼠标在球上则不淡出，否则 tick 会在
     // fadeSeconds 后自然淡出。
@@ -640,24 +646,19 @@ void FloatingBall::showEvent(QShowEvent *event)
         }
     }
     // 纠正隐藏期间的位置漂移：截图/录制会话隐藏窗口后，部分 WM/合成器重新
-    // 映射时会把自由漂浮的球挪到别处。延迟到事件循环返回后再比较（X11 上
-    // WM 的重新配置异步到达），若当前位置已偏离隐藏前位置且隐藏前位置仍在
-    // 屏幕内，则移回原位。停靠态由上面的恢复逻辑接管，不在这里干预。
-    if (positioningEnabled() && m_havePositionBeforeHide
-        && m_dockState == DockState::Floating) {
-        QTimer::singleShot(0, this, [this] {
-            if (!isVisible() || m_dockState != DockState::Floating) {
-                return;
-            }
-            const QPoint current = frameGeometry().topLeft();
-            if (current != m_positionBeforeHide && positionWithinScreenBounds(m_positionBeforeHide)) {
-                markshot::debugLog("floating", "restore position after show %d,%d -> %d,%d",
-                                   current.x(), current.y(),
-                                   m_positionBeforeHide.x(), m_positionBeforeHide.y());
-                move(m_positionBeforeHide);
-            }
-        });
+    // 映射时会把球挪到别处（屏幕中间 / 另一显示器）。立即纠正一次避免闪烁，
+    // 再延迟校验数次——X11 上 WM 的重新配置异步到达，Windows 的 WM_MOVE 也可能
+    // 晚于 show() 返回，单次 singleShot(0) 会漏掉这些迟到的重定位。
+    if (positioningEnabled() && m_havePositionBeforeHide) {
+        restorePositionAfterShow();
+        QTimer::singleShot(0, this, [this] { restorePositionAfterShow(); });
+        QTimer::singleShot(120, this, [this] { restorePositionAfterShow(); });
     }
+    // 置顶再兜底：合成器把窗口映射进 actor 列表后再调用扩展 SetWindowsAbove
+    // 才能按标题命中（GNOME）；Windows 顶层窗口销毁后顶层带会重排，延迟补
+    // HWND_TOPMOST 可避免截图覆盖层销毁时把球挤出顶层带。按多档延迟重复强化，
+    // 覆盖 Wayland 异步映射的时延（详见 reassertAlwaysOnTopAfterShow）。
+    reassertAlwaysOnTopAfterShow();
     markshot::debugLog("floating", "ball shown platform=%s",
                        QGuiApplication::platformName().toUtf8().constData());
 }
@@ -1132,6 +1133,70 @@ bool FloatingBall::positionWithinScreenBounds(const QPoint &topLeft) const
         return false;
     }
     return screen->geometry().intersects(ballRect);
+}
+
+bool FloatingBall::alwaysOnTopEnabled() const
+{
+    bool ok = false;
+    const QJsonObject root = readAppConfigRoot(&ok);
+    if (ok) {
+        const QJsonObject ball = root.value(QStringLiteral("floatingBall")).toObject();
+        const QJsonValue enabled = ball.value(QStringLiteral("alwaysOnTop"));
+        if (enabled.isBool()) {
+            return enabled.toBool();
+        }
+    }
+    return true;
+}
+
+void FloatingBall::applyAlwaysOnTopState(bool alwaysOnTop)
+{
+    // 只做平台原生兜底，不改 Qt 窗口标志（构造时已按配置定下，运行中改标志
+    // 会重建原生窗口、丢失位置并导致 showEvent 重入）。
+    markshot::windows::setWindowTopMost(this, alwaysOnTop);
+    markshot::windows::setGnomeWindowAbove(windowTitle(), alwaysOnTop);
+}
+
+void FloatingBall::reassertAlwaysOnTopAfterShow()
+{
+    // 多档延迟重复强化：GNOME Wayland 的 make_above 必须落在原生窗口映射完成
+    // 之后才有效（映射前调用会被 mutter 在 map 时重置）。延迟档位覆盖异步映射
+    // 的典型时延；每次都按"当前可见 + 配置开启"判断，避免无效调用或对已隐藏
+    // 的球误置顶。lambda 以 this 为 context 对象，窗口销毁后不会再触发。
+    const auto reassert = [this] {
+        if (isVisible() && alwaysOnTopEnabled()) {
+            applyAlwaysOnTopState(true);
+        }
+    };
+    QTimer::singleShot(120, this, reassert);
+    QTimer::singleShot(400, this, reassert);
+    QTimer::singleShot(1200, this, reassert);
+}
+
+void FloatingBall::restorePositionAfterShow()
+{
+    if (!positioningEnabled() || !m_havePositionBeforeHide || !isVisible()) {
+        return;
+    }
+    const QPoint current = frameGeometry().topLeft();
+    if (current == m_positionBeforeHide) {
+        return;
+    }
+    if (!positionWithinScreenBounds(m_positionBeforeHide)) {
+        return;
+    }
+    markshot::debugLog("floating", "restore position after show %d,%d -> %d,%d",
+                       current.x(), current.y(),
+                       m_positionBeforeHide.x(), m_positionBeforeHide.y());
+    move(m_positionBeforeHide);
+    // 停靠态：位置移回贴边位置后，隐入偏移依赖窗口实际贴边位置，需重算。
+    if (m_dockState == DockState::Snapped || m_dockState == DockState::Revealed) {
+        QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
+        if (screen) {
+            computeDockOffset(m_dockEdge, screen->availableGeometry(), &m_contentOffset);
+            applyDockVisuals();
+        }
+    }
 }
 
 }  // namespace markshot
