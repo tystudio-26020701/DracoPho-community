@@ -207,6 +207,32 @@ private:
     /// @return 可用时返回 true。
     bool positionWithinScreenBounds(const QPoint &topLeft) const;
 
+    /// @brief 读取悬浮球"始终置顶"配置（默认开启）。
+    /// @return 开启时返回 true。
+    bool alwaysOnTopEnabled() const;
+
+    /// @brief 应用悬浮球置顶状态（平台原生置顶 + GNOME 扩展置顶）。
+    ///
+    /// 只做原生兜底，不在显示过程中改动 Qt 窗口标志（那会重建原生窗口、
+    /// 丢失位置并导致 showEvent 重入）；Qt 标志在构造时按配置一次性决定。
+    /// @param alwaysOnTop 是否置顶。
+    void applyAlwaysOnTopState(bool alwaysOnTop);
+
+    /// @brief 重新显示后按多档延迟重复强化置顶。
+    ///
+    /// GNOME Wayland 下 make_above 在原生窗口映射完成前调用会被 mutter 在
+    /// map 时重置（Wayland 窗口置顶由 xdg 状态驱动，客户端未请求即清零），
+    /// 因此截图/录制会话结束恢复显示时，showEvent 里的同步调用与 singleShot(0)
+    /// 都早于异步映射，球会退回普通窗口层叠。这里以多档延迟重复兜底，确保至少
+    /// 一次落在合成器映射完成之后。仅在配置开启置顶时生效。
+    void reassertAlwaysOnTopAfterShow();
+
+    /// @brief 隐藏后重新显示时，把悬浮球位置纠正回隐藏前位置（覆盖自由漂浮与停靠态）。
+    ///
+    /// 截图/录制会话隐藏窗口后，部分 WM/合成器重新映射时会把球挪到别处
+    /// （屏幕中间 / 另一显示器）；本次显示时据此移回，避免"截图后悬浮球自己移动"。
+    void restorePositionAfterShow();
+
     CaptureCallback m_captureCallback;
     CaptureCallback m_fullscreenCallback;
     TimedCaptureCallback m_timedCaptureCallback;

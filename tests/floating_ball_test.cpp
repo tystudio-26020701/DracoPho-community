@@ -1,3 +1,4 @@
+#include "app_config_store.h"
 #include "floating_ball.h"
 #include "ui/i18n.h"
 
@@ -7,6 +8,7 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QScreen>
+#include <QStringList>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -557,6 +559,79 @@ private slots:
                                 .arg(now.x()).arg(now.y())));
         QVERIFY(ball.mask().isEmpty());
         QVERIFY(ball.isVisible());
+    }
+
+    void dockedBallRestoresPositionAfterHideDrift()
+    {
+        // 回归测试：停靠态的球在截图会话隐藏后，若 WM/合成器把它挪到别处，
+        // 重新显示时必须移回隐藏前的贴边位置，而不是留在漂移后的位置。
+        markshot::FloatingBall ball;
+        ball.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&ball));
+        QScreen *screen = ball.screen() ? ball.screen() : QGuiApplication::primaryScreen();
+        QVERIFY(screen);
+        const QRect available = screen->availableGeometry();
+        const int w = ball.width();
+
+        // 拖到右边缘释放，进入停靠隐入状态。
+        const QPoint start = ball.mapToGlobal(ball.rect().center());
+        const QPoint startTopLeft = ball.frameGeometry().topLeft();
+        const QPoint targetTopLeft(available.right() - w - 5, available.top() + 120);
+        const QPoint endGlobal = targetTopLeft + (start - startTopLeft);
+        QMouseEvent press(QEvent::MouseButtonPress, ball.rect().center(), start,
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(&ball, &press);
+        QMouseEvent moveEvent(QEvent::MouseMove, ball.mapFromGlobal(endGlobal), endGlobal,
+                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(&ball, &moveEvent);
+        QMouseEvent release(QEvent::MouseButtonRelease, ball.mapFromGlobal(endGlobal), endGlobal,
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(&ball, &release);
+
+        const int dockedX = available.right() - w + 1;
+        QVERIFY2(ball.pos().x() == dockedX, "ball should be docked to right edge");
+        const QPoint dockedPos = ball.pos();
+
+        // 截图会话：隐藏悬浮球。
+        ball.hide();
+
+        // 模拟 WM/合成器在隐藏期间把球挪到别处。
+        const QPoint drifted(available.left() + 300, available.top() + 300);
+        ball.move(drifted);
+        QVERIFY(ball.pos() == drifted);
+
+        // 会话结束：恢复显示，位置纠正应把球移回停靠贴边位置。
+        ball.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&ball));
+        QTest::qWait(200);
+        QVERIFY2(ball.pos() == dockedPos,
+                 qPrintable(QStringLiteral("docked ball must return to pre-hide position: expected=%1,%2 now=%3,%4")
+                                .arg(dockedPos.x()).arg(dockedPos.y())
+                                .arg(ball.pos().x()).arg(ball.pos().y())));
+    }
+
+    void honorsAlwaysOnTopSetting()
+    {
+        // 回归测试：floatingBall.alwaysOnTop=false 时，悬浮球窗口标志不带置顶，
+        // 恢复 true 后重新带置顶——即悬浮球遵循用户在设置中的置顶配置。
+        QString error;
+        QVERIFY(markshot::writeAppConfigValue(
+            QStringList{QStringLiteral("floatingBall"), QStringLiteral("alwaysOnTop")},
+            false,
+            &error));
+        {
+            markshot::FloatingBall ball;
+            QVERIFY2(!ball.windowFlags().testFlag(Qt::WindowStaysOnTopHint),
+                     "alwaysOnTop=false should drop the stays-on-top flag");
+        }
+        QVERIFY(markshot::writeAppConfigValue(
+            QStringList{QStringLiteral("floatingBall"), QStringLiteral("alwaysOnTop")},
+            true,
+            &error));
+        {
+            markshot::FloatingBall ball;
+            QVERIFY(ball.windowFlags().testFlag(Qt::WindowStaysOnTopHint));
+        }
     }
 
 private:

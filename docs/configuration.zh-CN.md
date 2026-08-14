@@ -175,6 +175,7 @@
 | `translation.autoAfterOcr` | 布尔值 | `false` | 控制贴图窗口 OCR 成功后是否自动启动翻译并缓存翻译结果。开启后，用户在右键菜单选择翻译时会瞬间渲染已缓存的翻译，无需临时发起网络请求。别名：`translation.auto` / `autoAfterOCR` 等。 |
 | `windowDetection.enabled` | 布尔值 | `true` | 控制窗口边界识别。设置为 `false` 后会同时关闭内置 X11 窗口识别和已配置的外挂检测脚本。 |
 | `windowDetection.env` | 对象 | `{}` | 传给窗口边界检测脚本的环境变量。别名：`environment`。<br>• **Niri 适配脚本**：自动读取 DMS bar、dock、frame 和 frame-exclusion 设置，也支持 `MARK_SHOT_NIRI_PANEL_EDGE`（`top`/`bottom`/`left`/`right`/`none`）以及像素偏移 `MARK_SHOT_NIRI_OFFSET_X/Y/WIDTH/HEIGHT`。<br>• **Hyprland 适配脚本**：支持 `MARK_SHOT_HYPRLAND_INCLUDE_INACTIVE`（`1`/`0`）以及像素偏移 `MARK_SHOT_HYPRLAND_OFFSET_X/Y/WIDTH/HEIGHT`。 |
+| `floatingBall.alwaysOnTop` | 布尔 | `true` | 悬浮球是否始终保持在普通窗口上方。悬浮球每次显示时都会重新强化置顶状态（Windows 原生 `HWND_TOPMOST`，GNOME Wayland 经随附 Shell 扩展），因此截图会话隐藏/恢复后仍能回到置顶。设为 `false` 可关闭置顶行为。 |
 | `floatingBall.edgeDockEnabled` | 布尔 | `true` | 悬浮球拖到屏幕边缘附近时是否停靠并隐入靠边缘的一半。仅在 X11/Windows/macOS 上生效：窗口会被吸附贴边并把球体一半滑出屏幕外。原生 Wayland 会话窗口位置由合成器决定、客户端无法读取可靠的绝对坐标，因此边缘停靠不可用（协议限制）：球体保持自由漂浮（闲置淡出在所有平台均正常）。 |
 | `floatingBall.hiddenExtentPx` | 数字 | `22` | 停靠时悬浮球滑出屏幕的像素数（即球半径，露出约一半球体作为可交互条）。夹紧在球直径以下。 |
 | `floatingBall.idleFadeSeconds` | 数字 | `3` | 鼠标离开悬浮球后，经过多少秒淡出到 `idleOpacity`。`0` 表示禁用闲置淡出。 |
