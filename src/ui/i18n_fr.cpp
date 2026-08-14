@@ -478,6 +478,7 @@ const QHash<QString, QString> &tableFr()
         {QStringLiteral("Settings Window"), QStringLiteral("Fenêtre des paramètres")},
         {QStringLiteral("Open the settings window when DracoPho starts."), QStringLiteral("Ouvrir la fenêtre des paramètres au démarrage de DracoPho.")},
         {QStringLiteral("Hide Floating Ball"), QStringLiteral("Masquer la boule flottante")},
+        {QStringLiteral("Show Floating Ball"), QStringLiteral("Afficher la boule flottante")},
         {QStringLiteral("Immediately"), QStringLiteral("Immediately")},
         {QStringLiteral("1 Second"), QStringLiteral("1 Second")},
         {QStringLiteral("3 Seconds"), QStringLiteral("3 Seconds")},

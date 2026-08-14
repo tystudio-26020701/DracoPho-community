@@ -478,6 +478,7 @@ const QHash<QString, QString> &tableZhCN()
         {QStringLiteral("Settings Window"), QStringLiteral("设置窗口")},
         {QStringLiteral("Open the settings window when DracoPho starts."), QStringLiteral("启动太殷龙摄时打开设置窗口。")},
         {QStringLiteral("Hide Floating Ball"), QStringLiteral("隐藏悬浮球")},
+        {QStringLiteral("Show Floating Ball"), QStringLiteral("显示悬浮球")},
         {QStringLiteral("Immediately"), QStringLiteral("立即")},
         {QStringLiteral("1 Second"), QStringLiteral("1 秒")},
         {QStringLiteral("3 Seconds"), QStringLiteral("3 秒")},
