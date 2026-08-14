@@ -3,6 +3,9 @@
 #include "debug_log.h"
 
 #include <QGuiApplication>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QProcessEnvironment>
 #include <QScreen>
 #include <QString>
@@ -614,6 +617,100 @@ void setGnomeWindowAbove(const QString &title, bool alwaysOnTop)
 #else
     Q_UNUSED(title);
     Q_UNUSED(alwaysOnTop);
+#endif
+}
+
+bool isGnomeSession()
+{
+#ifdef MARK_SHOT_WITH_DBUS
+    const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    const QString desktop = env.value(QStringLiteral("XDG_CURRENT_DESKTOP")).toLower();
+    const QString sessionDesktop = env.value(QStringLiteral("XDG_SESSION_DESKTOP")).toLower();
+    return desktop.contains(QStringLiteral("gnome"))
+        || sessionDesktop.contains(QStringLiteral("gnome"))
+        || env.contains(QStringLiteral("GNOME_DESKTOP_SESSION_ID"));
+#else
+    return false;
+#endif
+}
+
+bool gnomeWindowPosition(const QString &title, QPoint *out)
+{
+    if (!out || title.trimmed().isEmpty() || !isGnomeSession()) {
+        return false;
+    }
+#ifdef MARK_SHOT_WITH_DBUS
+    QDBusInterface helper(QStringLiteral("org.gnome.Shell"),
+                          QStringLiteral("/org/gnome/Shell/Extensions/MarkShotScrollHelper"),
+                          QStringLiteral("org.gnome.Shell.Extensions.MarkShotScrollHelper"),
+                          QDBusConnection::sessionBus());
+    if (!helper.isValid()) {
+        return false;
+    }
+
+    const QDBusMessage reply = helper.call(QStringLiteral("WindowGeometries"));
+    if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().isEmpty()) {
+        return false;
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(
+        reply.arguments().first().toString().toUtf8());
+    if (!document.isObject()) {
+        return false;
+    }
+    const QJsonArray windows = document.object().value(QStringLiteral("windows")).toArray();
+    for (const QJsonValue &value : windows) {
+        const QJsonObject window = value.toObject();
+        if (window.value(QStringLiteral("title")).toString() == title) {
+            const int x = window.value(QStringLiteral("x")).toInt();
+            const int y = window.value(QStringLiteral("y")).toInt();
+            *out = QPoint(x, y);
+            return true;
+        }
+    }
+    return false;
+#else
+    Q_UNUSED(title);
+    return false;
+#endif
+}
+
+int moveGnomeWindow(const QString &title, const QPoint &globalPos)
+{
+    if (title.trimmed().isEmpty() || !isGnomeSession()) {
+        return 0;
+    }
+#ifdef MARK_SHOT_WITH_DBUS
+    QDBusInterface helper(QStringLiteral("org.gnome.Shell"),
+                          QStringLiteral("/org/gnome/Shell/Extensions/MarkShotScrollHelper"),
+                          QStringLiteral("org.gnome.Shell.Extensions.MarkShotScrollHelper"),
+                          QDBusConnection::sessionBus());
+    if (!helper.isValid()) {
+        return 0;
+    }
+
+    const QDBusMessage reply = helper.call(QStringLiteral("MoveWindow"),
+                                           title,
+                                           globalPos.x(),
+                                           globalPos.y());
+    if (reply.type() == QDBusMessage::ErrorMessage) {
+        markshot::debugLog("windows",
+                           "GNOME helper MoveWindow failed: %s",
+                           reply.errorMessage().toUtf8().constData());
+        return 0;
+    }
+    if (reply.arguments().isEmpty()) {
+        return 0;
+    }
+    const int changed = reply.arguments().first().toInt();
+    if (changed > 0) {
+        markshot::debugLog("windows", "GNOME helper MoveWindow ok title=%s x=%d y=%d changed=%d",
+                           title.toUtf8().constData(), globalPos.x(), globalPos.y(), changed);
+    }
+    return changed;
+#else
+    Q_UNUSED(title);
+    Q_UNUSED(globalPos);
+    return 0;
 #endif
 }
 
