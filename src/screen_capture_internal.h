@@ -4,6 +4,7 @@
 
 #include "capture_geometry.h"
 #include "debug_log.h"
+#include "screen_capture_frame_validation.h"
 
 #ifdef MARK_SHOT_WITH_DBUS
 #include <QDBusArgument>

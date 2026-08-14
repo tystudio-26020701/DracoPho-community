@@ -185,6 +185,8 @@ qt_add_executable(dracoPho
     src/screen_capture_cursor.h
     src/screen_capture_dbus_portal.cpp
     src/screen_capture_dbus_wayland.cpp
+    src/screen_capture_frame_validation.cpp
+    src/screen_capture_frame_validation.h
     src/screen_capture_internal.h
     ${MARK_SHOT_PIPEWIRE_CAPTURE_SOURCES}
     src/screen_capture_platform_api.cpp
@@ -646,6 +648,20 @@ if(BUILD_TESTING)
             Qt6::Test
     )
     add_test(NAME screen-capture-cursor COMMAND dracoPho-screen-capture-cursor-test)
+
+    qt_add_executable(dracoPho-screen-capture-frame-validation-test
+        tests/screen_capture_frame_validation_test.cpp
+        src/screen_capture_frame_validation.cpp
+        src/screen_capture_frame_validation.h
+    )
+    target_include_directories(dracoPho-screen-capture-frame-validation-test PRIVATE src)
+    target_link_libraries(dracoPho-screen-capture-frame-validation-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+    )
+    add_test(NAME screen-capture-frame-validation COMMAND dracoPho-screen-capture-frame-validation-test)
 
     qt_add_executable(dracoPho-ocr-result-test
         tests/ocr_result_test.cpp

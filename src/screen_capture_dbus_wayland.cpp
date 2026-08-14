@@ -324,10 +324,13 @@ CaptureResult captureWaylandFrame(const CaptureRequest &request)
         && !request.sourceGeometry.isEmpty() && !request.allOutputs) {
         markshot::debugLog("capture", "route=gnome-scroll-helper");
         CaptureResult gnomeCapture = captureWithGnomeScrollHelper(request);
-        if (!gnomeCapture.image.isNull()) {
+        if (!gnomeCapture.image.isNull() && !markshot::isSuspiciousSolidFrame(gnomeCapture.image)) {
             markshot::debugLog("capture", "gnome-scroll-helper-ok frame=%dx%d",
                                gnomeCapture.image.width(), gnomeCapture.image.height());
             return gnomeCapture;
+        }
+        if (!gnomeCapture.image.isNull()) {
+            markshot::debugLog("capture", "gnome-scroll-helper-solid-frame (falling back)");
         }
         markshot::debugLog("capture", "gnome-scroll-helper-failed (falling back) error=%s",
                            gnomeCapture.error.toUtf8().constData());
@@ -343,10 +346,13 @@ CaptureResult captureWaylandFrame(const CaptureRequest &request)
                            kdeSession ? 1 : 0, kwinAvailable ? 1 : 0,
                            request.allOutputs ? 1 : 0);
         CaptureResult kwinCapture = captureWithKWinScreenShot(request);
-        if (!kwinCapture.image.isNull()) {
+        if (!kwinCapture.image.isNull() && !markshot::isSuspiciousSolidFrame(kwinCapture.image)) {
             markshot::debugLog("capture", "kwin-screenshot-ok frame=%dx%d",
                                kwinCapture.image.width(), kwinCapture.image.height());
             return kwinCapture;
+        }
+        if (!kwinCapture.image.isNull()) {
+            markshot::debugLog("capture", "kwin-screenshot-solid-frame (falling back)");
         }
         markshot::debugLog("capture", "kwin-screenshot-failed (falling back) error=%s",
                            kwinCapture.error.toUtf8().constData());
@@ -406,8 +412,11 @@ CaptureResult captureWaylandFrame(const CaptureRequest &request)
 
     if (prefersGrim()) {
         CaptureResult grimCapture = captureWithGrim(request);
-        if (!grimCapture.image.isNull()) {
+        if (!grimCapture.image.isNull() && !markshot::isSuspiciousSolidFrame(grimCapture.image)) {
             return grimCapture;
+        }
+        if (!grimCapture.image.isNull()) {
+            markshot::debugLog("capture", "grim-solid-frame (falling back)");
         }
 
         if (!request.allowPortalScreenshotFallback) {
@@ -429,8 +438,11 @@ CaptureResult captureWaylandFrame(const CaptureRequest &request)
     CaptureResult portalCapture;
     if (request.allowPortalScreenshotFallback) {
         portalCapture = captureWithPortalScreenshot(request);
-        if (!portalCapture.image.isNull()) {
+        if (!portalCapture.image.isNull() && !markshot::isSuspiciousSolidFrame(portalCapture.image)) {
             return portalCapture;
+        }
+        if (!portalCapture.image.isNull()) {
+            markshot::debugLog("capture", "portal-screenshot-solid-frame (falling back)");
         }
     } else {
         markshot::debugLog("capture", "【Wayland捕获】【Portal截图回退】已禁用");
