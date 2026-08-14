@@ -1,5 +1,33 @@
 # 发版说明
 
+### 26.8.5.1
+
+> **太殷龙摄 社区版**——补丁发布。修复 GNOME Wayland 下截图后悬浮球漂移、
+> 剪贴板双持有者竞争导致的交互式复制延迟，以及单帧截图把纯色占位帧当作结果
+> 的问题。
+
+#### 修复
+
+**悬浮球**
+- 截图 / 录制会话结束后恢复隐藏前位置，不再漂移到屏幕中央（mutter 会按
+  center-new-windows 居中重新映射窗口）。GNOME Wayland 下经
+  `MarkShotScrollHelper` Shell 扩展（`WindowGeometries` / `MoveWindow`）读取
+  合成器真实坐标并移动窗口（Qt 客户端无法在 Wayland 定位自身顶层窗口）；
+  X11/Windows 用 `move()`。
+- 置顶现在遵循 `floatingBall.alwaysOnTop` 配置（默认开启），并在显示后以多档
+  延迟重复强化，覆盖 Wayland 异步映射窗口的时延。
+
+**剪贴板**
+- 交互式复制不再派生 `wl-copy --foreground` 常驻进程，改由常驻主进程持有 Qt
+  数据源，消除"点击某个图标后才真正复制进剪贴板"的双持有者竞争。
+
+**Wayland 截图**
+- 单帧截图现在检测纯色占位帧（来自 `gnome-scroll-helper` / KWin / `grim` /
+  portal）并回退到下一后端，不再返回空白图。
+
+**i18n**
+- "Show Floating Ball"（显示悬浮球）已补齐 12 种语言翻译。
+
 ### 26.8.5.0
 
 > **太殷龙摄 社区版**——功能发布。新增**独立图片编辑器**（`--editor`）、
