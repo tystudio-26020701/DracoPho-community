@@ -478,6 +478,7 @@ const QHash<QString, QString> &tableKo()
         {QStringLiteral("Settings Window"), QStringLiteral("설정 창")},
         {QStringLiteral("Open the settings window when DracoPho starts."), QStringLiteral("DracoPho 시작 시 설정 창을 엽니다.")},
         {QStringLiteral("Hide Floating Ball"), QStringLiteral("플로팅 볼 숨기기")},
+        {QStringLiteral("Show Floating Ball"), QStringLiteral("플로팅 볼 표시")},
         {QStringLiteral("Immediately"), QStringLiteral("Immediately")},
         {QStringLiteral("1 Second"), QStringLiteral("1 Second")},
         {QStringLiteral("3 Seconds"), QStringLiteral("3 Seconds")},
