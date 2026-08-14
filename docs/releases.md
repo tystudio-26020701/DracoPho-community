@@ -1,5 +1,37 @@
 # Release Notes
 
+### 26.8.5.1
+
+> **DracoPho Community Edition** — patch release. Fixes the floating ball
+> drifting after a capture on GNOME Wayland, a clipboard double-owner race
+> that delayed interactive copies, and solid placeholder frames slipping
+> through single-frame Wayland captures.
+
+#### Fixes
+
+**Floating ball**
+- Restores its position after a capture/recording session instead of drifting
+  to screen center (mutter re-centers re-mapped windows). On GNOME Wayland the
+  real compositor position is read via the `MarkShotScrollHelper` Shell
+  extension (`WindowGeometries` / `MoveWindow`) because a Qt client cannot
+  position its own top-level window there; X11/Windows use `move()`.
+- Always-on-top now honors the `floatingBall.alwaysOnTop` config (default on)
+  and is re-asserted with multi-delay retries after showing, covering Wayland's
+  asynchronous window mapping.
+
+**Clipboard**
+- Interactive copy no longer spawns a `wl-copy --foreground` owner process; the
+  resident main process now holds the Qt data source, removing the double-owner
+  race that made copies land only after clicking an icon.
+
+**Wayland capture**
+- Single-frame screenshots now detect solid placeholder frames (from
+  `gnome-scroll-helper` / KWin / `grim` / portal) and fall back to the next
+  backend instead of returning a blank image.
+
+**i18n**
+- "Show Floating Ball" is now translated in all 12 languages.
+
 ### 26.8.5.0
 
 > **DracoPho Community Edition** — feature release. Adds a **standalone image

@@ -1,8 +1,8 @@
 ; DracoPho Windows 安装器（Inno Setup）
 ;
 ; 构建命令（CI 或本地）：
-;   ISCC.exe /DMyAppVersion=26.8.5.0 ^
-;            /DMyAppTag=v26.8.5.0 ^
+;   ISCC.exe /DMyAppVersion=26.8.5.1 ^
+;            /DMyAppTag=v26.8.5.1 ^
 ;            /DMyExeName=dracoPho.exe ^
 ;            /DMyProductName=dracoPho ^
 ;            /DMySourceDir=C:\path\to\app ^
