@@ -70,6 +70,12 @@ const DBUS_XML = `
       <arg type="b" name="above" direction="in"/>
       <arg type="i" name="changed" direction="out"/>
     </method>
+    <method name="MoveWindow">
+      <arg type="s" name="title" direction="in"/>
+      <arg type="i" name="x" direction="in"/>
+      <arg type="i" name="y" direction="in"/>
+      <arg type="i" name="changed" direction="out"/>
+    </method>
     <method name="CaptureWindow">
       <arg type="i" name="pid" direction="in"/>
       <arg type="i" name="x" direction="in"/>
@@ -314,6 +320,14 @@ export default class MarkShotScrollHelper extends Extension {
                 return;
             }
 
+            if (methodName === 'MoveWindow') {
+                const [title, x, y] = parameters.deepUnpack();
+                invocation.return_value(new GLib.Variant('(i)', [
+                    this._moveWindow(title, x, y),
+                ]));
+                return;
+            }
+
             if (methodName === 'CaptureWindow') {
                 this._handleCaptureWindow(parameters, invocation);
                 return;
@@ -441,6 +455,39 @@ export default class MarkShotScrollHelper extends Extension {
             }
         }
 
+        return changed;
+    }
+
+    // 程序化移动窗口：Wayland 客户端无法通过 setPosition/move 定位自己的
+    // 顶层窗口（位置由合成器决定，Qt 文档确认该平台不支持 setPosition），
+    // 而扩展运行在合成器进程内，可以直接调用 MetaWindow.move_frame 把窗口
+    // 移到指定全局坐标。用于悬浮球截图/录制会话隐藏后重新显示时移回原位。
+    _moveWindow(title, x, y) {
+        if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) {
+            return 0;
+        }
+        let changed = 0;
+        const actors = global.get_window_actors?.() ?? [];
+        for (const actor of actors) {
+            const metaWindow = actor?.meta_window;
+            if (!windowMatchesPinnedRequest(metaWindow, title) || !allowedWindowType(metaWindow)) {
+                continue;
+            }
+            const rect = windowRect(metaWindow);
+            if (!rect) {
+                continue;
+            }
+            // 已在目标位置则跳过，避免无谓的合成器重排。
+            if (rect.x === Math.round(x) && rect.y === Math.round(y)) {
+                continue;
+            }
+            try {
+                metaWindow.move_frame(true, Math.round(x), Math.round(y));
+                changed += 1;
+            } catch (e) {
+                console.log(`[MarkShotScrollHelper][move-window] failed title=${title} x=${x} y=${y} err=${e.message}`);
+            }
+        }
         return changed;
     }
 

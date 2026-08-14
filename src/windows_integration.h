@@ -49,5 +49,28 @@ void raiseTopMostWindow(QWidget *widget);
 /// @param title 匹配的窗口标题（扩展按标题精确匹配）。
 /// @param alwaysOnTop 置顶或取消置顶。
 void setGnomeWindowAbove(const QString &title, bool alwaysOnTop);
+/// @brief 当前会话是否为 GNOME 桌面（含 GNOME Wayland）。
+/// @return GNOME 会话时返回 true。
+bool isGnomeSession();
+/// @brief 通过 GNOME Shell 扩展查询匹配标题窗口的合成器真实位置。
+///
+/// Wayland (xdg-shell) 不向客户端回报窗口位置，Qt 客户端读到的
+/// frameGeometry() 位置是本地缓存值而非合成器真实位置。扩展运行在合成器
+/// 进程内，WindowGeometries 返回的是合成器视角的全局坐标。用于悬浮球隐藏
+/// 前记录真实位置、恢复时移回。非 GNOME 会话或扩展不可用时返回 false。
+/// @param title 匹配的窗口标题（扩展按标题精确匹配）。
+/// @param out 输出合成器全局坐标。
+/// @return 查询成功时返回 true。
+bool gnomeWindowPosition(const QString &title, QPoint *out);
+/// @brief GNOME Shell 下把匹配标题的窗口移动到指定全局坐标。
+///
+/// Wayland 客户端无法通过 Qt move()/setPosition 定位自己的顶层窗口（位置由
+/// 合成器决定，Qt 文档明确该平台不支持 setPosition），扩展运行在合成器
+/// 进程内，可直接调用 MetaWindow.move_frame 把窗口移到目标坐标。非 GNOME
+/// 会话或扩展不可用时为空操作。
+/// @param title 匹配的窗口标题（扩展按标题精确匹配）。
+/// @param globalPos 目标全局坐标（逻辑像素）。
+/// @return 扩展报告成功移动的窗口数。
+int moveGnomeWindow(const QString &title, const QPoint &globalPos);
 
 } // namespace markshot::windows

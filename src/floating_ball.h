@@ -227,10 +227,21 @@ private:
     /// 一次落在合成器映射完成之后。仅在配置开启置顶时生效。
     void reassertAlwaysOnTopAfterShow();
 
+    /// @brief 截图/录制会话隐藏后重新显示时，悬浮球位置恢复机制是否可用。
+    ///
+    /// 与 positioningEnabled()（门控启动/保存/停靠）相互独立：X11/Windows/
+    /// offscreen 用 Qt move() 恢复；GNOME Wayland 下客户端 move() 被合成器
+    /// 忽略（Qt 文档确认 Wayland 不支持 setPosition），但可经 GNOME Shell
+    /// 扩展 MoveWindow（合成器进程内 MetaWindow.move_frame）移动窗口，故也
+    /// 认为恢复机制可用。其他原生 Wayland（非 GNOME，无扩展）不可用。
+    /// @return 截图后位置恢复可执行时返回 true。
+    bool restorePositionCapable() const;
+
     /// @brief 隐藏后重新显示时，把悬浮球位置纠正回隐藏前位置（覆盖自由漂浮与停靠态）。
     ///
-    /// 截图/录制会话隐藏窗口后，部分 WM/合成器重新映射时会把球挪到别处
-    /// （屏幕中间 / 另一显示器）；本次显示时据此移回，避免"截图后悬浮球自己移动"。
+    /// 截图/录制会话隐藏窗口后，mutter 会把重新映射的窗口按
+    /// org.gnome.mutter center-new-windows 居中放置（本会话实测该值为 true），
+    /// 表现为"截图后悬浮球跑到屏幕中间"。本次显示时据此把球移回隐藏前位置。
     void restorePositionAfterShow();
 
     CaptureCallback m_captureCallback;

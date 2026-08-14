@@ -645,14 +645,17 @@ void FloatingBall::showEvent(QShowEvent *event)
             applyDockVisuals();
         }
     }
-    // 纠正隐藏期间的位置漂移：截图/录制会话隐藏窗口后，部分 WM/合成器重新
-    // 映射时会把球挪到别处（屏幕中间 / 另一显示器）。立即纠正一次避免闪烁，
-    // 再延迟校验数次——X11 上 WM 的重新配置异步到达，Windows 的 WM_MOVE 也可能
-    // 晚于 show() 返回，单次 singleShot(0) 会漏掉这些迟到的重定位。
-    if (positioningEnabled() && m_havePositionBeforeHide) {
+    // 纠正隐藏期间的位置漂移：截图/录制会话隐藏窗口后，mutter 会把重新映射
+    // 的窗口按 org.gnome.mutter center-new-windows 居中放置（表现为球跑到屏幕
+    // 中间）。立即纠正一次避免闪烁，再延迟校验数次——X11 上 WM 的重新配置异步
+    // 到达，Windows 的 WM_MOVE 也可能晚于 show() 返回，单次 singleShot(0) 会
+    // 漏掉这些迟到的重定位；原生 Wayland 下窗口映射完成时刻不定，需要更多档。
+    if (restorePositionCapable() && m_havePositionBeforeHide) {
         restorePositionAfterShow();
         QTimer::singleShot(0, this, [this] { restorePositionAfterShow(); });
         QTimer::singleShot(120, this, [this] { restorePositionAfterShow(); });
+        QTimer::singleShot(400, this, [this] { restorePositionAfterShow(); });
+        QTimer::singleShot(1200, this, [this] { restorePositionAfterShow(); });
     }
     // 置顶再兜底：合成器把窗口映射进 actor 列表后再调用扩展 SetWindowsAbove
     // 才能按标题命中（GNOME）；Windows 顶层窗口销毁后顶层带会重排，延迟补
@@ -682,10 +685,19 @@ void FloatingBall::hideEvent(QHideEvent *event)
     m_systemMoveStarted = false;
     m_lastDragActivityMs = -1;
     // 记录隐藏前的窗口位置：截图/录制会话结束重新显示时，若 WM/合成器把窗口
-    // 挪到了别处（部分 X11 WM 与 Windows 在重新映射/显隐时行为不一），据此
-    // 把球移回原位，避免"截图后悬浮球自己移动"。
-    if (positioningEnabled()) {
-        m_positionBeforeHide = frameGeometry().topLeft();
+    // 挪到了别处（mutter 会按 center-new-windows 居中重新映射），据此把球移回
+    // 原位。原生 Wayland 下 Qt 客户端读不到合成器真实位置（frameGeometry 是
+    // 本地缓存值），必须经扩展查询合成器坐标，否则恢复目标本身是错的。
+    if (restorePositionCapable()) {
+        QPoint compositorPosition;
+        const bool waylandGnome = markshot::windows::isGnomeSession()
+            && QGuiApplication::platformName().compare(QStringLiteral("wayland"), Qt::CaseInsensitive) == 0;
+        if (waylandGnome
+            && markshot::windows::gnomeWindowPosition(windowTitle(), &compositorPosition)) {
+            m_positionBeforeHide = compositorPosition;
+        } else {
+            m_positionBeforeHide = frameGeometry().topLeft();
+        }
         m_havePositionBeforeHide = true;
     }
     QWidget::hideEvent(event);
@@ -863,6 +875,18 @@ bool FloatingBall::positioningEnabled() const
     // offscreen 平台 move 记录位置，测试可用。
     const QString platform = QGuiApplication::platformName();
     return platform != QLatin1String("wayland");
+}
+
+bool FloatingBall::restorePositionCapable() const
+{
+    const QString platform = QGuiApplication::platformName();
+    // X11/Windows/offscreen：Qt move() 有效。
+    if (platform != QLatin1String("wayland")) {
+        return true;
+    }
+    // GNOME Wayland：客户端 move() 无效，但扩展 MoveWindow（合成器进程内
+    // MetaWindow.move_frame）可移动窗口，机制可用。
+    return markshot::windows::isGnomeSession();
 }
 
 bool FloatingBall::edgeDockEnabled() const
@@ -1175,20 +1199,33 @@ void FloatingBall::reassertAlwaysOnTopAfterShow()
 
 void FloatingBall::restorePositionAfterShow()
 {
-    if (!positioningEnabled() || !m_havePositionBeforeHide || !isVisible()) {
+    if (!restorePositionCapable() || !m_havePositionBeforeHide || !isVisible()) {
+        return;
+    }
+    const QPoint target = m_positionBeforeHide;
+    if (!positionWithinScreenBounds(target)) {
         return;
     }
     const QPoint current = frameGeometry().topLeft();
-    if (current == m_positionBeforeHide) {
+
+    // 原生 Wayland：客户端无法通过 move()/setPosition 定位顶层窗口（Qt 文档
+    // 明确该平台不支持 setPosition，合成器决定位置），必须经扩展在合成器进程
+    // 内调用 MetaWindow.move_frame 移回。合成器位置对客户端可见的 frameGeometry
+    // 可能滞后，因此不依赖 current==target 提前返回，而是每档延迟都请求扩展
+    // 移动；扩展内部按实际 frame_rect 判断已到位则跳过，避免无谓重排。
+    if (markshot::windows::isGnomeSession()
+        && QGuiApplication::platformName().compare(QStringLiteral("wayland"), Qt::CaseInsensitive) == 0) {
+        markshot::windows::moveGnomeWindow(windowTitle(), target);
         return;
     }
-    if (!positionWithinScreenBounds(m_positionBeforeHide)) {
+
+    if (current == target) {
         return;
     }
     markshot::debugLog("floating", "restore position after show %d,%d -> %d,%d",
                        current.x(), current.y(),
-                       m_positionBeforeHide.x(), m_positionBeforeHide.y());
-    move(m_positionBeforeHide);
+                       target.x(), target.y());
+    move(target);
     // 停靠态：位置移回贴边位置后，隐入偏移依赖窗口实际贴边位置，需重算。
     if (m_dockState == DockState::Snapped || m_dockState == DockState::Revealed) {
         QScreen *screen = QGuiApplication::screenAt(frameGeometry().center());
