@@ -77,9 +77,9 @@ sed -i '1s|^#!/usr/bin/env python3$|#!/usr/bin/python3|' \
 %{_datadir}/applications/dracoPho-edit.desktop
 %{_datadir}/applications/net.local.dracoPho.desktop
 %{_datadir}/icons/hicolor/scalable/apps/dracoPho.svg
-%{_datadir}/icons/hicolor/scalable/apps/dracoPho.svg
-%{_datadir}/icons/hicolor/scalable/apps/dracoPho-edit.svg
-%{_datadir}/gnome-shell/extensions/dracoPho-scroll-helper@snemc.org/
+%{_datadir}/icons/hicolor/scalable/apps/mark-shot.svg
+%{_datadir}/icons/hicolor/scalable/apps/mark-shot-edit.svg
+%{_datadir}/gnome-shell/extensions/mark-shot-scroll-helper@snemc.org/
 
 %changelog
 * Thu Jul 16 2026 jswysnemc <snemc@qq.com> - 0.1.41-1
