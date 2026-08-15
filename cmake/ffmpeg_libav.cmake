@@ -44,7 +44,13 @@ elseif(WIN32)
     if(FFmpegLibav_FOUND AND NOT TARGET MarkShot::FFmpegLibav)
         add_library(MarkShot::FFmpegLibav INTERFACE IMPORTED)
         target_include_directories(MarkShot::FFmpegLibav INTERFACE "${FFmpegLibav_INCLUDE_DIR}")
-        target_link_libraries(MarkShot::FFmpegLibav INTERFACE ${FFmpegLibav_LIBRARIES})
+        # 静态库间存在循环依赖（avformat → avcodec → avutil → avformat），
+        # 用链接器组重新扫描以解析所有未定义符号（MinGW ld 与 GNU ld 均支持）。
+        target_link_libraries(MarkShot::FFmpegLibav INTERFACE
+            -Wl,--start-group
+            ${FFmpegLibav_LIBRARIES}
+            -Wl,--end-group
+        )
     endif()
 endif()
 
