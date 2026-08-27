@@ -87,7 +87,7 @@ jobs:
             -w 128 \
             -h 128 \
             data/icons/TY-DracoPho.svg \
-            -o packaging/flatpak/io.github.jswysnemc.MarkShot.png
+            -o packaging/flatpak/io.github.tystudio26020701.DracoPho.png
 
           cd packaging/flatpak
           flatpak-builder \
@@ -96,10 +96,10 @@ jobs:
             --force-clean \
             --repo="$GITHUB_WORKSPACE/flatpak-repo" \
             "$GITHUB_WORKSPACE/flatpak-build" \
-            io.github.jswysnemc.MarkShot.yml
+            io.github.tystudio26020701.DracoPho.yml
 
           cd "$GITHUB_WORKSPACE"
-          flatpak build-bundle flatpak-repo "$ASSET" io.github.jswysnemc.MarkShot stable
+          flatpak build-bundle flatpak-repo "$ASSET" io.github.tystudio26020701.DracoPho stable
           sha256sum "$ASSET" > "$ASSET.sha256"
 
           {

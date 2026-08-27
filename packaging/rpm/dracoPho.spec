@@ -1,5 +1,5 @@
 Name:           dracoPho
-Version:        0.1.41
+Version:        26.8.5.1
 Release:        1%{?dist}
 Summary:        Qt 6 screenshot selection and annotation tool
 
@@ -77,37 +77,38 @@ sed -i '1s|^#!/usr/bin/env python3$|#!/usr/bin/python3|' \
 %{_datadir}/applications/dracoPho-edit.desktop
 %{_datadir}/applications/net.local.dracoPho.desktop
 %{_datadir}/icons/hicolor/scalable/apps/dracoPho.svg
-%{_datadir}/icons/hicolor/scalable/apps/mark-shot.svg
-%{_datadir}/icons/hicolor/scalable/apps/mark-shot-edit.svg
 %{_datadir}/gnome-shell/extensions/mark-shot-scroll-helper@snemc.org/
 
 %changelog
-* Thu Jul 16 2026 jswysnemc <snemc@qq.com> - 0.1.41-1
+* Tue Aug 25 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 26.8.5.1-1
+- Update to version 26.8.5.1
+
+* Thu Jul 16 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.41-1
 - Update to version 0.1.41
 
-* Thu Jul 16 2026 jswysnemc <snemc@qq.com> - 0.1.40-1
+* Thu Jul 16 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.40-1
 - Update to version 0.1.40
 
-* Fri Jul 10 2026 jswysnemc <snemc@qq.com> - 0.1.39-1
+* Fri Jul 10 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.39-1
 - Update to version 0.1.39
 
-* Sun Jun 07 2026 jswysnemc <snemc@qq.com> - 0.1.22-1
+* Sun Jun 07 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.22-1
 - Update to version 0.1.22
 
-* Sat Jun 06 2026 jswysnemc <snemc@qq.com> - 0.1.21-1
+* Sat Jun 06 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.21-1
 - Update to version 0.1.21
 
-* Fri Jun 05 2026 jswysnemc <snemc@qq.com> - 0.1.20-1
+* Fri Jun 05 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.20-1
 - Update to version 0.1.20
 
-* Fri Jun 05 2026 jswysnemc <snemc@qq.com> - 0.1.19-1
+* Fri Jun 05 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.19-1
 - Update to version 0.1.19
 
-* Thu Jun 04 2026 jswysnemc <snemc@qq.com> - 0.1.18-1
+* Thu Jun 04 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.18-1
 - Update to version 0.1.18
 
-* Thu Jun 04 2026 jswysnemc <snemc@qq.com> - 0.1.17-1
+* Thu Jun 04 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.17-1
 - Update to version 0.1.17
 
-* Thu Jun 04 2026 jswysnemc <snemc@qq.com> - 0.1.16-1
+* Thu Jun 04 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 0.1.16-1
 - Initial Fedora RPM packaging
