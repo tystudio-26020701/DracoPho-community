@@ -5,9 +5,6 @@
     <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
       <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
-    <a href="https://gitter.im/mark-shot/community">
-      <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
-    </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
     <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
@@ -99,7 +96,7 @@ DracoPho는 Qt 6 기반의 고성능 스크린샷 주석 도구입니다. 프로
 - **데스크톱 바로가기**:
   - `dracoPho.desktop`: 시스템 전체 스크린샷 도구로 구성되어 시스템 단축키로 바로 호출할 수 있습니다.
   - `dracoPho-edit.desktop`: 독립적인 이미지 편집기로 등록되어 파일 관리자(예: Dolphin, Nautilus)의 오른쪽 클릭 "연결 프로그램" 메뉴에 통합할 수 있습니다.
-- 고해상도 `dracoPho.svg` 및 `mark-shot-edit.svg` 시스템 벡터 아이콘이 함께 제공됩니다.
+- 고해상도 `dracoPho.svg` 시스템 벡터 아이콘이 함께 제공됩니다.
 
 ### KDE KWin ScreenShot2 권한
 
