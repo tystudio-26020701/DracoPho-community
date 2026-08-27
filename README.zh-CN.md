@@ -5,9 +5,6 @@
     <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
       <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
-    <a href="https://gitter.im/mark-shot/community">
-      <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
-    </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
     <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
@@ -108,7 +105,7 @@
  - **桌面快捷方式**：
    - `dracoPho.desktop`：配置为系统全局截图工具，支持系统快捷键直接调用。
    - `dracoPho-edit.desktop`：注册为独立的图像编辑器，可集成到文件管理器（如 Dolphin、Nautilus）的右键"打开方式"菜单中；直接启动该入口（不带文件）会以空画布打开图片编辑器（打开 / Ctrl+O / 拖放导入）。
-- 附带高分辨率的 `dracoPho.svg` 以及上游 `mark-shot.svg` 与 `mark-shot-edit.svg` 系统矢量图标。
+- 附带高分辨率的 `dracoPho.svg` 系统矢量图标。
 
 ### KDE KWin ScreenShot2 授权
 

@@ -5,9 +5,6 @@
     <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
       <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
-    <a href="https://gitter.im/mark-shot/community">
-      <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
-    </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
     <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
@@ -99,7 +96,7 @@ Il capture l'écran instantanément et ouvre une couche d'annotation interactive
 - **Raccourcis du bureau** :
   - `dracoPho.desktop` : configuré comme outil de capture d'écran global du système, invocable directement via un raccourci système.
   - `dracoPho-edit.desktop` : enregistré comme éditeur d'images indépendant, intégrable au menu contextuel « Ouvrir avec » des gestionnaires de fichiers (Dolphin, Nautilus, etc.).
-- Fourni avec les icônes vectorielles système haute résolution `dracoPho.svg` et `mark-shot-edit.svg`.
+- Fourni avec les icônes vectorielles système haute résolution `dracoPho.svg`.
 
 ### Autorisation KDE KWin ScreenShot2
 

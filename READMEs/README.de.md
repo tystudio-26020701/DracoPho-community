@@ -5,9 +5,6 @@
     <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
       <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
-    <a href="https://gitter.im/mark-shot/community">
-      <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
-    </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
     <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
@@ -82,7 +79,7 @@ Es kann in Sekundenschnelle den Bildschirm erfassen und eine adaptive Vollbild-A
   - **Auswahl per Ziehen anpassen**: Der schwebende Griff kann gedrückt und gezogen werden, um den Screenshot-Auswahlbereich entlang der Scroll-Achse zu verschieben und so Inhalte zu erfassen, die über den anfänglichen Bildschirmbereich hinausgehen;
   - **Achsenrichtung per Klick wechseln**: Vor Beginn der Erfassung kann durch Klicken auf den schwebenden Griff direkt die Scroll-Richtung (vertikal/horizontal) umgeschaltet werden.
 - **Kompatibilitätshinweis**: Scroll-Screenshots unter KDE, GNOME, X11 und anderen Umgebungen ohne `niri` sind weiterhin experimentell und noch nicht ausgereift. Diese Desktop-Stacks unterscheiden sich in den Portal-Backend-Strategien, im Verhalten von Shell bzw. Fenstermanager, beim Feedback der Fenstergeometrie, beim Frame-Timing und bei der Verarbeitung von Scroll-Ereignissen.
-- Falls Scroll-Screenshots nicht funktionieren, verwende bitte den normalen Screenshot-Ablauf oder binde über Mark-Shot-Erweiterungsbefehle ein externes Lang-Screenshot-Werkzeug an.
+- Falls Scroll-Screenshots nicht funktionieren, verwende bitte den normalen Screenshot-Ablauf oder binde über DracoPho-Erweiterungsbefehle ein externes Lang-Screenshot-Werkzeug an.
 - Um ein Problem mit Scroll-Screenshots zu melden, führe bitte zuerst `dracoPho --debug --debug-log /path/to/dracoPho.log` aus, reproduziere das Problem und hänge das Protokoll an das GitHub-Issue an. Alternativ kann das Debugging in `config.json` über `debug.enabled` und `debug.logPath` aktiviert werden; `DEBUG=1` und `MARK_SHOT_DEBUG_LOG=/path/to/log` funktionieren weiterhin.
 
 ### Unterstützung verschiedener Display-Server
@@ -99,7 +96,7 @@ Es kann in Sekundenschnelle den Bildschirm erfassen und eine adaptive Vollbild-A
 - **Desktop-Verknüpfungen**:
   - `dracoPho.desktop`: Als systemweites Screenshot-Werkzeug konfiguriert, das direkt über Systemtastenkürzel aufgerufen werden kann.
   - `dracoPho-edit.desktop`: Als eigenständiger Bildeditor registriert und in das Rechtsklick-Menü „Öffnen mit" von Dateimanagern (z. B. Dolphin, Nautilus) integrierbar.
-- Enthält hochauflösende System-Vektor-Icons `dracoPho.svg` und `mark-shot-edit.svg`.
+- Enthält hochauflösende System-Vektor-Icons `dracoPho.svg`.
 
 ### KDE-KWin-ScreenShot2-Autorisierung
 
@@ -570,7 +567,7 @@ Lade Python 3.10 oder neuer von [python.org](https://www.python.org/downloads/) 
 
 **2. Das OCR-Hilfsskript kopieren**
 
-Kopiere `../scripts/dracoPho-ocr` aus dem [Mark-Shot-Repository](https://github.com/tystudio-26020701/DracoPho-community) in ein lokales Verzeichnis, z. B. `%LOCALAPPDATA%\dracoPho\dracoPho-ocr.py`.
+Kopiere `../scripts/dracoPho-ocr` aus dem [DracoPho-Repository](https://github.com/tystudio-26020701/DracoPho-community) in ein lokales Verzeichnis, z. B. `%LOCALAPPDATA%\dracoPho\dracoPho-ocr.py`.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\dracoPho"

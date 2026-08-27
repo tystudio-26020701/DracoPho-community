@@ -5,9 +5,6 @@
     <a href="https://github.com/tystudio-26020701/DracoPho-community/releases">
       <img src="https://img.shields.io/github/v/release/tystudio-26020701/DracoPho-community?color=6da0f2&labelColor=4a5054&label=release&style=flat-square&logo=github" alt="Release" />
     </a>
-    <a href="https://gitter.im/mark-shot/community">
-      <img src="https://img.shields.io/badge/gitter-join%20chat-46bc99?labelColor=4a5054&style=flat-square&logo=gitter" alt="Gitter" />
-    </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
     <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
@@ -99,7 +96,7 @@ DracoPho — это высокопроизводительный инструм�
 - **Ярлыки рабочего стола**:
   - `dracoPho.desktop`: настроен как глобальный инструмент скриншотов системы, вызывается системным сочетанием клавиш.
   - `dracoPho-edit.desktop`: зарегистрирован как отдельный редактор изображений и интегрируется в пункт «Открыть с помощью» файловых менеджеров (например, Dolphin, Nautilus).
-- В комплект входят векторные иконки высокого разрешения `dracoPho.svg` и `mark-shot-edit.svg`.
+- В комплект входят векторные иконки высокого разрешения `dracoPho.svg`.
 
 ### Авторизация KDE KWin ScreenShot2
 
