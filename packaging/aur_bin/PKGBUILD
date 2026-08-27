@@ -1,8 +1,8 @@
-# Maintainer: jswysnemc <snemc@qq.com>
+# Maintainer: tystudio-26020701 <tystudio-26020701@users.noreply.github.com>
 # Binary package: downloads prebuilt pacman package from GitHub Release.
 # Source package dracoPho builds from source; dracoPho-bin installs prebuilt binary.
 pkgname=dracoPho-bin
-pkgver=0.1.41
+pkgver=26.8.5.1
 pkgrel=1
 pkgdesc='Qt 6 Wayland screenshot selection and annotation tool (prebuilt binary)'
 arch=('x86_64' 'aarch64')

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.jswysnemc.MarkShot</id>
+  <id>io.github.tystudio26020701.DracoPho</id>
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
   <name>DracoPho</name>
@@ -10,11 +10,11 @@
     <p>DracoPho captures screenshots, annotates image regions, pins floating image stickers, and provides OCR and translation helpers for pinned image text.</p>
     <p xml:lang="zh-CN">太殷龙摄支持截图选区、图像标注、置顶贴图，以及针对置顶图像文字的 OCR 与翻译辅助功能。</p>
   </description>
-  <launchable type="desktop-id">io.github.jswysnemc.MarkShot.desktop</launchable>
+  <launchable type="desktop-id">io.github.tystudio26020701.DracoPho.desktop</launchable>
   <url type="homepage">https://github.com/tystudio-26020701/DracoPho-community</url>
   <url type="bugtracker">https://github.com/tystudio-26020701/DracoPho-community/issues</url>
-  <developer id="io.github.jswysnemc">
-    <name>jswysnemc</name>
+  <developer id="io.github.tystudio26020701">
+    <name>Beijing Taiyin Zhaowu Technology Co., Ltd.</name>
   </developer>
   <content_rating type="oars-1.1" />
   <releases>

@@ -24,9 +24,9 @@
           qt6.qtcharts
         ];
 
-        mark-shot = pkgs.stdenv.mkDerivation {
-          pname = "mark-shot";
-          version = "26.8.4.0";
+        dracoPho = pkgs.stdenv.mkDerivation {
+          pname = "dracoPho";
+          version = "26.8.5.1";
 
           src = self;
 
@@ -52,8 +52,8 @@
       in
       {
         packages = rec {
-          default = mark-shot;
-          inherit mark-shot;
+          default = dracoPho;
+          inherit dracoPho;
         };
 
         devShells.default = pkgs.mkShell {

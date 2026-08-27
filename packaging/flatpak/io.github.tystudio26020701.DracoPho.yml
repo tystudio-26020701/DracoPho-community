@@ -1,0 +1,43 @@
+app-id: io.github.tystudio26020701.DracoPho
+branch: stable
+runtime: org.kde.Platform
+runtime-version: '6.9'
+sdk: org.kde.Sdk
+command: dracoPho
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --filesystem=xdg-pictures
+  - --filesystem=xdg-download
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.kde.KWin.ScreenShot2
+
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/man
+
+modules:
+  - name: dracoPho
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DMARK_SHOT_WITH_LAYER_SHELL=OFF
+      - -DMARK_SHOT_WITH_LIBPORTAL=ON
+    sources:
+      - type: dir
+        path: ../..
+    post-install:
+      - install -Dm644 ../packaging/flatpak/io.github.tystudio26020701.DracoPho.metainfo.xml /app/share/metainfo/io.github.tystudio26020701.DracoPho.metainfo.xml
+      - mv /app/share/applications/dracoPho.desktop /app/share/applications/io.github.tystudio26020701.DracoPho.desktop
+      - desktop-file-edit --set-key=Icon --set-value=io.github.tystudio26020701.DracoPho /app/share/applications/io.github.tystudio26020701.DracoPho.desktop
+      - desktop-file-edit --set-key=Exec --set-value=dracoPho /app/share/applications/io.github.tystudio26020701.DracoPho.desktop
+      - install -Dm644 ../packaging/flatpak/io.github.tystudio26020701.DracoPho.png /app/share/icons/hicolor/128x128/apps/io.github.tystudio26020701.DracoPho.png
+      - rm -f /app/share/applications/dracoPho-edit.desktop
