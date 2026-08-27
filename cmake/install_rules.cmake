@@ -48,8 +48,6 @@ if(MARK_SHOT_LINUX)
     )
     install(FILES
         data/icons/hicolor/scalable/apps/dracoPho.svg
-        data/icons/hicolor/scalable/apps/mark-shot.svg
-        data/icons/hicolor/scalable/apps/mark-shot-edit.svg
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
     )
     install(DIRECTORY
