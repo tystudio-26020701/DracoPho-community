@@ -782,6 +782,17 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
 
     if (m_tool == Tool::Text) {
         commitTextEditor();
+        // 点击既有文本框 → 就地选中并进入编辑,而不是新建文本框
+        // (与 Snipaste/PowerPoint 文本工具一致);空白处仍新建。
+        if (const std::optional<int> hitAnnotationId = annotationAt(imagePoint)) {
+            if (const Annotation *hitAnnotation = annotationById(*hitAnnotationId);
+                hitAnnotation && hitAnnotation->tool == Tool::Text) {
+                setSelectedAnnotations({*hitAnnotationId});
+                beginEditingSelectedTextAnnotation();
+                update();
+                return;
+            }
+        }
         beginTextAnnotation(imagePoint);
         return;
     }

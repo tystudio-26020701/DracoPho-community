@@ -118,9 +118,6 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
                                                   kTextBackgroundPaddingY * scale,
                                                   -kTextBackgroundPaddingX * scale,
                                                   -kTextBackgroundPaddingY * scale);
-        QTextOption option;
-        option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-        option.setAlignment(Qt::AlignLeft | Qt::AlignTop);
         painter.save();
         painter.setFont(font);
         if (annotation.backgroundColor.alpha() > 0) {
@@ -128,9 +125,25 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
             painter.setBrush(annotation.backgroundColor);
             painter.drawRoundedRect(backgroundRect, 4.0 * scale, 4.0 * scale);
         }
+        // 富文本经 QTextDocument 逐 span 渲染(局部字体/字号/粗斜/颜色);
+        // 未显式着色的片段取画笔颜色(即标注主色),与编辑器所见即所得。
         painter.setPen(annotation.color);
         painter.setBrush(Qt::NoBrush);
-        painter.drawText(textRect, annotation.text, option);
+        QTextDocument document;
+        document.setDocumentMargin(0.0);
+        QTextOption option;
+        option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+        option.setAlignment(Qt::AlignLeft | Qt::AlignTop);
+        document.setDefaultTextOption(option);
+        if (!annotation.richText.isEmpty()) {
+            document.setHtml(annotation.richText);
+        } else {
+            document.setPlainText(annotation.text);
+        }
+        document.setDefaultFont(font);
+        document.setTextWidth(std::max<qreal>(1.0, textRect.width()));
+        painter.translate(textRect.topLeft());
+        document.drawContents(&painter);
         painter.restore();
         break;
     }
@@ -573,11 +586,12 @@ void ShotWindow::beginTextAnnotation(QPointF imagePoint)
     m_textEditorImagePoint = imagePoint;
     m_draft.reset();
     m_textEditor->clear();
-    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, textEditorFontSizeForWidth(m_textSize)));
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, textFontSizeForWidth(m_textSize)));
     QFont editorFont = markshot::theme::textFont(0,
                                                  m_textWeight,
                                                  m_textFontFamily);
-    editorFont.setPointSizeF(textEditorFontSizeForWidth(m_textSize));
+    // 编辑器与渲染同字号(所见即所得),保证提交后的富文本 span 字号与最终输出一致
+    editorFont.setPointSizeF(textFontSizeForWidth(m_textSize));
     editorFont.setItalic(m_textItalic);
     m_textEditor->setFont(editorFont);
     m_textEditor->show();
@@ -585,6 +599,7 @@ void ShotWindow::beginTextAnnotation(QPointF imagePoint)
     updateTextEditorGeometry();
     m_textEditor->setFocus(Qt::MouseFocusReason);
     updateLayerShellForIme();
+    updateAnnotationPropertyPanel();
     update();
 }
 
@@ -601,29 +616,30 @@ void ShotWindow::beginEditingSelectedTextAnnotation()
     m_editingTextAnnotationId = annotation->id;
     m_textEditorImagePoint = annotation->rect.normalized().topLeft();
     m_draft.reset();
-    m_textEditor->setPlainText(annotation->text);
-    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(annotation->color, annotation->backgroundColor, textEditorFontSizeForWidth(annotation->width)));
+    if (!annotation->richText.isEmpty()) {
+        m_textEditor->setHtml(annotation->richText);
+    } else {
+        m_textEditor->setPlainText(annotation->text);
+    }
+    m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(annotation->color, annotation->backgroundColor, textFontSizeForWidth(annotation->width)));
     QFont editorFont = markshot::theme::textFont(0,
                                                  annotation->fontWeight,
                                                  annotation->fontFamily);
-    editorFont.setPointSizeF(textEditorFontSizeForWidth(annotation->width));
+    editorFont.setPointSizeF(textFontSizeForWidth(annotation->width));
     editorFont.setItalic(annotation->textItalic);
     m_textEditor->setFont(editorFont);
-    if (m_annotationPropertyPanel) {
-        m_annotationPropertyPanel->hide();
-    }
     if (m_propertyColorDialogPanel) {
         m_propertyColorDialogPanel->hide();
     }
-    if (m_propertyFontPanel) {
-        m_propertyFontPanel->hide();
-    }
+    // 编辑态保留属性面板:字体/字号/粗斜/颜色控件直接作用于编辑器内
+    // 被选中的局部文本,这是局部格式化的唯一入口。
     m_textEditor->show();
     m_textEditor->raise();
     const QRectF widgetRect = textContentRect(*annotation, true);
     m_textEditor->setGeometry(widgetRect.toAlignedRect().adjusted(0, 0, 1, 1));
     m_textEditor->setFocus(Qt::MouseFocusReason);
     updateLayerShellForIme();
+    updateAnnotationPropertyPanel();
     update();
 }
 
@@ -635,6 +651,8 @@ void ShotWindow::commitTextEditor()
 
     m_committingText = true;
     const QString text = m_textEditor->toPlainText().trimmed();
+    const QString richText = text.isEmpty() ? QString() : m_textEditor->toHtml();
+    const QFont editorFont = m_textEditor->font();
     const QRect editorGeometry = m_textEditor->geometry();
     m_textEditor->hide();
     m_textEditor->clear();
@@ -642,18 +660,43 @@ void ShotWindow::commitTextEditor()
     updateLayerShellForIme();
 
     if (m_editingTextAnnotationId.has_value()) {
-        if (Annotation *annotation = annotationById(*m_editingTextAnnotationId)) {
+        const int editingId = *m_editingTextAnnotationId;
+        m_editingTextAnnotationId.reset();
+        Annotation *annotation = annotationById(editingId);
+        if (annotation) {
+            if (text.isEmpty()) {
+                // 清空全部文本等价于删除该标注(与主流编辑器一致)
+                pushHistorySnapshot();
+                for (int i = m_annotations.size() - 1; i >= 0; --i) {
+                    if (m_annotations.at(i).id == editingId) {
+                        m_annotations.removeAt(i);
+                    }
+                }
+                QVector<int> remainingIds;
+                for (int id : selectedAnnotationIds()) {
+                    if (id != editingId) {
+                        remainingIds.append(id);
+                    }
+                }
+                setSelectedAnnotations(remainingIds);
+                m_committingText = false;
+                updateAnnotationPropertyPanel();
+                updateCursor();
+                update();
+                persistAnnotationState();
+                return;
+            }
             pushHistorySnapshot();
             annotation->text = text;
-            annotation->fontFamily = m_textEditor->font().family();
-            annotation->fontWeight = m_textEditor->font().weight();
-            annotation->textItalic = m_textEditor->font().italic();
+            annotation->richText = richText;
+            annotation->fontFamily = editorFont.family();
+            annotation->fontWeight = editorFont.weight();
+            annotation->textItalic = editorFont.italic();
             annotation->rect = textContentRect(*annotation, false);
             if (!annotation->points.isEmpty()) {
                 annotation->points[0] = annotation->rect.topLeft();
             }
         }
-        m_editingTextAnnotationId.reset();
         m_committingText = false;
         updateAnnotationPropertyPanel();
         update();
@@ -669,17 +712,25 @@ void ShotWindow::commitTextEditor()
         annotation.rect = QRectF(widgetToImage(editorGeometry.topLeft()),
                                  widgetToImage(editorGeometry.bottomRight())).normalized();
         annotation.text = text;
+        annotation.richText = richText;
         annotation.color = m_currentColor;
         annotation.backgroundColor = m_textBackgroundColor;
         annotation.width = m_textSize;
-        annotation.fontFamily = m_textEditor->font().family();
-        annotation.fontWeight = m_textEditor->font().weight();
-        annotation.textItalic = m_textEditor->font().italic();
+        annotation.fontFamily = editorFont.family();
+        annotation.fontWeight = editorFont.weight();
+        annotation.textItalic = editorFont.italic();
         annotation.rect = textContentRect(annotation, false);
         m_textFontFamily = annotation.fontFamily;
         m_textWeight = annotation.fontWeight;
         m_textItalic = annotation.textItalic;
         m_annotations.append(annotation);
+        const int committedId = annotation.id;
+        // 提交后自动选中,便于立即用属性面板统一调整该文本框参数
+        if (markshot::shot::annotationAutoSelectAfterDrawEnabled()) {
+            setTool(Tool::Select);
+            setSelectedAnnotations({committedId});
+            updateAnnotationPropertyPanel();
+        }
     }
 
     m_committingText = false;

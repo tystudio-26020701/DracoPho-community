@@ -484,6 +484,11 @@ void ShotWindow::applyPropertyColor(QColor color)
         return;
     }
     const QVector<int> selectedIds = selectedAnnotationIds();
+    // 编辑器内存在局部文本选区时,前景色只作用于选区,不改整框基色;
+    // 文本背景色是文本框级属性,不受局部选区影响。
+    const bool editorForegroundSelection = !m_propertyColorEditingTextBackground
+        && m_textEditor && m_textEditor->isVisible()
+        && m_textEditor->textCursor().hasSelection();
     if (m_propertyColorEditingTextBackground) {
         if (!selectedIds.isEmpty()) {
             if (!m_propertyColorEditHistoryCaptured) {
@@ -499,7 +504,7 @@ void ShotWindow::applyPropertyColor(QColor color)
         } else if (m_tool == Tool::Text) {
             m_textBackgroundColor = color;
         }
-    } else if (!selectedIds.isEmpty()) {
+    } else if (!selectedIds.isEmpty() && !editorForegroundSelection) {
         if (!m_propertyColorEditHistoryCaptured) {
             pushHistorySnapshot();
             m_propertyColorEditHistoryCaptured = true;
@@ -509,32 +514,30 @@ void ShotWindow::applyPropertyColor(QColor color)
                 annotation->color = color;
             }
         }
-    } else {
+    } else if (!editorForegroundSelection) {
         m_currentColor = color;
     }
     if (m_draft.has_value()) {
         m_draft->color = color;
     }
     if (m_textEditor && m_textEditor->isVisible()) {
-        QColor editorColor = m_currentColor;
-        QColor editorBackgroundColor = m_textBackgroundColor;
-        qreal editorWidth = m_textSize;
-        QFont::Weight editorWeight = m_textWeight;
-        bool editorItalic = m_textItalic;
-        if (m_editingTextAnnotationId.has_value()) {
-            if (const Annotation *annotation = annotationById(*m_editingTextAnnotationId)) {
-                editorColor = annotation->color;
-                editorBackgroundColor = annotation->backgroundColor;
-                editorWidth = annotation->width;
-                editorWeight = annotation->fontWeight;
-                editorItalic = annotation->textItalic;
+        if (editorForegroundSelection) {
+            // 局部文本着色(字符格式),提交时以富文本 span 承载
+            m_textEditor->setTextColor(color);
+        } else {
+            const Annotation *editingAnnotation = m_editingTextAnnotationId.has_value()
+                ? annotationById(*m_editingTextAnnotationId)
+                : nullptr;
+            QColor editorColor = editingAnnotation ? editingAnnotation->color : m_currentColor;
+            QColor editorBackgroundColor = editingAnnotation ? editingAnnotation->backgroundColor : m_textBackgroundColor;
+            const qreal editorBaseWidth = editingAnnotation ? editingAnnotation->width : m_textSize;
+            if (m_propertyColorEditingTextBackground) {
+                editorBackgroundColor = color;
+            } else {
+                editorColor = color;
             }
+            m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(editorColor, editorBackgroundColor, textFontSizeForWidth(editorBaseWidth)));
         }
-        m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(editorColor, editorBackgroundColor, textEditorFontSizeForWidth(editorWidth)));
-        QFont editorFont = m_textEditor->font();
-        editorFont.setWeight(editorWeight);
-        editorFont.setItalic(editorItalic);
-        m_textEditor->setFont(editorFont);
     }
     updateColorPalettePreview();
     updateAnnotationPropertyPanel();
@@ -577,13 +580,35 @@ void ShotWindow::setSelectedTextFontFamily(const QString &fontFamily)
         return;
     }
 
-    if (m_selectedAnnotationId.has_value()) {
-        Annotation *annotation = annotationById(*m_selectedAnnotationId);
-        if (!annotation || annotation->tool != Tool::Text || annotation->fontFamily == fontFamily) {
+    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入),
+    // 不直接改标注基值,由提交时的富文本 span 承载。
+    if (m_textEditor && m_textEditor->isVisible()) {
+        m_textEditor->setFontFamily(fontFamily);
+        m_textFontFamily = fontFamily;
+        updateAnnotationPropertyPanel();
+        return;
+    }
+
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (!selectedIds.isEmpty()) {
+        bool changed = false;
+        for (int id : selectedIds) {
+            const Annotation *annotation = annotationById(id);
+            if (annotation && annotation->tool == Tool::Text && annotation->fontFamily != fontFamily) {
+                changed = true;
+                break;
+            }
+        }
+        if (!changed) {
             return;
         }
         pushHistorySnapshot();
-        annotation->fontFamily = fontFamily;
+        for (int id : selectedIds) {
+            if (Annotation *annotation = annotationById(id);
+                annotation && annotation->tool == Tool::Text) {
+                annotation->fontFamily = fontFamily;
+            }
+        }
     } else {
         if (m_tool != Tool::Text || m_textFontFamily == fontFamily) {
             return;
@@ -631,19 +656,28 @@ void ShotWindow::setSelectedTextFontSize(qreal pointSize)
         const QSignalBlocker blocker(m_propertyFontSizeEdit);
         m_propertyFontSizeEdit->setText(QString::number(pointSize, 'f', 1));
     }
+    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入),
+    // 编辑器与渲染同字号(所见即所得),提交时由富文本 span 承载。
+    if (m_textEditor && m_textEditor->isVisible()) {
+        m_textEditor->setFontPointSize(pointSize);
+        updateAnnotationPropertyPanel();
+        return;
+    }
     const qreal targetWidth = textWidthForFontSize(pointSize);
     setSelectedAnnotationWidth(qRound(targetWidth));
-    if (m_textEditor && m_textEditor->isVisible()) {
-        QFont font = m_textEditor->font();
-        font.setPointSizeF(pointSize);
-        m_textEditor->setFont(font);
-    }
     update();
 }
 
 void ShotWindow::setSelectedTextBold(bool bold)
 {
     const QFont::Weight targetWeight = bold ? QFont::DemiBold : QFont::Normal;
+    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入)
+    if (m_textEditor && m_textEditor->isVisible()) {
+        m_textEditor->setFontWeight(static_cast<int>(targetWeight));
+        m_textWeight = targetWeight;
+        updateAnnotationPropertyPanel();
+        return;
+    }
     const QVector<int> selectedIds = selectedAnnotationIds();
     if (!selectedIds.isEmpty()) {
         bool changed = false;
@@ -670,19 +704,6 @@ void ShotWindow::setSelectedTextBold(bool bold)
         }
         m_textWeight = targetWeight;
     }
-    if (m_textEditor && m_textEditor->isVisible()) {
-        QFont font = m_textEditor->font();
-        if (m_editingTextAnnotationId.has_value()) {
-            if (const Annotation *annotation = annotationById(*m_editingTextAnnotationId)) {
-                font.setWeight(annotation->fontWeight);
-                font.setItalic(annotation->textItalic);
-            }
-        } else {
-            font.setWeight(m_textWeight);
-            font.setItalic(m_textItalic);
-        }
-        m_textEditor->setFont(font);
-    }
     updateAnnotationPropertyPanel();
     update();
     persistAnnotationState();
@@ -690,6 +711,13 @@ void ShotWindow::setSelectedTextBold(bool bold)
 
 void ShotWindow::setSelectedTextItalic(bool italic)
 {
+    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入)
+    if (m_textEditor && m_textEditor->isVisible()) {
+        m_textEditor->setFontItalic(italic);
+        m_textItalic = italic;
+        updateAnnotationPropertyPanel();
+        return;
+    }
     const QVector<int> selectedIds = selectedAnnotationIds();
     if (!selectedIds.isEmpty()) {
         bool changed = false;
@@ -715,19 +743,6 @@ void ShotWindow::setSelectedTextItalic(bool italic)
             return;
         }
         m_textItalic = italic;
-    }
-    if (m_textEditor && m_textEditor->isVisible()) {
-        QFont font = m_textEditor->font();
-        if (m_editingTextAnnotationId.has_value()) {
-            if (const Annotation *annotation = annotationById(*m_editingTextAnnotationId)) {
-                font.setWeight(annotation->fontWeight);
-                font.setItalic(annotation->textItalic);
-            }
-        } else {
-            font.setWeight(m_textWeight);
-            font.setItalic(m_textItalic);
-        }
-        m_textEditor->setFont(font);
     }
     updateAnnotationPropertyPanel();
     update();

@@ -56,14 +56,6 @@ inline qreal textWidthForFontSize(qreal fontSize)
 {
     return fontSize - 19.0;
 }
-
-/// @brief 文本编辑器的"字号↔宽度"换算（编辑器基线比渲染字号大一档）。
-/// @param annotationWidth 标注宽度。
-/// @return 编辑器字号（点）。
-inline qreal textEditorFontSizeForWidth(qreal annotationWidth)
-{
-    return 20.0 + annotationWidth;
-}
 inline constexpr qreal kMinImageZoom = 0.25;
 inline constexpr qreal kMaxImageZoom = 64.0;
 inline constexpr qint64 kCtrlDoubleTapMs = 360;

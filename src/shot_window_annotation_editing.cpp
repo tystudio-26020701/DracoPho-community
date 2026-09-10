@@ -49,16 +49,14 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
         }
         break;
     case Tool::Text:
+        // 调整文本框只改变换行宽度,字号恒定:高度按内容自适应,
+        // 与 PowerPoint/Snipaste 文本框语义一致。字号仅能通过
+        // 字号输入框/滚轮显式修改。
         annotation.rect = QRectF(mapPoint(annotation.rect.normalized().topLeft()),
                                  mapPoint(annotation.rect.normalized().bottomRight())).normalized();
-        if (m_annotationDrag == SelectionDrag::TopLeft ||
-            m_annotationDrag == SelectionDrag::BottomRight ||
-            m_annotationDrag == SelectionDrag::TopRight ||
-            m_annotationDrag == SelectionDrag::BottomLeft) {
-            annotation.width = std::clamp(textWidthForFontSize(textFontSizeForWidth(annotation.width) * scaleFactor), 1.0, 1000.0);
-            if (!annotation.points.isEmpty()) {
-                annotation.points[0] = annotation.rect.topLeft();
-            }
+        annotation.rect = textContentRect(annotation, false);
+        if (!annotation.points.isEmpty()) {
+            annotation.points[0] = annotation.rect.topLeft();
         }
         break;
     case Tool::Pen:
@@ -390,7 +388,10 @@ void ShotWindow::setCurrentColor(QColor color)
 
     m_currentColor = color;
     const QVector<int> selectedIds = selectedAnnotationIds();
-    if (m_tool == Tool::Select && !selectedIds.isEmpty()) {
+    // 编辑器内存在局部文本选区时,颜色只作用于选区,不改整框基色
+    const bool editorSelectionActive = m_textEditor && m_textEditor->isVisible()
+        && m_textEditor->textCursor().hasSelection();
+    if (m_tool == Tool::Select && !selectedIds.isEmpty() && !editorSelectionActive) {
         pushHistorySnapshot();
         for (int id : selectedIds) {
             if (Annotation *annotation = annotationById(id)) {
@@ -405,8 +406,26 @@ void ShotWindow::setCurrentColor(QColor color)
     if (m_colorPalette) {
         m_colorPalette->hide();
     }
-    if (m_textEditor && m_textEditor->isVisible() && !m_editingTextAnnotationId.has_value()) {
-        m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, m_textBackgroundColor, textEditorFontSizeForWidth(m_textSize)));
+    if (m_textEditor && m_textEditor->isVisible()) {
+        // 编辑态:有选区时仅给被选中的局部文本着色(字符格式);
+        // 无选区时同步编辑器基色,保证未显式着色的文本所见即所得。
+        m_textEditor->setTextColor(color);
+        if (!m_textEditor->textCursor().hasSelection()) {
+            const Annotation *editingAnnotation = m_editingTextAnnotationId.has_value()
+                ? annotationById(*m_editingTextAnnotationId)
+                : nullptr;
+            const qreal editorBaseWidth = editingAnnotation ? editingAnnotation->width : m_textSize;
+            const QColor editorBackgroundColor = editingAnnotation ? editingAnnotation->backgroundColor : m_textBackgroundColor;
+            m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(m_currentColor, editorBackgroundColor, textFontSizeForWidth(editorBaseWidth)));
+            // 通过 Text 工具进入编辑时(工具非 Select),上面的整框颜色循环
+            // 不会执行,这里同步正在编辑标注的基色,保证提交后所见即所得。
+            if (editingAnnotation && editingAnnotation->color != m_currentColor) {
+                if (Annotation *mutableAnnotation = annotationById(*m_editingTextAnnotationId)) {
+                    pushHistorySnapshot();
+                    mutableAnnotation->color = m_currentColor;
+                }
+            }
+        }
     }
     updateColorPalettePreview();
     updateAnnotationPropertyPanel();

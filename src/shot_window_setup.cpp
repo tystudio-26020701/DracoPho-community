@@ -688,7 +688,10 @@ void ShotWindow::initializeTextEditor()
     m_textEditor->setObjectName(QStringLiteral("textEditor"));
     m_textEditor->setPlaceholderText(MS_TR("Type text"));
     m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(QColor(94, 234, 212), QColor(0, 0, 0, 0), 24));
-    m_textEditor->setAcceptRichText(false);
+    // 富文本承载局部字体/字号/粗斜/颜色;换行模式与渲染端保持一致
+    m_textEditor->setAcceptRichText(true);
+    m_textEditor->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    m_textEditor->document()->setDocumentMargin(0.0);
     m_textEditor->setTabChangesFocus(false);
     m_textEditor->setFrameShape(QFrame::NoFrame);
     m_textEditor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -700,6 +703,17 @@ void ShotWindow::initializeTextEditor()
     m_textEditor->installEventFilter(this);
     m_textEditor->viewport()->installEventFilter(this);
     m_textEditor->setContextMenuPolicy(Qt::NoContextMenu);
+    // 光标移动/选区变化时同步属性面板,实时反映局部字体格式
+    connect(m_textEditor, &QTextEdit::cursorPositionChanged, this, [this] {
+        if (m_textEditor->isVisible()) {
+            updateAnnotationPropertyPanel();
+        }
+    });
+    connect(m_textEditor, &QTextEdit::selectionChanged, this, [this] {
+        if (m_textEditor->isVisible()) {
+            updateAnnotationPropertyPanel();
+        }
+    });
 }
 
 void ShotWindow::initializeLaserTimer()

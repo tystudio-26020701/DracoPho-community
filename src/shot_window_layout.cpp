@@ -7,9 +7,10 @@ using namespace markshot::shot;
 QRectF ShotWindow::textContentRect(const Annotation &annotation, bool widgetCoordinates) const
 {
     const qreal scale = annotationSizeScale(widgetCoordinates);
-    const QRectF baseRect = annotation.rect.isEmpty()
-        ? QRectF(annotation.points.value(0), QSizeF(360.0, 140.0))
-        : annotation.rect.normalized();
+    const bool hasRect = !annotation.rect.isEmpty();
+    const QRectF baseRect = hasRect
+        ? annotation.rect.normalized()
+        : QRectF(annotation.points.value(0), QSizeF(360.0, 140.0));
     const QPointF topLeft = widgetCoordinates ? imageToWidget(baseRect.topLeft()) : baseRect.topLeft();
     const qreal wrapWidth = std::max<qreal>(16.0, baseRect.width() * scale - kTextBackgroundPaddingX * 2.0 * scale);
 
@@ -24,9 +25,13 @@ QRectF ShotWindow::textContentRect(const Annotation &annotation, bool widgetCoor
 
     QTextDocument document;
     document.setDocumentMargin(0.0);
-    document.setDefaultFont(font);
     document.setDefaultTextOption(option);
-    document.setPlainText(annotation.text);
+    if (!annotation.richText.isEmpty()) {
+        document.setHtml(annotation.richText);
+    } else {
+        document.setPlainText(annotation.text);
+    }
+    document.setDefaultFont(font);
     document.setTextWidth(wrapWidth);
 
     const QSizeF documentSize = document.size();
@@ -48,7 +53,10 @@ QRectF ShotWindow::textContentRect(const Annotation &annotation, bool widgetCoor
         textHeight = documentSize.height();
     }
 
-    const qreal rectWidth = std::max<qreal>(1.0, std::ceil(textWidth + kTextBackgroundPaddingX * 2.0 * scale) + 5.0);
+    const qreal contentWidth = std::max<qreal>(1.0, std::ceil(textWidth + kTextBackgroundPaddingX * 2.0 * scale) + 5.0);
+    // 有矩形时保留用户调整出的换行宽度(内容不足时不回缩),高度始终贴合内容;
+    // 无矩形(初始占位)时按内容收缩,与旧行为一致。
+    const qreal rectWidth = hasRect ? std::max(baseRect.width(), contentWidth) : contentWidth;
     const qreal rectHeight = std::max<qreal>(1.0, std::ceil(textHeight + kTextBackgroundPaddingY * 2.0 * scale));
     return QRectF(topLeft, QSizeF(rectWidth, rectHeight));
 }
@@ -430,11 +438,27 @@ void ShotWindow::updateAnnotationPropertyPanel()
         annotation && annotation->tool == Tool::Number
             ? annotation->numberStyle
             : m_numberStyle;
-    const QString panelFontFamily = annotation ? annotation->fontFamily : m_textFontFamily;
-    const QFont::Weight panelFontWeight =
+    // 编辑态(文本编辑器可见)下,字体族/字号/粗斜体等面板值改从编辑器当前
+    // 字符格式读取,让面板实时反映光标处或选区内的局部格式。
+    const bool editorActive = m_textEditor && m_textEditor->isVisible();
+    QString panelFontFamily = annotation ? annotation->fontFamily : m_textFontFamily;
+    QFont::Weight panelFontWeight =
         annotation && annotation->tool == Tool::Text ? annotation->fontWeight : m_textWeight;
-    const bool panelFontItalic =
+    bool panelFontItalic =
         annotation && annotation->tool == Tool::Text ? annotation->textItalic : m_textItalic;
+    qreal panelFontSize = textFontSizeForWidth(panelWidth);
+    if (editorActive) {
+        panelFontFamily = m_textEditor->fontFamily();
+        panelFontWeight = static_cast<QFont::Weight>(
+            std::clamp(m_textEditor->fontWeight(),
+                       static_cast<int>(QFont::Thin),
+                       static_cast<int>(QFont::Black)));
+        panelFontItalic = m_textEditor->fontItalic();
+        const qreal editorPointSize = m_textEditor->currentFont().pointSizeF();
+        if (editorPointSize > 0.0) {
+            panelFontSize = editorPointSize;
+        }
+    }
 
     switch (panelTool) {
     case Tool::Move:
@@ -482,7 +506,7 @@ void ShotWindow::updateAnnotationPropertyPanel()
                                                : markshot::i18n::translate(title));
     }
     if (m_propertyEditTextButton) {
-        m_propertyEditTextButton->setVisible(!groupSelection && editingAnnotation && panelTool == Tool::Text);
+        m_propertyEditTextButton->setVisible(!groupSelection && editingAnnotation && panelTool == Tool::Text && !editorActive);
     }
     if (m_propertyFontButton) {
         m_propertyFontButton->setVisible(!groupSelection && panelTool == Tool::Text);
@@ -629,12 +653,14 @@ void ShotWindow::updateAnnotationPropertyPanel()
     if (m_propertyFontSizeEdit) {
         const QSignalBlocker blocker(m_propertyFontSizeEdit);
         m_propertyFontSizeEdit->setVisible(isTextPanel);
-        m_propertyFontSizeEdit->setText(QString::number(textFontSizeForWidth(panelWidth), 'f', 1));
+        if (!m_propertyFontSizeEdit->hasFocus()) {
+            m_propertyFontSizeEdit->setText(QString::number(std::max<qreal>(1.0, panelFontSize), 'f', 1));
+        }
     }
     if (m_propertyFontBoldButton) {
         const QSignalBlocker blocker(m_propertyFontBoldButton);
         m_propertyFontBoldButton->setVisible(isTextPanel);
-        m_propertyFontBoldButton->setChecked(panelFontWeight >= QFont::Bold);
+        m_propertyFontBoldButton->setChecked(panelFontWeight >= QFont::DemiBold);
     }
     if (m_propertyFontItalicButton) {
         const QSignalBlocker blocker(m_propertyFontItalicButton);

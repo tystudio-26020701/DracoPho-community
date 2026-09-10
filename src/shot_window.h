@@ -329,6 +329,9 @@ private:
         QRectF rect;           // Image-space bounds for area-based tools.
         QVector<QPointF> points; // Image-space control points for path tools.
         QString text;
+        // 富文本内容(toHtml 输出):承载逐段/逐字符的字体、字号、粗斜体与
+        // 颜色。为空时回退渲染 text 纯文本,兼容旧标注。
+        QString richText;
         int number = 0;
         QColor color = QColor(255, 77, 77);
         QColor backgroundColor = QColor(0, 0, 0, 0);
