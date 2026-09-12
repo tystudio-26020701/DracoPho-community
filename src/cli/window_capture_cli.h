@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QCommandLineParser>
+#include <QJsonObject>
 
 namespace markshot::cli {
 
@@ -13,5 +14,8 @@ void addWindowCaptureOptions(QCommandLineParser *parser);
 // code, or -1 when no window capture option is set and normal startup should
 // continue.
 int runWindowCaptureIfRequested(const QCommandLineParser &parser);
+
+// 返回窗口检测链路诊断（platform/source/count），供 --doctor 汇总。
+QJsonObject windowDetectionDiagnostics();
 
 } // namespace markshot::cli

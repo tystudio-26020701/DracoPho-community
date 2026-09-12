@@ -624,6 +624,17 @@ QString captureDestinationName(CaptureDestination destination)
 
 } // namespace
 
+QJsonObject windowDetectionDiagnostics()
+{
+    QString source;
+    const QVector<WindowInfo> windows = collectWindowInfos(&source);
+    QJsonObject diagnostics;
+    diagnostics.insert(QStringLiteral("platform"), platformName());
+    diagnostics.insert(QStringLiteral("source"), source);
+    diagnostics.insert(QStringLiteral("count"), windows.size());
+    return diagnostics;
+}
+
 void addWindowCaptureOptions(QCommandLineParser *parser)
 {
     QCommandLineOption listWindowsOption(QStringLiteral("list-windows"),
@@ -684,6 +695,24 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
         }
     }
     if (hasDestination && selectors.isEmpty()) {
+        // 屏幕截图路径同样使用 --capture-destination（inline/file/stage）；
+        // 当它伴随屏幕无头标志出现、或值本身是屏幕去向（非 clipboard）时，
+        // 交给屏幕分发器处理，这里不再拦截。
+        const bool screenDestination = QStringList{QStringLiteral("inline"),
+                                                   QStringLiteral("file"),
+                                                   QStringLiteral("stage")}
+                                           .contains(parser.value(QStringLiteral("capture-destination"))
+                                                         .trimmed()
+                                                         .toLower());
+        const bool screenContext = screenDestination
+            || parser.isSet(QStringLiteral("capture-to"))
+            || parser.isSet(QStringLiteral("region"))
+            || parser.isSet(QStringLiteral("display"))
+            || parser.isSet(QStringLiteral("all-outputs"))
+            || parser.isSet(QStringLiteral("list-displays"));
+        if (screenContext) {
+            return -1;
+        }
         err << "--capture-destination requires --window.\n";
         return 1;
     }
@@ -726,6 +755,7 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
             entries.append(windowJson(windows.at(i), i));
         }
         QJsonObject root;
+        root.insert(QStringLiteral("v"), 1);
         root.insert(QStringLiteral("platform"), platformName());
         root.insert(QStringLiteral("source"), source);
         root.insert(QStringLiteral("count"), windows.size());
@@ -807,6 +837,7 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
     }
 
     QJsonObject root;
+    root.insert(QStringLiteral("v"), 1);
     root.insert(QStringLiteral("platform"), platformName());
     root.insert(QStringLiteral("destination"), captureDestinationName(destination));
     if (clipboardBlocked) {

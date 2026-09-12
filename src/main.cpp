@@ -5,7 +5,9 @@
 #include "capture_own_windows_policy.h"
 #include "capture_session_launcher.h"
 #include "capture_session_screen_utils.h"
+#include "cli/doctor_cli.h"
 #include "cli/headless_capture.h"
+#include "cli/headless_capture_options.h"
 #include "cli/image_pin_launch.h"
 #include "cli/recording_cli.h"
 #include "cli/window_capture_cli.h"
@@ -158,6 +160,8 @@ int main(int argc, char *argv[])
                                    QStringLiteral("seconds"));
     QCommandLineOption windowCaptureOption(QStringLiteral("capture-window"),
                                            QStringLiteral("Start an interactive window capture: hover to highlight a window, click to capture it (X11 reads occluded/minimized window content; elsewhere the window's screen region is captured)."));
+    QCommandLineOption doctorOption(QStringLiteral("doctor"),
+                                    QStringLiteral("Print a JSON environment self-check (platform, session, displays, headless config, window detection) and exit."));
     parser.addOption(allOutputsOption);
     parser.addOption(xdgWindowOption);
     parser.addOption(fullscreenAnnotationOption);
@@ -184,6 +188,7 @@ int main(int argc, char *argv[])
     parser.addOption(debugLogOption);
     parser.addOption(delayOption);
     parser.addOption(windowCaptureOption);
+    parser.addOption(doctorOption);
     markshot::cli::addHeadlessCaptureOptions(&parser);
     markshot::cli::addWindowCaptureOptions(&parser);
     parser.process(app);
@@ -288,6 +293,19 @@ int main(int argc, char *argv[])
                        markshot::debugLogPath().toUtf8().constData());
 
     // 无头分发：返回 >=0 表示已处理并应立即退出；-1 表示继续交互式启动。
+    // 交互式窗口捕获与无头选项的组合是智能体最常见的误用面（要么改变语义、
+    // 要么被静默忽略），在这里统一拦截并给出可执行的修正建议。
+    if (parser.isSet(windowCaptureOption)) {
+        const QString conflict = markshot::cli::headlessInteractiveConflict(parser);
+        if (!conflict.isEmpty()) {
+            QTextStream errorStream(stderr);
+            errorStream << "dracoPho: " << conflict << "\n";
+            return 2;
+        }
+    }
+    if (parser.isSet(doctorOption)) {
+        return markshot::cli::runDoctor();
+    }
     const int windowExitCode = markshot::cli::runWindowCaptureIfRequested(parser);
     if (windowExitCode >= 0) {
         return windowExitCode;

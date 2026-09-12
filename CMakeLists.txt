@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(dracoPho VERSION 26.8.5.1 LANGUAGES C CXX)
+project(dracoPho VERSION 26.9.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -406,6 +406,19 @@ add_subdirectory(plugins/code-scan-zxing)
 include(CTest)
 if(BUILD_TESTING)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+
+    qt_add_executable(dracoPho-headless-options-test
+        tests/headless_capture_options_test.cpp
+        src/cli/headless_capture_options.cpp
+        src/cli/headless_capture_options.h
+    )
+    target_include_directories(dracoPho-headless-options-test PRIVATE src)
+    target_link_libraries(dracoPho-headless-options-test
+        PRIVATE
+            Qt6::Core
+            Qt6::Test
+    )
+    add_test(NAME headless-options COMMAND dracoPho-headless-options-test)
 
     qt_add_executable(dracoPho-capture-geometry-test
         tests/capture_geometry_test.cpp

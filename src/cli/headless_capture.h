@@ -2,6 +2,8 @@
 
 #include <QCommandLineParser>
 
+#include "cli/headless_capture_options.h"
+
 namespace markshot::cli {
 
 // Registers the headless capture options (--capture-to, --region, --display,

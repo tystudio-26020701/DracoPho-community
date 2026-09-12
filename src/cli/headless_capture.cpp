@@ -3,6 +3,7 @@
 #include "recording/recording_display_source.h"
 #include "screen_capture.h"
 
+#include <QBuffer>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -14,6 +15,7 @@
 #include <QJsonObject>
 #include <QScreen>
 #include <QTextStream>
+#include <QThread>
 
 #include <cstdio>
 #include <optional>
@@ -66,6 +68,7 @@ QByteArray displaysJson()
         displays.append(entry);
     }
     QJsonObject root;
+    root.insert(QStringLiteral("v"), 1);
     root.insert(QStringLiteral("displays"), displays);
     return QJsonDocument(root).toJson(QJsonDocument::Compact);
 }
@@ -219,6 +222,68 @@ QJsonObject captureOneToFile(const CaptureRequest &request,
             {QStringLiteral("error"), QJsonValue::Null}};
 }
 
+// Captures one frame and returns it inline as base64 PNG, keeping the image
+// out of the filesystem entirely. Shape mirrors captureOneToFile (with "data"
+// instead of "path") so agents can treat both destinations uniformly.
+QJsonObject captureOneToInline(const CaptureRequest &request, QTextStream *err)
+{
+    const CaptureResult result = captureScreenFrame(request);
+
+    if (result.image.isNull()) {
+        if (err) {
+            *err << result.error << '\n';
+        }
+        return {{QStringLiteral("path"), QJsonValue::Null},
+                {QStringLiteral("width"), 0},
+                {QStringLiteral("height"), 0},
+                {QStringLiteral("data"), QJsonValue::Null},
+                {QStringLiteral("output"), QJsonValue::Null},
+                {QStringLiteral("error"), result.error}};
+    }
+
+    QByteArray png;
+    QBuffer buffer(&png);
+    buffer.open(QIODevice::WriteOnly);
+    if (!result.image.save(&buffer, "PNG")) {
+        if (err) {
+            *err << "failed to encode capture as PNG\n";
+        }
+        return {{QStringLiteral("path"), QJsonValue::Null},
+                {QStringLiteral("width"), 0},
+                {QStringLiteral("height"), 0},
+                {QStringLiteral("data"), QJsonValue::Null},
+                {QStringLiteral("output"), QJsonValue::Null},
+                {QStringLiteral("error"), QStringLiteral("failed to encode capture as PNG")}};
+    }
+
+    QString effectiveOutput = result.outputName;
+    if (effectiveOutput.isEmpty() && !request.preferredOutputName.isEmpty()) {
+        effectiveOutput = request.preferredOutputName;
+    }
+
+    return {{QStringLiteral("path"), QJsonValue::Null},
+            {QStringLiteral("width"), result.image.width()},
+            {QStringLiteral("height"), result.image.height()},
+            {QStringLiteral("data"), QString::fromLatin1(png.toBase64())},
+            {QStringLiteral("output"), effectiveOutput.isEmpty() ? QJsonValue::Null : QJsonValue(effectiveOutput)},
+            {QStringLiteral("error"), QJsonValue::Null}};
+}
+
+// Waits the requested headless delay in short chunks so the process stays
+// responsive to termination signals. Unlike the interactive countdown overlay
+// this is a plain wait with no window and no Esc handling.
+void waitForHeadlessDelay(int seconds, QTextStream &err)
+{
+    if (seconds <= 0) {
+        return;
+    }
+    err << "waiting " << seconds << "s before capture (--delay)\n";
+    err.flush();
+    for (int waited = 0; waited < seconds * 10; ++waited) {
+        QThread::msleep(100);
+    }
+}
+
 } // namespace
 
 void addHeadlessCaptureOptions(QCommandLineParser *parser)
@@ -253,7 +318,12 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
     QTextStream err(stderr);
 
     const bool wantListDisplays = parser.isSet(QStringLiteral("list-displays"));
-    const bool wantCapture = parser.isSet(QStringLiteral("capture-to"));
+    // --capture-destination inline/stage 单独出现同样是无头屏幕截图请求，
+    // 不能落回交互式启动（否则会被常驻实例 IPC 接管或弹出捕获界面）。
+    const QString destinationValue = parser.value(QStringLiteral("capture-destination")).trimmed().toLower();
+    const bool standaloneInline = destinationValue == QLatin1String("inline")
+        || destinationValue == QLatin1String("stage");
+    const bool wantCapture = parser.isSet(QStringLiteral("capture-to")) || standaloneInline;
     if (!wantListDisplays && !wantCapture) {
         return -1;
     }
@@ -299,6 +369,57 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
         return 1;
     }
 
+    // 无头延时：--delay 在无头链路中是纯等待（无倒计时遮罩）。此前它被静默
+    // 忽略，脚本/智能体会误以为延时已生效；现在非法值报错、合法值真实生效。
+    if (parser.isSet(QStringLiteral("delay"))) {
+        const std::optional<int> delay =
+            parseHeadlessDelaySeconds(parser.value(QStringLiteral("delay")));
+        if (!delay.has_value()) {
+            err << "--delay expects an integer number of seconds in [0, 3600].\n";
+            return 2;
+        }
+        waitForHeadlessDelay(delay.value(), err);
+    }
+
+    // 屏幕截图去向：默认 file（--capture-to 决定路径）；inline 内嵌 base64
+    // 不落盘；stage 写入临时暂存目录。clipboard 在屏幕路径不受支持，显式
+    // 报错而不是静默降级。
+    ScreenCaptureDestination screenDestination = ScreenCaptureDestination::File;
+    if (parser.isSet(QStringLiteral("capture-destination"))) {
+        const QString value = parser.value(QStringLiteral("capture-destination"));
+        if (value.trimmed().toLower() == QLatin1String("clipboard")) {
+            err << "--capture-destination clipboard is only available for window captures "
+                   "(use --window <selector> --capture-destination clipboard).\n";
+            return 2;
+        }
+        const std::optional<ScreenCaptureDestination> parsed =
+            parseScreenDestination(value);
+        if (!parsed.has_value()) {
+            err << "invalid --capture-destination \"" << value
+                << "\" (expected inline, file or stage for screen captures).\n";
+            return 2;
+        }
+        screenDestination = parsed.value();
+    }
+    if (screenDestination == ScreenCaptureDestination::Inline
+        && (parser.isSet(QStringLiteral("capture-to")) || parser.isSet(QStringLiteral("output-name")))) {
+        err << "--capture-destination inline writes no files; drop --capture-to/--output-name.\n";
+        return 2;
+    }
+    if (screenDestination == ScreenCaptureDestination::File && captureTo.isEmpty()) {
+        err << "--capture-destination file requires --capture-to <path>.\n";
+        return 2;
+    }
+    QString effectiveCaptureTo = captureTo;
+    if (screenDestination == ScreenCaptureDestination::Stage) {
+        if (effectiveCaptureTo.isEmpty()) {
+            effectiveCaptureTo = QDir(QDir::tempPath()).filePath(screenStageDirectoryName());
+        }
+        // 先确保暂存目录存在：resolveOutputPath 依赖 isDir() 判定生成
+        // 时间戳文件名，缺失时会把这个路径误当作目标文件本身。
+        QDir().mkpath(effectiveCaptureTo);
+    }
+
     CaptureRequest request = baseCaptureRequest(parser);
     request.allOutputs = allOutputs;
 
@@ -318,6 +439,10 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
     // Multiple --display: capture each monitor to its own PNG and print a
     // {"captures":[...]} JSON array. This enables multi-screen selection for
     // agents and scripts.
+    const QString destinationName = screenDestination == ScreenCaptureDestination::Inline
+        ? QStringLiteral("inline")
+        : (screenDestination == ScreenCaptureDestination::Stage ? QStringLiteral("stage")
+                                                                : QStringLiteral("file"));
     if (displayNames.size() > 1) {
         QJsonArray captures;
         bool anyFailed = false;
@@ -327,13 +452,17 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
             const QString baseName = outputName.isEmpty()
                 ? displayName
                 : QStringLiteral("%1-%2").arg(outputName, displayName);
-            const QJsonObject one = captureOneToFile(displayRequest, captureTo, baseName, &err);
+            const QJsonObject one = screenDestination == ScreenCaptureDestination::Inline
+                ? captureOneToInline(displayRequest, &err)
+                : captureOneToFile(displayRequest, effectiveCaptureTo, baseName, &err);
             if (one.value(QStringLiteral("error")).isString()) {
                 anyFailed = true;
             }
             captures.append(one);
         }
-        out << QJsonDocument(QJsonObject{{QStringLiteral("captures"), captures}})
+        out << QJsonDocument(QJsonObject{{QStringLiteral("v"), 1},
+                                         {QStringLiteral("destination"), destinationName},
+                                         {QStringLiteral("captures"), captures}})
                    .toJson(QJsonDocument::Compact)
             << '\n';
         out.flush();
@@ -345,8 +474,13 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
         applyDisplayToRequest(&request, displayNames.first());
     }
 
-    const QJsonObject single = captureOneToFile(request, captureTo, outputName, &err);
-    out << QJsonDocument(single).toJson(QJsonDocument::Compact) << '\n';
+    const QJsonObject single = screenDestination == ScreenCaptureDestination::Inline
+        ? captureOneToInline(request, &err)
+        : captureOneToFile(request, effectiveCaptureTo, outputName, &err);
+    QJsonObject singleRoot = single;
+    singleRoot.insert(QStringLiteral("v"), 1);
+    singleRoot.insert(QStringLiteral("destination"), destinationName);
+    out << QJsonDocument(singleRoot).toJson(QJsonDocument::Compact) << '\n';
     out.flush();
     return single.value(QStringLiteral("error")).isString() ? 1 : 0;
 }
