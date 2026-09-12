@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="26.9.0.0" date="2026-09-12">
+      <description>
+        <p>Feature release: agent-facing headless hardening — inline base64 captures (--capture-destination inline), a real headless --delay wait, a --doctor environment self-check, versioned JSON output (v: 1), and interactive-vs-headless misuse guards with actionable exit codes.</p>
+      </description>
+    </release>
     <release version="26.8.4.0" date="2026-08-05">
       <description>
         <p>Feature release: brand update (DracoPho), timed/delayed capture with countdown, and live language switching for tray, floating ball and recording windows.</p>

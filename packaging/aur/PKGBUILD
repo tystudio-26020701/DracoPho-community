@@ -1,6 +1,6 @@
 # Maintainer: tystudio-26020701 <tystudio-26020701@users.noreply.github.com>
 pkgname=dracoPho
-pkgver=26.8.5.1
+pkgver=26.9.0.0
 pkgrel=1
 pkgdesc='Qt 6 Wayland screenshot selection and annotation tool'
 arch=('x86_64' 'aarch64')

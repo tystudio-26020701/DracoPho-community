@@ -1,5 +1,5 @@
 Name:           dracoPho
-Version:        26.8.5.1
+Version:        26.9.0.0
 Release:        1%{?dist}
 Summary:        Qt 6 screenshot selection and annotation tool
 
@@ -80,6 +80,9 @@ sed -i '1s|^#!/usr/bin/env python3$|#!/usr/bin/python3|' \
 %{_datadir}/gnome-shell/extensions/mark-shot-scroll-helper@snemc.org/
 
 %changelog
+* Fri Sep 12 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 26.9.0.0-1
+- Update to version 26.9.0.0
+
 * Tue Aug 25 2026 tystudio-26020701 <tystudio-26020701@users.noreply.github.com> - 26.8.5.1-1
 - Update to version 26.8.5.1
 

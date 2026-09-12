@@ -26,7 +26,7 @@
 
         dracoPho = pkgs.stdenv.mkDerivation {
           pname = "dracoPho";
-          version = "26.8.5.1";
+          version = "26.9.0.0";
 
           src = self;
 

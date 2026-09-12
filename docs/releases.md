@@ -1,5 +1,50 @@
 # Release Notes
 
+### 26.9.0.0
+
+> **DracoPho Community Edition** — feature release focused on **agent-facing
+> headless hardening**. Every failure mode that previously surfaced as a
+> silent no-op or a confusing interactive window now fails loudly with an
+> actionable message, and captures can be returned inline without touching
+> the filesystem.
+
+#### Headless CLI
+
+**Inline captures (no files)**
+- `--capture-destination inline` now also applies to screen captures
+  (`--capture-to` path). The JSON result carries the PNG as base64 in `data`
+  with no file written — mirroring the window-capture destination semantics.
+  `stage` writes into the temporary staging directory; `clipboard` is
+  explicitly rejected on the screen path (use `--window`) instead of being
+  silently ignored.
+
+**Honest `--delay`**
+- `--delay <seconds>` previously was silently dropped in headless captures
+  (the countdown overlay is an interactive-only feature). It now performs a
+  real, quiet wait (no window, no focus change) before capturing; invalid
+  values exit with code 2 instead of being ignored.
+
+**Versioned JSON output**
+- All headless capture JSON outputs (`--list-displays`, screen and window
+  captures) now carry `"v": 1` so scripts can pin the schema they parse.
+
+**`--doctor` environment self-check**
+- New `--doctor` flag prints a JSON report: application version, Qt runtime
+  and compile-time versions, OS/kernel/architecture, session environment
+  (XDG session type, desktop, `WAYLAND_DISPLAY`/`DISPLAY`), connected
+  displays, the configured headless defaults (destination and clipboard
+  policy), and the window-detection pipeline result (platform/source/count).
+  One command replaces guesswork when an agent asks "why can't I capture?".
+
+**Interactive-vs-headless misuse guards**
+- Combining the interactive `--capture-window` overlay with any headless
+  option (`--capture-to`, `--region`, `--display`, `--all-outputs`,
+  `--list-displays`, `--window`, `--list-windows`, `--window-by`,
+  `--capture-destination`, `--output-name`, `--include-cursor`) now exits
+  with code 2 and names the offending flag plus the headless alternative.
+  Previously such combinations either launched an unexpected full-screen
+  overlay on the user's desktop or silently dropped options.
+
 ### 26.8.5.1
 
 > **DracoPho Community Edition** — patch release. Fixes the floating ball
