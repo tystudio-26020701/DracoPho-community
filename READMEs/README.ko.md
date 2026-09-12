@@ -337,7 +337,10 @@ xdg-desktop-portal, PipeWire, grim, KWin/GNOME 헬퍼, Windows Graphics Capture)
 | `--display <name>` | `--capture-to`와 함께 사용: 디스플레이 이름으로 지정된 출력 화면을 캡처합니다. 여러 디스플레이를 한 번에 캡처하려면 반복 지정할 수 있습니다(화면당 PNG 하나). |
 | `--include-cursor` | `--capture-to`와 함께 사용: 마우스 커서를 캡처 프레임에 그립니다. |
 | `--output-name <name>` | `--capture-to`와 함께 사용: 캡처 경로가 디렉터리인 경우 사용되는 기본 파일 이름(확장자 제외). |
-| `--list-displays` | 현재 모든 디스플레이 정보를 JSON으로 출력하고 종료합니다. |
+| `--list-displays` | 사용 가능한 디스플레이를 JSON으로 출력하고 종료합니다. |
+| `--doctor` | 환경 자가 진단(버전, Qt/OS/세션, 디스플레이, 헤드리스 설정, 창 감지)을 JSON으로 출력하고 종료합니다. |
+| `--delay <seconds>` | 캡처 전 지정한 초만큼 대기합니다: 대화형은 전체 화면 카운트다운(Esc로 취소), 헤드리스는 창 없는 조용한 대기(0–3600, 잘못된 값은 종료 코드 2). |
+| `--capture-destination <mode>` | 캡처 저장 위치: `inline`(JSON 출력에 base64)/`file`/`stage`/`clipboard`. 창 캡처와, `clipboard`(종료 코드 2)를 제외한 화면 캡처에 적용됩니다. |
 
 ### 단축키 바인딩
 

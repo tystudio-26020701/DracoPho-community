@@ -333,7 +333,10 @@ por lo que la calidad de imagen y el comportamiento de recorte de regiones son i
 | `--display <name>` | Se usa con `--capture-to`: captura la pantalla de salida especificada por nombre de monitor. Puede repetirse para capturar varios monitores a la vez (un PNG por pantalla). |
 | `--include-cursor` | Se usa con `--capture-to`: dibuja el puntero del ratón en el fotograma capturado. |
 | `--output-name <name>` | Se usa con `--capture-to`: nombre base de archivo (sin extensión) cuando la ruta de captura es un directorio. |
-| `--list-displays` | Muestra en JSON la información de todos los monitores actuales y sale. |
+| `--list-displays` | Imprime las salidas disponibles como JSON y sale. |
+| `--doctor` | Imprime un autodiagnóstico JSON del entorno (versión, Qt/OS/sesión, pantallas, configuración headless, detección de ventanas) y sale. |
+| `--delay <seconds>` | Espera los segundos indicados antes de capturar: interactivo con cuenta regresiva a pantalla completa (Esc para cancelar); headless como espera silenciosa sin ventanas (0–3600, los valores no válidos terminan con código 2). |
+| `--capture-destination <mode>` | Destino de las capturas: `inline` (base64 en la salida JSON), `file`, `stage` o `clipboard`. Se aplica a capturas de ventana y — salvo `clipboard` (código de salida 2) — a capturas de pantalla. |
 
 ### Asignación de atajos de teclado
 

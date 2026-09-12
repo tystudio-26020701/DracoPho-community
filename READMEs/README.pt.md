@@ -335,7 +335,10 @@ mutuamente exclusivos com o parâmetro de arquivo de imagem posicional.
 | `--display <name>` | Usado com `--capture-to`: captura a tela de saída especificada pelo nome do monitor. Pode ser repetido para capturar vários monitores de uma vez (um PNG por tela). |
 | `--include-cursor` | Usado com `--capture-to`: desenha o ponteiro do mouse no quadro capturado. |
 | `--output-name <name>` | Usado com `--capture-to`: nome de arquivo base usado quando o caminho de captura é um diretório (sem extensão). |
-| `--list-displays` | Emite as informações de todos os monitores atuais em JSON e sai. |
+| `--list-displays` | Imprime as saídas disponíveis como JSON e sai. |
+| `--doctor` | Imprime um autodiagnóstico JSON do ambiente (versão, Qt/OS/sessão, monitores, configuração headless, detecção de janelas) e sai. |
+| `--delay <seconds>` | Aguarda os segundos indicados antes de capturar: interativo com contagem regressiva em tela cheia (Esc para cancelar); headless como espera silenciosa sem janelas (0–3600, valores inválidos saem com código 2). |
+| `--capture-destination <mode>` | Destino das capturas: `inline` (base64 na saída JSON), `file`, `stage` ou `clipboard`. Aplica-se a capturas de janela e — exceto `clipboard` (código de saída 2) — a capturas de tela. |
 
 ### Atalhos de teclado
 

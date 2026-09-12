@@ -340,7 +340,10 @@ sich mit dem Positionsparameter für Bilddateien gegenseitig aus.
 | `--display <name>` | In Kombination mit `--capture-to`: erfasst den angegebenen Ausgabebildschirm anhand des Display-Namens. Kann mehrfach angegeben werden, um mehrere Monitore in einem Durchgang zu erfassen (ein PNG pro Monitor). |
 | `--include-cursor` | In Kombination mit `--capture-to`: zeichnet den Mauszeiger in den erfassten Frame. |
 | `--output-name <name>` | In Kombination mit `--capture-to`: Basisdateiname (ohne Erweiterung), der verwendet wird, wenn der Erfassungspfad ein Verzeichnis ist. |
-| `--list-displays` | Gibt Informationen zu allen aktuellen Monitoren als JSON aus und beendet das Programm. |
+| `--list-displays` | Gibt die verfügbaren Ausgänge als JSON aus und beendet. |
+| `--doctor` | Gibt eine JSON-Umgebungsdiagnose aus (Version, Qt/OS/Sitzung, Displays, Headless-Konfiguration, Fenstererkennung) und beendet. |
+| `--delay <seconds>` | Wartet die angegebene Anzahl von Sekunden vor der Aufnahme: interaktiv mit Vollbild-Countdown (Esc zum Abbrechen); headless als stille Wartezeit ohne Fenster (0–3600, ungültige Werte beenden mit Code 2). |
+| `--capture-destination <mode>` | Ziel der Aufnahmen: `inline` (Base64 in der JSON-Ausgabe), `file`, `stage` oder `clipboard`. Gilt für Fenster- und — außer `clipboard` (Exit-Code 2) — für Bildschirmaufnahmen. |
 
 ### Tastenkürzel-Bindung
 

@@ -339,7 +339,10 @@ sont mutuellement exclusifs avec le paramètre de fichier image positionnel.
 | `--display <name>` | À utiliser avec `--capture-to` : capture l'écran de sortie spécifié par son nom. Répétable pour capturer plusieurs écrans en une fois (un PNG par écran). |
 | `--include-cursor` | À utiliser avec `--capture-to` : dessine le curseur de la souris dans la trame capturée. |
 | `--output-name <name>` | À utiliser avec `--capture-to` : nom de base du fichier (sans extension) lorsque le chemin de capture est un répertoire. |
-| `--list-displays` | Affiche en JSON les informations de tous les écrans puis quitte. |
+| `--list-displays` | Affiche les sorties disponibles en JSON et quitte. |
+| `--doctor` | Affiche un autodiagnostic JSON de l'environnement (version, Qt/OS/session, écrans, configuration headless, détection de fenêtres) et quitte. |
+| `--delay <seconds>` | Attend le nombre de secondes indiqué avant la capture : interactif avec compte à rebours plein écran (Échap pour annuler) ; headless en attente silencieuse sans fenêtre (0–3600, valeurs invalides → code de sortie 2). |
+| `--capture-destination <mode>` | Destination des captures : `inline` (base64 dans la sortie JSON), `file`, `stage` ou `clipboard`. S'applique aux captures de fenêtre et — sauf `clipboard` (code de sortie 2) — aux captures d'écran. |
 
 ### Liaison des raccourcis
 

@@ -334,7 +334,10 @@ xdg-desktop-portal、PipeWire、grim、KWin/GNOME 輔助、Windows Graphics Capt
 | `--display <name>` | 配合 `--capture-to` 使用：依顯示器名稱擷取指定輸出螢幕。可重複指定以一次擷取多個顯示器（每個螢幕一張 PNG）。 |
 | `--include-cursor` | 配合 `--capture-to` 使用：將滑鼠游標繪製進擷取幀。 |
 | `--output-name <name>` | 配合 `--capture-to` 使用：當擷取路徑為目錄時使用的基準檔案名稱（不含副檔名）。 |
-| `--list-displays` | 以 JSON 輸出目前所有顯示器資訊並退出。 |
+| `--list-displays` | 以 JSON 輸出目前所有顯示器資訊並結束。 |
+| `--doctor` | 以 JSON 輸出環境自我檢查（版本、Qt/OS/工作階段、顯示器、無頭設定、視窗偵測鏈路）並結束。 |
+| `--delay <seconds>` | 進入截圖前先等待指定秒數：互動模式顯示全屏倒數遮罩（按 Esc 取消）；無頭模式為靜默無視窗等待（0–3600，非法值以結束代碼 2 退出）。 |
+| `--capture-destination <mode>` | 截圖去向：`inline`（JSON 輸出內嵌 base64）/`file`/`stage`/`clipboard`。適用於視窗擷取，以及除 `clipboard`（結束代碼 2）外的螢幕擷取。 |
 
 ### 快捷鍵繫結
 

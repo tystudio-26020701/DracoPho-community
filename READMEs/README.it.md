@@ -333,7 +333,10 @@ quindi qualità dell'immagine e comportamento di ritaglio delle aree sono identi
 | `--display <name>` | Da usare con `--capture-to`: cattura lo schermo di output specificato in base al nome del display. Può essere ripetuto per catturare più display in una sola volta (un PNG per schermo). |
 | `--include-cursor` | Da usare con `--capture-to`: disegna il puntatore del mouse nel fotogramma catturato. |
 | `--output-name <name>` | Da usare con `--capture-to`: nome file di base (senza estensione) usato quando il percorso di cattura è una directory. |
-| `--list-displays` | Emette le informazioni su tutti i display correnti come JSON ed esce. |
+| `--list-displays` | Stampa le uscite disponibili come JSON ed esce. |
+| `--doctor` | Stampa un autodiagnostico JSON dell'ambiente (versione, Qt/OS/sessione, monitor, configurazione headless, rilevamento finestre) ed esce. |
+| `--delay <seconds>` | Attende i secondi indicati prima di acquisire: interattivo con conto alla rovescia a schermo intero (Esc per annullare); headless come attesa silenziosa senza finestre (0–3600, valori non validi escono con codice 2). |
+| `--capture-destination <mode>` | Destinazione delle acquisizioni: `inline` (base64 nell'output JSON), `file`, `stage` o `clipboard`. Si applica alle acquisizioni di finestra e — tranne `clipboard` (codice di uscita 2) — alle acquisizioni dello schermo. |
 
 ### Associazioni di scorciatoie
 

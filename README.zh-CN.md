@@ -299,23 +299,43 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
 dracoPho --list-displays
+
+# 环境自检：平台/会话/显示器/无头配置/窗口检测链路
+dracoPho --doctor
 ```
 
 单显示器 `--capture-to` 的 JSON 输出示例：
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 当指定多个 `--display` 时，输出变为每屏一个捕获的数组：
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 每个选中的显示器使用各自的源几何进行捕获，因此 portal 类后端会精确返回
 该显示器而不是整个虚拟桌面。
+
+**面向智能体/脚本的去向与延时**
+
+- `--capture-destination inline`：PNG 以 base64 放进 JSON 的 `data` 字段
+  直接返回，不写任何文件（如 `dracoPho --capture-destination inline`），
+  与 `--display`/`--region` 组合可全程不落盘。
+- `--capture-destination stage`：未指定 `--capture-to` 时写入临时暂存目录
+  （`/tmp/dracoPho-staging/`）。
+- `--delay <秒>`：无头截图中为静默无窗口等待（0–3600），非法值以退出码 2
+  退出；交互式模式下才是倒计时遮罩。
+- `clipboard` 不是屏幕截图去向：请求即以退出码 2 退出（窗口捕获
+  `--window` 支持）。
+- 所有无头 JSON 输出携带 `"v"` schema 版本（当前为 `1`）。
+- 交互式 `--capture-window` 与任何无头选项组合时以退出码 2 退出，并点名
+  冲突选项与对应的无头替代方案——这是脚本/智能体最常见的误用防护。
+- 退出码：`0` 成功；`1` 捕获失败（含逐屏部分失败与剪贴板策略降级）；
+  `2` 用法错误。
 
 无界面截图复用与交互界面相同的全部捕获后端（QScreen、
 xdg-desktop-portal、PipeWire、grim、KWin/GNOME 辅助、Windows Graphics Capture），

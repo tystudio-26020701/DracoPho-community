@@ -288,9 +288,9 @@ dracoPho --xdg-window
 
 #### Headless (non-interactive) capture
 
-Scripts, CI jobs, and other programs can capture the screen without opening
-the annotation UI. The captured frame is written to a PNG and a compact JSON
-summary is printed to stdout:
+Scripts, CI jobs, **AI agents**, and other programs can capture the screen
+without opening the annotation UI. The captured frame is written to a PNG and
+a compact JSON summary is printed to stdout:
 
 ```bash
 # Capture the primary screen to a PNG
@@ -310,24 +310,48 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # Print the available outputs as JSON and exit
 dracoPho --list-displays
+
+# Self-check: platform, session, displays, headless config, window detection
+dracoPho --doctor
 ```
 
 The JSON output of a single-display `--capture-to` looks like:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 When more than one `--display` is requested the output becomes an array of
 captures, one per monitor:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 Each selected monitor is captured with its own source geometry, so portal-based
 backends return exactly that display instead of the whole virtual desktop.
+
+**Agent-friendly destinations and timing**
+
+- `--capture-destination inline` returns the PNG as base64 in the JSON
+  (`data` field) without writing any file — useful when a temp file is
+  unwanted: `dracoPho --capture-destination inline`. Combined with
+  `--display`/`--region` it keeps the no-filesystem guarantee.
+- `--capture-destination stage` writes into the temporary staging directory
+  (`/tmp/dracoPho-staging/`) when `--capture-to` is omitted.
+- `--delay <seconds>` performs a quiet, windowless wait before the capture
+  (0–3600); unlike the interactive countdown overlay it never shows UI, and
+  invalid values exit with code 2.
+- `clipboard` is not a screen-capture destination; requesting it exits with
+  code 2 (window captures via `--window` support it).
+- All headless JSON outputs carry a `"v"` schema version (currently `1`).
+- Combining the interactive `--capture-window` overlay with any headless
+  option exits with code 2 and names the offending flag plus the correct
+  headless alternative — this guards against the most common scripting
+  mistake.
+- Exit codes: `0` success, `1` capture failed (including per-monitor
+  partial failures and clipboard-policy downgrades), `2` usage error.
 
 Headless capture reuses the same capture backends as the interactive UI
 (QScreen, xdg-desktop-portal, PipeWire, grim, KWin/GNOME helpers, and Windows
@@ -371,7 +395,7 @@ no interactive portal prompt, no focus stealing; the outcome is queried via
 | `--capture-window` | Starts an interactive window capture: hover to highlight a window (title badge shown), click to capture it. Reads the window's own content on X11/XWayland, Windows (PrintWindow) and KDE Wayland (KWin ScreenShot2); elsewhere the window's screen region is captured. |
 | `--tray` | Keeps DracoPho running in the system tray and registers global capture hotkeys when supported. |
 | `--capture` | Forces one-shot capture when tray autostart is enabled in the config. |
-| `--delay <seconds>` | Waits the given number of seconds with a fullscreen countdown overlay (Esc to cancel) before entering capture. |
+| `--delay <seconds>` | Waits the given number of seconds before capturing: a fullscreen countdown overlay (Esc to cancel) in interactive mode; a quiet windowless wait in headless captures (0–3600, invalid values exit with code 2). |
 | `--pin-image <path>` | Opens an existing local image directly as a pinned sticker window, skipping capture and region selection. |
 | `--recording-status` | Prints the current recording status as JSON through the running instance. |
 | `--stop-recording` | Requests the running instance to stop the active recording. |
@@ -395,10 +419,11 @@ no interactive portal prompt, no focus stealing; the outcome is queried via
 | `--include-cursor` | With `--capture-to`: draw the mouse cursor into the captured frame. |
 | `--output-name <name>` | With `--capture-to`: base file name (without extension) used when the capture path is a directory. |
 | `--list-displays` | Prints the available outputs as JSON and exits. |
+| `--doctor` | Prints a JSON environment self-check (version, Qt/OS/session, displays, headless config, window-detection pipeline) and exits. |
 | `--list-windows` | Lists the visible windows (id, title, class, pid, geometry) as JSON and exits. |
 | `--window <selector>` | Captures the window(s) matching the selector. May be repeated; append `@x,y,w,h` to capture a component sub-region. |
 | `--window-by <mode>` | How `--window` selectors are interpreted: `auto`, `id`, `title`, `class`, `index`, `pid` or `process`. |
-| `--capture-destination <mode>` | Where captured window images go: `inline` (base64), `file`, `stage` or `clipboard`. |
+| `--capture-destination <mode>` | Where captured images go: `inline` (base64 in the JSON output), `file`, `stage` or `clipboard`. Applies to window captures and — except `clipboard`, which exits with code 2 — to screen captures. |
 
 ### Compositor / Desktop Hotkey Integration
 
