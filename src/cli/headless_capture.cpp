@@ -318,12 +318,14 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
     QTextStream err(stderr);
 
     const bool wantListDisplays = parser.isSet(QStringLiteral("list-displays"));
-    // --capture-destination inline/stage 单独出现同样是无头屏幕截图请求，
+    // --capture-destination（非 clipboard）单独出现同样是无头屏幕截图请求，
     // 不能落回交互式启动（否则会被常驻实例 IPC 接管或弹出捕获界面）。
+    // clipboard 是窗口捕获专属去向，仍由窗口分发器给出自己的报错。
     const QString destinationValue = parser.value(QStringLiteral("capture-destination")).trimmed().toLower();
-    const bool standaloneInline = destinationValue == QLatin1String("inline")
-        || destinationValue == QLatin1String("stage");
-    const bool wantCapture = parser.isSet(QStringLiteral("capture-to")) || standaloneInline;
+    const bool hasScreenDestination = parser.isSet(QStringLiteral("capture-destination"))
+        && !destinationValue.isEmpty()
+        && destinationValue != QLatin1String("clipboard");
+    const bool wantCapture = parser.isSet(QStringLiteral("capture-to")) || hasScreenDestination;
     if (!wantListDisplays && !wantCapture) {
         return -1;
     }

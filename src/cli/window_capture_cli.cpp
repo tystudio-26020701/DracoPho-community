@@ -695,15 +695,13 @@ int runWindowCaptureIfRequested(const QCommandLineParser &parser)
         }
     }
     if (hasDestination && selectors.isEmpty()) {
-        // 屏幕截图路径同样使用 --capture-destination（inline/file/stage）；
-        // 当它伴随屏幕无头标志出现、或值本身是屏幕去向（非 clipboard）时，
-        // 交给屏幕分发器处理，这里不再拦截。
-        const bool screenDestination = QStringList{QStringLiteral("inline"),
-                                                   QStringLiteral("file"),
-                                                   QStringLiteral("stage")}
-                                           .contains(parser.value(QStringLiteral("capture-destination"))
-                                                         .trimmed()
-                                                         .toLower());
+        // 屏幕截图路径同样使用 --capture-destination（inline/file/stage 及一切
+        // 非 clipboard 值）；当它伴随屏幕无头标志出现、或值本身不是 clipboard
+        // 时，交给屏幕分发器统一校验与执行，这里不再拦截。clipboard 单独
+        // 出现维持本路径的既有报错（它是窗口捕获专属去向）。
+        const bool screenDestination = parser.value(QStringLiteral("capture-destination"))
+                                           .trimmed()
+                                           .toLower() != QLatin1String("clipboard");
         const bool screenContext = screenDestination
             || parser.isSet(QStringLiteral("capture-to"))
             || parser.isSet(QStringLiteral("region"))

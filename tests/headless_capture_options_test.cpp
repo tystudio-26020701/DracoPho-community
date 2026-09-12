@@ -98,6 +98,54 @@ private slots:
         QVERIFY(emptyParser.parse({QStringLiteral("dracoPho")}));
         QVERIFY(headlessInteractiveConflict(emptyParser).isEmpty());
     }
+
+    /**
+     * 验证 --doctor 与捕获/录制/窗口/文件参数互斥：每类代表旗标都要点名，
+     * 纯自检与调试类旗标不冲突。
+     * @return 无返回值。
+     */
+    void detectsDoctorConflicts()
+    {
+        const QStringList exclusiveFlags{
+            QStringLiteral("capture-to"), QStringLiteral("window"),
+            QStringLiteral("capture-window"), QStringLiteral("delay"),
+            QStringLiteral("record-display"), QStringLiteral("recording-status"),
+            QStringLiteral("stop-recording"), QStringLiteral("list-windows"),
+        };
+
+        for (const QString &flag : exclusiveFlags) {
+            QCommandLineParser parser;
+            parser.addOption(QCommandLineOption(QStringLiteral("doctor")));
+            parser.addOption(QCommandLineOption(flag));
+            QVERIFY(parser.parse({QStringLiteral("dracoPho"),
+                                  QStringLiteral("--doctor"),
+                                  QStringLiteral("--%1").arg(flag)}));
+            const QString conflict = doctorOptionConflict(parser);
+            QVERIFY2(!conflict.isEmpty(), qPrintable(QStringLiteral("flag %1 must conflict with --doctor").arg(flag)));
+            QVERIFY2(conflict.contains(QStringLiteral("--%1").arg(flag)),
+                     qPrintable(QStringLiteral("conflict must name --%1").arg(flag)));
+        }
+
+        QCommandLineParser positionalParser;
+        positionalParser.addOption(QCommandLineOption(QStringLiteral("doctor")));
+        QVERIFY(positionalParser.parse({QStringLiteral("dracoPho"),
+                                        QStringLiteral("--doctor"),
+                                        QStringLiteral("image.png")}));
+        QVERIFY(!doctorOptionConflict(positionalParser).isEmpty());
+
+        QCommandLineParser cleanParser;
+        cleanParser.addOption(QCommandLineOption(QStringLiteral("doctor")));
+        QVERIFY(cleanParser.parse({QStringLiteral("dracoPho"), QStringLiteral("--doctor")}));
+        QVERIFY(doctorOptionConflict(cleanParser).isEmpty());
+
+        QCommandLineParser debugParser;
+        debugParser.addOption(QCommandLineOption(QStringLiteral("doctor")));
+        debugParser.addOption(QCommandLineOption(QStringLiteral("debug")));
+        QVERIFY(debugParser.parse({QStringLiteral("dracoPho"),
+                                   QStringLiteral("--doctor"),
+                                   QStringLiteral("--debug")}));
+        QVERIFY(doctorOptionConflict(debugParser).isEmpty());
+    }
 };
 
 QTEST_APPLESS_MAIN(HeadlessCaptureOptionsTest)

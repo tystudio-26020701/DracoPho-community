@@ -193,6 +193,18 @@ int main(int argc, char *argv[])
     markshot::cli::addWindowCaptureOptions(&parser);
     parser.process(app);
 
+    // --doctor 是纯只读自检：必须先于一切捕获/录制分发执行，且与任何
+    // 捕获类参数组合都报用法错误，绝不静默吞掉其他选项。
+    if (parser.isSet(doctorOption)) {
+        const QString doctorConflict = markshot::cli::doctorOptionConflict(parser);
+        if (!doctorConflict.isEmpty()) {
+            QTextStream errorStream(stderr);
+            errorStream << "dracoPho: " << doctorConflict << "\n";
+            return 2;
+        }
+        return markshot::cli::runDoctor();
+    }
+
     if (parser.isSet(stopRecordingOption)) {
         return markshot::cli::stopRecordingFromCommandLine();
     }
@@ -302,9 +314,6 @@ int main(int argc, char *argv[])
             errorStream << "dracoPho: " << conflict << "\n";
             return 2;
         }
-    }
-    if (parser.isSet(doctorOption)) {
-        return markshot::cli::runDoctor();
     }
     const int windowExitCode = markshot::cli::runWindowCaptureIfRequested(parser);
     if (windowExitCode >= 0) {

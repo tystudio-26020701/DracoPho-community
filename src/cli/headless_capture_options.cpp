@@ -62,4 +62,29 @@ QString headlessInteractiveConflict(const QCommandLineParser &parser)
     return QString();
 }
 
+QString doctorOptionConflict(const QCommandLineParser &parser)
+{
+    // --doctor 是纯只读自检：与任何捕获、录制、窗口或文件参数组合都属于
+    // 用法错误（此前 doctor 会静默优先，吞掉其余选项）。
+    static const char *kExclusiveFlags[] = {
+        "capture-to",       "region",           "display",           "all-outputs",
+        "list-displays",    "window",           "list-windows",      "window-by",
+        "capture-destination", "output-name",   "include-cursor",    "delay",
+        "capture-window",   "record-region",    "record-display",    "record-duration",
+        "record-output",    "record-fps",       "record-format",     "record-audio",
+        "record-wait-json", "recording-status", "stop-recording",
+    };
+    for (const char *flag : kExclusiveFlags) {
+        if (parser.isSet(QLatin1String(flag))) {
+            return QStringLiteral("--doctor cannot be combined with --%1. "
+                                  "Run --doctor on its own for the environment self-check.")
+                .arg(QLatin1String(flag));
+        }
+    }
+    if (!parser.positionalArguments().isEmpty()) {
+        return QStringLiteral("--doctor cannot be combined with an image file argument.");
+    }
+    return QString();
+}
+
 } // namespace markshot::cli

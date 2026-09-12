@@ -30,4 +30,9 @@ std::optional<ScreenCaptureDestination> parseScreenDestination(const QString &na
 // 延时在交互式与无头两条链路中均有合法语义。
 QString headlessInteractiveConflict(const QCommandLineParser &parser);
 
+// 判定 --doctor 与任何捕获/录制/窗口/文件参数的组合冲突。--doctor 是纯
+// 自检命令，静默吞掉其他选项会制造新的误用面，因此一律显式报错。
+// 返回第一条冲突说明；无冲突时返回空字符串。
+QString doctorOptionConflict(const QCommandLineParser &parser);
+
 } // namespace markshot::cli
