@@ -18,6 +18,8 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
     const qreal penWidth = std::max<qreal>(1.5, annotation.width * scale);
 
     painter.save();
+    // 文本框透明度(决-A):整个标注的合成不透明度,与文字颜色 alpha 无关
+    painter.setOpacity(std::clamp(annotation.opacity, 0.0, 1.0));
     if (annotationSupportsRotation(annotation) && !qFuzzyIsNull(annotation.rotationDegrees)) {
         const QPointF center = annotationRotationCenter(annotation, widgetCoordinates);
         painter.translate(center);
@@ -125,8 +127,9 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
             painter.setBrush(annotation.backgroundColor);
             painter.drawRoundedRect(backgroundRect, 4.0 * scale, 4.0 * scale);
         }
-        // 富文本经 QTextDocument 逐 span 渲染(局部字体/字号/粗斜/颜色);
-        // 未显式着色的片段取画笔颜色(即标注主色),与编辑器所见即所得。
+        // 富文本经 QTextDocument 逐 span 渲染(局部字体/字号/粗斜/颜色)。
+        // 注意: drawContents 不会采用画笔颜色,未显式着色的片段会回落到
+        // 默认调色板(黑);必须用 PaintContext 显式把 Text 色设为标注主色。
         painter.setPen(annotation.color);
         painter.setBrush(Qt::NoBrush);
         QTextDocument document;
@@ -135,15 +138,17 @@ void ShotWindow::drawAnnotation(QPainter &painter, const Annotation &annotation,
         option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
         option.setAlignment(Qt::AlignLeft | Qt::AlignTop);
         document.setDefaultTextOption(option);
+        document.setDefaultFont(font);
         if (!annotation.richText.isEmpty()) {
             document.setHtml(annotation.richText);
         } else {
             document.setPlainText(annotation.text);
         }
-        document.setDefaultFont(font);
         document.setTextWidth(std::max<qreal>(1.0, textRect.width()));
         painter.translate(textRect.topLeft());
-        document.drawContents(&painter);
+        QAbstractTextDocumentLayout::PaintContext paintContext;
+        paintContext.palette.setColor(QPalette::Text, annotation.color);
+        document.documentLayout()->draw(&painter, paintContext);
         painter.restore();
         break;
     }
@@ -595,7 +600,7 @@ void ShotWindow::beginTextAnnotation(QPointF imagePoint)
     editorFont.setItalic(m_textItalic);
     m_textEditor->setFont(editorFont);
     m_textEditor->show();
-    m_textEditor->raise();
+    raiseTextEditorAbovePanels();
     updateTextEditorGeometry();
     m_textEditor->setFocus(Qt::MouseFocusReason);
     updateLayerShellForIme();
@@ -634,7 +639,7 @@ void ShotWindow::beginEditingSelectedTextAnnotation()
     // 编辑态保留属性面板:字体/字号/粗斜/颜色控件直接作用于编辑器内
     // 被选中的局部文本,这是局部格式化的唯一入口。
     m_textEditor->show();
-    m_textEditor->raise();
+    raiseTextEditorAbovePanels();
     const QRectF widgetRect = textContentRect(*annotation, true);
     m_textEditor->setGeometry(widgetRect.toAlignedRect().adjusted(0, 0, 1, 1));
     m_textEditor->setFocus(Qt::MouseFocusReason);
@@ -650,10 +655,81 @@ void ShotWindow::commitTextEditor()
     }
 
     m_committingText = true;
+    // 字号输入框仍持有焦点时(点击画布提交的路径),先让它失焦触发
+    // editingFinished,把待生效的字号在编辑器存活时应用到选区字符格式,
+    // 再读取富文本;否则该次字号修改会路由到整框基值并被 span 压制,
+    // 表现为"失焦后字号不生效"。
+    if (m_propertyFontSizeEdit && m_propertyFontSizeEdit->isVisible() && m_propertyFontSizeEdit->hasFocus()) {
+        m_propertyFontSizeEdit->clearFocus();
+    }
     const QString text = m_textEditor->toPlainText().trimmed();
     const QString richText = text.isEmpty() ? QString() : m_textEditor->toHtml();
     const QFont editorFont = m_textEditor->font();
-    const QRect editorGeometry = m_textEditor->geometry();
+    // 决-3:整框同格式折叠——遍历全部片段,若字体/字号/粗斜体全篇一致,
+    // 折叠进标注基值字段;若全部片段都带同一显式前景色,折叠进标注主色。
+    // 混排时保持基值不变(仅承载新输入默认),局部格式由 span 表达。
+    std::optional<QString> foldedFamily;
+    std::optional<qreal> foldedPointSize;
+    std::optional<int> foldedWeight;
+    std::optional<bool> foldedItalic;
+    std::optional<QColor> foldedColor;
+    std::optional<QColor> foldedHighlight;
+    bool colorAllExplicit = true;
+    bool highlightAllExplicit = true;
+    if (!text.isEmpty()) {
+        QTextDocument *document = m_textEditor->document();
+        const QFont defaultFont = document->defaultFont();
+        for (QTextBlock block = document->begin(); block.isValid(); block = block.next()) {
+            for (QTextBlock::iterator it = block.begin(); !it.atEnd(); ++it) {
+                if (!it.fragment().isValid()) {
+                    continue;
+                }
+                const QTextCharFormat format = it.fragment().charFormat();
+                const QFont fragmentFont = format.font().resolve(defaultFont);
+                if (!foldedFamily.has_value()) {
+                    foldedFamily = fragmentFont.family();
+                    foldedPointSize = fragmentFont.pointSizeF();
+                    foldedWeight = fragmentFont.weight();
+                    foldedItalic = fragmentFont.italic();
+                } else {
+                    if (foldedFamily.has_value() && foldedFamily.value() != fragmentFont.family()) {
+                        foldedFamily.reset();
+                    }
+                    if (foldedPointSize.has_value()
+                        && !qFuzzyCompare(foldedPointSize.value(), fragmentFont.pointSizeF())) {
+                        foldedPointSize.reset();
+                    }
+                    if (foldedWeight.has_value() && foldedWeight.value() != fragmentFont.weight()) {
+                        foldedWeight.reset();
+                    }
+                    if (foldedItalic.has_value() && foldedItalic.value() != fragmentFont.italic()) {
+                        foldedItalic.reset();
+                    }
+                }
+                if (format.hasProperty(QTextCharFormat::ForegroundBrush)) {
+                    const QColor fragmentColor = format.foreground().color();
+                    if (!foldedColor.has_value()) {
+                        foldedColor = fragmentColor;
+                    } else if (foldedColor.has_value() && foldedColor.value().rgba() != fragmentColor.rgba()) {
+                        foldedColor.reset();
+                    }
+                } else {
+                    colorAllExplicit = false;
+                }
+                if (format.hasProperty(QTextCharFormat::BackgroundBrush)) {
+                    const QColor fragmentHighlight = format.background().color();
+                    if (!foldedHighlight.has_value()) {
+                        foldedHighlight = fragmentHighlight;
+                    } else if (foldedHighlight.has_value()
+                               && foldedHighlight.value().rgba() != fragmentHighlight.rgba()) {
+                        foldedHighlight.reset();
+                    }
+                } else {
+                    highlightAllExplicit = false;
+                }
+            }
+        }
+    }
     m_textEditor->hide();
     m_textEditor->clear();
     setFocus(Qt::OtherFocusReason);
@@ -689,13 +765,27 @@ void ShotWindow::commitTextEditor()
             pushHistorySnapshot();
             annotation->text = text;
             annotation->richText = richText;
-            annotation->fontFamily = editorFont.family();
-            annotation->fontWeight = editorFont.weight();
-            annotation->textItalic = editorFont.italic();
-            annotation->rect = textContentRect(*annotation, false);
-            if (!annotation->points.isEmpty()) {
-                annotation->points[0] = annotation->rect.topLeft();
+            // 决-3:全篇同格式时折叠进基值,保证面板状态与内容一致
+            annotation->fontFamily = foldedFamily.has_value() ? foldedFamily.value() : editorFont.family();
+            annotation->fontWeight = foldedWeight.has_value()
+                ? static_cast<QFont::Weight>(foldedWeight.value())
+                : editorFont.weight();
+            annotation->textItalic = foldedItalic.has_value() ? foldedItalic.value() : editorFont.italic();
+            if (foldedPointSize.has_value() && foldedPointSize.value() > 0.0) {
+                annotation->width = std::clamp(textWidthForFontSize(foldedPointSize.value()), 1.0, 1000.0);
             }
+            if (colorAllExplicit && foldedColor.has_value()) {
+                annotation->color = foldedColor.value();
+            }
+            if (highlightAllExplicit && foldedHighlight.has_value()) {
+                annotation->highlightColor = foldedHighlight.value();
+            }
+            // 框即权威:就地编辑不改变框几何(拖柄所见即所得)
+        }
+        // 就地编辑结束:回到选择工具并保持选中,避免 Text 工具残留导致
+        // 后续点击随处新建空文本框。
+        if (m_tool != Tool::Select) {
+            setTool(Tool::Select);
         }
         m_committingText = false;
         updateAnnotationPropertyPanel();
@@ -709,28 +799,43 @@ void ShotWindow::commitTextEditor()
         annotation.id = m_nextAnnotationId++;
         annotation.tool = Tool::Text;
         annotation.points.append(m_textEditorImagePoint);
-        annotation.rect = QRectF(widgetToImage(editorGeometry.topLeft()),
-                                 widgetToImage(editorGeometry.bottomRight())).normalized();
         annotation.text = text;
         annotation.richText = richText;
-        annotation.color = m_currentColor;
+        // Auto Width(决-2):新框贴合内容,不沿用编辑器几何宽度;
+        // rect 留空交由 textContentRect 按内容收缩。
+        annotation.color = (colorAllExplicit && foldedColor.has_value())
+            ? foldedColor.value()
+            : m_currentColor;
         annotation.backgroundColor = m_textBackgroundColor;
-        annotation.width = m_textSize;
-        annotation.fontFamily = editorFont.family();
-        annotation.fontWeight = editorFont.weight();
-        annotation.textItalic = editorFont.italic();
+        // 文字高亮默认值(alpha>0 时应用到整框文字)
+        if (m_textHighlightColor.isValid() && m_textHighlightColor.alpha() > 0) {
+            annotation.richText = richTextWithHighlight(annotation.richText, m_textHighlightColor);
+            annotation.highlightColor = m_textHighlightColor;
+        } else if (highlightAllExplicit && foldedHighlight.has_value()) {
+            annotation.highlightColor = foldedHighlight.value();
+        }
+        annotation.opacity = m_defaultAnnotationOpacity;
+        if (foldedFamily.has_value() && foldedPointSize.has_value() && foldedPointSize.value() > 0.0) {
+            annotation.width = std::clamp(textWidthForFontSize(foldedPointSize.value()), 1.0, 1000.0);
+        } else {
+            annotation.width = m_textSize;
+        }
+        annotation.fontFamily = foldedFamily.has_value() ? foldedFamily.value() : editorFont.family();
+        annotation.fontWeight = foldedWeight.has_value()
+            ? static_cast<QFont::Weight>(foldedWeight.value())
+            : editorFont.weight();
+        annotation.textItalic = foldedItalic.has_value() ? foldedItalic.value() : editorFont.italic();
         annotation.rect = textContentRect(annotation, false);
         m_textFontFamily = annotation.fontFamily;
         m_textWeight = annotation.fontWeight;
         m_textItalic = annotation.textItalic;
         m_annotations.append(annotation);
-        const int committedId = annotation.id;
-        // 提交后自动选中,便于立即用属性面板统一调整该文本框参数
-        if (markshot::shot::annotationAutoSelectAfterDrawEnabled()) {
-            setTool(Tool::Select);
-            setSelectedAnnotations({committedId});
-            updateAnnotationPropertyPanel();
-        }
+        // 提交即结束编辑:无条件回到选择工具并选中新文本框。若 Text 工具
+        // 残留,后续对画布的任意点击都会不断新建空文本框(空编辑器还会盖在
+        // 属性面板上吞掉面板点击)。要新建下一框时再点文字工具即可。
+        setTool(Tool::Select);
+        setSelectedAnnotations({annotation.id});
+        updateAnnotationPropertyPanel();
     }
 
     m_committingText = false;

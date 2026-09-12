@@ -24,6 +24,7 @@ enum class PropertyIcon {
     Opacity,
     Color,
     TextBackground,
+    TextBoxFill,
     CornerRadius,
     MagnifierScale,
     MagnifierShape,

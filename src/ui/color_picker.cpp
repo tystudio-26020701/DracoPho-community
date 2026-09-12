@@ -436,12 +436,41 @@ ColorPicker::ColorPicker(QWidget *parent) : QWidget(parent)
     });
     connect(m_hex, &QLineEdit::editingFinished, this, [this] { onHexEdited(); });
 
+    // 决-D:跟踪三个鼠标交互子控件的按下/释放,供宿主判断"用户正在取色"
+    for (QWidget *interactiveWidget : {static_cast<QWidget *>(m_svField),
+                                       static_cast<QWidget *>(m_hueSlider),
+                                       static_cast<QWidget *>(m_alphaSlider)}) {
+        interactiveWidget->installEventFilter(this);
+    }
+
     setColor(QColor(255, 0, 0, 255));
+}
+
+bool ColorPicker::eventFilter(QObject *watched, QEvent *event)
+{
+    Q_UNUSED(watched);
+    switch (event->type()) {
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonDblClick:
+        m_interacting = true;
+        break;
+    case QEvent::MouseButtonRelease:
+        m_interacting = false;
+        break;
+    default:
+        break;
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void ColorPicker::setColor(const QColor &color)
 {
     QColor c = color.isValid() ? color : QColor(255, 255, 255);
+    // 决-D:同值短路——值未变化时保留全部子控件状态,避免外部回灌把
+    // 滑块条/取色板/色槽/色号拽回(联动断链的根因之一)
+    if (!m_settingColor && c.rgba() == m_color.rgba()) {
+        return;
+    }
     m_settingColor = true;
     m_color = c;
     int h = -1;
@@ -466,6 +495,13 @@ void ColorPicker::setColor(const QColor &color)
     rebuildHex();
     m_settingColor = false;
     refreshHistorySwatches();
+}
+
+void ColorPicker::setAlphaToolTip(const QString &text)
+{
+    if (m_alphaSlider) {
+        m_alphaSlider->setToolTip(text);
+    }
 }
 
 void ColorPicker::emitColor()

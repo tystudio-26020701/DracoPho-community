@@ -657,6 +657,18 @@ QIcon makePropertyIcon(PropertyIcon icon, QColor ink)
         p.drawLine(QPointF(12.3, 17.0), QPointF(19.7, 17.0));
         break;
     }
+    case PropertyIcon::TextBoxFill: {
+        // 文本框底色:框内下半部填充,示意"框的填充"
+        p.setPen(makePen(iconSoft, 1.3));
+        p.drawRoundedRect(QRectF(7.0, 7.5, 18.0, 17.0), 2.5, 2.5);
+        p.setPen(Qt::NoPen);
+        p.setBrush(withAlpha(iconInk, 60));
+        p.drawRoundedRect(QRectF(8.6, 14.5, 14.8, 8.4), 1.8, 1.8);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(makePen(iconInk, 1.4));
+        p.drawLine(QPointF(11.0, 11.5), QPointF(21.0, 11.5));
+        break;
+    }
     case PropertyIcon::CornerRadius: {
         p.setPen(makePen(iconFaint, 1.4));
         p.drawLine(QPointF(8.0, 24.0), QPointF(8.0, 13.5));

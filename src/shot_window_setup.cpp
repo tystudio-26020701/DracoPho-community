@@ -228,14 +228,24 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     m_propertyColorButton->setAccessibleName(MS_TR("Change selected object color"));
     connect(m_propertyColorButton, &QPushButton::clicked, this, [this] { openSelectedAnnotationColorPalette(); });
     propertyLayout->addWidget(m_propertyColorButton);
-    m_propertyTextBackgroundButton = new QPushButton(m_annotationPropertyPanel);
-    m_propertyTextBackgroundButton->setFocusPolicy(Qt::NoFocus);
-    m_propertyTextBackgroundButton->setIcon(markshot::ui::makePropertyIcon(markshot::ui::PropertyIcon::TextBackground));
-    m_propertyTextBackgroundButton->setIconSize(QSize(propertyButtonIconSize, propertyButtonIconSize));
-    m_propertyTextBackgroundButton->setToolTip(MS_TR("Text background color"));
-    m_propertyTextBackgroundButton->setAccessibleName(MS_TR("Text background color"));
-    connect(m_propertyTextBackgroundButton, &QPushButton::clicked, this, [this] { openSelectedTextBackgroundColorPalette(); });
-    propertyLayout->addWidget(m_propertyTextBackgroundButton);
+    // 文字高亮(<mark> 语义):有局部选区改选区高亮,无选区改整框文字高亮
+    m_propertyTextHighlightButton = new QPushButton(m_annotationPropertyPanel);
+    m_propertyTextHighlightButton->setFocusPolicy(Qt::NoFocus);
+    m_propertyTextHighlightButton->setIcon(markshot::ui::makePropertyIcon(markshot::ui::PropertyIcon::TextBackground));
+    m_propertyTextHighlightButton->setIconSize(QSize(propertyButtonIconSize, propertyButtonIconSize));
+    m_propertyTextHighlightButton->setToolTip(MS_TR("Text highlight"));
+    m_propertyTextHighlightButton->setAccessibleName(MS_TR("Text highlight"));
+    connect(m_propertyTextHighlightButton, &QPushButton::clicked, this, [this] { openSelectedTextHighlightPalette(); });
+    propertyLayout->addWidget(m_propertyTextHighlightButton);
+    // 文本框底色:框圆角矩形填充,永远整框,与文字选区无关
+    m_propertyBoxFillButton = new QPushButton(m_annotationPropertyPanel);
+    m_propertyBoxFillButton->setFocusPolicy(Qt::NoFocus);
+    m_propertyBoxFillButton->setIcon(markshot::ui::makePropertyIcon(markshot::ui::PropertyIcon::TextBoxFill));
+    m_propertyBoxFillButton->setIconSize(QSize(propertyButtonIconSize, propertyButtonIconSize));
+    m_propertyBoxFillButton->setToolTip(MS_TR("Text box fill color"));
+    m_propertyBoxFillButton->setAccessibleName(MS_TR("Text box fill color"));
+    connect(m_propertyBoxFillButton, &QPushButton::clicked, this, [this] { openSelectedBoxFillPalette(); });
+    propertyLayout->addWidget(m_propertyBoxFillButton);
     m_propertyFillButton = new QPushButton(m_annotationPropertyPanel);
     m_propertyFillButton->setCheckable(true);
     m_propertyFillButton->setFocusPolicy(Qt::NoFocus);
@@ -383,6 +393,17 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     auto *propertyColorLayout = new QVBoxLayout(m_propertyColorDialogPanel);
     propertyColorLayout->setContentsMargins(8, 8, 8, 8);
     propertyColorLayout->setSpacing(0);
+    // 模式标题:区分"对象颜色"与"文字背景色"两个入口,避免误选不可见的背景色
+    m_propertyColorDialogTitle = new QLabel(m_propertyColorDialogPanel);
+    m_propertyColorDialogTitle->setStyleSheet(QStringLiteral(
+        "QLabel {"
+        " color: #E5E7EB;"
+        " background: transparent;"
+        " border: 0;"
+        " font-weight: 600;"
+        " padding: 0 2px 6px 2px;"
+        "}"));
+    propertyColorLayout->addWidget(m_propertyColorDialogTitle);
     m_propertyColorPicker = new markshot::ui::ColorPicker(m_propertyColorDialogPanel);
     m_propertyColorPicker->setColor(m_currentColor);
     connect(m_propertyColorPicker, &markshot::ui::ColorPicker::colorChanged, this,
@@ -413,10 +434,9 @@ ShotWindow::ShotWindow(QImage frozenFrame,
         if (!item) {
             return;
         }
+        // 决-7:点选即实时应用(所见即所得),面板保持打开供连续试选;
+        // 关闭由"确定/取消"按钮或点击面板外部完成。
         setSelectedTextFontFamily(item->data(Qt::UserRole).toString());
-        if (m_propertyFontPanel) {
-            m_propertyFontPanel->hide();
-        }
     });
     fontPanelLayout->addWidget(m_propertyFontList);
 
@@ -461,6 +481,48 @@ ShotWindow::ShotWindow(QImage frozenFrame,
     });
     fontStyleLayout->addWidget(m_propertyFontItalicButton);
     fontStyleLayout->addStretch(1);
+    // 决-7:确定=确认当前字体并关闭;取消=还原打开面板时的字体并关闭
+    m_propertyFontApplyButton = new QPushButton(m_propertyFontPanel);
+    m_propertyFontApplyButton->setFocusPolicy(Qt::NoFocus);
+    m_propertyFontApplyButton->setText(MS_TR("OK"));
+    m_propertyFontApplyButton->setToolTip(MS_TR("Apply font"));
+    m_propertyFontApplyButton->setProperty("role", QStringLiteral("primary"));
+    connect(m_propertyFontApplyButton, &QPushButton::clicked, this, [this] {
+        if (m_propertyFontPanel) {
+            m_propertyFontPanel->hide();
+        }
+    });
+    fontStyleLayout->addWidget(m_propertyFontApplyButton);
+    m_propertyFontCancelButton = new QPushButton(m_propertyFontPanel);
+    m_propertyFontCancelButton->setFocusPolicy(Qt::NoFocus);
+    m_propertyFontCancelButton->setText(MS_TR("Cancel"));
+    m_propertyFontCancelButton->setToolTip(MS_TR("Revert font"));
+    connect(m_propertyFontCancelButton, &QPushButton::clicked, this, [this] {
+        // 1. 还原字号(含已通过回车应用的值)
+        if (m_fontPanelInitialFontSize > 0.0) {
+            setSelectedTextFontSize(m_fontPanelInitialFontSize);
+        }
+        // 2. 还原打开面板时的字体族
+        if (m_propertyFontList) {
+            const QString currentFamily = m_propertyFontList->currentItem()
+                ? m_propertyFontList->currentItem()->data(Qt::UserRole).toString()
+                : QString();
+            if (!m_fontPanelInitialFamily.isEmpty() && currentFamily != m_fontPanelInitialFamily) {
+                setSelectedTextFontFamily(m_fontPanelInitialFamily);
+            }
+        }
+        // 3. 隐藏面板时字号框失焦会触发 editingFinished,用信号块吞掉,
+        //    防止"取消"之后待生效的输入仍然被应用
+        if (m_propertyFontPanel) {
+            if (m_propertyFontSizeEdit) {
+                const QSignalBlocker sizeEditBlocker(m_propertyFontSizeEdit);
+                m_propertyFontPanel->hide();
+            } else {
+                m_propertyFontPanel->hide();
+            }
+        }
+    });
+    fontStyleLayout->addWidget(m_propertyFontCancelButton);
     fontPanelLayout->addLayout(fontStyleLayout);
 
     m_propertyFontPanel->hide();

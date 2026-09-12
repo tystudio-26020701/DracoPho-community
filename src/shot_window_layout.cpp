@@ -11,6 +11,13 @@ QRectF ShotWindow::textContentRect(const Annotation &annotation, bool widgetCoor
     const QRectF baseRect = hasRect
         ? annotation.rect.normalized()
         : QRectF(annotation.points.value(0), QSizeF(360.0, 140.0));
+    // 框即权威:用户创建/拖柄得到的几何就是最终几何,文字按框宽换行,
+    // 本函数不回缩、不重排框本身(柄只负责调整框,与字体/内容无关)。
+    if (hasRect) {
+        return widgetCoordinates ? imageRectToWidget(baseRect) : baseRect;
+    }
+
+    // Auto Width(仅创建时刻):无矩形时按内容收缩,得到紧贴文字的新框。
     const QPointF topLeft = widgetCoordinates ? imageToWidget(baseRect.topLeft()) : baseRect.topLeft();
     const qreal wrapWidth = std::max<qreal>(16.0, baseRect.width() * scale - kTextBackgroundPaddingX * 2.0 * scale);
 
@@ -26,14 +33,15 @@ QRectF ShotWindow::textContentRect(const Annotation &annotation, bool widgetCoor
     QTextDocument document;
     document.setDocumentMargin(0.0);
     document.setDefaultTextOption(option);
+    document.setDefaultFont(font);
     if (!annotation.richText.isEmpty()) {
         document.setHtml(annotation.richText);
     } else {
         document.setPlainText(annotation.text);
     }
-    document.setDefaultFont(font);
     document.setTextWidth(wrapWidth);
-
+    // 必须先取 document.size() 强制同步排版,否则逐行 QTextLayout 测量
+    // 恒为 0(惰性布局),会退化为"自然宽=换行宽"并导致宽度每次调用 +5 漂移。
     const QSizeF documentSize = document.size();
     qreal textWidth = 0.0;
     qreal textHeight = 0.0;
@@ -54,11 +62,8 @@ QRectF ShotWindow::textContentRect(const Annotation &annotation, bool widgetCoor
     }
 
     const qreal contentWidth = std::max<qreal>(1.0, std::ceil(textWidth + kTextBackgroundPaddingX * 2.0 * scale) + 5.0);
-    // 有矩形时保留用户调整出的换行宽度(内容不足时不回缩),高度始终贴合内容;
-    // 无矩形(初始占位)时按内容收缩,与旧行为一致。
-    const qreal rectWidth = hasRect ? std::max(baseRect.width(), contentWidth) : contentWidth;
     const qreal rectHeight = std::max<qreal>(1.0, std::ceil(textHeight + kTextBackgroundPaddingY * 2.0 * scale));
-    return QRectF(topLeft, QSizeF(rectWidth, rectHeight));
+    return QRectF(topLeft, QSizeF(contentWidth, rectHeight));
 }
 
 QRectF ShotWindow::constrainedRect(QPointF start, QPointF end) const
@@ -419,7 +424,10 @@ void ShotWindow::updateAnnotationPropertyPanel()
         ? annotation->backgroundColor
         : m_textBackgroundColor;
     const qreal panelWidth = firstSelectedAnnotation ? firstSelectedAnnotation->width : currentToolWidth();
-    const int panelOpacity = qRound(panelColor.alphaF() * 100.0);
+    // 决-A:不透明度滑条 = 文本框透明度(整个标注合成),不再是文字颜色 alpha
+    const int panelOpacity = qRound((firstSelectedAnnotation
+        ? std::clamp(firstSelectedAnnotation->opacity, 0.0, 1.0)
+        : m_defaultAnnotationOpacity) * 100.0);
     const bool panelFilled = annotation ? annotation->filled : m_shapeFilled;
     const qreal panelRadius = annotation ? annotation->cornerRadius : m_rectangleCornerRadius;
     const RectangleStyle panelRectangleStyle =
@@ -447,6 +455,9 @@ void ShotWindow::updateAnnotationPropertyPanel()
     bool panelFontItalic =
         annotation && annotation->tool == Tool::Text ? annotation->textItalic : m_textItalic;
     qreal panelFontSize = textFontSizeForWidth(panelWidth);
+    QColor panelHighlightColor = annotation && annotation->tool == Tool::Text
+        ? annotation->highlightColor
+        : m_textHighlightColor;
     if (editorActive) {
         panelFontFamily = m_textEditor->fontFamily();
         panelFontWeight = static_cast<QFont::Weight>(
@@ -457,6 +468,13 @@ void ShotWindow::updateAnnotationPropertyPanel()
         const qreal editorPointSize = m_textEditor->currentFont().pointSizeF();
         if (editorPointSize > 0.0) {
             panelFontSize = editorPointSize;
+        }
+        const QTextCharFormat editorFormat = m_textEditor->currentCharFormat();
+        if (editorFormat.hasProperty(QTextCharFormat::BackgroundBrush)) {
+            const QColor editorHighlight = editorFormat.background().color();
+            if (editorHighlight.isValid()) {
+                panelHighlightColor = editorHighlight;
+            }
         }
     }
 
@@ -683,19 +701,56 @@ void ShotWindow::updateAnnotationPropertyPanel()
             m_propertyColorDialogPanel->hide();
         }
     }
-    if (m_propertyTextBackgroundButton) {
-        const bool supportsTextBackground = !groupSelection && panelTool == Tool::Text;
-        m_propertyTextBackgroundButton->setVisible(supportsTextBackground);
-        m_propertyTextBackgroundButton->setStyleSheet(markshot::theme::propertyColorButtonStyleSheet(panelTextBackgroundColor));
-        m_propertyTextBackgroundButton->setIcon(markshot::ui::makePropertyIcon(
-            markshot::ui::PropertyIcon::TextBackground, propertyIconInkForFill(panelTextBackgroundColor)));
-        if (!supportsTextBackground && m_propertyColorDialogPanel && m_propertyColorEditingTextBackground) {
-            m_propertyColorDialogPanel->hide();
-        }
+    // 文字高亮(<mark> 语义)与文本框底色:两个独立概念、两个独立入口
+    const bool supportsTextHighlight = !groupSelection && panelTool == Tool::Text;
+    const bool supportsBoxFill = !groupSelection && panelTool == Tool::Text;
+    if (m_propertyTextHighlightButton) {
+        m_propertyTextHighlightButton->setVisible(supportsTextHighlight);
+        m_propertyTextHighlightButton->setStyleSheet(
+            markshot::theme::propertyColorButtonStyleSheet(panelHighlightColor));
+        m_propertyTextHighlightButton->setIcon(markshot::ui::makePropertyIcon(
+            markshot::ui::PropertyIcon::TextBackground, propertyIconInkForFill(panelHighlightColor)));
     }
-    if (m_propertyColorPicker && m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()) {
+    if (m_propertyBoxFillButton) {
+        m_propertyBoxFillButton->setVisible(supportsBoxFill);
+        m_propertyBoxFillButton->setStyleSheet(
+            markshot::theme::propertyColorButtonStyleSheet(panelTextBackgroundColor));
+        m_propertyBoxFillButton->setIcon(markshot::ui::makePropertyIcon(
+            markshot::ui::PropertyIcon::TextBoxFill, propertyIconInkForFill(panelTextBackgroundColor)));
+    }
+    // 面板不再是文字标注(或进入多选组)时,关闭高亮/底色模式对话框
+    if (m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()
+        && m_propertyColorDialogMode != ColorModeObject && !supportsTextHighlight) {
+        m_propertyColorDialogPanel->hide();
+    }
+    // 决-D:用户正在拾色器上按住拖拽时禁止宿主回灌,否则滑块条/取色板/
+    // 色槽/色号会被拽回旧值(相互断链);同值时 setColor 内部短路。
+    if (m_propertyColorPicker && m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()
+        && !m_propertyColorPicker->isInteracting()) {
+        // 决-6:回灌值按对话框模式取自对应概念的当前值,并跟随编辑器选区字符格式
+        QColor pickerColor;
+        switch (m_propertyColorDialogMode) {
+        case ColorModeHighlight:
+            pickerColor = panelHighlightColor;
+            break;
+        case ColorModeBoxFill:
+            pickerColor = panelTextBackgroundColor;
+            break;
+        default:
+            pickerColor = panelColor;
+            break;
+        }
+        if (m_propertyColorDialogMode == ColorModeObject && editorActive) {
+            const QTextCharFormat editorFormat = m_textEditor->currentCharFormat();
+            if (editorFormat.hasProperty(QTextCharFormat::ForegroundBrush)) {
+                const QColor editorColor = editorFormat.foreground().color();
+                if (editorColor.isValid()) {
+                    pickerColor = editorColor;
+                }
+            }
+        }
         const QSignalBlocker blocker(m_propertyColorPicker);
-        m_propertyColorPicker->setColor(m_propertyColorEditingTextBackground ? panelTextBackgroundColor : panelColor);
+        m_propertyColorPicker->setColor(pickerColor);
     }
 
     m_annotationPropertyPanel->show();
@@ -752,8 +807,10 @@ void ShotWindow::updatePropertyColorDialogGeometry()
     // Falling back to the property panel keeps geometry valid when the
     // button is hidden (mosaic case).
     QPoint anchor;
-    if (m_propertyColorEditingTextBackground && m_propertyTextBackgroundButton && m_propertyTextBackgroundButton->isVisible()) {
-        anchor = m_propertyTextBackgroundButton->mapTo(this, m_propertyTextBackgroundButton->rect().center());
+    if (m_propertyColorDialogMode == ColorModeHighlight && m_propertyTextHighlightButton && m_propertyTextHighlightButton->isVisible()) {
+        anchor = m_propertyTextHighlightButton->mapTo(this, m_propertyTextHighlightButton->rect().center());
+    } else if (m_propertyColorDialogMode == ColorModeBoxFill && m_propertyBoxFillButton && m_propertyBoxFillButton->isVisible()) {
+        anchor = m_propertyBoxFillButton->mapTo(this, m_propertyBoxFillButton->rect().center());
     } else if (m_propertyColorButton && m_propertyColorButton->isVisible()) {
         anchor = m_propertyColorButton->mapTo(this, m_propertyColorButton->rect().center());
     } else {

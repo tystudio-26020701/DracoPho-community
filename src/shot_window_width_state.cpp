@@ -101,6 +101,15 @@ bool ShotWindow::setSelectedAnnotationWidth(int width, bool captureHistory)
 
         return std::clamp<qreal>(requestedWidth, kMinStrokeWidth, kMaxStrokeWidth);
     };
+
+    // 编辑态(决-4):字号统一走 setSelectedTextFontSize 单一入口,
+    // 夹持区间与字号输入框一致;不直接写标注基值——那会把整个文本框
+    // 字号一并改动,且宽度重排会破坏正在编辑的框几何。
+    if (m_textEditor && m_textEditor->isVisible()) {
+        setSelectedTextFontSize(textFontSizeForWidth(clampedWidthForTool(Tool::Text, width)));
+        return true;
+    }
+
     auto syncDefaultWidthForTool = [this](Tool tool, qreal appliedWidth) {
         switch (tool) {
         case Tool::Highlighter:
@@ -154,14 +163,8 @@ bool ShotWindow::setSelectedAnnotationWidth(int width, bool captureHistory)
                 } else if (annotation->tool == Tool::Number) {
                     annotation->width = clampedWidthForTool(annotation->tool, width);
                 } else if (annotation->tool == Tool::Text) {
-                    const qreal oldWidth = annotation->width;
+                    // 字号只改字号:框几何不受影响,文字按框宽重新换行
                     annotation->width = clampedWidthForTool(annotation->tool, width);
-                    const qreal factor = ((19.0 + annotation->width) / (19.0 + oldWidth)) * 1.05;
-                    annotation->rect.setWidth(annotation->rect.width() * factor);
-                    annotation->rect = textContentRect(*annotation, false);
-                    if (!annotation->points.isEmpty()) {
-                        annotation->points[0] = annotation->rect.topLeft();
-                    }
                 } else {
                     annotation->width = clampedWidthForTool(annotation->tool, width);
                 }

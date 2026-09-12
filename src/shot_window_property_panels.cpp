@@ -6,14 +6,16 @@ using namespace markshot::shot;
 
 void ShotWindow::setSelectedAnnotationOpacity(int opacity)
 {
+    // 决-A:此滑条是"文本框透明度"——整个标注的合成不透明度,
+    // 与文字透明度(颜色对话框的 alpha 滑条)完全独立。
     opacity = std::clamp(opacity, 0, 100);
-    const int alpha = qRound(opacity * 255.0 / 100.0);
+    const qreal normalized = opacity / 100.0;
     const QVector<int> selectedIds = selectedAnnotationIds();
     if (!selectedIds.isEmpty()) {
         bool changed = false;
         for (int id : selectedIds) {
             const Annotation *annotation = annotationById(id);
-            if (annotation && annotation->color.alpha() != alpha) {
+            if (annotation && !qFuzzyCompare(annotation->opacity, normalized)) {
                 changed = true;
                 break;
             }
@@ -24,23 +26,21 @@ void ShotWindow::setSelectedAnnotationOpacity(int opacity)
         pushHistorySnapshot();
         for (int id : selectedIds) {
             if (Annotation *annotation = annotationById(id)) {
-                annotation->color.setAlpha(alpha);
+                annotation->opacity = normalized;
             }
         }
     } else {
-        if (m_currentColor.alpha() == alpha) {
+        if (qFuzzyCompare(m_defaultAnnotationOpacity, normalized)) {
             return;
         }
-        m_currentColor.setAlpha(alpha);
+        m_defaultAnnotationOpacity = normalized;
     }
 
     if (m_draft.has_value()) {
-        m_draft->color.setAlpha(alpha);
+        m_draft->opacity = normalized;
     }
-    if (m_laserDraft.has_value()) {
-        m_laserDraft->color.setAlpha(alpha);
-    }
-    if (m_propertyColorPicker && m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()) {
+    if (m_propertyColorPicker && m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()
+        && m_propertyColorDialogMode == ColorModeObject) {
         const QSignalBlocker blocker(m_propertyColorPicker);
         m_propertyColorPicker->setColor(selectedIds.isEmpty() ? m_currentColor : annotationById(selectedIds.first())->color);
     }
@@ -349,19 +349,45 @@ void ShotWindow::deleteSelectedAnnotation()
     update();
 }
 
+QString ShotWindow::richTextWithHighlight(const QString &html, const QColor &color) const
+{
+    if (html.isEmpty()) {
+        return html;
+    }
+    // 离线改写整框文字高亮:文档全选合并字符背景,再导出 HTML。
+    // alpha 0 视为"清除高亮"。
+    QTextDocument document;
+    document.setDocumentMargin(0.0);
+    document.setHtml(html);
+    QTextCursor cursor(&document);
+    cursor.select(QTextCursor::Document);
+    QTextCharFormat format;
+    if (color.isValid() && color.alpha() > 0) {
+        format.setBackground(color);
+    } else {
+        format.clearBackground();
+    }
+    cursor.mergeCharFormat(format);
+    cursor.clearSelection();
+    return document.toHtml();
+}
+
 void ShotWindow::openSelectedAnnotationColorPalette()
 {
     if (!m_propertyColorDialogPanel || !m_propertyColorPicker || !m_annotationPropertyPanel) {
         return;
     }
-    const bool wasEditingTextBackground = m_propertyColorEditingTextBackground;
-    m_propertyColorEditingTextBackground = false;
+    const int previousMode = m_propertyColorDialogMode;
+    m_propertyColorDialogMode = ColorModeObject;
 
-    if (m_propertyColorDialogPanel->isVisible() && !wasEditingTextBackground) {
+    if (m_propertyColorDialogPanel->isVisible() && previousMode == ColorModeObject) {
         m_propertyColorDialogPanel->hide();
         return;
     }
 
+    if (m_propertyColorDialogTitle) {
+        m_propertyColorDialogTitle->setText(MS_TR("Change selected object color"));
+    }
     if (m_colorPalette) {
         m_colorPalette->hide();
     }
@@ -371,6 +397,9 @@ void ShotWindow::openSelectedAnnotationColorPalette()
         if (const Annotation *annotation = annotationById(selectedIds.first())) {
             color = annotation->color;
         }
+    }
+    if (m_propertyColorPicker) {
+        m_propertyColorPicker->setAlphaToolTip(MS_TR("Text opacity"));
     }
     m_propertyColorEditHistoryCaptured = false;
     {
@@ -401,19 +430,86 @@ void ShotWindow::openSelectedAnnotationColorPalette()
     });
 }
 
-void ShotWindow::openSelectedTextBackgroundColorPalette()
+void ShotWindow::openSelectedTextHighlightPalette()
 {
     if (!m_propertyColorDialogPanel || !m_propertyColorPicker || !m_annotationPropertyPanel) {
         return;
     }
-    const bool wasEditingTextBackground = m_propertyColorEditingTextBackground;
-    m_propertyColorEditingTextBackground = true;
+    const int previousMode = m_propertyColorDialogMode;
+    m_propertyColorDialogMode = ColorModeHighlight;
 
-    if (m_propertyColorDialogPanel->isVisible() && wasEditingTextBackground) {
+    if (m_propertyColorDialogPanel->isVisible() && previousMode == ColorModeHighlight) {
         m_propertyColorDialogPanel->hide();
         return;
     }
 
+    if (m_propertyColorDialogTitle) {
+        m_propertyColorDialogTitle->setText(MS_TR("Text highlight"));
+    }
+    if (m_colorPalette) {
+        m_colorPalette->hide();
+    }
+    QColor color = m_textHighlightColor;
+    const QVector<int> selectedIds = selectedAnnotationIds();
+    if (selectedIds.size() == 1) {
+        if (const Annotation *annotation = annotationById(selectedIds.first());
+            annotation && annotation->tool == Tool::Text) {
+            color = annotation->highlightColor;
+        }
+    }
+    // 高亮未启用时默认透明:按不透明初始化,选色即启用高亮;
+    // 透明度仍可用 alpha 滑条显式调
+    if (color.isValid() && color.alpha() == 0) {
+        color.setAlpha(255);
+    }
+    if (m_propertyColorPicker) {
+        m_propertyColorPicker->setAlphaToolTip(MS_TR("Highlight opacity"));
+    }
+    m_propertyColorEditHistoryCaptured = false;
+    {
+        const QSignalBlocker blocker(m_propertyColorPicker);
+        m_propertyColorPicker->setColor(color);
+    }
+    updateAnnotationPropertyPanel();
+    if (m_annotationPropertyPanel) {
+        m_annotationPropertyPanel->show();
+        m_annotationPropertyPanel->raise();
+        if (QLayout *panelLayout = m_annotationPropertyPanel->layout()) {
+            panelLayout->activate();
+        }
+        updateAnnotationPropertyPanelGeometry();
+    }
+    if (QLayout *colorLayout = m_propertyColorDialogPanel->layout()) {
+        colorLayout->activate();
+    }
+    updatePropertyColorDialogGeometry();
+    m_propertyColorDialogPanel->show();
+    updatePropertyColorDialogGeometry();
+    m_propertyColorDialogPanel->raise();
+    QTimer::singleShot(0, this, [this] {
+        if (m_propertyColorDialogPanel && m_propertyColorDialogPanel->isVisible()) {
+            updatePropertyColorDialogGeometry();
+            m_propertyColorDialogPanel->raise();
+        }
+    });
+}
+
+void ShotWindow::openSelectedBoxFillPalette()
+{
+    if (!m_propertyColorDialogPanel || !m_propertyColorPicker || !m_annotationPropertyPanel) {
+        return;
+    }
+    const int previousMode = m_propertyColorDialogMode;
+    m_propertyColorDialogMode = ColorModeBoxFill;
+
+    if (m_propertyColorDialogPanel->isVisible() && previousMode == ColorModeBoxFill) {
+        m_propertyColorDialogPanel->hide();
+        return;
+    }
+
+    if (m_propertyColorDialogTitle) {
+        m_propertyColorDialogTitle->setText(MS_TR("Text box fill color"));
+    }
     if (m_colorPalette) {
         m_colorPalette->hide();
     }
@@ -424,6 +520,13 @@ void ShotWindow::openSelectedTextBackgroundColorPalette()
             annotation && annotation->tool == Tool::Text) {
             color = annotation->backgroundColor;
         }
+    }
+    // 底色未启用时默认透明:按不透明初始化,选色即启用底色
+    if (color.isValid() && color.alpha() == 0) {
+        color.setAlpha(255);
+    }
+    if (m_propertyColorPicker) {
+        m_propertyColorPicker->setAlphaToolTip(MS_TR("Fill opacity"));
     }
     m_propertyColorEditHistoryCaptured = false;
     {
@@ -476,6 +579,26 @@ void ShotWindow::toggleSelectedTextFontPanel()
     m_propertyFontPanel->show();
     updatePropertyFontPanelGeometry();
     m_propertyFontPanel->raise();
+    // 决-7:记录打开时的字体族与字号,供"取消"按钮还原
+    m_fontPanelInitialFamily.clear();
+    if (const QListWidgetItem *current = m_propertyFontList->currentItem()) {
+        m_fontPanelInitialFamily = current->data(Qt::UserRole).toString();
+    }
+    m_fontPanelInitialFontSize = 0.0;
+    if (m_propertyFontSizeEdit) {
+        bool ok = false;
+        const qreal parsed = m_propertyFontSizeEdit->text().toDouble(&ok);
+        m_fontPanelInitialFontSize = (ok && parsed > 0.0) ? parsed : 0.0;
+    }
+}
+
+/// @brief 决-6:颜色作用域判定的唯一入口——文本编辑器可见且其中存在
+/// 局部文本选区时,前景色只作用于该选区。快速调色板与属性拾色器共用。
+/// @return 编辑器内存在局部文本选区时返回 true
+bool ShotWindow::editorTextSelectionActive() const
+{
+    return m_textEditor && m_textEditor->isVisible()
+        && m_textEditor->textCursor().hasSelection();
 }
 
 void ShotWindow::applyPropertyColor(QColor color)
@@ -484,12 +607,32 @@ void ShotWindow::applyPropertyColor(QColor color)
         return;
     }
     const QVector<int> selectedIds = selectedAnnotationIds();
-    // 编辑器内存在局部文本选区时,前景色只作用于选区,不改整框基色;
-    // 文本背景色是文本框级属性,不受局部选区影响。
-    const bool editorForegroundSelection = !m_propertyColorEditingTextBackground
-        && m_textEditor && m_textEditor->isVisible()
-        && m_textEditor->textCursor().hasSelection();
-    if (m_propertyColorEditingTextBackground) {
+    // 决-6:三个模式各自的作用域规则唯一确定——
+    //   文字颜色:有局部选区→仅选区;无→整框文字/工具默认
+    //   文字高亮:有局部选区→选区字符背景;无→整框文字高亮(span 重写)/工具默认
+    //   文本框底色:永远整框,与文字选区无关
+    const bool editorSelectionActive = editorTextSelectionActive();
+    switch (m_propertyColorDialogMode) {
+    case ColorModeHighlight:
+        if (editorSelectionActive) {
+            m_textEditor->setTextBackgroundColor(color);
+        } else if (!selectedIds.isEmpty()) {
+            if (!m_propertyColorEditHistoryCaptured) {
+                pushHistorySnapshot();
+                m_propertyColorEditHistoryCaptured = true;
+            }
+            for (int id : selectedIds) {
+                if (Annotation *annotation = annotationById(id);
+                    annotation && annotation->tool == Tool::Text) {
+                    annotation->richText = richTextWithHighlight(annotation->richText, color);
+                    annotation->highlightColor = color;
+                }
+            }
+        } else {
+            m_textHighlightColor = color;
+        }
+        break;
+    case ColorModeBoxFill:
         if (!selectedIds.isEmpty()) {
             if (!m_propertyColorEditHistoryCaptured) {
                 pushHistorySnapshot();
@@ -504,39 +647,61 @@ void ShotWindow::applyPropertyColor(QColor color)
         } else if (m_tool == Tool::Text) {
             m_textBackgroundColor = color;
         }
-    } else if (!selectedIds.isEmpty() && !editorForegroundSelection) {
-        if (!m_propertyColorEditHistoryCaptured) {
-            pushHistorySnapshot();
-            m_propertyColorEditHistoryCaptured = true;
-        }
-        for (int id : selectedIds) {
-            if (Annotation *annotation = annotationById(id)) {
-                annotation->color = color;
+        break;
+    default:
+        if (editorSelectionActive) {
+            m_textEditor->setTextColor(color);
+        } else if (!selectedIds.isEmpty()) {
+            if (!m_propertyColorEditHistoryCaptured) {
+                pushHistorySnapshot();
+                m_propertyColorEditHistoryCaptured = true;
             }
+            for (int id : selectedIds) {
+                if (Annotation *annotation = annotationById(id)) {
+                    annotation->color = color;
+                }
+            }
+        } else {
+            m_currentColor = color;
         }
-    } else if (!editorForegroundSelection) {
-        m_currentColor = color;
-    }
-    if (m_draft.has_value()) {
-        m_draft->color = color;
+        if (m_draft.has_value()) {
+            m_draft->color = color;
+        }
+        break;
     }
     if (m_textEditor && m_textEditor->isVisible()) {
-        if (editorForegroundSelection) {
-            // 局部文本着色(字符格式),提交时以富文本 span 承载
+        if (m_propertyColorDialogMode == ColorModeObject && editorSelectionActive) {
+            // 文字颜色(局部):字符格式,提交时以富文本 span 承载
             m_textEditor->setTextColor(color);
-        } else {
+        } else if (m_propertyColorDialogMode == ColorModeObject
+                   || m_propertyColorDialogMode == ColorModeBoxFill) {
+            // 整框基色/底色:同步编辑器样式表,保证所见即所得
             const Annotation *editingAnnotation = m_editingTextAnnotationId.has_value()
                 ? annotationById(*m_editingTextAnnotationId)
                 : nullptr;
             QColor editorColor = editingAnnotation ? editingAnnotation->color : m_currentColor;
             QColor editorBackgroundColor = editingAnnotation ? editingAnnotation->backgroundColor : m_textBackgroundColor;
             const qreal editorBaseWidth = editingAnnotation ? editingAnnotation->width : m_textSize;
-            if (m_propertyColorEditingTextBackground) {
+            if (m_propertyColorDialogMode == ColorModeBoxFill) {
                 editorBackgroundColor = color;
             } else {
                 editorColor = color;
             }
             m_textEditor->setStyleSheet(markshot::theme::textEditorStyleSheet(editorColor, editorBackgroundColor, textFontSizeForWidth(editorBaseWidth)));
+        }
+        // 文字高亮(整框,编辑态):经编辑器全选合并字符背景,实时可见
+        if (m_propertyColorDialogMode == ColorModeHighlight && !editorSelectionActive) {
+            QTextCursor cursor = m_textEditor->textCursor();
+            cursor.select(QTextCursor::Document);
+            QTextCharFormat format;
+            if (color.isValid() && color.alpha() > 0) {
+                format.setBackground(color);
+            } else {
+                format.clearBackground();
+            }
+            cursor.mergeCharFormat(format);
+            cursor.clearSelection();
+            m_textEditor->setTextCursor(cursor);
         }
     }
     updateColorPalettePreview();
@@ -580,11 +745,10 @@ void ShotWindow::setSelectedTextFontFamily(const QString &fontFamily)
         return;
     }
 
-    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入),
-    // 不直接改标注基值,由提交时的富文本 span 承载。
+    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入);
+    // 决-5:选区操作不写工具默认值,避免污染下一个新建文本框。
     if (m_textEditor && m_textEditor->isVisible()) {
         m_textEditor->setFontFamily(fontFamily);
-        m_textFontFamily = fontFamily;
         updateAnnotationPropertyPanel();
         return;
     }
@@ -671,10 +835,10 @@ void ShotWindow::setSelectedTextFontSize(qreal pointSize)
 void ShotWindow::setSelectedTextBold(bool bold)
 {
     const QFont::Weight targetWeight = bold ? QFont::DemiBold : QFont::Normal;
-    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入)
+    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入);
+    // 决-5:不写工具默认值
     if (m_textEditor && m_textEditor->isVisible()) {
         m_textEditor->setFontWeight(static_cast<int>(targetWeight));
-        m_textWeight = targetWeight;
         updateAnnotationPropertyPanel();
         return;
     }
@@ -711,10 +875,10 @@ void ShotWindow::setSelectedTextBold(bool bold)
 
 void ShotWindow::setSelectedTextItalic(bool italic)
 {
-    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入)
+    // 编辑态:作用于编辑器内被选中的局部文本(或光标后的新输入);
+    // 决-5:不写工具默认值
     if (m_textEditor && m_textEditor->isVisible()) {
         m_textEditor->setFontItalic(italic);
-        m_textItalic = italic;
         updateAnnotationPropertyPanel();
         return;
     }

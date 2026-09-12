@@ -7,6 +7,8 @@
 class QLineEdit;
 class QMouseEvent;
 class QPaintEvent;
+class QObject;
+class QEvent;
 
 namespace markshot::ui {
 
@@ -122,6 +124,11 @@ public:
 
     QColor color() const { return m_color; }
     void setColor(const QColor &color);
+    // 决-E:alpha 滑条的模式悬停提示(文字透明度/高亮不透明度/底色不透明度)
+    void setAlphaToolTip(const QString &text);
+    // 决-D:用户正在拾色器子控件上按住拖拽时为真;宿主此时不得回灌颜色,
+    // 否则滑块条/取色板/色槽/色号会被拽回旧值(表现为相互断链)。
+    bool isInteracting() const { return m_interacting; }
 
 signals:
     void colorChanged(const QColor &color);
@@ -133,12 +140,16 @@ private:
     void refreshHistorySwatches();
     void updateCurrentHistorySwatch();
 
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
     QColor m_color{255, 0, 0, 255};
     int m_hue = 0;
     int m_sat = 255;
     int m_val = 255;
     int m_alpha = 255;
     bool m_settingColor = false;
+    bool m_interacting = false;
 
     SVField *m_svField = nullptr;
     HueSlider *m_hueSlider = nullptr;

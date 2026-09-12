@@ -7,7 +7,8 @@ using namespace markshot::shot;
 /// @return 无返回值
 void ShotWindow::toggleColorPalette(QPoint position)
 {
-    commitTextEditor();
+    // 注意:文本编辑器可见时绝不提交——调色板要用于给"被选中的局部文本"
+    // 着色(setCurrentColor 已按选区分流),先提交会销毁选区并退化为整框改色。
     if (m_openWithPanel) {
         m_openWithPanel->hide();
     }
@@ -74,6 +75,25 @@ void ShotWindow::updateColorPalettePreview()
         " border: 0;"
         " border-radius: 3px;"
         "}").arg(m_currentColor.name()));
+}
+
+/// @brief 把文本编辑器抬到画布之上,但保持工具栏/属性面板等浮层在其上
+/// @return 无返回值
+void ShotWindow::raiseTextEditorAbovePanels()
+{
+    if (!m_textEditor) {
+        return;
+    }
+    m_textEditor->raise();
+    // 编辑器背景透明,若盖在面板上,面板区域的点击会被编辑器吞掉,
+    // 表现为面板"像图片一样无法交互"。
+    for (QWidget *panel : {m_toolbar, m_actionToolbar, m_annotationPropertyPanel,
+                           m_propertyFontPanel, m_propertyColorDialogPanel,
+                           m_openWithPanel, m_extensionPanel}) {
+        if (panel && panel->isVisible()) {
+            panel->raise();
+        }
+    }
 }
 
 /// @brief 根据文本标注位置和选区边界更新文本编辑器几何

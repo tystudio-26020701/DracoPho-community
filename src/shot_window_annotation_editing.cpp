@@ -38,6 +38,9 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
     case Tool::Rectangle:
     case Tool::Ellipse:
     case Tool::Mosaic:
+    case Tool::Text:
+        // 各个柄的语义:只调整文本框几何本身,与字体毫无关系——
+        // 行为与矩形柄完全一致(纯映射框角点),字号/字体永不因拖柄变化。
         annotation.rect = QRectF(mapPoint(annotation.rect.normalized().topLeft()),
                                  mapPoint(annotation.rect.normalized().bottomRight())).normalized();
         break;
@@ -46,17 +49,6 @@ void ShotWindow::transformAnnotation(Annotation &annotation, QRectF oldBounds, Q
                                  mapPoint(annotation.rect.normalized().bottomRight())).normalized();
         for (QPointF &point : annotation.points) {
             point = mapPoint(point);
-        }
-        break;
-    case Tool::Text:
-        // 调整文本框只改变换行宽度,字号恒定:高度按内容自适应,
-        // 与 PowerPoint/Snipaste 文本框语义一致。字号仅能通过
-        // 字号输入框/滚轮显式修改。
-        annotation.rect = QRectF(mapPoint(annotation.rect.normalized().topLeft()),
-                                 mapPoint(annotation.rect.normalized().bottomRight())).normalized();
-        annotation.rect = textContentRect(annotation, false);
-        if (!annotation.points.isEmpty()) {
-            annotation.points[0] = annotation.rect.topLeft();
         }
         break;
     case Tool::Pen:
@@ -386,11 +378,13 @@ void ShotWindow::setCurrentColor(QColor color)
         return;
     }
 
-    m_currentColor = color;
+    // 决-6:与 applyPropertyColor 共用同一作用域判定——编辑器内存在
+    // 局部文本选区时,颜色只作用于选区,不同步工具当前色。
     const QVector<int> selectedIds = selectedAnnotationIds();
-    // 编辑器内存在局部文本选区时,颜色只作用于选区,不改整框基色
-    const bool editorSelectionActive = m_textEditor && m_textEditor->isVisible()
-        && m_textEditor->textCursor().hasSelection();
+    const bool editorSelectionActive = editorTextSelectionActive();
+    if (!editorSelectionActive) {
+        m_currentColor = color;
+    }
     if (m_tool == Tool::Select && !selectedIds.isEmpty() && !editorSelectionActive) {
         pushHistorySnapshot();
         for (int id : selectedIds) {

@@ -666,7 +666,12 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
             return;
         }
         if (event->button() == Qt::RightButton && m_mode == Mode::Editing) {
-            setTool(Tool::Select);
+            // 文本编辑期间右键不切换工具:切换会隐式提交编辑器、销毁局部
+            // 文本选区,导致调色板/属性面板退化为整框改色。编辑器自身区域
+            // 的右键由事件过滤器弹出文本编辑菜单。
+            if (!(m_textEditor && m_textEditor->isVisible())) {
+                setTool(Tool::Select);
+            }
             event->accept();
             return;
         }
@@ -674,6 +679,27 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     }
 
     const QPointF imagePoint = widgetToImage(event->position());
+    // 面板本体误触保护:空文本编辑器打开时,落在可见面板几何内的点击
+    //(面板未处理而冒泡到窗口的事件)只代表面板交互——不提交、不销毁、
+    // 不新建、不关闭面板。不再外扩边缘:画布点击一律走"空框重放置"。
+    if (m_textEditor && m_textEditor->isVisible()
+        && m_textEditor->toPlainText().isEmpty()) {
+        auto insideVisiblePanel = [this, event](const QWidget *panel) {
+            return panel && panel->isVisible()
+                && panel->geometry().contains(event->pos());
+        };
+        if (insideVisiblePanel(m_colorPalette)
+            || insideVisiblePanel(m_propertyFontPanel)
+            || insideVisiblePanel(m_propertyColorDialogPanel)
+            || insideVisiblePanel(m_annotationPropertyPanel)
+            || insideVisiblePanel(m_openWithPanel)
+            || insideVisiblePanel(m_extensionPanel)
+            || insideVisiblePanel(m_toolbar)
+            || insideVisiblePanel(m_actionToolbar)) {
+            event->accept();
+            return;
+        }
+    }
     if (m_openWithPanel && m_openWithPanel->isVisible()
         && !m_openWithPanel->geometry().contains(event->pos())
         && (!m_actionToolbar || !m_actionToolbar->geometry().contains(event->pos()))
@@ -703,7 +729,44 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         && (!m_toolbar || !m_toolbar->geometry().contains(event->pos()))) {
         m_propertyFontPanel->hide();
     }
-    if (m_textEditor && m_textEditor->isVisible() && !m_textEditor->geometry().contains(event->pos())) {
+    // 方案一(空框重放置):空编辑器打开时,画布点击不提交、不销毁——
+    // 点中另一个文本标注则切换为编辑该标注;其余情况把编辑器平移到
+    // 点击处继续编辑。参数面板往返期间空框永远存活。
+    if (m_textEditor && m_textEditor->isVisible()
+        && m_textEditor->toPlainText().isEmpty()
+        && !m_textEditor->geometry().contains(event->pos())) {
+        if (!m_frozenImageRect.contains(event->position())) {
+            // 图像区域外:忽略,保持编辑器原位
+            event->accept();
+            return;
+        }
+        const std::optional<int> hitAnnotationId = annotationAt(imagePoint);
+        if (hitAnnotationId.has_value()) {
+            if (const Annotation *hitAnnotation = annotationById(*hitAnnotationId);
+                hitAnnotation && hitAnnotation->tool == Tool::Text) {
+                m_textEditor->hide();
+                m_textEditor->clear();
+                setSelectedAnnotations({*hitAnnotationId});
+                beginEditingSelectedTextAnnotation();
+                update();
+                event->accept();
+                return;
+            }
+        }
+        m_textEditorImagePoint = imagePoint;
+        updateTextEditorGeometry();
+        m_textEditor->setFocus(Qt::MouseFocusReason);
+        update();
+        event->accept();
+        return;
+    }
+    // 编辑器可见且点击在其外部时,本次点击承担"结束当前文本编辑"职责;
+    // 记录该状态供 Text 工具分支使用,避免同一击又立即新建文本框。
+    const bool committedTextEditorOnClick = m_textEditor && m_textEditor->isVisible()
+        && !m_textEditor->geometry().contains(event->pos());
+    // 提交文本编辑可能把工具切回 Select,按下瞬间的工具才代表本次点击语义
+    const Tool toolAtPress = m_tool;
+    if (committedTextEditorOnClick) {
         commitTextEditor();
     }
 
@@ -780,10 +843,9 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    if (m_tool == Tool::Text) {
-        commitTextEditor();
+    if (toolAtPress == Tool::Text) {
         // 点击既有文本框 → 就地选中并进入编辑,而不是新建文本框
-        // (与 Snipaste/PowerPoint 文本工具一致);空白处仍新建。
+        // (与 Snipaste/PowerPoint 文本工具一致)。
         if (const std::optional<int> hitAnnotationId = annotationAt(imagePoint)) {
             if (const Annotation *hitAnnotation = annotationById(*hitAnnotationId);
                 hitAnnotation && hitAnnotation->tool == Tool::Text) {
@@ -793,6 +855,13 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
                 return;
             }
         }
+        // 刚通过本次点击结束了一个正在编辑的文本框时,这一击只负责收尾
+        // (commitTextEditor 已把工具切回 Select),不再连续新建编辑器;
+        // 再次点击空白处才会新建,防止编辑文本时到处弹出空文本框。
+        if (committedTextEditorOnClick) {
+            update();
+            return;
+        }
         beginTextAnnotation(imagePoint);
         return;
     }
@@ -800,6 +869,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     if (m_tool == Tool::Number) {
         Annotation annotation;
         annotation.tool = Tool::Number;
+        annotation.opacity = m_defaultAnnotationOpacity;
         annotation.points.append(clampImagePoint(imagePoint));
         annotation.points.append(clampImagePoint(imagePoint));
         annotation.number = m_nextNumber;
@@ -817,6 +887,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
         const QPointF sourceCenter = clampImagePoint(imagePoint);
         Annotation annotation;
         annotation.tool = Tool::Magnifier;
+        annotation.opacity = m_defaultAnnotationOpacity;
         annotation.points.append(sourceCenter);
         annotation.points.append(sourceCenter);
         annotation.rect = QRectF(sourceCenter, sourceCenter);
@@ -840,6 +911,7 @@ void ShotWindow::mousePressEvent(QMouseEvent *event)
     m_dragStart = imagePoint;
     Annotation annotation;
     annotation.tool = m_tool;
+    annotation.opacity = m_defaultAnnotationOpacity;
     annotation.color = m_currentColor;
     annotation.width = currentToolWidth();
     annotation.filled = m_shapeFilled;

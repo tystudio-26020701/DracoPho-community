@@ -83,6 +83,9 @@
 #include <QStandardPaths>
 #include <QStyle>
 #include <QTemporaryFile>
+#include <QAbstractTextDocumentLayout>
+#include <QTextCharFormat>
+#include <QTextCursor>
 #include <QTextEdit>
 #include <QTextBlock>
 #include <QTextDocument>

@@ -334,7 +334,13 @@ private:
         QString richText;
         int number = 0;
         QColor color = QColor(255, 77, 77);
+        // 文本框底色:框圆角矩形的填充,永远整框生效,与文字选区无关
         QColor backgroundColor = QColor(0, 0, 0, 0);
+        // 文字高亮:逐字符背景色(<mark> 语义),随富文本 span 承载;
+        // 本字段仅为属性面板色板显示缓存
+        QColor highlightColor = QColor(0, 0, 0, 0);
+        // 文本框透明度:整个标注的合成不透明度(0..1),与文字透明度无关
+        qreal opacity = 1.0;
         qreal width = 4.0;     // Tool-specific size: stroke width, font scale, or mosaic block size.
         bool filled = false;
         qreal cornerRadius = 0.0;
@@ -563,10 +569,14 @@ private:
     void applyPropertyColor(QColor color);
     void deleteSelectedAnnotation();
     void openSelectedAnnotationColorPalette();
-    void openSelectedTextBackgroundColorPalette();
+    void openSelectedTextHighlightPalette();
+    void openSelectedBoxFillPalette();
+    QString richTextWithHighlight(const QString &html, const QColor &color) const;
     void toggleSelectedTextFontPanel();
     void clearAnnotations();
     void updateTextEditorGeometry();
+    void raiseTextEditorAbovePanels();
+    bool editorTextSelectionActive() const;
     void updateFrozenImageRect();
     void zoomImageAt(qreal factor, QPointF widgetAnchor);
     void resetImageZoom();
@@ -739,6 +749,10 @@ private:
     QFont::Weight m_textWeight = QFont::DemiBold;
     bool m_textItalic = false;
     QColor m_textBackgroundColor = QColor(0, 0, 0, 0);
+    // 文字高亮的工具默认值(新建文本框时应用;alpha 0 表示不启用)
+    QColor m_textHighlightColor = QColor(0, 0, 0, 0);
+    // 文本框透明度的工具默认值(0..1,新建标注时应用)
+    qreal m_defaultAnnotationOpacity = 1.0;
     int m_nextNumber = 1;
     int m_nextAnnotationId = 1;
     std::optional<int> m_selectedAnnotationId;
@@ -762,7 +776,8 @@ private:
     QLabel *m_propertyOpacityLabel = nullptr;
     QSlider *m_propertyOpacitySlider = nullptr;
     QPushButton *m_propertyColorButton = nullptr;
-    QPushButton *m_propertyTextBackgroundButton = nullptr;
+    QPushButton *m_propertyTextHighlightButton = nullptr;
+    QPushButton *m_propertyBoxFillButton = nullptr;
     QPushButton *m_propertyFillButton = nullptr;
     QLabel *m_propertyRadiusGlyphLabel = nullptr;
     QLabel *m_propertyRadiusLabel = nullptr;
@@ -783,11 +798,22 @@ private:
     QLineEdit *m_propertyFontSizeEdit = nullptr;
     QToolButton *m_propertyFontBoldButton = nullptr;
     QToolButton *m_propertyFontItalicButton = nullptr;
+    QPushButton *m_propertyFontApplyButton = nullptr;
+    QPushButton *m_propertyFontCancelButton = nullptr;
+    QString m_fontPanelInitialFamily;
+    qreal m_fontPanelInitialFontSize = 0.0;
+    QLabel *m_propertyColorDialogTitle = nullptr;
     QPushButton *m_propertyEditTextButton = nullptr;
     QWidget *m_propertyColorDialogPanel = nullptr;
     markshot::ui::ColorPicker *m_propertyColorPicker = nullptr;
     bool m_propertyColorEditHistoryCaptured = false;
-    bool m_propertyColorEditingTextBackground = false;
+    // 颜色对话框模式(决-B 三概念分离):文字颜色 / 文字高亮 / 文本框底色
+    enum {
+        ColorModeObject = 0,
+        ColorModeHighlight = 1,
+        ColorModeBoxFill = 2,
+    };
+    int m_propertyColorDialogMode = ColorModeObject;
     QWidget *m_openWithPanel = nullptr;
     QWidget *m_extensionPanel = nullptr;
     QWidget *m_startupColorPanel = nullptr;
