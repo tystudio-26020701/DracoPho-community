@@ -60,7 +60,8 @@ private slots:
     void detectsInteractiveConflicts()
     {
         const QStringList headlessFlags{
-            QStringLiteral("capture-to"), QStringLiteral("region"),
+            QStringLiteral("capture-to"), QStringLiteral("capture-screen"),
+            QStringLiteral("region"),
             QStringLiteral("display"), QStringLiteral("all-outputs"),
             QStringLiteral("list-displays"), QStringLiteral("window"),
             QStringLiteral("list-windows"), QStringLiteral("window-by"),

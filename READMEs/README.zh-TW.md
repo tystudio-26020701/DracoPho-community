@@ -301,8 +301,9 @@ dracoPho --doctor
 
 **面向智能體的輸出去向與時序**
 
-- `--capture-destination inline` 不寫入任何檔案，直接把 PNG 以 Base64 放進 JSON（`data` 欄位）；可與 `--display`/`--region` 組合。
-- 省略 `--capture-to` 時，`--capture-destination stage` 寫入暫存目錄（`/tmp/dracoPho-staging/`）。
+- `--capture-screen --capture-destination inline` 不寫入任何檔案，直接把 PNG 以 Base64 放進 JSON（`data` 欄位）；可與 `--region`/`--display`/`--all-outputs` 組合。
+- `--capture-screen --capture-destination stage` 寫入暫存目錄（`/tmp/dracoPho-staging/`）；與 `--capture-to` 組合視為冗餘並拒絕。
+- `--capture-destination` 是純修飾符，自身絕不觸發截圖；任何離開觸發器（`--capture-to`/`--capture-screen`/`--window`）的修飾參數一律以結束碼 2 拒絕。
 - `--delay <秒>` 在擷取前執行無視窗的靜默等待（0–3600）；非法值以結束碼 2 結束。
 - `clipboard` 不是螢幕擷取的去向，以結束碼 2 拒絕（`--window` 視窗擷取支援它）。
 - 所有無頭 JSON 輸出都帶有 `"v"` 綱要版本（目前為 `1`）。
@@ -343,6 +344,7 @@ xdg-desktop-portal、PipeWire、grim、KWin/GNOME 輔助、Windows Graphics Capt
 | `--no-debug` | 為本次執行停用除錯日誌，並覆蓋設定檔與環境變數。 |
 | `--debug-log <path>` | 將除錯日誌寫入指定路徑；除非同時設定 `--no-debug`，否則會啟用除錯日誌。 |
 | `--capture-to <path>` | 無介面截圖：將 PNG 寫入指定檔案或目錄，不開啟介面；向標準輸出列印 JSON 摘要。 |
+| `--capture-screen` | 無路徑的螢幕擷取；必須顯式搭配 `--capture-destination inline` 或 `stage`。 |
 | `--region <x,y,w,h>` | 配合 `--capture-to` 使用：只擷取指定邏輯螢幕區域。 |
 | `--display <name>` | 配合 `--capture-to` 使用：依顯示器名稱擷取指定輸出螢幕。可重複指定以一次擷取多個顯示器（每個螢幕一張 PNG）。 |
 | `--include-cursor` | 配合 `--capture-to` 使用：將滑鼠游標繪製進擷取幀。 |
@@ -350,7 +352,7 @@ xdg-desktop-portal、PipeWire、grim、KWin/GNOME 輔助、Windows Graphics Capt
 | `--list-displays` | 以 JSON 輸出目前所有顯示器資訊並結束。 |
 | `--doctor` | 以 JSON 輸出環境自我檢查（版本、Qt/OS/工作階段、顯示器、無頭設定、視窗偵測鏈路）並結束。 |
 | `--delay <seconds>` | 進入截圖前先等待指定秒數：互動模式顯示全屏倒數遮罩（按 Esc 取消）；無頭模式為靜默無視窗等待（0–3600，非法值以結束代碼 2 退出）。 |
-| `--capture-destination <mode>` | 截圖去向：`inline`（JSON 輸出內嵌 base64）/`file`/`stage`/`clipboard`。適用於視窗擷取，以及除 `clipboard`（結束代碼 2）外的螢幕擷取。 |
+| `--capture-destination <mode>` | 純修飾符、絕非觸發器：`inline`／`file`（需 `--capture-to`）／`stage`（需 `--capture-screen`）／`clipboard`（僅視窗）。單獨或錯誤搭配：結束碼 2。 |
 
 ### 快捷鍵繫結
 

@@ -304,8 +304,9 @@ dracoPho --doctor
 
 **에이전트 친화적 목적지와 타이밍**
 
-- `--capture-destination inline`은 파일을 쓰지 않고 PNG를 Base64로 JSON(`data` 필드)에 반환합니다. `--display`/`--region`과 조합 가능.
-- `--capture-to` 생략 시 `--capture-destination stage`는 임시 스테이징 디렉터리(`/tmp/dracoPho-staging/`)에 기록합니다.
+- `--capture-screen --capture-destination inline`은 파일을 쓰지 않고 PNG를 Base64로 JSON(`data` 필드)에 반환합니다. `--region`/`--display`/`--all-outputs`와 조합 가능.
+- `--capture-screen --capture-destination stage`는 임시 스테이징 디렉터리(`/tmp/dracoPho-staging/`)에 기록합니다. `--capture-to`와의 조합은 중복으로 거부됩니다.
+- `--capture-destination`은 순수 수식어로 단독으로 캡처를 유발하지 않습니다. 트리거(`--capture-to`/`--capture-screen`/`--window`) 없는 수식어는 종료 코드 2로 거부됩니다.
 - `--delay <초>`는 캡처 전 창 없이 조용히 대기합니다(0–3600). 잘못된 값은 종료 코드 2.
 - `clipboard`는 화면 캡처 목적지가 아니며 종료 코드 2로 거부됩니다(`--window` 창 캡처는 지원).
 - 모든 헤드리스 JSON 출력에는 스키마 버전 `"v"`(현재 `1`)가 있습니다.
@@ -346,6 +347,7 @@ xdg-desktop-portal, PipeWire, grim, KWin/GNOME 헬퍼, Windows Graphics Capture)
 | `--no-debug` | 이번 실행에 대한 디버그 로그를 비활성화하고 구성 파일과 환경 변수를 덮어씁니다. |
 | `--debug-log <path>` | 디버그 로그를 지정된 경로에 기록합니다. `--no-debug`도 함께 설정하지 않는 한 디버그 로그가 활성화됩니다. |
 | `--capture-to <path>` | 헤드리스 스크린샷: UI를 열지 않고 PNG를 지정된 파일 또는 디렉터리에 기록하며 표준 출력에 JSON 요약을 출력합니다. |
+| `--capture-screen` | 경로 없는 화면 캡처. `--capture-destination inline` 또는 `stage` 명시 필요. |
 | `--region <x,y,w,h>` | `--capture-to`와 함께 사용: 지정된 논리 화면 영역만 캡처합니다. |
 | `--display <name>` | `--capture-to`와 함께 사용: 디스플레이 이름으로 지정된 출력 화면을 캡처합니다. 여러 디스플레이를 한 번에 캡처하려면 반복 지정할 수 있습니다(화면당 PNG 하나). |
 | `--include-cursor` | `--capture-to`와 함께 사용: 마우스 커서를 캡처 프레임에 그립니다. |
@@ -353,7 +355,7 @@ xdg-desktop-portal, PipeWire, grim, KWin/GNOME 헬퍼, Windows Graphics Capture)
 | `--list-displays` | 사용 가능한 디스플레이를 JSON으로 출력하고 종료합니다. |
 | `--doctor` | 환경 자가 진단(버전, Qt/OS/세션, 디스플레이, 헤드리스 설정, 창 감지)을 JSON으로 출력하고 종료합니다. |
 | `--delay <seconds>` | 캡처 전 지정한 초만큼 대기합니다: 대화형은 전체 화면 카운트다운(Esc로 취소), 헤드리스는 창 없는 조용한 대기(0–3600, 잘못된 값은 종료 코드 2). |
-| `--capture-destination <mode>` | 캡처 저장 위치: `inline`(JSON 출력에 base64)/`file`/`stage`/`clipboard`. 창 캡처와, `clipboard`(종료 코드 2)를 제외한 화면 캡처에 적용됩니다. |
+| `--capture-destination <mode>` | 순수 수식어이며 트리거 아님: `inline`/`file`(`--capture-to`와)/`stage`(`--capture-screen`와)/`clipboard`(창 전용). 단독 또는 잘못된 조합은 종료 코드 2. |
 
 ### 단축키 바인딩
 

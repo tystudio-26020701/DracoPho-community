@@ -10,13 +10,18 @@
 
 #### Headless CLI
 
-**Inline captures (no files)**
-- `--capture-destination inline` now also applies to screen captures
-  (`--capture-to` path). The JSON result carries the PNG as base64 in `data`
-  with no file written — mirroring the window-capture destination semantics.
-  `stage` writes into the temporary staging directory; `clipboard` is
-  explicitly rejected on the screen path (use `--window`) instead of being
-  silently ignored.
+**Strict trigger/modifier contract**
+- Screen captures now have exactly two explicit triggers: `--capture-to
+  <path>` (writes a file — the only way to) and the new `--capture-screen`,
+  which **requires** an explicit `--capture-destination inline` (base64 `data`
+  in the JSON, zero files) or `stage` (temporary staging directory).
+- `--capture-destination` is a pure modifier that never triggers a capture.
+  Any headless modifier without a trigger (`--region`, `--display`,
+  `--all-outputs`, `--capture-destination`, `--output-name`,
+  `--include-cursor`) exits with code 2 — nothing silently falls through to
+  the interactive UI anymore. Redundant (`stage` + `--capture-to`) and
+  impossible pairings (`inline` + `--capture-to`) are rejected the same way;
+  `clipboard` on the screen path points to `--window`.
 
 **Honest `--delay`**
 - `--delay <seconds>` previously was silently dropped in headless captures

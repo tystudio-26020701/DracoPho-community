@@ -42,6 +42,8 @@ QString headlessInteractiveConflict(const QCommandLineParser &parser)
     } kConflicts[] = {
         {"capture-to",
          "use \"--window <selector> --capture-destination file --capture-to <dir>\" for headless window capture"},
+        {"capture-screen",
+         "\"--capture-screen\" is a headless trigger; interactive window capture does not take it"},
         {"region", "use \"--capture-to <path> --region x,y,w,h\" for headless region capture"},
         {"display", "use \"--capture-to <dir> --display <name>\" for headless display capture"},
         {"all-outputs", "use \"--capture-to <dir> --all-outputs\" for headless multi-display capture"},
@@ -49,7 +51,7 @@ QString headlessInteractiveConflict(const QCommandLineParser &parser)
         {"window", "interactive window capture takes no \"--window\" selector; drop it or drop \"--capture-window\""},
         {"list-windows", "run \"--list-windows\" on its own for the JSON window list"},
         {"window-by", "\"--window-by\" only applies to headless \"--window\" captures"},
-        {"capture-destination", "\"--capture-destination\" only applies to headless \"--window\"/\"--capture-to\" captures"},
+        {"capture-destination", "\"--capture-destination\" only applies to headless \"--window\"/\"--capture-to\"/\"--capture-screen\" captures"},
         {"output-name", "\"--output-name\" only applies to headless captures"},
         {"include-cursor", "\"--include-cursor\" only applies to headless captures"},
     };
@@ -67,12 +69,12 @@ QString doctorOptionConflict(const QCommandLineParser &parser)
     // --doctor 是纯只读自检：与任何捕获、录制、窗口或文件参数组合都属于
     // 用法错误（此前 doctor 会静默优先，吞掉其余选项）。
     static const char *kExclusiveFlags[] = {
-        "capture-to",       "region",           "display",           "all-outputs",
-        "list-displays",    "window",           "list-windows",      "window-by",
-        "capture-destination", "output-name",   "include-cursor",    "delay",
-        "capture-window",   "record-region",    "record-display",    "record-duration",
-        "record-output",    "record-fps",       "record-format",     "record-audio",
-        "record-wait-json", "recording-status", "stop-recording",
+        "capture-to",       "capture-screen",    "region",            "display",
+        "all-outputs",      "list-displays",     "window",            "list-windows",
+        "window-by",        "capture-destination", "output-name",     "include-cursor",
+        "delay",            "capture-window",    "record-region",     "record-display",
+        "record-duration",  "record-output",     "record-fps",        "record-format",
+        "record-audio",     "record-wait-json",  "recording-status",  "stop-recording",
     };
     for (const char *flag : kExclusiveFlags) {
         if (parser.isSet(QLatin1String(flag))) {

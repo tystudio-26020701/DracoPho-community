@@ -320,13 +320,22 @@ dracoPho --doctor
 每个选中的显示器使用各自的源几何进行捕获，因此 portal 类后端会精确返回
 该显示器而不是整个虚拟桌面。
 
-**面向智能体/脚本的去向与延时**
+**触发器/修饰符严格契约（绝不静默落回交互界面）**
 
-- `--capture-destination inline`：PNG 以 base64 放进 JSON 的 `data` 字段
-  直接返回，不写任何文件（如 `dracoPho --capture-destination inline`），
-  与 `--display`/`--region` 组合可全程不落盘。
-- `--capture-destination stage`：未指定 `--capture-to` 时写入临时暂存目录
-  （`/tmp/dracoPho-staging/`）。
+- 屏幕截图只有两个显式触发器：`--capture-to <路径>`（写 PNG 文件——唯一
+  的写文件方式）与 `--capture-screen`（无路径截图，**必须**显式搭配
+  `--capture-destination inline` 或 `stage`）。
+- `--capture-destination` 是纯修饰符，自身绝不触发截图。任何无头修饰参数
+  （`--region`、`--display`、`--all-outputs`、`--capture-destination`、
+  `--output-name`、`--include-cursor`）离开触发器（`--capture-to`、
+  `--capture-screen`、`--window`）单独出现，一律以退出码 2 报错，绝不
+  静默落回交互界面。
+- `--capture-screen --capture-destination inline`：PNG 以 base64 放进 JSON
+  的 `data` 字段直接返回，不写任何文件；可与 `--region`/`--display`/
+  `--all-outputs` 组合，全程不落盘。
+- `--capture-screen --capture-destination stage`：写入临时暂存目录
+  （`/tmp/dracoPho-staging/`）；`stage` 与 `--capture-to` 组合视为冗余，
+  直接拒绝。
 - `--delay <秒>`：无头截图中为静默无窗口等待（0–3600），非法值以退出码 2
   退出；交互式模式下才是倒计时遮罩。
 - `clipboard` 不是屏幕截图去向：请求即以退出码 2 退出（窗口捕获
@@ -394,6 +403,7 @@ dracoPho --window "0@0,0,1680,100" --capture-destination stage
 | `--no-debug` | 为本次运行禁用调试日志，并覆盖配置文件和环境变量。 |
 | `--debug-log <path>` | 将调试日志写入指定路径；除非同时设置 `--no-debug`，否则会启用调试日志。 |
 | `--capture-to <path>` | 无界面截图：将 PNG 写入指定文件或目录，不打开界面；向标准输出打印 JSON 摘要。 |
+| `--capture-screen` | 无路径的无界面截图：必须显式搭配 `--capture-destination inline`（base64 进 JSON、不落盘）或 `stage`（临时暂存目录）；可与 `--region`/`--display`/`--all-outputs` 组合选择截取范围。 |
 | `--region <x,y,w,h>` | 配合 `--capture-to` 使用：只捕获指定逻辑屏幕区域。 |
 | `--display <name>` | 配合 `--capture-to` 使用：按显示器名称捕获指定输出屏幕。可重复指定以一次捕获多个显示器（每屏一张 PNG）。 |
 | `--include-cursor` | 配合 `--capture-to` 使用：将鼠标指针绘制进捕获帧。 |
@@ -402,7 +412,7 @@ dracoPho --window "0@0,0,1680,100" --capture-destination stage
 | `--list-windows` | 以 JSON 输出当前可见窗口（id/title/class/pid/几何）并退出。 |
 | `--window <selector>` | 按选择器捕获窗口，可重复以一次截取多个窗口；选择器后追加 `@x,y,w,h` 截取窗口内组件子区域。 |
 | `--window-by <mode>` | 解释 `--window` 选择器的规则：`auto`/`id`/`title`/`class`/`index`/`pid`/`process`。 |
-| `--capture-destination <mode>` | 窗口图片去向：`inline`（base64）/`file`/`stage`/`clipboard`。 |
+| `--capture-destination <mode>` | 纯修饰符、绝不触发截图：`inline`（base64）/`file`（需 `--capture-to`）/`stage`（需 `--capture-screen`）/`clipboard`（仅窗口捕获）。单独出现或搭配错误即退出码 2。 |
 
 ### 快捷键绑定
 

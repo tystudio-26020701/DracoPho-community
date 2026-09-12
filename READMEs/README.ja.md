@@ -304,8 +304,9 @@ dracoPho --doctor
 
 **エージェント向けの出力先とタイミング**
 
-- `--capture-destination inline` はファイルを書かずに PNG を Base64 で JSON（`data` フィールド）に返します。`--display`/`--region` との併用可。
-- `--capture-to` 省略時、`--capture-destination stage` は一時ステージングディレクトリ（`/tmp/dracoPho-staging/`）に書き込みます。
+- `--capture-screen --capture-destination inline` はファイルを書かずに PNG を Base64 で JSON（`data` フィールド）に返します。`--region`/`--display`/`--all-outputs` と併用可。
+- `--capture-screen --capture-destination stage` は一時ステージングディレクトリ（`/tmp/dracoPho-staging/`）に書き込みます。`--capture-to` との併用は冗長として拒否されます。
+- `--capture-destination` は純粋な修飾子で単体では撮影を引き起こしません。トリガー（`--capture-to`/`--capture-screen`/`--window`）のない修飾子は終了コード 2 で拒否されます。
 - `--delay <秒>` はウィンドウなしの静かな待機をしてから撮影します（0～3600）。無効な値は終了コード 2。
 - `clipboard` は画面撮影の出力先ではなく終了コード 2 で拒否されます（`--window` によるウィンドウ撮影は対応）。
 - すべてのヘッドレス JSON 出力はスキーマ版 `"v"`（現在 `1`）を持ちます。
@@ -344,6 +345,7 @@ dracoPho --doctor
 | `--no-debug` | この実行でデバッグログを無効にし、設定ファイルと環境変数を上書きします。 |
 | `--debug-log <path>` | デバッグログを指定したパスに書き込みます。`--no-debug` も同時に設定しない限り、デバッグログが有効になります。 |
 | `--capture-to <path>` | ヘッドレススクリーンショット: UI を開かずに PNG を指定したファイルまたはディレクトリに書き込み、標準出力に JSON サマリーを出力します。 |
+| `--capture-screen` | パスなしのスクリーン撮影。`--capture-destination inline` または `stage` の明示が必要。 |
 | `--region <x,y,w,h>` | `--capture-to` と併用します: 指定した論理画面領域のみをキャプチャします。 |
 | `--display <name>` | `--capture-to` と併用します: ディスプレイ名で指定した出力画面をキャプチャします。繰り返し指定すると、複数のディスプレイを一度にキャプチャできます（各画面につき PNG 1 枚）。 |
 | `--include-cursor` | `--capture-to` と併用します: マウスポインターをキャプチャフレームに描画します。 |
@@ -351,7 +353,7 @@ dracoPho --doctor
 | `--list-displays` | 利用可能な出力ディスプレイを JSON で出力して終了します。 |
 | `--doctor` | 環境自己診断（バージョン、Qt/OS/セッション、ディスプレイ、ヘッドレス設定、ウィンドウ検出）を JSON で出力して終了します。 |
 | `--delay <seconds>` | 指定秒数待機してからキャプチャします：対話モードはフルスクリーンカウントダウン（Esc で中止）、ヘッドレスは静かな無ウィンドウ待機（0–3600、不正値は終了コード 2）。 |
-| `--capture-destination <mode>` | キャプチャの保存先：`inline`（JSON 出力に base64）/`file`/`stage`/`clipboard`。ウィンドウキャプチャと、`clipboard`（終了コード 2）を除く画面キャプチャに適用されます。 |
+| `--capture-destination <mode>` | 純粋な修飾子でトリガーではない：`inline`／`file`（`--capture-to` と）／`stage`（`--capture-screen` と）／`clipboard`（ウィンドウのみ）。単独や誤った組は終了コード 2。 |
 
 ### ショートカットキーのバインド
 

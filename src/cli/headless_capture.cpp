@@ -301,10 +301,16 @@ void addHeadlessCaptureOptions(QCommandLineParser *parser)
                                            QStringLiteral("Draw the mouse cursor into the captured image."));
     QCommandLineOption listDisplaysOption(QStringLiteral("list-displays"),
                                           QStringLiteral("Print the available outputs as JSON and exit."));
+    QCommandLineOption captureScreenOption(QStringLiteral("capture-screen"),
+                                           QStringLiteral("Capture the screen without a caller-supplied path; requires an explicit "
+                                                          "--capture-destination inline (base64 in JSON, no files) or stage (temporary "
+                                                          "staging directory). Combine with --region/--display/--all-outputs to select "
+                                                          "what to capture (default: the primary screen)."));
     QCommandLineOption outputNameOption(QStringLiteral("output-name"),
                                         QStringLiteral("Base file name (without extension) used when the capture path is a directory."),
                                         QStringLiteral("name"));
     parser->addOption(captureToOption);
+    parser->addOption(captureScreenOption);
     parser->addOption(regionOption);
     parser->addOption(displayOption);
     parser->addOption(includeCursorOption);
@@ -318,16 +324,32 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
     QTextStream err(stderr);
 
     const bool wantListDisplays = parser.isSet(QStringLiteral("list-displays"));
-    // --capture-destination（非 clipboard）单独出现同样是无头屏幕截图请求，
-    // 不能落回交互式启动（否则会被常驻实例 IPC 接管或弹出捕获界面）。
-    // clipboard 是窗口捕获专属去向，仍由窗口分发器给出自己的报错。
-    const QString destinationValue = parser.value(QStringLiteral("capture-destination")).trimmed().toLower();
-    const bool hasScreenDestination = parser.isSet(QStringLiteral("capture-destination"))
-        && !destinationValue.isEmpty()
-        && destinationValue != QLatin1String("clipboard");
-    const bool wantCapture = parser.isSet(QStringLiteral("capture-to")) || hasScreenDestination;
+    // B 契约：触发器只有 --capture-to（写文件）与 --capture-screen（显式无路径
+    // 截屏，必须搭配 --capture-destination inline|stage）。--capture-destination
+    // 及其余无头参数一律是修饰符：修饰符离开触发器单独出现 = 用法错误退出 2，
+    // 绝不静默落回交互式启动。
+    const bool wantScreen = parser.isSet(QStringLiteral("capture-screen"));
+    const bool wantCapture = parser.isSet(QStringLiteral("capture-to")) || wantScreen;
     if (!wantListDisplays && !wantCapture) {
+        if (parser.isSet(QStringLiteral("region"))
+            || parser.isSet(QStringLiteral("display"))
+            || parser.isSet(QStringLiteral("all-outputs"))
+            || parser.isSet(QStringLiteral("capture-destination"))
+            || parser.isSet(QStringLiteral("output-name"))
+            || parser.isSet(QStringLiteral("include-cursor"))) {
+            err << "no capture operation requested: headless modifiers need a trigger. "
+                   "Use --capture-to <path> for file output, or --capture-screen with "
+                   "--capture-destination inline|stage, or --window <selector> for "
+                   "window captures.\n";
+            return 2;
+        }
         return -1;
+    }
+    if (wantScreen && parser.isSet(QStringLiteral("capture-to"))) {
+        err << "--capture-screen and --capture-to are mutually exclusive: "
+               "--capture-to writes a file, --capture-screen needs "
+               "--capture-destination inline|stage.\n";
+        return 2;
     }
 
     if (wantListDisplays) {
@@ -383,11 +405,13 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
         waitForHeadlessDelay(delay.value(), err);
     }
 
-    // 屏幕截图去向：默认 file（--capture-to 决定路径）；inline 内嵌 base64
-    // 不落盘；stage 写入临时暂存目录。clipboard 在屏幕路径不受支持，显式
-    // 报错而不是静默降级。
+    // B 契约去向矩阵：
+    //   --capture-to                     → file（唯一写文件方式）
+    //   --capture-screen                 → 必须显式 --capture-destination inline|stage
+    //   inline × --capture-to/--output-name 互斥；stage × --capture-to 冗余拒绝
     ScreenCaptureDestination screenDestination = ScreenCaptureDestination::File;
-    if (parser.isSet(QStringLiteral("capture-destination"))) {
+    const bool hasDestination = parser.isSet(QStringLiteral("capture-destination"));
+    if (hasDestination) {
         const QString value = parser.value(QStringLiteral("capture-destination"));
         if (value.trimmed().toLower() == QLatin1String("clipboard")) {
             err << "--capture-destination clipboard is only available for window captures "
@@ -403,20 +427,34 @@ int runHeadlessCaptureIfRequested(const QCommandLineParser &parser)
         }
         screenDestination = parsed.value();
     }
-    if (screenDestination == ScreenCaptureDestination::Inline
-        && (parser.isSet(QStringLiteral("capture-to")) || parser.isSet(QStringLiteral("output-name")))) {
-        err << "--capture-destination inline writes no files; drop --capture-to/--output-name.\n";
+    if (wantScreen) {
+        if (!hasDestination) {
+            err << "--capture-screen requires an explicit --capture-destination inline or stage.\n";
+            return 2;
+        }
+        if (screenDestination == ScreenCaptureDestination::File) {
+            err << "--capture-screen does not take a path: use --capture-to <path> for "
+                   "file output, or --capture-destination inline|stage with --capture-screen.\n";
+            return 2;
+        }
+    } else if (screenDestination == ScreenCaptureDestination::File && captureTo.isEmpty()) {
+        err << "--capture-destination file requires --capture-to <path>.\n";
         return 2;
     }
-    if (screenDestination == ScreenCaptureDestination::File && captureTo.isEmpty()) {
-        err << "--capture-destination file requires --capture-to <path>.\n";
+    if (screenDestination == ScreenCaptureDestination::Inline
+        && parser.isSet(QStringLiteral("output-name"))) {
+        err << "--capture-destination inline writes no files; drop --output-name.\n";
+        return 2;
+    }
+    if (screenDestination == ScreenCaptureDestination::Stage
+        && parser.isSet(QStringLiteral("capture-to"))) {
+        err << "--capture-destination stage writes to the staging directory while "
+               "--capture-to already names a path; keep exactly one.\n";
         return 2;
     }
     QString effectiveCaptureTo = captureTo;
     if (screenDestination == ScreenCaptureDestination::Stage) {
-        if (effectiveCaptureTo.isEmpty()) {
-            effectiveCaptureTo = QDir(QDir::tempPath()).filePath(screenStageDirectoryName());
-        }
+        effectiveCaptureTo = QDir(QDir::tempPath()).filePath(screenStageDirectoryName());
         // 先确保暂存目录存在：resolveOutputPath 依赖 isDir() 判定生成
         // 时间戳文件名，缺失时会把这个路径误当作目标文件本身。
         QDir().mkpath(effectiveCaptureTo);

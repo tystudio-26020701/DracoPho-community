@@ -9,11 +9,15 @@
 
 #### 无头 CLI
 
-**inline 截图（不落盘）**
-- `--capture-destination inline` 现在同样适用于屏幕截图（`--capture-to`
-  路径）：JSON 结果以 base64 把 PNG 放进 `data` 字段，不写任何文件，
-  与窗口捕获的去向语义对齐。`stage` 写入临时暂存目录；`clipboard` 在
-  屏幕路径显式报错（请改用 `--window`），不再被静默忽略。
+**触发器/修饰符严格契约**
+- 屏幕截图只有两个显式触发器：`--capture-to <路径>`（写文件——唯一方式）
+  与新增的 `--capture-screen`，后者**必须**显式搭配
+  `--capture-destination inline`（base64 进 `data` 字段、零落盘）或
+  `stage`（临时暂存目录）。
+- `--capture-destination` 是纯修饰符，绝不自身触发截图；任何无头修饰参数
+  离开触发器单独出现一律退出码 2，绝不静默落回交互界面。冗余组合
+  （`stage` + `--capture-to`）、不可能组合（`inline` + `--capture-to`）
+  同样拒绝；屏幕路径的 `clipboard` 指引改用 `--window`。
 
 **诚实的 `--delay`**
 - 此前 `--delay <秒>` 在无头截图中被静默丢弃（倒计时遮罩是交互式专属）。

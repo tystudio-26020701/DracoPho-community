@@ -332,14 +332,24 @@ captures, one per monitor:
 Each selected monitor is captured with its own source geometry, so portal-based
 backends return exactly that display instead of the whole virtual desktop.
 
-**Agent-friendly destinations and timing**
+**Strict trigger/modifier contract (no silent fallthrough)**
 
-- `--capture-destination inline` returns the PNG as base64 in the JSON
-  (`data` field) without writing any file — useful when a temp file is
-  unwanted: `dracoPho --capture-destination inline`. Combined with
-  `--display`/`--region` it keeps the no-filesystem guarantee.
-- `--capture-destination stage` writes into the temporary staging directory
-  (`/tmp/dracoPho-staging/`) when `--capture-to` is omitted.
+- Screen captures have exactly two explicit triggers: `--capture-to <path>`
+  (writes a PNG file — the only way to write a file) and `--capture-screen`
+  (pathless capture that **requires** an explicit
+  `--capture-destination inline` or `stage`).
+- `--capture-destination` is a pure modifier — it never triggers a capture
+  by itself. Any headless modifier (`--region`, `--display`, `--all-outputs`,
+  `--capture-destination`, `--output-name`, `--include-cursor`) that appears
+  without a trigger (`--capture-to`, `--capture-screen`, `--window`) exits
+  with code 2 instead of silently falling through to the interactive UI.
+- `--capture-screen --capture-destination inline` returns the PNG as base64
+  in the JSON (`data` field) without writing any file; it combines with
+  `--region`/`--display`/`--all-outputs` while keeping the no-filesystem
+  guarantee.
+- `--capture-screen --capture-destination stage` writes into the temporary
+  staging directory (`/tmp/dracoPho-staging/`); combining `stage` with
+  `--capture-to` is rejected as redundant.
 - `--delay <seconds>` performs a quiet, windowless wait before the capture
   (0–3600); unlike the interactive countdown overlay it never shows UI, and
   invalid values exit with code 2.
@@ -414,6 +424,7 @@ no interactive portal prompt, no focus stealing; the outcome is queried via
 | `--no-debug` | Disables debug logging for this run, overriding config and environment variables. |
 | `--debug-log <path>` | Writes debug logs to the specified path and enables debug logging unless `--no-debug` is also set. |
 | `--capture-to <path>` | Headless capture: writes a PNG to the given file or directory without opening the UI. Prints a JSON summary to stdout. |
+| `--capture-screen` | Headless capture without a caller-supplied path; requires an explicit `--capture-destination inline` (base64 in JSON, no files) or `stage` (temporary staging directory). Combine with `--region`/`--display`/`--all-outputs` to select what to capture. |
 | `--region <x,y,w,h>` | With `--capture-to`: capture only the logical screen region. |
 | `--display <name>` | With `--capture-to`: capture a specific output by monitor name. May be repeated to capture several monitors at once (one PNG each). |
 | `--include-cursor` | With `--capture-to`: draw the mouse cursor into the captured frame. |
@@ -423,7 +434,7 @@ no interactive portal prompt, no focus stealing; the outcome is queried via
 | `--list-windows` | Lists the visible windows (id, title, class, pid, geometry) as JSON and exits. |
 | `--window <selector>` | Captures the window(s) matching the selector. May be repeated; append `@x,y,w,h` to capture a component sub-region. |
 | `--window-by <mode>` | How `--window` selectors are interpreted: `auto`, `id`, `title`, `class`, `index`, `pid` or `process`. |
-| `--capture-destination <mode>` | Where captured images go: `inline` (base64 in the JSON output), `file`, `stage` or `clipboard`. Applies to window captures and — except `clipboard`, which exits with code 2 — to screen captures. |
+| `--capture-destination <mode>` | Pure modifier, never a trigger: `inline` (base64 in the JSON output), `file` (needs `--capture-to`), `stage` (needs `--capture-screen`) or `clipboard` (window captures only). Alone or mispaired it exits with code 2. |
 
 ### Compositor / Desktop Hotkey Integration
 

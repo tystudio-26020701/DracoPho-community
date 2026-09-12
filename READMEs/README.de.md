@@ -306,8 +306,9 @@ diesen Monitor und nicht den gesamten virtuellen Desktop zurückliefern.
 
 **Agentenfreundliche Ziele und Zeitsteuerung**
 
-- `--capture-destination inline` liefert das PNG als Base64 im JSON (`data`-Feld) zurück, ohne eine Datei zu schreiben; kombinierbar mit `--display`/`--region`.
-- `--capture-destination stage` schreibt ohne `--capture-to` in das temporäre Staging-Verzeichnis (`/tmp/dracoPho-staging/`).
+- `--capture-screen --capture-destination inline` liefert das PNG als Base64 im JSON (`data`-Feld) zurück, ohne eine Datei zu schreiben; kombinierbar mit `--region`/`--display`/`--all-outputs`.
+- `--capture-screen --capture-destination stage` schreibt in das temporäre Staging-Verzeichnis (`/tmp/dracoPho-staging/`); zusammen mit `--capture-to` wird es als redundant abgelehnt.
+- `--capture-destination` ist ein reiner Modifikator und löst nie selbst eine Aufnahme aus; jeder Modifikator ohne Trigger (`--capture-to`/`--capture-screen`/`--window`) endet mit Code 2.
 - `--delay <Sekunden>` wartet vor der Aufnahme still und ohne Fenster (0–3600); ungültige Werte enden mit Code 2.
 - `clipboard` ist kein Ziel für Bildschirmaufnahmen und wird mit Code 2 abgelehnt (Fensteraufnahmen über `--window` unterstützen es).
 - Alle Headless-JSON-Ausgaben tragen eine `"v"`-Schema-Version (aktuell `1`).
@@ -349,6 +350,7 @@ sich mit dem Positionsparameter für Bilddateien gegenseitig aus.
 | `--no-debug` | Deaktiviert die Debug-Protokollierung für diesen Lauf und überschreibt Konfigurationsdatei und Umgebungsvariablen. |
 | `--debug-log <path>` | Schreibt das Debug-Protokoll in den angegebenen Pfad; aktiviert die Debug-Protokollierung, sofern nicht gleichzeitig `--no-debug` gesetzt ist. |
 | `--capture-to <path>` | Headless-Screenshot: Schreibt ein PNG in die angegebene Datei oder das angegebene Verzeichnis, ohne die Oberfläche zu öffnen; gibt eine JSON-Zusammenfassung auf der Standardausgabe aus. |
+| `--capture-screen` | Bildschirmaufnahme ohne Pfad; erfordert ausdrücklich `--capture-destination inline` oder `stage`. |
 | `--region <x,y,w,h>` | In Kombination mit `--capture-to`: erfasst nur den angegebenen logischen Bildschirmbereich. |
 | `--display <name>` | In Kombination mit `--capture-to`: erfasst den angegebenen Ausgabebildschirm anhand des Display-Namens. Kann mehrfach angegeben werden, um mehrere Monitore in einem Durchgang zu erfassen (ein PNG pro Monitor). |
 | `--include-cursor` | In Kombination mit `--capture-to`: zeichnet den Mauszeiger in den erfassten Frame. |
@@ -356,7 +358,7 @@ sich mit dem Positionsparameter für Bilddateien gegenseitig aus.
 | `--list-displays` | Gibt die verfügbaren Ausgänge als JSON aus und beendet. |
 | `--doctor` | Gibt eine JSON-Umgebungsdiagnose aus (Version, Qt/OS/Sitzung, Displays, Headless-Konfiguration, Fenstererkennung) und beendet. |
 | `--delay <seconds>` | Wartet die angegebene Anzahl von Sekunden vor der Aufnahme: interaktiv mit Vollbild-Countdown (Esc zum Abbrechen); headless als stille Wartezeit ohne Fenster (0–3600, ungültige Werte beenden mit Code 2). |
-| `--capture-destination <mode>` | Ziel der Aufnahmen: `inline` (Base64 in der JSON-Ausgabe), `file`, `stage` oder `clipboard`. Gilt für Fenster- und — außer `clipboard` (Exit-Code 2) — für Bildschirmaufnahmen. |
+| `--capture-destination <mode>` | Reiner Modifikator, nie ein Trigger: `inline`, `file` (mit `--capture-to`), `stage` (mit `--capture-screen`) oder `clipboard` (nur Fenster). Allein oder falsch gepaart: Code 2. |
 
 ### Tastenkürzel-Bindung
 
