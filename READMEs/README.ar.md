@@ -283,23 +283,36 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
 dracoPho --list-displays
+
+# 环境自检：平台、会话、显示器、无头配置、窗口检测
+dracoPho --doctor
 ```
 
 مثال على مخرجات JSON لأمر `--capture-to` مع شاشة واحدة:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 عند تحديد عدة `--display`، يصبح المخرج مصفوفة تحتوي لقطة لكل شاشة:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 تُلتقط كل شاشة محددة باستخدام هندسة مصدرها الخاصة، لذلك تعيد الخلفيات من نوع portal الشاشة
 المحددة بدقة بدلاً من سطح المكتب الافتراضي بأكمله.
+
+**وجهات وتوقيتات ملائمة للوكلاء**
+
+- يعيد `--capture-destination inline` صورة PNG بصيغة Base64 داخل JSON (حقل `data`) دون كتابة أي ملف؛ ويدعم الجمع مع `--display`/`--region`.
+- يكتب `--capture-destination stage` عند حذف `--capture-to` في دليل الترحيل المؤقت (`/tmp/dracoPho-staging/`).
+- ينفّذ `--delay <ثوانٍ>` انتظارًا صامتًا بلا نافذة قبل الالتقاط (0–3600)؛ القيم غير الصالحة تُنهي بالرمز 2.
+- `clipboard` ليست وجهة لالتقاط الشاشة وتُرفض بالرمز 2 (التقاط النوافذ عبر `--window` يدعمها).
+- تحمل جميع مخرجات JSON في الوضع بدون واجهة رقم إصدار للمخطط `"v"` (حاليًا `1`).
+- الجمع بين `--capture-window` التفاعلي وأي خيار بدون واجهة يُنهي بالرمز 2 مع ذكر الخيار المتعارض والبديل الصحيح.
+- رموز الخروج: `0` نجاح، `1` فشل الالتقاط (شامل الإخفاقات الجزئية وخفض الحافظة)، `2` خطأ استخدام.
 
 تعيد اللقطات بدون واجهة استخدام نفس خلفيات الالتقاط المستخدمة في الواجهة التفاعلية (QScreen
 وxdg-desktop-portal وPipeWire وgrim ومساعد KWin/GNOME وWindows Graphics Capture)،

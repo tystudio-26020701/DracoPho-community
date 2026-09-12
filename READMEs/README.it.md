@@ -277,23 +277,36 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
 dracoPho --list-displays
+
+# 环境自检：平台、会话、显示器、无头配置、窗口检测
+dracoPho --doctor
 ```
 
 Esempio di output JSON di `--capture-to` con un singolo display:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 Quando si specificano più `--display`, l'output diventa un array con una cattura per schermo:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 Ogni display selezionato viene catturato usando la propria geometria sorgente, quindi i backend basati su portal restituiscono con precisione
 quel display e non l'intero desktop virtuale.
+
+**Destinazioni e temporizzazione pensate per gli agenti**
+
+- `--capture-destination inline` restituisce il PNG in Base64 nel JSON (campo `data`) senza scrivere file; combinabile con `--display`/`--region`.
+- `--capture-destination stage` scrive nella directory temporanea di staging (`/tmp/dracoPho-staging/`) quando si omette `--capture-to`.
+- `--delay <secondi>` attende in silenzio e senza finestre prima della cattura (0–3600); i valori non validi terminano con il codice 2.
+- `clipboard` non è una destinazione di cattura schermo e viene rifiutato con il codice 2 (le catture finestre via `--window` lo supportano).
+- Tutti gli output JSON headless riportano una versione di schema `"v"` (attualmente `1`).
+- Combinare `--capture-window` (interattivo) con un'opzione headless termina con il codice 2 indicando l'opzione in conflitto e la sua alternativa.
+- Codici di uscita: `0` successo, `1` cattura non riuscita (inclusi guasti parziali e declassamenti degli appunti), `2` errore d'uso.
 
 La cattura senza interfaccia riutilizza tutti i backend di acquisizione dell'interfaccia interattiva (QScreen,
 xdg-desktop-portal, PipeWire, grim, helper KWin/GNOME, Windows Graphics Capture),

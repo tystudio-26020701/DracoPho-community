@@ -283,23 +283,36 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
 dracoPho --list-displays
+
+# 环境自检：平台、会话、显示器、无头配置、窗口检测
+dracoPho --doctor
 ```
 
 Beispiel für die JSON-Ausgabe von `--capture-to` mit einem einzelnen Monitor:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 Wenn mehrere `--display` angegeben werden, wird die Ausgabe zu einem Array mit einer Erfassung pro Monitor:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 Jeder ausgewählte Monitor wird mit seiner eigenen Quellgeometrie erfasst, sodass Portal-artige Backends exakt
 diesen Monitor und nicht den gesamten virtuellen Desktop zurückliefern.
+
+**Agentenfreundliche Ziele und Zeitsteuerung**
+
+- `--capture-destination inline` liefert das PNG als Base64 im JSON (`data`-Feld) zurück, ohne eine Datei zu schreiben; kombinierbar mit `--display`/`--region`.
+- `--capture-destination stage` schreibt ohne `--capture-to` in das temporäre Staging-Verzeichnis (`/tmp/dracoPho-staging/`).
+- `--delay <Sekunden>` wartet vor der Aufnahme still und ohne Fenster (0–3600); ungültige Werte enden mit Code 2.
+- `clipboard` ist kein Ziel für Bildschirmaufnahmen und wird mit Code 2 abgelehnt (Fensteraufnahmen über `--window` unterstützen es).
+- Alle Headless-JSON-Ausgaben tragen eine `"v"`-Schema-Version (aktuell `1`).
+- `--capture-window` (interaktiv) in Kombination mit einer Headless-Option endet mit Code 2 und nennt das betroffene Flag samt Alternative.
+- Exit-Codes: `0` Erfolg, `1` Aufnahme fehlgeschlagen (inkl. Teilfehler/Clipboard-Downgrade), `2` Verwendungsfehler.
 
 Headless-Screenshots verwenden dieselben Erfassungs-Backends wie die interaktive Oberfläche (QScreen,
 xdg-desktop-portal, PipeWire, grim, KWin/GNOME-Helfer, Windows Graphics Capture),

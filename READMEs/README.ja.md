@@ -282,22 +282,35 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
 dracoPho --list-displays
+
+# 环境自检：平台、会话、显示器、无头配置、窗口检测
+dracoPho --doctor
 ```
 
 単一ディスプレイの `--capture-to` における JSON 出力例:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 複数の `--display` を指定した場合、出力は各ディスプレイのキャプチャを含む配列になります:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 選択した各ディスプレイはそれぞれのソースジオメトリでキャプチャされるため、portal 系バックエンドは仮想デスクトップ全体ではなく、そのディスプレイを正確に返します。
+
+**エージェント向けの出力先とタイミング**
+
+- `--capture-destination inline` はファイルを書かずに PNG を Base64 で JSON（`data` フィールド）に返します。`--display`/`--region` との併用可。
+- `--capture-to` 省略時、`--capture-destination stage` は一時ステージングディレクトリ（`/tmp/dracoPho-staging/`）に書き込みます。
+- `--delay <秒>` はウィンドウなしの静かな待機をしてから撮影します（0～3600）。無効な値は終了コード 2。
+- `clipboard` は画面撮影の出力先ではなく終了コード 2 で拒否されます（`--window` によるウィンドウ撮影は対応）。
+- すべてのヘッドレス JSON 出力はスキーマ版 `"v"`（現在 `1`）を持ちます。
+- 対話式 `--capture-window` とヘッドレスオプションの組み合わせは終了コード 2 で、該当フラグと正しい代替を提示します。
+- 終了コード：`0` 成功、`1` 撮影失敗（部分的失敗・クリップボード降格を含む）、`2` 使用方法の誤り。
 
 ヘッドレススクリーンショットは、対話 UI と同じすべてのキャプチャバックエンド（QScreen、xdg-desktop-portal、PipeWire、grim、KWin/GNOME ヘルパー、Windows Graphics Capture）を再利用するため、画質と領域切り抜きの挙動は完全に一致します。すべてのヘッドレスパラメータと位置指定の画像ファイルパラメータは互いに排他的です。
 

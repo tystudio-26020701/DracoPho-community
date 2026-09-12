@@ -282,22 +282,35 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
 dracoPho --list-displays
+
+# 环境自检：平台、会话、显示器、无头配置、窗口检测
+dracoPho --doctor
 ```
 
 단일 디스플레이 `--capture-to`의 JSON 출력 예시:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 여러 개의 `--display`를 지정하면 출력은 화면당 하나의 캡처 배열이 됩니다:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 선택된 각 디스플레이는 자체 소스 지오메트리로 캡처되므로 portal 계열 백엔드는 전체 가상 데스크톱이 아니라 해당 디스플레이를 정확히 반환합니다.
+
+**에이전트 친화적 목적지와 타이밍**
+
+- `--capture-destination inline`은 파일을 쓰지 않고 PNG를 Base64로 JSON(`data` 필드)에 반환합니다. `--display`/`--region`과 조합 가능.
+- `--capture-to` 생략 시 `--capture-destination stage`는 임시 스테이징 디렉터리(`/tmp/dracoPho-staging/`)에 기록합니다.
+- `--delay <초>`는 캡처 전 창 없이 조용히 대기합니다(0–3600). 잘못된 값은 종료 코드 2.
+- `clipboard`는 화면 캡처 목적지가 아니며 종료 코드 2로 거부됩니다(`--window` 창 캡처는 지원).
+- 모든 헤드리스 JSON 출력에는 스키마 버전 `"v"`(현재 `1`)가 있습니다.
+- 대화형 `--capture-window`와 헤드리스 옵션 조합은 종료 코드 2와 함께 해당 플래그와 올바른 대안을 안내합니다.
+- 종료 코드: `0` 성공, `1` 캡처 실패(부분 실패·클립보드 강등 포함), `2` 사용 오류.
 
 헤드리스 스크린샷은 대화형 UI와 동일한 모든 캡처 백엔드(QScreen,
 xdg-desktop-portal, PipeWire, grim, KWin/GNOME 헬퍼, Windows Graphics Capture)를

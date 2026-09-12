@@ -278,22 +278,35 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
 dracoPho --list-displays
+
+# 环境自检：平台、会话、显示器、无头配置、窗口检测
+dracoPho --doctor
 ```
 
 Ejemplo de salida JSON de `--capture-to` con un único monitor:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 Cuando se especifican varios `--display`, la salida pasa a ser una matriz con una captura por pantalla:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 Cada monitor seleccionado se captura usando su propia geometría de origen, por lo que los backends tipo portal devuelven con precisión ese monitor y no todo el escritorio virtual.
+
+**Destinos y temporización pensados para agentes**
+
+- `--capture-destination inline` devuelve el PNG en Base64 dentro del JSON (campo `data`) sin escribir archivos; combinable con `--display`/`--region`.
+- `--capture-destination stage` escribe en el directorio temporal de staging (`/tmp/dracoPho-staging/`) cuando se omite `--capture-to`.
+- `--delay <segundos>` espera en silencio y sin ventana antes de capturar (0–3600); los valores no válidos terminan con código 2.
+- `clipboard` no es un destino de captura de pantalla y se rechaza con código 2 (las capturas de ventanas con `--window` sí lo admiten).
+- Todas las salidas JSON headless llevan una versión de esquema `"v"` (actualmente `1`).
+- Combinar `--capture-window` (interactivo) con cualquier opción headless termina con código 2 indicando la opción en conflicto y su alternativa.
+- Códigos de salida: `0` éxito, `1` fallo de captura (incluidos fallos parciales y degradaciones de portapapeles), `2` error de uso.
 
 La captura sin interfaz reutiliza todos los backends de captura de la interfaz interactiva (QScreen,
 xdg-desktop-portal, PipeWire, grim, helpers de KWin/GNOME y Windows Graphics Capture),

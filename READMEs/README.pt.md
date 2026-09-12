@@ -278,23 +278,36 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 输出当前所有显示器信息并退出
 dracoPho --list-displays
+
+# 环境自检：平台、会话、显示器、无头配置、窗口检测
+dracoPho --doctor
 ```
 
 Exemplo da saída JSON de `--capture-to` com um único monitor:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 Quando vários `--display` são especificados, a saída se torna um array com uma captura por tela:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 Cada monitor selecionado é capturado usando sua própria geometria de origem; portanto, backends do tipo portal retornam
 precisamente esse monitor, e não o desktop virtual inteiro.
+
+**Destinos e temporização pensados para agentes**
+
+- `--capture-destination inline` devolve o PNG em Base64 no JSON (campo `data`) sem gravar arquivos; combinável com `--display`/`--region`.
+- `--capture-destination stage` grava no diretório temporário de staging (`/tmp/dracoPho-staging/`) quando `--capture-to` é omitido.
+- `--delay <segundos>` espera em silêncio, sem janela, antes da captura (0–3600); valores inválidos terminam com o código 2.
+- `clipboard` não é um destino de captura de tela e é rejeitado com o código 2 (capturas de janela via `--window` o suportam).
+- Todas as saídas JSON headless carregam uma versão de esquema `"v"` (atualmente `1`).
+- Combinar `--capture-window` (interativo) com qualquer opção headless termina com o código 2 citando a opção em conflito e a alternativa correta.
+- Códigos de saída: `0` sucesso, `1` falha na captura (incluindo falhas parciais e rebaixamentos da área de transferência), `2` erro de uso.
 
 A captura sem interface reutiliza todos os mesmos backends de captura da interface interativa (QScreen,
 xdg-desktop-portal, PipeWire, grim, KWin/GNOME helpers, Windows Graphics Capture);

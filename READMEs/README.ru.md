@@ -283,23 +283,36 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # Вывод информации обо всех дисплеях в формате JSON и выход
 dracoPho --list-displays
+
+# Самопроверка: платформа, сеанс, дисплеи, конфигурация headless, обнаружение окон
+dracoPho --doctor
 ```
 
 Пример JSON-вывода `--capture-to` для одного дисплея:
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 При указании нескольких `--display` вывод становится массивом захватов по одному на экран:
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 Каждый выбранный дисплей захватывается с собственной исходной геометрией, поэтому бэкенды типа portal возвращают
 именно этот дисплей, а не весь виртуальный рабочий стол.
+
+**Направления вывода и тайминги для агентов**
+
+- `--capture-destination inline` возвращает PNG в Base64 внутри JSON (поле `data`), не записывая файлов; сочетается с `--display`/`--region`.
+- `--capture-destination stage` без `--capture-to` пишет во временный каталог стейджинга (`/tmp/dracoPho-staging/`).
+- `--delay <секунды>` выполняет тихое ожидание без окна перед захватом (0–3600); недопустимые значения завершаются кодом 2.
+- `clipboard` не является направлением для захвата экрана и отклоняется с кодом 2 (захват окон через `--window` его поддерживает).
+- Все headless-выводы JSON несут версию схемы `"v"` (сейчас `1`).
+- Комбинация интерактивного `--capture-window` с любой headless-опцией завершается кодом 2 с указанием конфликтного флага и альтернативы.
+- Коды выхода: `0` успех, `1` сбой захвата (включая частичные сбои и понижение буфера обмена), `2` ошибка использования.
 
 Безголовый захват использует те же бэкенды захвата, что и интерактивный интерфейс (QScreen,
 xdg-desktop-portal, PipeWire, grim, помощники KWin/GNOME, Windows Graphics Capture),

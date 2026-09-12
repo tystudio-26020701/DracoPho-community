@@ -282,23 +282,36 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # Affiche en JSON les informations de tous les écrans puis quitte
 dracoPho --list-displays
+
+# Auto-diagnostic : plateforme, session, écrans, configuration headless, détection des fenêtres
+dracoPho --doctor
 ```
 
 Exemple de sortie JSON pour un `--capture-to` mono-écran :
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 Lorsque plusieurs `--display` sont spécifiés, la sortie devient un tableau avec une capture par écran :
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 Chaque écran sélectionné est capturé avec sa propre géométrie source : les backends de type portal
 renvoient donc précisément cet écran et non tout le bureau virtuel.
+
+**Destinations et minutage adaptés aux agents**
+
+- `--capture-destination inline` renvoie le PNG en Base64 dans le JSON (champ `data`) sans écrire de fichier ; compatible avec `--display`/`--region`.
+- `--capture-destination stage` écrit dans le répertoire temporaire de staging (`/tmp/dracoPho-staging/`) quand `--capture-to` est omis.
+- `--delay <secondes>` attend en silence, sans fenêtre, avant la capture (0–3600) ; les valeurs invalides terminent avec le code 2.
+- `clipboard` n'est pas une destination de capture d'écran et est rejeté avec le code 2 (les captures de fenêtres via `--window` le prennent en charge).
+- Toutes les sorties JSON headless portent une version de schéma `"v"` (actuellement `1`).
+- Combiner `--capture-window` (interactif) avec une option headless termine avec le code 2 en citant l'option fautive et son alternative.
+- Codes de sortie : `0` succès, `1` échec de capture (y compris échecs partiels et rétrogradations presse-papiers), `2` erreur d'utilisation.
 
 La capture sans interface réutilise exactement les mêmes backends de capture que l'interface interactive (QScreen,
 xdg-desktop-portal, PipeWire, grim, assistants KWin/GNOME, Windows Graphics Capture) :

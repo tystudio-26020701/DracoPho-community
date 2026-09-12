@@ -278,23 +278,36 @@ dracoPho --capture-to /tmp/shots/ --display DP-1 --display DP-2
 
 # 以 JSON 輸出目前所有顯示器資訊並退出
 dracoPho --list-displays
+
+# 環境自檢：平台、工作階段、顯示器、無頭設定、視窗偵測
+dracoPho --doctor
 ```
 
 單一顯示器 `--capture-to` 的 JSON 輸出範例：
 
 ```json
-{"path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
+{"v":1,"destination":"file","path":"/tmp/shot.png","width":2560,"height":1440,"output":"DP-1","error":null}
 ```
 
 當指定多個 `--display` 時，輸出變為每個螢幕一個擷取的陣列：
 
 ```json
-{"captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
+{"v":1,"destination":"file","captures":[{"path":"/tmp/shots/dracoPho-DP-1-20260801-000000.png","width":2560,"height":1440,"output":"DP-1","error":null},
              {"path":"/tmp/shots/dracoPho-DP-2-20260801-000000.png","width":1920,"height":1080,"output":"DP-2","error":null}]}
 ```
 
 每個選中的顯示器使用各自的來源幾何進行擷取，因此 portal 類後端會精確回傳
 該顯示器而不是整個虛擬桌面。
+
+**面向智能體的輸出去向與時序**
+
+- `--capture-destination inline` 不寫入任何檔案，直接把 PNG 以 Base64 放進 JSON（`data` 欄位）；可與 `--display`/`--region` 組合。
+- 省略 `--capture-to` 時，`--capture-destination stage` 寫入暫存目錄（`/tmp/dracoPho-staging/`）。
+- `--delay <秒>` 在擷取前執行無視窗的靜默等待（0–3600）；非法值以結束碼 2 結束。
+- `clipboard` 不是螢幕擷取的去向，以結束碼 2 拒絕（`--window` 視窗擷取支援它）。
+- 所有無頭 JSON 輸出都帶有 `"v"` 綱要版本（目前為 `1`）。
+- 互動式 `--capture-window` 與任何無頭選項組合會以結束碼 2 結束，並指出衝突選項與正確替代方案。
+- 結束碼：`0` 成功、`1` 擷取失敗（含部分失敗與剪貼簿降級）、`2` 用法錯誤。
 
 無介面截圖重用與互動介面相同的全部擷取後端（QScreen、
 xdg-desktop-portal、PipeWire、grim、KWin/GNOME 輔助、Windows Graphics Capture），
