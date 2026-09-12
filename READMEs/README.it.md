@@ -43,10 +43,10 @@ Cattura istantaneamente lo schermo e apre una sovrapposizione di annotazione a s
   - `Evidenziazione`: effetto di copertura stile evidenziatore ottenuto con `CompositionMode_Multiply` e riempimento semitrasparente.
   - `Inverti`: inverte i canali RGB dei pixel nell'area coperta dal rettangolo, mantenendo il contorno esterno come riferimento visivo.
 - **Freccia ottimizzata**: usa il classico percorso a sei vertici, con bordi morbidi e rendering antialiased.
-- **Testo a doppio collegamento**:
-  - Supporta dimensioni di carattere molto grandi con regolazione continua, scalabili dolcemente tramite la rotellina del mouse o il cursore delle proprietà.
+- **Annotazione di testo formattato**:
+  - Supporta dimensioni di carattere molto grandi con regolazione continua, scalabili dolcemente tramite la rotellina del mouse.
   - Introduce un buffer di larghezza fisica per evitare interruzioni di riga indesiderate dovute a oscillazioni di rendering a fattori di scala molto elevati.
-  - **I punti di controllo diagonali** ridimensionano proporzionalmente sia la dimensione del carattere sia la cornice del testo; **le linee di controllo laterali** regolano invece solo la larghezza dei confini di impaginazione.
+  - **Le otto maniglie** ridimensionano la cornice esattamente come un rettangolo; la dimensione del carattere resta costante e il testo va a capo alla nuova larghezza.
 - **Laser per presentazioni**: adatto a demo o didattica; i tratti svaniscono dolcemente nel tempo.
 - **Numerazione automatica dei passaggi**: un clic posiziona marcatori numerici progressivi.
 - **Mosaico**: offusca con effetto vetro smerigliato le informazioni sensibili.
@@ -822,7 +822,7 @@ Il risultato atteso è `('4.2',)`. Dopo aver abilitato l'estensione, riavvia `dr
 | **R** | Rettangolo (Rectangle) | Disegna il contorno di un rettangolo. |
 | **E** | Ellisse (Ellipse) | Disegna il contorno di un'ellisse. |
 | **A** | Freccia (Arrow) | Disegna la classica freccia a sei vertici, affilata e lunga, con angolo acuto. |
-| **T** | Testo (Text) | Inserisci e componi testo formattato, con dimensioni fino a 1000px e collegamenti di trascinamento. |
+| **T** | Testo (Text) | Inserisci e componi testo formattato con formattazione della selezione; le maniglie cambiano solo la geometria della casella e la dimensione del font resta costante. |
 | **N** | Numerazione (Number) | Etichette numeriche a incremento automatico per i passaggi. |
 | **M** | Mosaico (Mosaic) | Offusca con effetto vetro smerigliato le aree sensibili. |
 | **G** | Laser (Laser) | Tratti temporanei per didattica o presentazioni, che svaniscono dolcemente da soli. |

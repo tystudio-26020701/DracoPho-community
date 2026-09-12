@@ -48,10 +48,10 @@ Es kann in Sekundenschnelle den Bildschirm erfassen und eine adaptive Vollbild-A
   - `高亮`: Textmarkerartiger Überlagerungseffekt, realisiert mit `CompositionMode_Multiply` und halbtransparenter Füllung.
   - `反色`: Invertiert die RGB-Werte der Pixel innerhalb des überdeckten Rechteckbereichs und behält dabei die Außenkontur als visuellen Hinweis.
 - **Optimierter Pfeil**: Verwendet den klassischen Sechs-Eckpunkte-Pfeilpfad mit glatten Kanten und Anti-Aliasing-Rendering.
-- **Doppelt verknüpfter Text**:
-  - Unterstützt stufenlose Anpassung bis hin zu sehr großen Schriftgrößen, die per Mausrad oder Attributregler sanft skaliert werden können.
+- **Rich-Text-Annotation**:
+  - Unterstützt stufenlose Anpassung bis hin zu sehr großen Schriftgrößen, die per Mausrad sanft skaliert werden können.
   - Führt ein Pufferdesign mit physischer Breite ein, um unerwünschte Zeilenumbrüche bei extrem hohen Zoomstufen infolge von Rendering-Jitter zu vermeiden.
-  - Über den **diagonalen Kontrollpunkt** können Schriftgröße und Textrahmen proportional miteinander skaliert werden; die **seitlichen Kontrolllinien** passen lediglich die Breite des Umbruchbereichs an.
+  - **Alle acht Kontrollpunkte** ändern die Boxgeometrie genau wie beim Rechteck; die Schriftgröße bleibt konstant, der Text bricht auf die neue Boxbreite um.
 - **Laser-Präsentationsstift**: Geeignet für Präsentationen oder Unterricht; die Striche verblassen mit der Zeit sanft und verschwinden.
 - **Automatisch nummerierte Schritte**: Mit einem Klick werden fortlaufend ansteigende nummerierte Schrittmarkierungen platziert.
 - **Mosaik**: Ermöglicht das Unkenntlichmachen sensibler Informationen durch regionale Unschärfe (Milchglas-Effekt).
@@ -829,7 +829,7 @@ Erwartetes Ergebnis: `('4.2',)`. Starte `dracoPho` nach dem Aktivieren der Erwei
 | **R** | Rechteck (Rectangle) | Zeichnet rechteckige Rahmen. |
 | **E** | Ellipse (Ellipse) | Zeichnet elliptische Rahmen. |
 | **A** | Pfeil (Arrow) | Zeichnet den klassischen sechseckigen, spitzen Pfeil mit langem, scharfem Winkel. |
-| **T** | Text (Text) | Eingabe und Anordnung von Rich Text, unterstützt 1000-px-Schriftgrößen und Zieh-Verknüpfung. |
+| **T** | Text (Text) | Eingabe und Anordnung von Rich Text mit Formatierung der Markierung; Griffe ändern nur die Boxgeometrie, die Schriftgröße bleibt konstant. |
 | **N** | Nummer (Number) | Automatisch fortlaufende Schrittnummern-Aufkleber. |
 | **M** | Mosaik (Mosaic) | Unkenntlichmachen sensibler Bereiche per Milchglas-Effekt. |
 | **G** | Laserpointer (Laser) | Temporäre Spuren für Unterricht oder Präsentationen, die automatisch sanft verblassen. |

@@ -43,10 +43,10 @@ Ele captura a tela instantaneamente e abre uma camada de anotação adaptável e
   - `高亮`: efeito de sobreposição estilo marcador implementado com `CompositionMode_Multiply` e preenchimento semitransparente.
   - `反色`: inverte o RGB dos pixels na área coberta pelo retângulo, mantendo o contorno externo como indicação visual.
 - **Seta otimizada**: usa o clássico caminho de seta com seis vértices, com bordas suaves e renderização antisserrilhada.
-- **Texto duplo com vínculo dinâmico**:
-  - Suporte ao ajuste contínuo de tamanhos de fonte muito grandes, com zoom suave pela roda do mouse ou pelo controle deslizante de propriedades.
+- **Anotação de texto rico**:
+  - Suporte ao ajuste contínuo de tamanhos de fonte muito grandes, com zoom suave pela roda do mouse.
   - Foi introduzido um design de buffer de largura física para evitar quebras de linha inesperadas em escalas de zoom muito altas, causadas pela trepidação de renderização.
-  - Os **pontos de controle diagonais** permitem o redimensionamento proporcional conjunto do tamanho da fonte e da caixa de texto; as **linhas de controle laterais** ajustam apenas a largura dos limites do texto.
+  - **As oito alças** alteram a geometria da caixa exatamente como um retângulo; o tamanho da fonte permanece constante e o texto se reacomoda à nova largura.
 - **Caneta laser de apresentação**: adequada para demonstrações ou aulas; os traços se dissolvem suavemente com o tempo.
 - **Números de etapa autoincrementais**: um clique coloca marcadores numéricos de etapa que aumentam sequencialmente.
 - **Mosaico**: suporte ao desfoque de área estilo vidro fosco para informações sensíveis.
@@ -824,7 +824,7 @@ O resultado esperado é `('4.2',)`. Depois de ativar a extensão, reinicie o `dr
 | **R** | Retângulo (Rectangle) | Desenha contornos de retângulo. |
 | **E** | Elipse (Ellipse) | Desenha contornos de elipse. |
 | **A** | Seta (Arrow) | Desenha a clássica seta longa e afilada de seis vértices com ângulo agudo. |
-| **T** | Texto (Text) | Insere e organiza texto rico, com suporte a tamanho de fonte de 1000px e vínculo por arrastar. |
+| **T** | Texto (Text) | Insere e organiza texto rico com formatação da seleção; as alças alteram apenas a geometria da caixa e o tamanho da fonte permanece constante. |
 | **N** | Número (Number) | Marcadores de número de etapa com incremento automático. |
 | **M** | Mosaico (Mosaic) | Aplica desfoque estilo vidro fosco em áreas sensíveis. |
 | **G** | Caneta laser (Laser) | Traços temporários para aulas ou apresentações, que se dissolvem suavemente. |

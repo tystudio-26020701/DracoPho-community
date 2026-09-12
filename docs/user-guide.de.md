@@ -223,7 +223,7 @@ mit den Zifferntasten oder der Werkzeugleiste umgeschaltet:
 | `R` | Rechteck | Kasten mit `Stroke`- / `Highlight`- / `Invert`-Stilen, abgerundete Ecken |
 | `E` | Ellipse | Ellipse / Kreis |
 | `A` | Pfeil | klassische Pfeile (befiedert, KDE, bidirektional) |
-| `T` | Text | Rich-Text; Rad oder Schieberegler ändern die Größe; diagonale Griffe skalieren beides, seitliche Griffe passen den Umbruch an; exakte pt-Größe, Schriftfamilie, fett / kursiv im Schriftpanel |
+| `T` | Text | Rich-Text mit Formatierung der aktuellen Markierung; das Rad ändert die Schriftgröße; alle acht Griffe ändern wie beim Rechteck nur die Boxgeometrie – die Schriftgröße bleibt konstant, der Text bricht neu um; exakte pt-Größe, Schriftfamilie, fett / kursiv im Schriftpanel |
 | `N` | Nummer | fortlaufende nummerierte Marker (arabisch, alpha, römisch, chinesisch, …) |
 | `M` | Mosaik | acrylartiger Frost-Unschärfeeffekt zum Verbergen sensibler Inhalte |
 | `G` | Laser | temporäre Striche, die automatisch verblassen |
@@ -247,13 +247,17 @@ anzuzeigen:
 - Ecken-/Kantengriffe ziehen, um die Größe zu ändern;
 - den runden Griff über der Oberkante ziehen, um zu drehen;
 - `Delete` / `Backspace` drücken, um zu entfernen;
-- doppelklicken Sie auf Text, um ihn direkt zu bearbeiten.
+- doppelklicken Sie auf Text, um ihn direkt zu bearbeiten (auch ein Klick mit
+  dem Text-Werkzeug auf eine vorhandene Textbox wählt und bearbeitet sie direkt).
 
-Das Eigenschaften-Panel (rechte Seite) bearbeitet die ausgewählte Annotation:
-Farbe, Breite, Stil, Textschriftfamilie / -größe / fett / kursiv. Mehrere
-Annotationen können ausgewählt werden, indem unter dem `Select`-Werkzeug ein
-Auswahlrechteck gezogen wird; die Gruppe kann dann gemeinsam verschoben,
-skaliert, gedreht und gelöscht werden.
+Das Eigenschaften-Panel (rechte Seite) bearbeitet die ausgewählte Annotation.
+Formen bieten Farbe, Breite und Stil; Text bietet Schriftfamilie / -größe /
+fett / kursiv, Textfarbe, Textmarker und Boxfüllung sowie einen
+Deckkraft-Regler. Textfarbe und Textmarker wirken bei einer aktiven Markierung
+nur auf diese, sonst auf den gesamten Text; Boxfüllung und Deckkraft wirken
+immer auf die ganze Box. Mehrere Annotationen können ausgewählt werden, indem
+unter dem `Select`-Werkzeug ein Auswahlrechteck gezogen wird; die Gruppe kann
+dann gemeinsam verschoben, skaliert, gedreht und gelöscht werden.
 
 ### 4.2 Aktionen
 

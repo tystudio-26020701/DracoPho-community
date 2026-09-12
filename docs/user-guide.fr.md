@@ -227,7 +227,7 @@ touches numériques ou la barre d'outils :
 | `R` | Rectangle | boîte avec styles `Contour` / `Surlignage` / `Inverser`, coins arrondis |
 | `E` | Ellipse | ellipse / cercle |
 | `A` | Flèche | flèches classiques (à empennage, KDE, bidirectionnelles) |
-| `T` | Texte | texte enrichi ; la molette ou les curseurs redimensionnent ; les poignées diagonales redimensionnent les deux axes, les poignées latérales ajustent le retour à la ligne ; taille exacte en pt, famille de police, gras / italique dans le panneau de police |
+| `T` | Texte | texte enrichi avec mise en forme de la sélection ; la molette règle la taille de police ; les huit poignées redimensionnent la boîte comme un rectangle (taille de police inchangée, le texte se réenroule) ; taille exacte en pt, famille de police, gras / italique dans le panneau de police |
 | `N` | Numéro | marqueurs numérotés séquentiels (arabe, alpha, romain, chinois, …) |
 | `M` | Mosaïque | flou givré acrylique pour masquer le contenu sensible |
 | `G` | Laser | traits temporaires qui disparaissent automatiquement |
@@ -253,13 +253,19 @@ poignées :
 - faites glisser la poignée ronde au-dessus du bord supérieur pour faire
   pivoter ;
 - appuyez sur `Suppr` / `Retour arrière` pour supprimer ;
-- double-cliquez sur un texte pour le modifier sur place.
+- double-cliquez sur un texte pour le modifier sur place (un clic avec
+  l'outil Texte sur une zone de texte existante la sélectionne et l'édite
+  également).
 
-Le panneau de propriétés (côté droit) modifie l'annotation sélectionnée :
-couleur, largeur, style, famille / taille de police / gras / italique du texte.
-Plusieurs annotations peuvent être sélectionnées en faisant glisser une boîte
-de sélection sous l'outil `Sélection` ; le groupe peut ensuite être déplacé,
-redimensionné, pivoté et supprimé ensemble.
+Le panneau de propriétés (côté droit) modifie l'annotation sélectionnée. Les
+formes proposent couleur, largeur et style ; le texte propose famille / taille
+de police / gras / italique, couleur du texte, surlignage du texte, fond de la
+zone et un curseur d'opacité. La couleur et le surlignage du texte s'appliquent
+à la sélection locale pendant l'édition, sinon à tout le texte ; le fond et
+l'opacité s'appliquent toujours à toute la zone. Plusieurs annotations peuvent
+être sélectionnées en faisant glisser une boîte de sélection sous l'outil
+`Sélection` ; le groupe peut ensuite être déplacé, redimensionné, pivoté et
+supprimé ensemble.
 
 ### 4.2 Actions
 

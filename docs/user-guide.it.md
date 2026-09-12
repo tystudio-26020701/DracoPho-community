@@ -222,7 +222,7 @@ con i tasti numerici o con la barra degli strumenti:
 | `R` | Rectangle | rettangolo con stili `Stroke` / `Highlight` / `Invert`, angoli arrotondati |
 | `E` | Ellipse | ellisse / cerchio |
 | `A` | Arrow | frecce classiche (con piumaggio, KDE, bidirezionali) |
-| `T` | Text | testo formattato; la rotellina o i cursori ridimensionano; le maniglie diagonali ridimensionano entrambi gli assi, le maniglie laterali regolano l'avvolgimento; dimensione esatta in pt, famiglia di font, grassetto / corsivo nel pannello font |
+| `T` | Text | testo formattato con formattazione della selezione; la rotellina regola la dimensione del font; le otto maniglie ridimensionano la casella come un rettangolo (la dimensione del font resta costante e il testo va a capo nella nuova larghezza); dimensione esatta in pt, famiglia di font, grassetto / corsivo nel pannello font |
 | `N` | Number | marcatori numerici sequenziali (arabo, alfa, romano, cinese, …) |
 | `M` | Mosaic | sfocatura a effetto acrilico per nascondere i contenuti sensibili |
 | `G` | Laser | tratti temporanei che si dissolvono automaticamente |
@@ -245,13 +245,18 @@ Passa a **Select** (`S`). Fai clic su un'annotazione per mostrarne le maniglie:
 - trascina le maniglie degli angoli / dei bordi per ridimensionarla;
 - trascina la maniglia rotonda sopra il bordo superiore per ruotarla;
 - premi `Delete` / `Backspace` per rimuoverla;
-- fai doppio clic sul testo per modificarlo sul posto.
+- fai doppio clic sul testo per modificarlo sul posto (anche un clic con lo
+  strumento Testo su una casella di testo esistente la seleziona e la modifica).
 
-Il pannello delle proprietà (lato destro) modifica l'annotazione selezionata:
-colore, spessore, stile, famiglia / dimensione / grassetto / corsivo del font
-del testo. È possibile selezionare più annotazioni trascinando un riquadro di
-selezione sotto lo strumento `Select`; il gruppo può quindi essere spostato,
-ridimensionato, ruotato ed eliminato insieme.
+Il pannello delle proprietà (lato destro) modifica l'annotazione selezionata.
+Le forme offrono colore, spessore e stile; il testo offre famiglia /
+dimensione / grassetto / corsivo del font, colore del testo, evidenziazione del
+testo, riempimento della casella e un cursore di opacità. Colore ed
+evidenziazione del testo agiscono sulla selezione locale durante la modifica, o
+su tutto il testo in assenza di selezione; riempimento e opacità agiscono
+sempre sull'intera casella. È possibile selezionare più annotazioni trascinando
+un riquadro di selezione sotto lo strumento `Select`; il gruppo può quindi
+essere spostato, ridimensionato, ruotato ed eliminato insieme.
 
 ### 4.2 Azioni
 

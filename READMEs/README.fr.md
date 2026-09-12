@@ -48,10 +48,10 @@ Il capture l'écran instantanément et ouvre une couche d'annotation interactive
   - `Surlignage` : effet surligneur rendu avec `CompositionMode_Multiply` et un remplissage semi-transparent.
   - `Inversion` : inverse les pixels RGB de la zone couverte par le rectangle, tout en conservant le contour externe comme repère visuel.
 - **Flèche optimisée** : chemin de flèche classique à six sommets, aux bords lisses et rendu avec anti-crénelage.
-- **Texte à double liaison** :
-  - Prend en charge le réglage fluide de tailles de police très grandes, avec un zoom progressif via la molette de la souris ou les curseurs de propriétés.
+- **Annotation de texte enrichi** :
+  - Prend en charge le réglage fluide de tailles de police très grandes, avec un zoom progressif via la molette de la souris.
   - Introduit un tampon de largeur physique pour éviter les retours à la ligne inattendus dus aux vibrations de rendu aux niveaux de zoom extrêmes.
-  - **Les poignées diagonales** permettent une mise à l'échelle liée et proportionnelle de la taille de police et de la zone de texte ; **les lignes de bordure gauche/droite** ne règlent que la largeur de justification.
+  - **Les huit poignées** changent la géométrie de la zone exactement comme un rectangle ; la taille de police reste constante et le texte se réenroule sur la nouvelle largeur.
 - **Pointeur laser de présentation** : destiné aux présentations ou à l'enseignement ; les traits se dissolvent en douceur au fil du temps.
 - **Numérotation incrémentale** : cliquez pour placer des marqueurs numérotés en ordre croissant.
 - **Mosaïque** : applique un flou verre dépoli sur les zones contenant des informations sensibles.
@@ -828,7 +828,7 @@ Le résultat attendu est `('4.2',)`. Après l'activation de l'extension, redéma
 | **R** | Rectangle (Rectangle) | Dessine des contours rectangulaires. |
 | **E** | Ellipse (Ellipse) | Dessine des contours elliptiques. |
 | **A** | Flèche (Arrow) | Dessine la flèche classique à six sommets, fine, allongée et à angle aigu. |
-| **T** | Texte (Text) | Saisit et organise du texte enrichi, avec prise en charge d'une taille de 1000 px et d'une liaison par glisser-déposer. |
+| **T** | Texte (Text) | Saisit et organise du texte enrichi avec mise en forme de la sélection ; les poignées ne changent que la géométrie de la zone, la taille de police reste constante. |
 | **N** | Numéro (Number) | Étiquettes de numérotation incrémentale automatique. |
 | **M** | Mosaïque (Mosaic) | Applique un flou verre dépoli aux zones sensibles. |
 | **G** | Pointeur laser (Laser) | Traces temporaires pour l'enseignement ou la présentation, qui se dissolvent automatiquement en douceur. |

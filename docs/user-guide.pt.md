@@ -220,7 +220,7 @@ teclas numéricas ou a barra de ferramentas:
 | `R` | Retângulo | caixa com estilos `Stroke` / `Highlight` / `Invert`, cantos arredondados |
 | `E` | Elipse | elipse / círculo |
 | `A` | Seta | setas clássicas (com penas, KDE, bidirecional) |
-| `T` | Texto | texto rico; a roda ou os controles deslizantes redimensionam; as alças diagonais escalam ambos, as alças laterais ajustam a quebra de linha; tamanho exato em pt, família de fonte, negrito / itálico no painel de fontes |
+| `T` | Texto | texto rico com formatação da seleção; a roda ajusta o tamanho da fonte; as oito alças redimensionam a caixa como um retângulo (o tamanho da fonte permanece constante e o texto se reacomoda); tamanho exato em pt, família de fonte, negrito / itálico no painel de fontes |
 | `N` | Número | marcadores numerados sequenciais (arábico, alfa, romano, chinês, …) |
 | `M` | Mosaico | desfoque fosco acrílico para ocultar conteúdo sensível |
 | `G` | Laser | traços temporários que se dissolvem automaticamente |
@@ -244,13 +244,17 @@ alças:
 - arraste as alças de canto / borda para redimensionar;
 - arraste a alça redonda acima da borda superior para rotacionar;
 - pressione `Delete` / `Backspace` para remover;
-- dê dois cliques no texto para editá-lo no local.
+- dê dois cliques no texto para editá-lo no local (clicar com a ferramenta de
+  texto em uma caixa de texto existente também a seleciona e edita).
 
-O painel de propriedades (lado direito) edita a anotação selecionada: cor,
-largura, estilo, família / tamanho / negrito / itálico da fonte do texto.
-Várias anotações podem ser selecionadas arrastando uma caixa de seleção sob a
-ferramenta `Select`; o grupo pode então ser movido, redimensionado, rotacionado
-e excluído em conjunto.
+O painel de propriedades (lado direito) edita a anotação selecionada. Formas
+oferecem cor, largura e estilo; texto oferece família / tamanho / negrito /
+itálico da fonte, cor do texto, realce do texto, preenchimento da caixa e um
+controle deslizante de opacidade. A cor e o realce do texto atuam na seleção
+local durante a edição, ou em todo o texto sem seleção; o preenchimento e a
+opacidade atuam sempre na caixa inteira. Várias anotações podem ser selecionadas
+arrastando uma caixa de seleção sob a ferramenta `Select`; o grupo pode então
+ser movido, redimensionado, rotacionado e excluído em conjunto.
 
 ### 4.2 Ações
 

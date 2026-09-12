@@ -225,7 +225,7 @@ con las teclas numéricas o con la barra de herramientas:
 | `R` | Rectángulo | caja con estilos `Trazo` / `Resaltado` / `Invertir`, esquinas redondeadas |
 | `E` | Elipse | elipse / círculo |
 | `A` | Flecha | flechas clásicas (emplumadas, KDE, bidireccionales) |
-| `T` | Texto | texto enriquecido; la rueda o los controles deslizantes redimensionan; las asas diagonales escalan ambos ejes, las laterales ajustan el ajuste de línea; tamaño exacto en puntos, familia de fuente, negrita / cursiva en el panel de fuentes |
+| `T` | Texto | texto enriquecido con formato de la selección; la rueda ajusta el tamaño de la fuente; las ocho asas redimensionan la caja como un rectángulo (el tamaño de fuente se mantiene constante y el texto se reajusta); tamaño exacto en puntos, familia de fuente, negrita / cursiva en el panel de fuentes |
 | `N` | Número | marcadores numerados secuenciales (arábicos, alfa, romanos, chinos, …) |
 | `M` | Mosaico | desenfoque de vidrio esmerilado acrílico para ocultar contenido sensible |
 | `G` | Láser | trazos temporales que se disuelven automáticamente |
@@ -249,10 +249,16 @@ asas:
 - arrastre las asas de las esquinas / bordes para redimensionar;
 - arrastre el asa redonda sobre el borde superior para rotar;
 - pulse `Delete` / `Backspace` para eliminar;
-- haga doble clic en el texto para editarlo en el lugar.
+- haga doble clic en el texto para editarlo en el lugar (también puede hacer
+  clic con la herramienta de texto sobre un cuadro de texto existente para
+  seleccionarlo y editarlo).
 
-El panel de propiedades (lado derecho) edita la anotación seleccionada: color,
-ancho, estilo, familia / tamaño de fuente del texto, negrita / cursiva. Se
+El panel de propiedades (lado derecho) edita la anotación seleccionada. Las
+formas ofrecen color, ancho y estilo; el texto ofrece familia / tamaño de
+fuente / negrita / cursiva, color del texto, resaltado del texto, relleno del
+cuadro y un deslizador de opacidad. El color y el resaltado del texto se
+aplican a la selección local durante la edición, o a todo el texto si no hay
+selección; el relleno y la opacidad se aplican siempre a todo el cuadro. Se
 pueden seleccionar varias anotaciones arrastrando un cuadro de selección con la
 herramienta `Seleccionar`; luego el grupo se puede mover, redimensionar, rotar y
 eliminar en conjunto.

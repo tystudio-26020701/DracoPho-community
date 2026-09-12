@@ -43,10 +43,10 @@ Permite capturar la pantalla al instante y abrir una capa de anotación a pantal
   - `高亮`: un efecto de cobertura tipo resaltador implementado con `CompositionMode_Multiply` y relleno semitransparente.
   - `反色`: invierte los canales RGB de los píxeles del área cubierta por el rectángulo, conservando el contorno exterior como pista visual.
 - **Flecha optimizada**: utiliza la clásica trayectoria de flecha de seis vértices, con bordes suaves y renderizado antialias.
-- **Texto doblemente vinculado**:
-  - Admite el ajuste continuo de tamaños de fuente muy grandes, con escala suave mediante la rueda del ratón o el control deslizante de propiedades.
+- **Anotación de texto enriquecido**:
+  - Admite el ajuste continuo de tamaños de fuente muy grandes, con escala suave mediante la rueda del ratón.
   - Introduce un diseño de búfer de anchura física para evitar saltos de línea inesperados causados por el temblor del renderizado en proporciones de escala extremadamente altas.
-  - Los **puntos de control en las esquinas** permiten escalar proporcionalmente y de forma vinculada el tamaño de fuente y el cuadro de texto; las **líneas de control laterales** ajustan únicamente la anchura del límite de composición.
+  - **Los ocho puntos de control** cambian la geometría de la caja exactamente como un rectángulo; el tamaño de fuente se mantiene constante y el texto se reajusta a la nueva anchura.
 - **Lápiz láser de presentación**: ideal para presentaciones o clases; los trazos se desvanecen suavemente con el tiempo.
 - **Números de paso autoincrementales**: un clic coloca marcadores de paso numéricos en orden creciente.
 - **Mosaico**: permite difuminar información sensible con un efecto de desenfoque de vidrio esmerilado.
@@ -817,7 +817,7 @@ El resultado esperado es `('4.2',)`. Tras habilitar la extensión, reinicie `dra
 | **R** | Rectángulo (Rectangle) | Dibuja marcos rectangulares. |
 | **E** | Elipse (Ellipse) | Dibuja marcos elípticos. |
 | **A** | Flecha (Arrow) | Dibuja la clásica flecha de seis vértices, afilada, larga y de ángulo agudo. |
-| **T** | Texto (Text) | Introduce y compone texto enriquecido, con tamaños de fuente de hasta 1000 px y vinculación por arrastre. |
+| **T** | Texto (Text) | Introduce y compone texto enriquecido con formato de la selección; las asas solo cambian la geometría de la caja y el tamaño de fuente se mantiene constante. |
 | **N** | Número (Number) | Etiquetas de paso numéricas autoincrementales. |
 | **M** | Mosaico (Mosaic) | Difumina las regiones sensibles con efecto de vidrio esmerilado. |
 | **G** | Lápiz láser (Laser) | Trazos temporales para clases o presentaciones que se desvanecen suavemente solos. |

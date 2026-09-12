@@ -223,7 +223,7 @@ the annotation toolbar. Tools are switched with the number keys or the toolbar:
 | `R` | Rectangle | box with `Stroke` / `Highlight` / `Invert` styles, rounded corners |
 | `E` | Ellipse | ellipse / circle |
 | `A` | Arrow | classic arrows (fletched, KDE, bidirectional) |
-| `T` | Text | rich text; wheel or sliders resize; diagonal handles scale both, side handles adjust wrap; exact pt size, font family, bold / italic in the font panel |
+| `T` | Text | rich text with per-selection formatting; wheel resizes the font; all eight handles resize the box like a rectangle (font size stays constant, text re-wraps); exact pt size, font family, bold / italic in the font panel |
 | `N` | Number | sequential numbered markers (Arabic, alpha, roman, Chinese, …) |
 | `M` | Mosaic | acrylic frost blur to hide sensitive content |
 | `G` | Laser | temporary strokes that dissolve automatically |
@@ -245,12 +245,16 @@ Switch to **Select** (`S`). Click an annotation to show its handles:
 - drag corner / edge handles to resize;
 - drag the round handle above the top edge to rotate;
 - press `Delete` / `Backspace` to remove;
-- double-click text to edit it in place.
+- double-click text to edit it in place (clicking an existing text box with the
+  Text tool also selects and edits it).
 
-The property panel (right side) edits the selected annotation: color, width,
-style, text font family / size / bold / italic. Multiple annotations can be
-selected by dragging a selection box under the `Select` tool; the group can
-then be moved, resized, rotated and deleted together.
+The property panel (right side) edits the selected annotation. Shapes offer
+color, width and style. Text offers font family / size / bold / italic, text
+color, text highlight, box fill and a box opacity slider: text color and text
+highlight act on the local selection while editing, or on the whole text
+without one; box fill and opacity always act on the whole box. Multiple
+annotations can be selected by dragging a selection box under the `Select`
+tool; the group can then be moved, resized, rotated and deleted together.
 
 ### 4.2 Actions
 

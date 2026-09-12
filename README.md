@@ -48,10 +48,10 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
   - `Highlight`: marker-pen overlay rendered with `CompositionMode_Multiply` and a semi-transparent fill.
   - `Invert`: inverts the RGB pixels covered by the rectangle while keeping the outline as a visual cue.
 - **Refined Arrow**: Sharp 6-vertex acute arrow path rendering with anti-aliasing.
-- **Dual-Gesture Text**:
-  - Supports dynamic, ultra-large font sizing with fluid adjustment via scroll wheel or property sliders.
+- **Rich-Text Annotation**:
+  - Supports dynamic, ultra-large font sizing with fluid adjustment via the scroll wheel.
   - Implements a physical width buffer to prevent unexpected wrapping across extreme scales.
-  - **Diagonal handles** scale font size and boundary box proportionally; **side borders** only adjust wrap width.
+  - **All eight handles** resize the box exactly like a rectangle; the font size stays constant and text re-wraps to the new box width.
   - **Precise font control**: the text font panel provides an exact point-size input (8-300 pt), a font family list, and Bold / Italic toggles. All of them apply to new text, the inline editor, and existing annotations, and persist across sessions.
 - **Laser Pointer**: Dedicated presentation tool with pen traces that dissolve smoothly over time.
 - **Auto-Increment Marker**: Click to stamp sequential numbered markers.
@@ -782,7 +782,7 @@ The expected result is `('4.2',)`. On GNOME Wayland, restart `dracoPho` after en
 | **R** | Rectangle | Draws rectangular bounding boxes. |
 | **E** | Ellipse | Draws elliptical bounding boxes. |
 | **A** | Arrow | Draws classic pointy-tailed arrows. |
-| **T** | Text | Types rich text (supports 1000px size and dual-gesture scale). |
+| **T** | Text | Types rich text with per-selection formatting; handles resize the box like a rectangle while the font size stays constant. |
 | **N** | Number | Stamps sequential auto-incrementing numbered markers. |
 | **M** | Mosaic | Covers sensitive data with acrylic frost blur. |
 | **G** | Laser | Places temporary laser markings that dissolve automatically over time. |
