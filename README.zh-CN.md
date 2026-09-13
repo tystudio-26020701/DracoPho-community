@@ -811,6 +811,25 @@ cmake --build build-windows
 
 当前 Windows 支持范围是普通截图与图片标注。滚动截图、合成器专用窗口检测和 Linux 桌面快捷方式在 Windows 上不可用。内置的 Python 辅助脚本（`dracoPho-ocr`、`dracoPho-code-scan`、`dracoPho-translate`）不会自动安装，请参考上方的 [OCR 后端](#ocr-后端可选)、[扫码后端](#扫码后端可选)和翻译章节进行手动配置。
 
+#### macOS
+
+安装 Xcode Command Line Tools、Qt 6（经 [aqtinstall](https://github.com/miurahr/aqtinstall) 或官方安装器）、CMake 和 Ninja。如需录制功能，安装 FFmpeg 开发库（可经 conda-forge：`micromamba create -p ~/ffenv -c conda-forge ffmpeg`）。
+
+```bash
+# 基础构建（截图、窗口枚举、标注——不含录制）
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=$HOME/Qt/6.8.3/macos
+cmake --build build
+
+# 含录制（FFmpeg 经 conda-forge）
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.3/macos;$HOME/ffenv" \
+  -DMARK_SHOT_REQUIRE_FFMPEG=ON
+cmake --build build
+```
+
+macOS 支持包括屏幕截图（Cocoa/QScreen）、Quartz `CGWindowListCopyWindowInfo` 原生窗口枚举（无需检测脚本）、以及经 FFmpeg/AVFoundation 录制。首次使用时请求 TCC 权限（屏幕录制、辅助功能）。macOS 15（Sequoia）x86_64 架构已实证。
+
 ### 构建与编译
 
 ```bash

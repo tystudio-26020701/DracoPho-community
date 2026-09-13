@@ -728,6 +728,25 @@ cmake --build build-windows
 
 Windows support currently targets normal screenshots and image annotation. Scrolling capture, compositor-specific window detection, and Linux desktop entries are not available on Windows. The bundled Python helper scripts (`dracoPho-ocr`, `dracoPho-code-scan`, `dracoPho-translate`) are not installed automatically—see the [OCR Backend](#ocr-backend-optional), [Code Scan Backend](#code-scan-backend-optional), and translation sections above for manual Windows setup instructions.
 
+#### macOS
+
+Install Xcode Command Line Tools, Qt 6 (via [aqtinstall](https://github.com/miurahr/aqtinstall) or the official installer), CMake, and Ninja. For recording support, install FFmpeg development libraries (e.g. via conda-forge: `micromamba create -p ~/ffenv -c conda-forge ffmpeg`).
+
+```bash
+# Basic build (screen capture, window enumeration, annotation — no recording)
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=$HOME/Qt/6.8.3/macos
+cmake --build build
+
+# With recording (FFmpeg via conda-forge)
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.3/macos;$HOME/ffenv" \
+  -DMARK_SHOT_REQUIRE_FFMPEG=ON
+cmake --build build
+```
+
+macOS support includes screen capture (Cocoa/QScreen), native window enumeration via Quartz `CGWindowListCopyWindowInfo` (no detection scripts needed), and recording via FFmpeg/AVFoundation. TCC permissions (Screen Recording, Accessibility) are requested on first use. Verified on macOS 15 (Sequoia), x86_64 architecture.
+
 ### Build Steps
 
 ```bash
