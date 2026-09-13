@@ -20,6 +20,8 @@
 #include <cstdio>
 #include <optional>
 
+#include <new>
+
 namespace markshot::cli {
 namespace {
 
@@ -168,7 +170,20 @@ QJsonObject captureOneToFile(const CaptureRequest &request,
                              const QString &baseName,
                              QTextStream *err)
 {
-    const CaptureResult result = captureScreenFrame(request);
+    CaptureResult result;
+    try {
+        result = captureScreenFrame(request);
+    } catch (const std::bad_alloc &) {
+        if (err) {
+            *err << "screen capture failed: no usable desktop frame in this session "
+                    "(run from an interactive session)\n";
+        }
+        return {{QStringLiteral("path"), QJsonValue::Null},
+                {QStringLiteral("width"), 0},
+                {QStringLiteral("height"), 0},
+                {QStringLiteral("output"), QJsonValue::Null},
+                {QStringLiteral("error"), QStringLiteral("screen capture failed: no usable desktop frame in this session (run from an interactive session)")}};
+    }
 
     if (result.image.isNull()) {
         if (err) {
@@ -227,7 +242,21 @@ QJsonObject captureOneToFile(const CaptureRequest &request,
 // instead of "path") so agents can treat both destinations uniformly.
 QJsonObject captureOneToInline(const CaptureRequest &request, QTextStream *err)
 {
-    const CaptureResult result = captureScreenFrame(request);
+    CaptureResult result;
+    try {
+        result = captureScreenFrame(request);
+    } catch (const std::bad_alloc &) {
+        if (err) {
+            *err << "screen capture failed: no usable desktop frame in this session "
+                    "(run from an interactive session)\n";
+        }
+        return {{QStringLiteral("path"), QJsonValue::Null},
+                {QStringLiteral("width"), 0},
+                {QStringLiteral("height"), 0},
+                {QStringLiteral("output"), QJsonValue::Null},
+                {QStringLiteral("data"), QJsonValue::Null},
+                {QStringLiteral("error"), QStringLiteral("screen capture failed: no usable desktop frame in this session (run from an interactive session)")}};
+    }
 
     if (result.image.isNull()) {
         if (err) {
