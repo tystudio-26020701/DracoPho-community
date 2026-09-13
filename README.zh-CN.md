@@ -7,7 +7,7 @@
     </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
-    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
+    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows | macOS" />
     <img src="https://img.shields.io/badge/display-Wayland%20%7C%20X11-9979d9?labelColor=4a5054&style=flat-square" alt="Display Wayland | X11" />
     <img src="https://img.shields.io/badge/features-Screenshot%20%7C%20OCR%20%7C%20Pin%20%7C%20Scroll-ff8f59?labelColor=4a5054&style=flat-square" alt="Features Screenshot | OCR | Pin | Scroll" />
   </p>
@@ -84,6 +84,7 @@
 
 ### 跨显示服务器支持
 - **Wayland**：使用 PipeWire portal screencast 支持录制和实验性滚动截图，并处理共享内存与 DMA-BUF 两类帧路径；使用 `grim` 支持 wlroots 截屏，使用 `layer-shell-qt` 创建原生覆盖层，使用 `wl-copy` 持久化剪贴板。
+- **macOS**：使用 Cocoa 框架截屏（QScreen）、Quartz `CGWindowListCopyWindowInfo` 原生窗口枚举（无需检测脚本）、AVFoundation 经 FFmpeg 录制。macOS 15（Sequoia）已实证。首次使用时请求 TCC 权限（屏幕录制、辅助功能）。剪贴板经 Qt 使用 NSPasteboard。
 - **X11**：使用 `QScreen::grabWindow` 截屏、全屏置顶窗口作为覆盖层、`xclip` 持久化剪贴板。
 - **Windows**：使用 Qt 原生截屏与剪贴板 API 支持基础截图、标注、复制、保存和贴图流程。PipeWire、xdg-desktop-portal、`grim`、XCB 窗口检测、LayerShellQt、GNOME Shell helper 等 Linux 专用后端会在编译期关闭。
 - Linux 显示服务器后端会在运行时通过 `$XDG_SESSION_TYPE` 自动检测；Windows 使用 Qt 原生平台后端。
@@ -156,7 +157,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 
 ## 产品功能对比
 
-太殷龙摄 社区版是一款**开源（MIT）、跨平台（Linux X11/Wayland 原生 + Windows）、可完全离线**的截图·标注·贴图·OCR·翻译·录屏一体化工具。下表按各产品官网与官方文档整理（截至 **2026 年 8 月**），覆盖全球开源与商用、各主流平台的高关注度截图工具。能力如实标注：**✅ 内置支持**；**⭕ 部分支持（受付费层级、平台或外部工具/服务限制）**；**❌ 不支持**。一律按"开箱即用"口径统计，不与付费会员、云端服务或实验性分支挂钩；⭕ 的具体限制见下方"功能详解"。
+太殷龙摄 社区版是一款**开源（MIT）、跨平台（Linux X11/Wayland + Windows + macOS）、可完全离线**的截图·标注·贴图·OCR·翻译·录屏一体化工具。下表按各产品官网与官方文档整理（截至 **2026 年 8 月**），覆盖全球开源与商用、各主流平台的高关注度截图工具。能力如实标注：**✅ 内置支持**；**⭕ 部分支持（受付费层级、平台或外部工具/服务限制）**；**❌ 不支持**。一律按"开箱即用"口径统计，不与付费会员、云端服务或实验性分支挂钩；⭕ 的具体限制见下方"功能详解"。
 
 ### 核心能力总览
 
@@ -198,7 +199,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 | 能力 | 太殷龙摄 社区版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截图工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 原生 Linux Wayland | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 跨平台（覆盖 ≥2 个桌面 OS） | ⭕ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 跨平台（覆盖 ≥2 个桌面 OS） | ✅ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 插件 / 扩展机制 | ✅ | ⭕ | ❌ | ❌ | ⭕ | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ⭕ | ❌ | ❌ |
 | 开源 / 免费 | ✅ | ✅ | ⭕ | ⭕ | ✅ | ✅ | ✅ | ✅ | ⭕ | ✅ | ❌ | ❌ | ✅ | ⭕ | ⭕ |
 
@@ -234,7 +235,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 **四、平台与生态**
 
 - **原生 Linux Wayland** — 太殷龙摄 原生支持 PipeWire portal、grim、layer-shell、KDE KWin ScreenShot2 与 GNOME 扩展；开源阵营仅 Spectacle（KDE）达到同等原生水平，Flameshot / ksnip 的 Wayland 为实验性或依赖 portal。
-- **跨平台** — Snipaste、Flameshot、ksnip、Snagit 覆盖 Windows + macOS + Linux 三大桌面 OS；太殷龙摄 覆盖 Linux + Windows（macOS 在规划中）；ShareX、PicPick、Windows 截图工具、Spectacle、CleanShot X、Shottr、Xnip、iShot 为单平台工具。
+- **跨平台** — Snipaste、Flameshot、ksnip、Snagit 覆盖 Windows + macOS + Linux 三大桌面 OS；太殷龙摄 覆盖 Linux + Windows + macOS（macOS 15 已实证：全量构建、屏幕截图、Quartz 窗口枚举、录制）；ShareX、PicPick、Windows 截图工具、Spectacle、CleanShot X、Shottr、Xnip、iShot 为单平台工具。
 - **插件 / 扩展机制** — 太殷龙摄 提供 Qt 插件体系与 GitHub 插件市场（OCR / 翻译 / 扫码 provider 可扩展）；ksnip、Greenshot 有插件 API；ShareX、Spectacle、Snagit、CleanShot X、Shottr 以自定义动作 / 集成替代。
 - **开源 / 免费** — 太殷龙摄 社区版为 MIT 开源、完全免费、无广告、无账号、无需联网；ShareX、Flameshot、ksnip、Spectacle、Greenshot（Windows）同为开源免费；Shottr、Windows 截图工具免费；PixPin / Snipaste / PicPick / Xnip / iShot 为闭源免费 + 付费升级；Snagit / CleanShot X 为付费商业软件。
 

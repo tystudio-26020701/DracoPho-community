@@ -7,7 +7,7 @@
     </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
-    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
+    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows | macOS" />
     <img src="https://img.shields.io/badge/display-Wayland%20%7C%20X11-9979d9?labelColor=4a5054&style=flat-square" alt="Display Wayland | X11" />
     <img src="https://img.shields.io/badge/features-Screenshot%20%7C%20OCR%20%7C%20Pin%20%7C%20Scroll-ff8f59?labelColor=4a5054&style=flat-square" alt="Features Screenshot | OCR | Pin | Scroll" />
   </p>
@@ -185,7 +185,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 | 能力 | 太殷龍攝 社群版 | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | 截圖工具 | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 原生 Linux Wayland | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 跨平台（涵蓋 ≥2 個桌面 OS） | ⭕ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 跨平台（涵蓋 ≥2 個桌面 OS） | ✅ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 外掛 / 擴充機制 | ✅ | ⭕ | ❌ | ❌ | ⭕ | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ⭕ | ❌ | ❌ |
 | 開源 / 免費 | ✅ | ✅ | ⭕ | ⭕ | ✅ | ✅ | ✅ | ✅ | ⭕ | ✅ | ❌ | ❌ | ✅ | ⭕ | ⭕ |
 
@@ -220,7 +220,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 **四、平台與生態**
 
 - **原生 Linux Wayland** — 太殷龍攝 原生支援 PipeWire portal、grim、layer-shell、KDE KWin ScreenShot2 與 GNOME 擴充套件；開源陣營僅 Spectacle（KDE）達到同等原生水準，Flameshot / ksnip 的 Wayland 為實驗性或依賴 portal。
-- **跨平台** — Snipaste、Flameshot、ksnip、Snagit 涵蓋 Windows + macOS + Linux 三大桌面 OS；太殷龍攝 涵蓋 Linux + Windows（macOS 在規劃中）；ShareX、PicPick、Windows 截圖工具、Spectacle、CleanShot X、Shottr、Xnip、iShot 為單平台工具。
+- **跨平台** — Snipaste、Flameshot、ksnip、Snagit 涵蓋 Windows + macOS + Linux 三大桌面 OS；太殷龍攝 涵蓋 Linux + Windows（macOS 已支援（macOS 15 已實證））；ShareX、PicPick、Windows 截圖工具、Spectacle、CleanShot X、Shottr、Xnip、iShot 為單平台工具。
 - **外掛 / 擴充機制** — 太殷龍攝 提供 Qt 外掛體系與 GitHub 外掛市集（OCR / 翻譯 / 掃碼 provider 可擴充）；ksnip、Greenshot 有外掛 API；ShareX、Spectacle、Snagit、CleanShot X、Shottr 以自訂動作 / 整合替代。
 - **開源 / 免費** — 太殷龍攝 社群版為 MIT 開源、完全免費、無廣告、無帳號、無需連網；ShareX、Flameshot、ksnip、Spectacle、Greenshot（Windows）同為開源免費；Shottr、Windows 截圖工具免費；PixPin / Snipaste / PicPick / Xnip / iShot 為閉源免費 + 付費升級；Snagit / CleanShot X 為付費商業軟體。
 

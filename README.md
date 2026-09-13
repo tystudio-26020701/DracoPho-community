@@ -7,7 +7,7 @@
     </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
-    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
+    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows | macOS" />
     <img src="https://img.shields.io/badge/display-Wayland%20%7C%20X11-9979d9?labelColor=4a5054&style=flat-square" alt="Display Wayland | X11" />
     <img src="https://img.shields.io/badge/features-Screenshot%20%7C%20OCR%20%7C%20Pin%20%7C%20Scroll-ff8f59?labelColor=4a5054&style=flat-square" alt="Features Screenshot | OCR | Pin | Scroll" />
   </p>
@@ -88,6 +88,7 @@ It captures screen frames instantly and opens an interactive fullscreen overlay,
 ### Cross-Platform Display Server Support
 - **Wayland**: Uses PipeWire portal screencast for recording and experimental scrolling capture, including shared-memory and DMA-BUF frame paths, `grim` for wlroots screenshot capture, `layer-shell-qt` for native overlay, and `wl-copy` for clipboard persistence.
 - **GNOME Wayland**: Uses the DracoPho Scroll Helper GNOME Shell extension for scrolling capture. Without the extension, DracoPho disables the scrolling capture action on GNOME Wayland.
+- **macOS**: Uses Cocoa framework for screen capture (QScreen), Quartz `CGWindowListCopyWindowInfo` for native window enumeration (no detection scripts needed), and AVFoundation for recording (via FFmpeg). Verified on macOS 15 (Sequoia). TCC permissions (Screen Recording, Accessibility) are requested on first use. Clipboard persistence uses NSPasteboard via Qt.
 - **X11**: Uses `QScreen::grabWindow` for screen capture, fullscreen top-level window for overlay, and `xclip` for clipboard persistence.
 - **Windows**: Uses Qt's native screen capture and clipboard APIs for the core screenshot, annotation, copy, save, and pin workflows. Linux-specific backends such as PipeWire, xdg-desktop-portal, `grim`, XCB window detection, LayerShellQt, and GNOME Shell helpers are disabled at build time.
 - Linux display server backends are detected at runtime via `$XDG_SESSION_TYPE`; Windows uses Qt's native platform backend.
@@ -208,7 +209,7 @@ DracoPho Community Edition is an **open source (MIT), cross-platform (native Lin
 | Capability | DracoPho CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Native Linux Wayland | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Cross-platform (≥2 desktop OS) | ⭕ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Cross-platform (≥2 desktop OS) | ✅ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Plugin / extension mechanism | ✅ | ⭕ | ❌ | ❌ | ⭕ | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ⭕ | ❌ | ❌ |
 | Open source / free | ✅ | ✅ | ⭕ | ⭕ | ✅ | ✅ | ✅ | ✅ | ⭕ | ✅ | ❌ | ❌ | ✅ | ⭕ | ⭕ |
 
@@ -244,7 +245,7 @@ DracoPho Community Edition is an **open source (MIT), cross-platform (native Lin
 **IV. Platform and ecosystem**
 
 - **Native Linux Wayland** — DracoPho natively supports PipeWire portal, grim, layer-shell, KDE KWin ScreenShot2 and GNOME extensions; among open source tools only Spectacle (KDE) matches that depth, while Flameshot / ksnip are experimental or portal-dependent.
-- **Cross-platform** — Snipaste, Flameshot, ksnip and Snagit cover all three major desktop OSes (Windows + macOS + Linux); DracoPho covers Linux + Windows (macOS planned); ShareX, PicPick, Snipping Tool, Spectacle, CleanShot X, Shottr, Xnip and iShot are single-platform.
+- **Cross-platform** — Snipaste, Flameshot, ksnip and Snagit cover all three major desktop OSes (Windows + macOS + Linux); DracoPho covers Linux + Windows + macOS (macOS 15 verified: full build, screen capture, window enumeration via Quartz, recording); ShareX, PicPick, Snipping Tool, Spectacle, CleanShot X, Shottr, Xnip and iShot are single-platform.
 - **Plugin / extension mechanism** — DracoPho provides a Qt plugin system with a GitHub plugin marketplace (extensible OCR / translation / code-scan providers); ksnip and Greenshot have plugin APIs; ShareX, Spectacle, Snagit, CleanShot X and Shottr substitute custom actions / integrations.
 - **Open source / free** — DracoPho CE is MIT licensed, fully free, ad-free, account-free and network-optional; ShareX, Flameshot, ksnip, Spectacle and Greenshot (Windows) are open-source free too; Shottr and Snipping Tool are free; PixPin / Snipaste / PicPick / Xnip / iShot are closed-source freemium; Snagit / CleanShot X are paid commercial software.
 

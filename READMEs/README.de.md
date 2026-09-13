@@ -7,7 +7,7 @@
     </a>
     <img src="https://img.shields.io/badge/language-C%2B%2B-dfb56c?labelColor=4a5054&style=flat-square&logo=c%2B%2B" alt="Language C++" />
     <img src="https://img.shields.io/badge/framework-Qt%206-92d076?labelColor=4a5054&style=flat-square&logo=qt" alt="Framework Qt 6" />
-    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows" />
+    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-28c0e7?labelColor=4a5054&style=flat-square" alt="Platform Linux | Windows | macOS" />
     <img src="https://img.shields.io/badge/display-Wayland%20%7C%20X11-9979d9?labelColor=4a5054&style=flat-square" alt="Display Wayland | X11" />
     <img src="https://img.shields.io/badge/features-Screenshot%20%7C%20OCR%20%7C%20Pin%20%7C%20Scroll-ff8f59?labelColor=4a5054&style=flat-square" alt="Features Screenshot | OCR | Pin | Scroll" />
   </p>
@@ -190,7 +190,7 @@ DracoPho Community Edition ist ein **Open-Source- (MIT), plattformübergreifende
 | Fähigkeit | DracoPho CE | ShareX | PixPin | Snipaste | Flameshot | ksnip | Spectacle | Greenshot | PicPick | Snipping Tool | Snagit | CleanShot X | Shottr | Xnip | iShot |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Natives Linux-Wayland | ✅ | ❌ | ❌ | ❌ | ⭕ | ⭕ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Plattformübergreifend (≥2 Desktop-Betriebssysteme) | ⭕ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Plattformübergreifend (≥2 Desktop-Betriebssysteme) | ✅ | ❌ | ⭕ | ✅ | ✅ | ✅ | ❌ | ⭕ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Plugin- / Erweiterungsmechanismus | ✅ | ⭕ | ❌ | ❌ | ⭕ | ✅ | ⭕ | ✅ | ❌ | ❌ | ⭕ | ⭕ | ⭕ | ❌ | ❌ |
 | Open Source / Kostenlos | ✅ | ✅ | ⭕ | ⭕ | ✅ | ✅ | ✅ | ✅ | ⭕ | ✅ | ❌ | ❌ | ✅ | ⭕ | ⭕ |
 
@@ -225,7 +225,7 @@ DracoPho Community Edition ist ein **Open-Source- (MIT), plattformübergreifende
 **IV. Plattform und Ökosystem**
 
 - **Natives Linux-Wayland** — DracoPho unterstützt nativ das PipeWire-Portal, grim, layer-shell, KDE KWin ScreenShot2 und GNOME-Erweiterungen; unter den Open-Source-Werkzeugen erreicht nur Spectacle (KDE) diese Tiefe, während Flameshot / ksnip experimentell oder portalabhängig sind.
-- **Plattformübergreifend** — Snipaste, Flameshot, ksnip und Snagit decken alle drei großen Desktop-Betriebssysteme ab (Windows + macOS + Linux); DracoPho deckt Linux + Windows ab (macOS geplant); ShareX, PicPick, Snipping Tool, Spectacle, CleanShot X, Shottr, Xnip und iShot sind Single-Platform-Werkzeuge.
+- **Plattformübergreifend** — Snipaste, Flameshot, ksnip und Snagit decken alle drei großen Desktop-Betriebssysteme ab (Windows + macOS + Linux); DracoPho deckt Linux + Windows + macOS ab (macOS 15 verifiziert); ShareX, PicPick, Snipping Tool, Spectacle, CleanShot X, Shottr, Xnip und iShot sind Single-Platform-Werkzeuge.
 - **Plugin- / Erweiterungsmechanismus** — DracoPho bietet ein Qt-Plugin-System mit einem GitHub-Plugin-Marktplatz (erweiterbare OCR- / Übersetzungs- / Code-Scan-Provider); ksnip und Greenshot haben Plugin-APIs; ShareX, Spectacle, Snagit, CleanShot X und Shottr ersetzen das durch benutzerdefinierte Aktionen / Integrationen.
 - **Open Source / Kostenlos** — DracoPho CE ist MIT-lizenziert, vollständig kostenlos, ohne Werbung, ohne Konto und ohne Netzzwang; ShareX, Flameshot, ksnip, Spectacle und Greenshot (Windows) sind ebenfalls Open Source und kostenlos; Shottr und das Snipping Tool sind kostenlos; PixPin / Snipaste / PicPick / Xnip / iShot sind Closed-Source-Freemium; Snagit / CleanShot X sind kostenpflichtige kommerzielle Software.
 
