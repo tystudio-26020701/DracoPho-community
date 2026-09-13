@@ -107,6 +107,7 @@ private:
     bool m_finishEmitted = false;
     int m_frameCount = 0;
     qint64 m_recordedElapsedMs = 0;
+    qint64 m_lastWrittenFrameMs = -1;
     RecordingStatusThrottler m_statusThrottler;
 };
 

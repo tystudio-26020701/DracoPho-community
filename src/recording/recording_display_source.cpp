@@ -52,7 +52,10 @@ QVector<DisplaySource> availableDisplaySources()
     QVector<DisplaySource> sources;
     const QList<QScreen *> screens = QGuiApplication::screens();
     const QRect virtualGeometry = virtualScreensGeometry();
-    if (screens.size() > 1 && !virtualGeometry.isEmpty()) {
+    // 始终提供 all-outputs 源：CLI 帮助文本承诺 "--record-display all"
+    // 可用，单屏机器（多数笔记本/VM）同样要能解析该值——此前仅多屏时才
+    // 生成，单屏上报 "display id not found: all"。
+    if (!virtualGeometry.isEmpty()) {
         DisplaySource allDisplays;
         allDisplays.allOutputs = true;
         allDisplays.outputName = QStringLiteral("all-displays");

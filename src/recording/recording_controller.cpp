@@ -115,11 +115,23 @@ void RecordingController::handleFrame(const RecordingFrameSample &sample)
         m_writerStarted = true;
     }
 
+    m_recordedElapsedMs = std::max(m_recordedElapsedMs, sample.timestampMs);
+
+    // 按请求的 fps 节流采样：捕获流可能以高于目标帧率的节拍送帧（Windows
+    // WGC 随合成器 ~40fps、PipeWire 同理），而编码器按 1/fps 逐帧打时间戳，
+    // 全量写入会把产物时间基拉伸数倍（实测 15fps 标称 ×2.7）。丢弃间隔不足
+    // 0.9 帧的样本，保证输出时长与墙钟一致；耗时统计不受丢弃影响。
+    const qint64 intervalMs = m_options.fps > 0 ? qMax<qint64>(1, 1000 / m_options.fps) : 1;
+    if (m_writerStarted && m_lastWrittenFrameMs >= 0
+        && sample.timestampMs - m_lastWrittenFrameMs < intervalMs * 9 / 10) {
+        publishStatus(false);
+        return;
+    }
     if (!m_writer->writeFrame(sample, &error)) {
         fail(error);
         return;
     }
-    m_recordedElapsedMs = std::max(m_recordedElapsedMs, sample.timestampMs);
+    m_lastWrittenFrameMs = sample.timestampMs;
     ++m_frameCount;
     publishStatus(false);
 }
