@@ -50,6 +50,30 @@
   Previously such combinations either launched an unexpected full-screen
   overlay on the user's desktop or silently dropped options.
 
+**macOS platform support (first-class)**
+- `--list-windows` now enumerates windows natively on macOS via Quartz
+  (`CGWindowListCopyWindowInfo`, pure C API, no detection scripts needed);
+  `platformName()` correctly reports `"macos"` (previously misreported as
+  `"wayland"`). Verified on macOS 15.7.9 with dynamic window list updates.
+- The full build (main binary + 58 tests) compiles and passes on macOS
+  without any porting changes — Qt portability was already sufficient.
+
+**Recording fixes**
+- Single-display machines (most laptops/VMs) can now use
+  `--record-display all` — previously only multi-screen setups offered the
+  "all" virtual display source, so single-screen systems reported
+  `display id not found: all`.
+- Recording now throttles sampling to the requested fps: capture streams
+  deliver frames at the compositor rate (Windows WGC ~41fps, PipeWire
+  similar) while the encoder stamps at 1/fps, previously stretching the
+  output timeline ~2.7×. Verified cross-platform: Windows 72f@4.98s,
+  Linux 79f@5.2s, macOS 65f@4.85s (all at 15fps target).
+
+**Robustness**
+- Screen captures in a session without a desktop (SSH session-0 on Windows)
+  now return a structured JSON error instead of crashing with
+  `std::bad_alloc`.
+
 ### 26.8.5.1
 
 > **DracoPho Community Edition** — patch release. Fixes the floating ball

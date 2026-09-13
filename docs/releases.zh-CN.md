@@ -43,6 +43,24 @@
   并点名冲突选项与对应的无头替代方案。此前这类组合要么在用户真实桌面
   上弹出意料之外的全屏遮罩，要么静默丢弃选项。
 
+**macOS 平台支持（一等公民）**
+- `--list-windows` 在 macOS 经 Quartz 原生枚举窗口（CGWindowList 纯 C API，
+  无需检测脚本）；`platformName()` 正确报告 `"macos"`（此前误报 `"wayland"`）。
+  macOS 15.7.9 实机动态窗口列表验证通过。
+- 全量构建（主程序 + 58 项测试）在 macOS 编译并全绿——零移植改动。
+
+**录制修复**
+- 单屏机器（多数笔记本/VM）现在可以使用 `--record-display all`——此前仅
+  多屏环境才提供 "all" 虚拟显示器源，单屏系统报 `display id not found: all`。
+- 录制现在按请求的 fps 节流采样：捕获流按合成器节拍送帧（Windows WGC
+  ~41fps）而编码器按 1/fps 打时间戳，此前产物时间基被拉伸 ~2.7×。
+  跨平台实证：Windows 72帧@4.98s、Linux 79帧@5.2s、macOS 65帧@4.85s
+  （目标均为 15fps）。
+
+**健壮性**
+- 无桌面会话（如 Windows SSH session-0）下截屏返回结构化 JSON 错误，
+  不再 `std::bad_alloc` 裸崩。
+
 ### 26.8.5.1
 
 > **太殷龙摄 社区版**——补丁发布。修复 GNOME Wayland 下截图后悬浮球漂移、
