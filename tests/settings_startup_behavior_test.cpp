@@ -36,10 +36,13 @@ public:
         // 与 USERPROFILE 兜底路径，保证候选目录全部落在临时目录内。
         qputenv("LOCALAPPDATA", m_dir.path().toUtf8());
         qputenv("APPDATA", m_dir.path().toUtf8());
-        return qputenv("USERPROFILE", m_dir.path().toUtf8());
+        qputenv("USERPROFILE", m_dir.path().toUtf8());
 #else
-        return qputenv("XDG_CONFIG_HOME", m_dir.path().toUtf8());
+        qputenv("XDG_CONFIG_HOME", m_dir.path().toUtf8());
 #endif
+        // 显式覆盖在所有平台都精确生效（macOS 的 Qt 路径不认 XDG）；指向
+        // 已写入 "{}" 的 dracoPho 子目录本身。
+        return qputenv("DRACOPHO_CONFIG_DIR", configDir.toUtf8());
     }
 
 private:

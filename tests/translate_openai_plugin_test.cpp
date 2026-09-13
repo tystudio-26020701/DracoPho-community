@@ -96,13 +96,16 @@ private:
                 return;
             }
             const QByteArray header = m_request.left(headerEnd);
-            const QByteArray marker = QByteArrayLiteral("Content-Length:");
-            const int lengthPos = header.indexOf(marker);
+            // RFC 9110：头字段名大小写不敏感（macOS Qt 6.8 的 QNAM 发小写头）。
+            // QByteArray::indexOf 的 CaseInsensitive 重载在 Qt 6.8 已移除，
+            // 统一用 toLower 定位（toLower 保长，后续偏移量对原文同样成立）。
+            const QByteArray lowerHeader = header.toLower();
+            const int lengthPos = lowerHeader.indexOf(QByteArrayLiteral("content-length:"));
             int contentLength = 0;
             if (lengthPos >= 0) {
-                const int lineEnd = header.indexOf('\n', lengthPos);
-                contentLength = header.mid(lengthPos + marker.size(),
-                                           lineEnd < 0 ? -1 : lineEnd - lengthPos - marker.size())
+                const int lineEnd = lowerHeader.indexOf('\n', lengthPos);
+                contentLength = header.mid(lengthPos + QByteArrayLiteral("content-length:").size(),
+                                           lineEnd < 0 ? -1 : lineEnd - lengthPos - QByteArrayLiteral("content-length:").size())
                                     .trimmed()
                                     .toInt();
             }
@@ -202,7 +205,11 @@ private slots:
         QCOMPARE(translations.size(), 1);
         QCOMPARE(translations.first().id, 7);
         QCOMPARE(translations.first().text, QStringLiteral("你好"));
-        QVERIFY(server.requestBody().contains("\"model\":\"test-model\""));
+        // 按语义比对请求体字段，而非子串匹配：序列化差异或偶发的杂散请求
+        // 不应造成平台相关的假失败。
+        const QJsonObject requestBody = QJsonDocument::fromJson(server.requestBody()).object();
+        QCOMPARE(requestBody.value(QStringLiteral("model")).toString(),
+                 QStringLiteral("test-model"));
     }
 };
 

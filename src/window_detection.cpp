@@ -40,6 +40,14 @@ QString envConfigDir(const QString &name, const QString &relativePath = QStringL
 QStringList appConfigDirCandidates()
 {
     QStringList candidates;
+    // 显式环境覆盖优先于一切平台候选：测试隔离（macOS 上 XDG 不生效）与
+    // 容器/多实例部署都靠它保证配置目录唯一确定。
+    const QString explicitOverride =
+        qEnvironmentVariable("DRACOPHO_CONFIG_DIR").trimmed();
+    if (!explicitOverride.isEmpty()) {
+        candidates.append(explicitOverride);
+        return candidates;
+    }
 #if defined(Q_OS_WIN)
     const QString localAppData = envConfigDir(QStringLiteral("LOCALAPPDATA"));
     if (!localAppData.isEmpty()) {
