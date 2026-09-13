@@ -214,6 +214,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 - **螢幕錄製** — 太殷龍攝 支援 MP4 / GIF / 動畫 WebP，無人值守錄製（區域 / 顯示器）靜默執行、不彈窗不搶焦點；ShareX、PixPin、Spectacle（Plasma 6）、PicPick、Windows 截圖工具、Snagit、CleanShot X、iShot 內建；Snipaste、Flameshot、ksnip、Greenshot、Shottr、Xnip 不支援。
 - **動畫 GIF / WebP 輸出** — 太殷龍攝 原生錄製**動畫 WebP**（體積更小、支援透明度），競品均無法原生輸出動畫 WebP；PixPin、iShot 支援 GIF 錄製，ShareX 支援 GIF（WebP 僅靜態儲存），Snagit、CleanShot X 支援 GIF 匯出。
 - **圖床 / 雲端上傳** — 太殷龍攝 內建 ImgURL / sm.ms / imgbb / litterbox / 自訂指令，`Ctrl+U` 上傳並複製連結；ShareX 上傳目標最齊全；Greenshot、PicPick、Snagit、CleanShot X 內建雲端上傳；Flameshot 僅 Imgur，ksnip 僅 Imgur / FTP / 腳本，Shottr 需啟用 S3；Snipaste、PixPin、Windows 截圖工具、Xnip、iShot 無。
+- **無頭 CLI / 腳本化** — 太殷龍攝 提供完整無頭鏈路：`--capture-to` 區域 / 顯示器截圖、`--list-windows` + `--window` 視窗 / 元件截圖、`--record-region` / `--record-display` 無人值守錄製、`--record-wait-json` 等待並輸出結構化狀態；全程無視窗、無彈窗、無焦點搶佔，可指定 **PID / 行程名稱**並截取被遮擋 / 最小化視窗。ShareX（僅 Windows）、Flameshot、ksnip、Spectacle 有較強 CLI；Snipaste 的 CLI 為付費版功能；PixPin 僅有 JS 腳本動作引擎。
 - **懸浮球快捷入口** — 太殷龍攝 內建可拖曳、可吸附螢幕邊緣、閒置自動半透明的懸浮球（X11 / Windows / macOS 支援邊緣吸附，Wayland 受協定限制保持自由漂浮）；同類僅 PixPin 提供。
 - **截圖歷史** — 太殷龍攝 暫未提供獨立歷史面板；ShareX、Snipaste、Flameshot、Snagit、CleanShot X 內建歷史，ksnip / PicPick / Shottr / iShot 有輕量替代（多標籤 / 圖庫 / 置頂暫存），其餘無。
 
@@ -491,11 +492,7 @@ home.packages = with pkgs; [
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> 無頭截圖（`--capture-to`）、多顯示器截圖（可重複的 `--display`）以及本機
+> cmake -S .04 的 Wayland（GNOME）與 X11 工作階段下執行。
 
 ### 系統依賴
 

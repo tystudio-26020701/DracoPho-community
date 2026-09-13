@@ -582,6 +582,7 @@ The official `.deb` package is built on a Debian 12 compatibility baseline. It i
 >
 > Headless capture (`--capture-to`), multi-display capture (repeatable
 > `--display`), and the headless CLI pipeline all run on Ubuntu 26.04 under
+> both Wayland (GNOME) and X11 sessions. 
 
 ### Dependencies
 

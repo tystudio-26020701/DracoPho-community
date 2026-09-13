@@ -213,6 +213,7 @@ DracoPho Community Edition è uno strumento all-in-one per **cattura, annotazion
 - **Registrazione schermo** — DracoPho registra MP4 / GIF / WebP animato con registrazione silenziosa e senza supervisione di aree/display (nessuna finestra, nessuna finestra di dialogo, nessuna sottrazione del focus); la includono ShareX, PixPin, Spectacle (Plasma 6), PicPick, Snipping Tool, Snagit, CleanShot X e iShot; Snipaste, Flameshot, ksnip, Greenshot, Shottr e Xnip no.
 - **Output GIF / WebP animato** — DracoPho registra nativamente **WebP animato** (file più piccoli, supporto alpha); nessun concorrente produce WebP animato in modo nativo. PixPin e iShot registrano GIF, ShareX registra GIF (WebP solo come salvataggio statico), Snagit e CleanShot X esportano GIF; gli altri non hanno output animato.
 - **Caricamento immagini / cloud** — DracoPho include il caricamento su ImgURL / sm.ms / imgbb / litterbox / comando personalizzato (`Ctrl+U`); ShareX ha il maggior numero di destinazioni; Greenshot, PicPick, Snagit e CleanShot X hanno il caricamento cloud integrato; Flameshot solo Imgur, ksnip Imgur/FTP/script, Shottr S3 dopo l'attivazione; Snipaste, PixPin, Snipping Tool, Xnip e iShot non lo hanno.
+- **CLI headless / scripting** — DracoPho offre una pipeline headless completa: `--capture-to` per catture di aree/display, `--list-windows` + `--window` per catture di finestre/componenti, `--record-region` / `--record-display` per registrazioni senza supervisione e `--record-wait-json` per l'output strutturato dello stato — il tutto senza finestre, finestre di dialogo o sottrazione del focus, con la possibilità di **specificare PID / nome del processo e catturare finestre oscurate o ridotte a icona**.ShareX (solo Windows), Flameshot, ksnip e Spectacle hanno CLI solide; la CLI di Snipaste è una funzione del piano a pagamento; PixPin offre soltanto un motore di azioni basato su script JS.
 - **Pallina fluttuante di accesso rapido** — DracoPho ha una pallina trascinabile che si aggancia ai bordi dello schermo (X11/Windows/macOS; su Wayland resta libera di fluttuare per i limiti del protocollo) e sfuma quando è inattiva; solo PixPin offre qualcosa di simile.
 - **Cronologia catture** — DracoPho non ha ancora un pannello dedicato della cronologia; lo hanno ShareX, Snipaste, Flameshot, Snagit e CleanShot X, mentre ksnip / PicPick / Shottr / iShot hanno alternative leggere (schede / galleria / raccolta bloccata), gli altri nessuna.
 
@@ -490,11 +491,7 @@ Per le altre distribuzioni (ad es. Ubuntu, Debian, Fedora), scarica il pacchetto
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> La cattura headless (`--capture-to`), la cattura multi-display (`--display` ripetibile) e il servizio
+> cmake -S .04.
 
 ### Dipendenze di sistema
 

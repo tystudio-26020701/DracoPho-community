@@ -219,6 +219,7 @@ DracoPho コミュニティ版は、**オープンソース（MIT）、クロス
 - **画面録画** — DracoPho は MP4 / GIF / アニメーション WebP を録画でき、静かな無人録画（領域 / ディスプレイ）に対応します（ウィンドウなし・ダイアログなし・フォーカス奪取なし）。ShareX・PixPin・Spectacle（Plasma 6）・PicPick・Snipping Tool・Snagit・CleanShot X・iShot は内蔵、Snipaste・Flameshot・ksnip・Greenshot・Shottr・Xnip にはありません。
 - **アニメーション GIF / WebP 出力** — DracoPho は**アニメーション WebP**（ファイルサイズが小さく、アルファチャンネル対応）をネイティブに録画できます。競合でアニメーション WebP をネイティブに出力できる製品はありません。PixPin と iShot は GIF 録画、ShareX は GIF 録画（WebP は静止画保存のみ）、Snagit と CleanShot X は GIF 書き出しに対応し、その他にはアニメーション出力がありません。
 - **画像アップロード / クラウド** — DracoPho は ImgURL / sm.ms / imgbb / litterbox / カスタムコマンドによるアップロード（`Ctrl+U`）を内蔵しています。アップロード先は ShareX が最多で、Greenshot・PicPick・Snagit・CleanShot X はクラウドアップロードを内蔵、Flameshot は Imgur のみ、ksnip は Imgur/FTP/スクリプト、Shottr はアクティベーション後に S3 に対応します。Snipaste・PixPin・Snipping Tool・Xnip・iShot にはありません。
+- **ヘッドレス CLI / スクリプト化** — DracoPho は完全なヘッドレスパイプラインを提供します：`--capture-to` による領域 / ディスプレイのスクリーンショット、`--list-windows` + `--window` によるウィンドウ / コンポーネントのキャプチャ、`--record-region` / `--record-display` による無人録画、`--record-wait-json` による構造化ステータス出力。すべてウィンドウ・ダイアログなし・フォーカス奪取なしで動作し、**PID / プロセス名の指定と遮蔽・最小化されたウィンドウのキャプチャ**に対応します。ShareX（Windows のみ）・Flameshot・ksnip・Spectacle は堅牢な CLI を備え、Snipaste の CLI は有料プラン機能、PixPin は JS アクションエンジンのみです。
 - **フローティングボールランチャー** — DracoPho は画面端に吸着するドラッグ可能なボールを備え（X11/Windows/macOS。Wayland はプロトコル制約のため自由浮動）、アイドル時にはフェードアウトします。同様の機能を持つのは PixPin だけです。
 - **キャプチャ履歴** — DracoPho には専用の履歴パネルがまだありません。ShareX・Snipaste・Flameshot・Snagit・CleanShot X にはあり、ksnip / PicPick / Shottr / iShot は軽量な代替機能（タブ / ギャラリー / ピン留めストック）があり、その他にはありません。
 
@@ -490,11 +491,7 @@ home.packages = with pkgs; [
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> ヘッドレススクリーンショット（`--capture-to`）、複数ディスプレイのスクリーンショット（繰り返し指定可能な `--display`）、およびローカルの
+> cmake -S .04 の Wayland（GNOME）と X11 の両セッションで実行できます。
 
 ### システム依存パッケージ
 

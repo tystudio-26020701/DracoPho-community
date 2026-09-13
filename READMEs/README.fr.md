@@ -218,6 +218,7 @@ DracoPho édition communautaire est un outil tout-en-un **open source (MIT), mul
 - **Enregistrement d'écran** — DracoPho enregistre en MP4 / GIF / WebP animé avec un enregistrement silencieux et sans surveillance de région / d'écran (sans fenêtre, sans dialogue, sans vol de focus) ; ShareX, PixPin, Spectacle (Plasma 6), PicPick, l'outil Capture d'écran de Windows, Snagit, CleanShot X et iShot l'intègrent ; Snipaste, Flameshot, ksnip, Greenshot, Shottr et Xnip non.
 - **Sortie GIF / WebP animé** — DracoPho enregistre nativement en **WebP animé** (fichiers plus petits, prise en charge de l'alpha) ; aucun concurrent ne produit de WebP animé nativement. PixPin et iShot enregistrent en GIF, ShareX enregistre en GIF (sauvegarde statique WebP uniquement), Snagit et CleanShot X exportent en GIF ; les autres n'ont pas de sortie animée.
 - **Téléversement d'images / cloud** — DracoPho intègre le téléversement vers ImgURL / sm.ms / imgbb / litterbox / commande personnalisée (`Ctrl+U`) ; ShareX a le plus grand nombre de cibles ; Greenshot, PicPick, Snagit et CleanShot X ont un téléversement cloud intégré ; Flameshot seulement Imgur, ksnip Imgur/FTP/scripts, Shottr S3 après activation ; Snipaste, PixPin, l'outil Capture d'écran de Windows, Xnip et iShot n'en ont pas.
+- **CLI sans interface / scripts** — DracoPho fournit une chaîne sans interface complète : `--capture-to` pour les captures de région / d'écran, `--list-windows` + `--window` pour les captures de fenêtre / de composant, `--record-region` / `--record-display` pour l'enregistrement sans surveillance et `--record-wait-json` pour la sortie d'état structurée — le tout sans fenêtre, sans dialogue ni vol de focus, avec **ciblage par PID / nom de processus et capture des fenêtres masquées / réduites**.ShareX (Windows uniquement), Flameshot, ksnip et Spectacle disposent de CLI solides ; la CLI de Snipaste est une fonctionnalité d'abonnement payant ; PixPin ne propose qu'un moteur d'actions JS.
 - **Boule flottante d'accès rapide** — DracoPho dispose d'une boule déplaçable qui s'aime aux bords de l'écran (X11/Windows/macOS ; Wayland la laisse flotter librement en raison des limites du protocole) et devient semi-transparente au repos ; seul PixPin propose quelque chose de similaire.
 - **Historique des captures** — DracoPho n'a pas encore de panneau d'historique dédié ; ShareX, Snipaste, Flameshot, Snagit et CleanShot X en ont un, ksnip / PicPick / Shottr / iShot ont des alternatives légères (onglets / galerie / réserve épinglée), les autres n'en ont pas.
 
@@ -496,11 +497,7 @@ Pour les autres distributions (comme Ubuntu, Debian, Fedora), téléchargez le p
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> La capture sans interface (`--capture-to`), la capture multi-écrans (paramètre `--display` répétable) et le service
+> cmake -S .04.
 
 ### Dépendances du système
 

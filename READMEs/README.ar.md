@@ -219,6 +219,7 @@ X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 - **تسجيل الشاشة** — يسجل DracoPho MP4 / GIF / WebP متحرك مع تسجيل مناطق/شاشات دون مراقبة وبصمت (بلا نوافذ ولا نوافذ منبثقة ولا انتزاع للتركيز)؛ وتضمه ShareX وPixPin وSpectacle (Plasma 6) وPicPick وأداة لقطات Windows وSnagit وCleanShot X وiShot؛ بينما لا تضمه Snipaste وFlameshot وksnip وGreenshot وShottr وXnip.
 - **إخراج GIF / WebP متحرك** — يسجل DracoPho أصلياً **WebP متحرك** (ملفات أصغر ودعم شفافية ألفا)؛ ولا ينتج أي من المنافسين WebP متحرك أصلياً. يسجل PixPin وiShot بصيغة GIF، ويسجل ShareX بصيغة GIF (حفظ WebP ثابت فقط)، وتصدر Snagit وCleanShot X بصيغة GIF؛ أما البقية فلا إخراج متحرك لديها.
 - **رفع الصور / السحابة** — يضم DracoPho رفعاً عبر ImgURL / sm.ms / imgbb / litterbox / أوامر مخصصة (`Ctrl+U`)؛ وتمتلك ShareX أكبر عدد من وجهات الرفع؛ وتضم Greenshot وPicPick وSnagit وCleanShot X رفعاً سحابياً مدمجاً؛ وFlameshot عبر Imgur فقط، وksnip عبر Imgur/FTP/سكربتات، وShottr عبر S3 بعد التفعيل؛ ولا يملك أيّ من Snipaste وPixPin وأداة لقطات Windows وXnip وiShot.
+- **CLI بدون واجهة / سكربتات** — يوفر DracoPho مساراً كاملاً بدون واجهة: `--capture-to` للقطات المناطق/الشاشات، و`--list-windows` + `--window` للقطات النوافذ/المكونات، و`--record-region` / `--record-display` للتسجيل دون مراقبة، و`--record-wait-json` لإخراج حالة منظمة — كل ذلك بلا نوافذ ولا نوافذ منبثقة ولا انتزاع للتركيز، مع **إمكانية تحديد PID / اسم العملية والتقاط النوافذ المحجوبة/المصغّرة**.تملك ShareX (على Windows فقط) وFlameshot وksnip وSpectacle واجهات CLI قوية؛ ويُعد CLI الخاص بـ Snipaste ميزة من الطبقة المدفوعة؛ ولا يقدم PixPin إلا محرك إجراءات سكربتات JS.
 - **الكرة العائمة للوصول السريع** — يضم DracoPho كرة قابلة للسحب تلتصق بحواف الشاشة (X11/Windows/macOS؛ وتبقى حرة الطفو على Wayland بسبب قيود البروتوكول) وتتلاشى عند الخمول؛ ولا يوفر شيئاً مماثلاً سوى PixPin.
 - **محفوظات الالتقاط** — لا يملك DracoPho بعد لوحة محفوظات مخصصة؛ تملكها ShareX وSnipaste وFlameshot وSnagit وCleanShot X، وتملك ksnip / PicPick / Shottr / iShot بدائل خفيفة (تبويبات / معرض / مخزن مثبت)، ولا يملك البقية شيئاً.
 
@@ -496,11 +497,7 @@ home.packages = with pkgs; [
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> تعمل اللقطات بدون واجهة (`--capture-to`) ولقطات الشاشات المتعددة (`--display` القابل للتكرار) وخدمة
+> cmake -S .04.
 
 ### تبعيات النظام
 

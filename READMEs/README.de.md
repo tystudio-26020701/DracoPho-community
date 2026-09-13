@@ -219,6 +219,7 @@ DracoPho Community Edition ist ein **Open-Source- (MIT), plattformübergreifende
 - **Bildschirmaufnahme** — DracoPho nimmt MP4 / GIF / animiertes WebP mit lautloser unbeaufsichtigter Bereichs-/Display-Aufnahme auf (keine Fenster, keine Dialoge, kein Fokusraub); ShareX, PixPin, Spectacle (Plasma 6), PicPick, Snipping Tool, Snagit, CleanShot X und iShot haben es integriert; Snipaste, Flameshot, ksnip, Greenshot, Shottr und Xnip nicht.
 - **Animierte GIF- / WebP-Ausgabe** — DracoPho nimmt nativ **animiertes WebP** auf (kleinere Dateien, Alpha-Unterstützung); kein Wettbewerber produziert nativ animiertes WebP. PixPin und iShot nehmen GIF auf, ShareX nimmt GIF auf (WebP nur als statischer Speicher), Snagit und CleanShot X exportieren GIF; der Rest hat keine animierte Ausgabe.
 - **Bild-Hosting-Upload** — DracoPho enthält Uploads zu ImgURL / sm.ms / imgbb / litterbox / benutzerdefinierte Befehle (`Ctrl+U`); ShareX hat die meisten Ziele; Greenshot, PicPick, Snagit und CleanShot X haben integrierten Cloud-Upload; Flameshot nur Imgur, ksnip Imgur/FTP/Skripte, Shottr S3 nach Aktivierung; Snipaste, PixPin, Snipping Tool, Xnip und iShot haben keine.
+- **Headless-CLI / Skripting** — DracoPho bietet eine vollständige Headless-Pipeline: `--capture-to` für Region-/Display-Screenshots, `--list-windows` + `--window` für Fenster-/Komponenten-Aufnahmen, `--record-region` / `--record-display` für unbeaufsichtigte Aufnahmen und `--record-wait-json` für eine strukturierte Statusausgabe — durchgängig ohne Fenster, Dialoge oder Fokusraub, mit **PID-/Prozessnamen-Auswahl und Aufnahme verdeckter/minimierter Fenster**.ShareX (nur Windows), Flameshot, ksnip und Spectacle haben solide CLIs; die CLI von Snipaste ist eine Funktion der kostenpflichtigen Mitgliedschaft; PixPin bietet nur eine JS-Aktions-Engine.
 - **Schnellzugriff über die schwebende Kugel** — DracoPho hat eine ziehbare Kugel, die an den Bildschirmrändern einrastet (X11/Windows/macOS; unter Wayland bleibt sie wegen Protokollgrenzen frei schwebend) und bei Inaktivität halbtransparent ausblendet; nur PixPin bietet etwas Ähnliches.
 - **Aufnahme-Verlauf** — DracoPho hat noch kein dediziertes Verlaufs-Panel; ShareX, Snipaste, Flameshot, Snagit und CleanShot X haben eines, ksnip / PicPick / Shottr / iShot bieten leichte Alternativen (Tabs / Galerie / angepinnte Ablage), der Rest keine.
 
@@ -497,11 +498,7 @@ Für andere Distributionen (z. B. Ubuntu, Debian, Fedora) lade das vorkompiliert
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> Headless-Screenshots (`--capture-to`), Multi-Monitor-Screenshots (wiederholbares `--display`) sowie der
+> cmake -S .04-Sitzungen unter Wayland (GNOME) und X11.
 
 ### Systemabhängigkeiten
 

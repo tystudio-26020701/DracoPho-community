@@ -219,6 +219,7 @@ DracoPho 커뮤니티 에디션은 **오픈소스(MIT)이며 크로스 플랫폼
 - **화면 녹화** — DracoPho은 창, 대화 상자, 포커스 선점 없이 조용히 무인으로 영역/디스플레이를 MP4/GIF/애니메이션 WebP로 녹화합니다. ShareX, PixPin, Spectacle(Plasma 6), PicPick, Snipping Tool, Snagit, CleanShot X, iShot도 지원하며, Snipaste, Flameshot, ksnip, Greenshot, Shottr, Xnip은 지원하지 않습니다.
 - **애니메이션 GIF/WebP 출력** — DracoPho은 **애니메이션 WebP**(파일 크기 감소, 알파 지원)를 네이티브로 녹화합니다. 어떤 경쟁 제품도 애니메이션 WebP를 네이티브로 생성하지 못합니다. PixPin과 iShot은 GIF를 녹화하고, ShareX는 GIF를 녹화하며(WebP는 정적 저장만), Snagit과 CleanShot X는 GIF로 내보냅니다. 나머지는 애니메이션 출력이 없습니다.
 - **이미지 호스팅 업로드/클라우드** — DracoPho은 ImgURL/sm.ms/imgbb/litterbox/사용자 지정 명령 업로드(`Ctrl+U`)를 내장하고 있습니다. ShareX는 업로드 대상이 가장 많고, Greenshot, PicPick, Snagit, CleanShot X는 클라우드 업로드를 내장하고 있습니다. Flameshot은 Imgur만, ksnip은 Imgur/FTP/스크립트, Shottr은 활성화 후 S3를 지원합니다. Snipaste, PixPin, Snipping Tool, Xnip, iShot은 없습니다.
+- **헤드리스 CLI/스크립트** — DracoPho은 완전한 헤드리스 파이프라인을 제공합니다: `--capture-to` 영역/디스플레이 스크린샷, `--list-windows` + `--window` 창/구성 요소 캡처, `--record-region`/`--record-display` 무인 녹화, `--record-wait-json` 구조화된 상태 출력. 전 과정에서 창, 대화 상자, 포커스 선점이 없으며, **PID/프로세스 이름 지정과 가려지거나 최소화된 창 캡처**를 지원합니다.ShareX(Windows 전용), Flameshot, ksnip, Spectacle은 견고한 CLI를 제공하며, Snipaste의 CLI는 유료 등급 기능이고, PixPin은 JS 동작 엔진만 제공합니다.
 - **플로팅 볼 빠른 실행** — DracoPho에는 화면 가장자리에 달라붙는 드래그 가능한 플로팅 볼(X11/Windows/macOS, Wayland는 프로토콜 제한으로 자유 부유 상태 유지)이 있으며, 유휴 상태에서는 페이드아웃됩니다. 유사한 기능은 PixPin만 제공합니다.
 - **캡처 기록** — DracoPho에는 아직 전용 기록 패널이 없습니다. ShareX, Snipaste, Flameshot, Snagit, CleanShot X는 있으며, ksnip/PicPick/Shottr/iShot은 가벼운 대안(탭/갤러리/고정 보관함)을 제공하고 나머지는 없습니다.
 
@@ -494,11 +495,7 @@ home.packages = with pkgs; [
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> 헤드리스 스크린샷(`--capture-to`), 다중 디스플레이 스크린샷(반복 가능한 `--display`) 및 로컬
+> cmake -S .04의 Wayland(GNOME)와 X11 세션에서 실행할 수 있습니다.
 
 ### 시스템 종속성
 

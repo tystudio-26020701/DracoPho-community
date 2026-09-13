@@ -219,6 +219,7 @@ DracoPho Community Edition — это **открытая (MIT), кросспла
 - **Запись экрана** — DracoPho записывает MP4 / GIF / анимированный WebP с тихой записью области/дисплея без участия пользователя (без окон, диалогов и перехвата фокуса); ShareX, PixPin, Spectacle (Plasma 6), PicPick, Snipping Tool, Snagit, CleanShot X и iShot имеют её; у Snipaste, Flameshot, ksnip, Greenshot, Shottr и Xnip — нет.
 - **Анимированный GIF / WebP** — DracoPho нативно записывает **анимированный WebP** (меньший размер файлов, поддержка альфа-канала); ни один конкурент не создаёт анимированный WebP нативно. PixPin и iShot записывают GIF, ShareX записывает GIF (WebP — только статическое сохранение), Snagit и CleanShot X экспортируют GIF; у остальных анимированного вывода нет.
 - **Загрузка на хостинг изображений** — в DracoPho встроены ImgURL / sm.ms / imgbb / litterbox / загрузка пользовательской командой (`Ctrl+U`); у ShareX наибольшее число целей; у Greenshot, PicPick, Snagit и CleanShot X есть встроенная облачная загрузка; Flameshot — только Imgur, ksnip — Imgur/FTP/скрипты, Shottr — S3 после активации; у Snipaste, PixPin, Snipping Tool, Xnip и iShot её нет.
+- **Безголовый CLI / скриптинг** — DracoPho предоставляет полный безголовый конвейер: `--capture-to` для снимков области/дисплея, `--list-windows` + `--window` для снимков окна/компонента, `--record-region` / `--record-display` для записи без участия пользователя и `--record-wait-json` для структурированного вывода статуса — всё без окон, диалогов и перехвата фокуса, с **нацеливанием по PID/имени процесса и захватом перекрытых/свёрнутых окон**.У ShareX (только Windows), Flameshot, ksnip и Spectacle полноценные CLI; CLI Snipaste — платная функция; PixPin предлагает только движок JS-действий.
 - **Плавающий шар быстрого запуска** — в DracoPho есть перетаскиваемый шар, который прилипает к краям экрана (X11/Windows/macOS; на Wayland он свободно плавает из-за ограничений протокола) и становится полупрозрачным в простое; аналогичную функцию предлагает только PixPin.
 - **История снимков** — у DracoPho пока нет отдельной панели истории; у ShareX, Snipaste, Flameshot, Snagit и CleanShot X она есть, ksnip / PicPick / Shottr / iShot имеют облегчённые альтернативы (вкладки / галерея / закреплённые хранилища), у остальных её нет.
 
@@ -496,11 +497,7 @@ home.packages = with pkgs; [
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> Безголовые скриншоты (`--capture-to`), скриншоты нескольких дисплеев (повторяемый `--display`), а также локальный
+> cmake -S .04.
 
 ### Системные зависимости
 

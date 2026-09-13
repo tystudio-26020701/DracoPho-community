@@ -558,6 +558,7 @@ home.packages = with pkgs; [
 >
 > 无头截图（`--capture-to`）、多显示器截图（可重复的 `--display`）以及本地
 
+
 ### 系统依赖
 
 #### Wayland (Arch Linux)

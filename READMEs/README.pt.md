@@ -214,6 +214,7 @@ A Edição Comunitária do DracoPho é uma ferramenta integrada de captura de te
 - **Gravação de tela** — o DracoPho grava MP4 / GIF / WebP animado, com gravação silenciosa e sem supervisão de região/monitor (sem janelas, sem diálogos e sem roubo de foco); ShareX, PixPin, Spectacle (Plasma 6), PicPick, a Ferramenta de Recorte, Snagit, CleanShot X e iShot a incluem; Snipaste, Flameshot, ksnip, Greenshot, Shottr e Xnip não a incluem.
 - **Saída em GIF / WebP animado** — o DracoPho grava nativamente **WebP animado** (arquivos menores, suporte a alfa); nenhum concorrente produz WebP animado nativamente. PixPin e iShot gravam GIF, o ShareX grava GIF (WebP apenas para salvamento estático), Snagit e CleanShot X exportam GIF; os demais não têm saída animada.
 - **Upload de imagens / nuvem** — o DracoPho inclui upload via ImgURL / sm.ms / imgbb / litterbox / comando personalizado (`Ctrl+U`); o ShareX tem o maior número de destinos; Greenshot, PicPick, Snagit e CleanShot X têm upload em nuvem integrado; o Flameshot apenas Imgur, o ksnip Imgur/FTP/scripts e o Shottr S3 após ativação; Snipaste, PixPin, a Ferramenta de Recorte, Xnip e iShot não têm nenhum.
+- **CLI headless / scripts** — o DracoPho oferece um pipeline headless completo: `--capture-to` para capturas de região/monitor, `--list-windows` + `--window` para capturas de janela/componente, `--record-region` / `--record-display` para gravação sem supervisão e `--record-wait-json` para emitir o status estruturado — o tempo todo sem janelas, sem diálogos e sem roubo de foco, com **seleção por PID/nome do processo e captura de janelas ocultas/minimizadas**.ShareX (somente Windows), Flameshot, ksnip e Spectacle têm CLIs sólidas; a CLI do Snipaste é um recurso de assinatura paga; o PixPin oferece apenas um mecanismo de ações por script JS.
 - **Atalho pela bola flutuante** — o DracoPho tem uma bola arrastável que se encaixa nas bordas da tela (X11/Windows/macOS; o Wayland a mantém flutuando livremente por limites do protocolo) e esmaece quando ociosa; apenas o PixPin oferece algo parecido.
 - **Histórico de capturas** — o DracoPho ainda não tem um painel de histórico dedicado; ShareX, Snipaste, Flameshot, Snagit e CleanShot X têm; ksnip / PicPick / Shottr / iShot têm alternativas leves (abas / galeria / acervo fixado); os demais não têm.
 
@@ -492,11 +493,7 @@ Para outras distribuições (como Ubuntu, Debian, Fedora), baixe o pacote compil
 > sudo apt install build-essential cmake ninja-build pkg-config \
 >   qt6-base-dev qt6-wayland libpipewire-0.3-dev libxcb-cursor0 \
 >   xdg-desktop-portal pipewire xclip
-> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-> cmake --build build
-> ```
->
-> funcionam tanto em sessões Wayland (GNOME) quanto X11 no Ubuntu 26.04.
+> cmake -S .04.
 
 ### Dependências do sistema
 
