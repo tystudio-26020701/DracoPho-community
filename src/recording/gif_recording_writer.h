@@ -18,6 +18,7 @@ public:
     bool writeFrame(const RecordingFrameSample &sample, QString *error) override;
     bool finish(QString *error) override;
     void cancel() override;
+    int writtenFrames() const override { return m_process.writtenFrames(); }
 
 private:
     RecordingOptions m_options;

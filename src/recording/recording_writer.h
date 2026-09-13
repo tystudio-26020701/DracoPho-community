@@ -54,6 +54,14 @@ public:
      * @return 无返回值。
      */
     virtual void cancel() = 0;
+
+    /**
+     * 编码器实际写入的帧数（含补帧），finish() 后调用才有精确值。
+     * 控制器节流后的提交数可能少于实际编码帧——写线程按目标 fps 补帧
+     * 填充时间线。JSON 报表应以本值为准。
+     * @return 编码帧数。
+     */
+    virtual int writtenFrames() const { return 0; }
 };
 
 }  // namespace markshot::recording

@@ -79,9 +79,15 @@ public:
      * @param error 输出错误信息。
      * @return 完成成功时返回 true。
      */
-    bool finishWriter(QString *error)
+    bool finishWriter(QString *error, int *writtenFrames)
     {
-        return m_writer && m_writer->finish(error);
+        if (!m_writer || !m_writer->finish(error)) {
+            return false;
+        }
+        if (writtenFrames) {
+            *writtenFrames = m_writer->writtenFrames();
+        }
+        return true;
     }
 
     /**
@@ -212,12 +218,14 @@ bool RecordingAsyncWriter::finish(QString *error)
         worker,
         [worker, self] {
             QString finishError;
-            const bool ok = worker->finishWriter(&finishError);
+            int written = 0;
+            const bool ok = worker->finishWriter(&finishError, &written);
             if (self) {
                 QMetaObject::invokeMethod(
                     self,
-                    [self, ok, finishError] {
+                    [self, ok, finishError, written] {
                         if (self) {
+                            self->m_writtenFramesRelaxed.storeRelease(written);
                             self->handleFinishComplete(ok, finishError);
                         }
                     },
@@ -226,6 +234,11 @@ bool RecordingAsyncWriter::finish(QString *error)
         },
         Qt::QueuedConnection);
     return true;
+}
+
+int RecordingAsyncWriter::writtenFrames() const
+{
+    return m_writtenFramesRelaxed.loadAcquire();
 }
 
 void RecordingAsyncWriter::cancel()

@@ -42,6 +42,7 @@ public:
     bool writeFrame(const RecordingFrameSample &sample, QString *error);
     bool finish(QString *error);
     void cancel();
+    int nextPts() const { return static_cast<int>(m_nextPts); }
 
 private:
     RecordingBgraFrame bgraBytesForSample(const RecordingFrameSample &sample, QString *error);
@@ -402,6 +403,11 @@ bool LibavGifRecordingProcess::finish(QString *error)
 void LibavGifRecordingProcess::cancel()
 {
     d->cancel();
+}
+
+int LibavGifRecordingProcess::writtenFrames() const
+{
+    return static_cast<int>(d->nextPts());
 }
 
 }  // namespace markshot::recording

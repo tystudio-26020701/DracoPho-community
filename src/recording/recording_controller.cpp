@@ -209,6 +209,14 @@ void RecordingController::completeStop(bool ok, const QString &error)
         return;
     }
     m_finishEmitted = true;
+    // JSON 报表取编码器实际写入帧数（含补帧）而非控制器节流后提交数：
+    // 写线程按目标 fps 补帧填充时间线，实际编码帧数才是产物真实帧数。
+    if (m_writer) {
+        const int written = m_writer->writtenFrames();
+        if (written > 0) {
+            m_frameCount = written;
+        }
+    }
     markshot::debugLog("recording",
                        "【录制】【结束】ok=%d frames=%d output=%s error=%s",
                        ok ? 1 : 0,

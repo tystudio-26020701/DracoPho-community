@@ -4,6 +4,7 @@
 #include "recording/recording_options.h"
 #include "recording/recording_writer.h"
 
+#include <QAtomicInt>
 #include <QObject>
 #include <QThread>
 
@@ -53,6 +54,12 @@ public:
      */
     void cancel() override;
 
+    /**
+     * 编码器实际写入帧数（含补帧）。finish 完成回调后可读；线程安全。
+     * @return 帧数。
+     */
+    int writtenFrames() const override;
+
 signals:
     void failed(QString error);
     void finished(bool ok, QString error);
@@ -66,6 +73,8 @@ private:
      * @return 无返回值。
      */
     void handleWriteComplete(bool ok, const QString &error);
+
+    QAtomicInt m_writtenFramesRelaxed = 0;
 
     /**
      * 处理工作线程完成结果。

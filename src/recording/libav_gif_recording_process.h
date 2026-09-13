@@ -45,6 +45,12 @@ public:
      */
     void cancel();
 
+    /**
+     * 编码器已写入的帧数（pts 即计数），finish() 后精确。
+     * @return 帧数。
+     */
+    int writtenFrames() const;
+
 private:
     class Private;
     Private *d = nullptr;
