@@ -581,7 +581,7 @@ The official `.deb` package is built on a Debian 12 compatibility baseline. It i
 > ```
 >
 > Headless capture (`--capture-to`), multi-display capture (repeatable
-> Wayland (GNOME) and X11 sessions.
+> `--display`), and the headless CLI pipeline all run on Ubuntu 26.04 under
 
 ### Dependencies
 
@@ -726,7 +726,7 @@ cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
 cmake --build build-windows
 ```
 
-Windows support currently targets normal screenshots and image annotation. Scrolling capture, compositor-specific window detection, and Linux desktop entries are not available on Windows. The bundled Python helper scripts (`dracoPho-ocr`, `dracoPho-code-scan`, `dracoPho-translate`) are not installed automatically—see the [OCR Backend](#ocr-backend-optional), [Code Scan Backend](#code-scan-backend-optional), and translation sections above for manual Windows setup instructions.
+Windows support includes normal screenshots, image annotation, and native window capture (`--list-windows` / `--window` via the Win32 API, including occluded/minimized window content). Scrolling capture and Linux compositor-specific detection scripts are not available on Windows; Linux desktop entries are not installed. The bundled Python helper scripts (`dracoPho-ocr`, `dracoPho-code-scan`, `dracoPho-translate`) are not installed automatically—see the [OCR Backend](#ocr-backend-optional), [Code Scan Backend](#code-scan-backend-optional), and translation sections above for manual Windows setup instructions.
 
 #### macOS
 

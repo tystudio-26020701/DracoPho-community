@@ -809,7 +809,7 @@ cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release `
 cmake --build build-windows
 ```
 
-当前 Windows 支持范围是普通截图与图片标注。滚动截图、合成器专用窗口检测和 Linux 桌面快捷方式在 Windows 上不可用。内置的 Python 辅助脚本（`dracoPho-ocr`、`dracoPho-code-scan`、`dracoPho-translate`）不会自动安装，请参考上方的 [OCR 后端](#ocr-后端可选)、[扫码后端](#扫码后端可选)和翻译章节进行手动配置。
+当前 Windows 支持范围是普通截图与图片标注。Windows 支持普通截图、图片标注和原生窗口捕获（经 Win32 API 的 --list-windows/--window，含被遮挡/最小化窗口内容）。滚动截图和 Linux 合成器专用检测脚本在 Windows 上不可用；Linux 桌面快捷方式不安装。内置的 Python 辅助脚本（`dracoPho-ocr`、`dracoPho-code-scan`、`dracoPho-translate`）不会自动安装，请参考上方的 [OCR 后端](#ocr-后端可选)、[扫码后端](#扫码后端可选)和翻译章节进行手动配置。
 
 #### macOS
 
