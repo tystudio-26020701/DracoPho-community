@@ -68,7 +68,7 @@ void RecordingPollingCaptureStream::captureFrame()
     request.preferredOutputName = m_options.display.outputName;
     request.allOutputs = m_options.display.allOutputs && m_options.scope == RecordingScope::Display;
     request.preferScreencast = true;
-    // 静默录制严禁交互式 portal（无人值守 触发时用户无感）；非静默路径
+    // 静默录制严禁交互式 portal（无人值守触发时用户无感）；非静默路径
     // 维持既有语义：视频轮询避开交互 portal，动图可请求一次授权。
     request.allowInteractivePortal = !m_options.silent && m_options.mode != RecordingMode::Video;
     request.allowPortalScreenshotFallback = m_options.mode != RecordingMode::Video;

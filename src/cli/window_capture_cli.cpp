@@ -515,7 +515,7 @@ QJsonObject captureOne(const WindowInfo &info,
     }
     // 窗口对象抓取失败后回退到区域抓屏时如实标注：被遮挡/最小化窗口若没有
     // 保留的合成缓冲，区域抓屏得到的是该区域当前内容（可能是另一个窗口），
-    // 必须让调用方（调用方）知道这是回退产物而非目标窗口本身。
+    // 必须让调用方知道这是回退产物而非目标窗口本身。
     if (!windowCaptureError.isEmpty()) {
         entry.insert(QStringLiteral("windowCaptureError"), windowCaptureError);
         if (!capturedImage.isNull()) {

@@ -851,7 +851,7 @@ int main(int argc, char *argv[])
                     markshot::recording::availableDisplaySources();
                 if (!command.recordDisplayKey.trimmed().isEmpty()) {
                     // 归一化显示器标识（裸屏名 "DP-1"、"screen:DP-1"、"output:DP-1"、
-                    // "all" 均可），使 CLI 帮助文本承诺的用法与调用方路径一致。
+                    // "all" 均可），使 CLI 帮助文本承诺的用法与调用方一致。
                     const QString key = markshot::recording::normalizeRecordingDisplayId(
                         command.recordDisplayKey);
                     int matched = -1;
