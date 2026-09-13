@@ -3,6 +3,7 @@
 #include "app_config_store.h"
 #include "capture_session_screen_utils.h"
 #include "clipboard_image.h"
+#include "darwin_window_list.h"
 #include "headless_capture_config.h"
 #include "screen_capture.h"
 #include "window_detection.h"
@@ -121,6 +122,17 @@ QVector<WindowInfo> collectWindowInfos(QString *source)
         source->clear();
     }
 
+#if defined(Q_OS_DARWIN)
+    // macOS：Quartz 原生枚举优先（CGWindowList，纯 C API，无需检测脚本）。
+    const QVector<WindowInfo> quartz = markshot::enumerateDarwinWindowInfos(true);
+    if (!quartz.isEmpty()) {
+        if (source) {
+            *source = QStringLiteral("quartz");
+        }
+        return quartz;
+    }
+#endif
+
     const QVector<WindowInfo> scripted =
         collectConfiguredWindowInfos(markshot::capture_session::virtualScreensGeometry(), QString(), true);
     if (!scripted.isEmpty()) {
@@ -157,6 +169,8 @@ QString platformName()
 {
 #if defined(Q_OS_WIN)
     return QStringLiteral("windows");
+#elif defined(Q_OS_DARWIN)
+    return QStringLiteral("macos");
 #else
     if (isX11SessionLike()) {
         return QStringLiteral("x11");

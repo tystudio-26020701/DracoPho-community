@@ -169,6 +169,8 @@ qt_add_executable(dracoPho
     src/startup_config.h
     src/startup_shortcut_hint.cpp
     src/startup_shortcut_hint.h
+    src/darwin_window_list.cpp
+    src/darwin_window_list.h
     src/window_detection.cpp
     src/window_detection.h
     src/windows_integration.cpp
@@ -311,6 +313,10 @@ if(MARK_SHOT_LINUX)
     )
     target_link_libraries(dracoPho PRIVATE Qt6::DBus)
     target_compile_definitions(dracoPho PRIVATE MARK_SHOT_WITH_DBUS)
+endif()
+
+if(APPLE)
+    target_link_libraries(dracoPho PRIVATE "-framework CoreGraphics" "-framework CoreFoundation")
 endif()
 
 if(MARK_SHOT_LINUX AND X11_xcb_FOUND)
