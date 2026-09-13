@@ -17,19 +17,19 @@ if(MARK_SHOT_LINUX)
             target_link_libraries(MarkShot::FFmpegLibav INTERFACE PkgConfig::FFmpegLibav)
         endif()
     endif()
-elseif(WIN32)
+elseif(WIN32 OR APPLE)
     include(FindPackageHandleStandardArgs)
 
     find_path(FFmpegLibav_INCLUDE_DIR
         NAMES libavcodec/avcodec.h
-        HINTS ENV MINGW_PREFIX
+        HINTS ENV MINGW_PREFIX ${CMAKE_PREFIX_PATH}
         PATH_SUFFIXES include
     )
 
     foreach(component IN ITEMS avcodec avformat avutil swresample swscale)
         find_library(FFmpegLibav_${component}_LIBRARY
             NAMES ${component} lib${component}
-            HINTS ENV MINGW_PREFIX
+            HINTS ENV MINGW_PREFIX ${CMAKE_PREFIX_PATH} ${CMAKE_LIBRARY_PATH}
             PATH_SUFFIXES lib
         )
         list(APPEND FFmpegLibav_REQUIRED_VARS FFmpegLibav_${component}_LIBRARY)
@@ -44,13 +44,20 @@ elseif(WIN32)
     if(FFmpegLibav_FOUND AND NOT TARGET MarkShot::FFmpegLibav)
         add_library(MarkShot::FFmpegLibav INTERFACE IMPORTED)
         target_include_directories(MarkShot::FFmpegLibav INTERFACE "${FFmpegLibav_INCLUDE_DIR}")
-        # 静态库间存在循环依赖（avformat → avcodec → avutil → avformat），
-        # 用链接器组重新扫描以解析所有未定义符号（MinGW ld 与 GNU ld 均支持）。
-        target_link_libraries(MarkShot::FFmpegLibav INTERFACE
-            -Wl,--start-group
-            ${FFmpegLibav_LIBRARIES}
-            -Wl,--end-group
-        )
+        if(WIN32)
+            # 静态库间存在循环依赖（avformat → avcodec → avutil → avformat），
+            # 用链接器组重新扫描以解析所有未定义符号（MinGW ld 与 GNU ld 均支持）。
+            target_link_libraries(MarkShot::FFmpegLibav INTERFACE
+                -Wl,--start-group
+                ${FFmpegLibav_LIBRARIES}
+                -Wl,--end-group
+            )
+        else()
+            # macOS 动态 dylib 无循环依赖问题，直接链接。
+            target_link_libraries(MarkShot::FFmpegLibav INTERFACE
+                ${FFmpegLibav_LIBRARIES}
+            )
+        endif()
     endif()
 endif()
 
